@@ -1228,3 +1228,27 @@ and a taper and the shade has a dark rim now, so its silhouette survives
 being forty pixels tall on a green field. The trees come in two forms
 instead of one, because a lane lined with a single silhouette repeated
 at three sizes reads as a tiled background.
+
+## Half a board of crates read as a hole
+
+The crate is carefully made: four planks with seams and grain, two
+knots, a diagonal brace, iron corners with nails, splits and a chipped
+corner that only appear on the last hit point, and an iron band across
+the middle so a two-hit crate is a different *shape* and not merely a
+different brown.
+
+At forty-two pixels, on a level where half the cells are crates, none of
+that helped. Two things were wrong:
+
+- **Its brown was the well's brown.** The board's well is `#6B563A` and
+  the crate was `#A97B4C`, which is a slightly different shade of the
+  same thing. With no rim of its own, the crate's gradient ran straight
+  into the board behind it, so a wall of crates had no silhouettes and
+  read as a hole in the middle of the level.
+- **Ten grain lines at that size is hatching, not wood**, and a
+  seven-percent-wide diagonal brace was the loudest mark on the tile —
+  it read as a strike-through.
+
+Lighter wood, a defined dark edge, five grain lines instead of ten, and
+a quieter brace. Nothing was removed; the drawing is the same drawing at
+a size where it is legible.

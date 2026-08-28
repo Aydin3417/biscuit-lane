@@ -5218,7 +5218,10 @@ function drawTileFx(c, type, sp, s, t, seed) {
 function paintCrate(c, s, hp) {
   /* a real crate: four planks, iron corners, nails, and damage
      that only shows once you have already hit it. */
-  const wood = hp > 1 ? '#8A6039' : '#A97B4C';
+  /* The well behind these is #6B563A. At the old browns a crate was a
+     slightly different shade of the board rather than a thing sitting on
+     it, and half a board of them read as a hole. */
+  const wood = hp > 1 ? '#A6713F' : '#C69257';
   c.save();
   c.shadowColor = rgba('#000000', PAL.dark ? .45 : .22);
   c.shadowBlur = s * .1; c.shadowOffsetY = s * .04;
@@ -5247,10 +5250,10 @@ function paintCrate(c, s, hp) {
     c.beginPath(); c.moveTo(-s * .5, y); c.lineTo(s * .5, y); c.stroke();
   }
   /* grain: long wavering lines along each plank */
-  c.strokeStyle = rgba('#2E1F10', .16);
+  c.strokeStyle = rgba('#2E1F10', .13);
   c.lineWidth = s * .012;
-  for (let i = 0; i < 10; i++) {
-    const y = -s * .42 + i * .093 * s;
+  for (let i = 0; i < 5; i++) {
+    const y = -s * .38 + i * .19 * s;
     c.beginPath();
     c.moveTo(-s * .5, y);
     c.quadraticCurveTo(0, y + (i % 2 ? s * .022 : -s * .022), s * .5, y);
@@ -5266,11 +5269,11 @@ function paintCrate(c, s, hp) {
     }
   });
   /* diagonal brace */
-  c.strokeStyle = rgba('#2E1F10', .22);
-  c.lineWidth = s * .07;
+  c.strokeStyle = rgba('#2E1F10', .15);
+  c.lineWidth = s * .055;
   c.beginPath(); c.moveTo(-s * .46, s * .46); c.lineTo(s * .46, -s * .46); c.stroke();
-  c.strokeStyle = rgba('#FFFFFF', .1);
-  c.lineWidth = s * .02;
+  c.strokeStyle = rgba('#FFFFFF', .09);
+  c.lineWidth = s * .018;
   c.beginPath(); c.moveTo(-s * .44, s * .44); c.lineTo(s * .48, -s * .44); c.stroke();
 
   /* reinforcement: an iron band, so a two-hit crate is a different shape
@@ -5320,6 +5323,14 @@ function paintCrate(c, s, hp) {
   c.fillStyle = sh;
   c.fillRect(-s * .5, -s * .5, s, s);
   c.restore();
+
+  /* A defined edge. Without one the crate's own gradient runs straight
+     into the well behind it and the tile has no silhouette — which is
+     what made a board that is half crates read as a hole rather than as
+     a stack of boxes. */
+  c.strokeStyle = rgba('#3A2614', PAL.dark ? .55 : .42);
+  c.lineWidth = Math.max(1, s * .035);
+  rr(c, -s * .46, -s * .46, s * .92, s * .92, s * .1); c.stroke();
 
   /* iron corners and their nails */
   c.save();
