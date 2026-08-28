@@ -1522,6 +1522,7 @@ function applyTheme() {
   if (t === 'auto') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', t);
   readPalette();
+  themeColorSync();   /* the strip above the top bar follows Day and Dusk */
   clearSprites();
   paintLogo();
   if (SCREEN === 'map') drawMap();

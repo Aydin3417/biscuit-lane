@@ -63,6 +63,8 @@ node test/tune.js 1 60     # suggests move counts from measured play
 node test/chains.js 400    # how deep cascades actually go
 node test/ice.js           # the frost rule, all five claims
 node test/care.js          # can a player actually hold the pet perks
+node test/mobile.js        # manifest, worker, icons: is it installable
+node tools/icon.js         # redraw the app icons from the game's logo
 PERKS=1 node test/ai.js    # the same levels, with a cared-for pet
 STARS=1 node test/ai.js    # how the three star tiers divide up
 KINDS=1 node test/ai.js    # the generated run broken down by goal kind
@@ -1277,3 +1279,52 @@ checks both halves — that the hint is the highest-scoring move available
 on ten levels, and that the board is byte-identical afterwards.
 
 Sixty-odd swaps, once, five seconds after the player went quiet.
+
+## Making it something you keep on your phone
+
+The input layer was already right for a phone and had been all along:
+pointer events with capture so a drag survives the finger leaving the
+canvas, `touch-action: none` on the board, `overscroll-behavior: none`
+so there is no pull-to-refresh to lose a level to, a fixed layout,
+`viewport-fit=cover` for the notch, and swipe-to-swap at a threshold of
+`max(12, cell × 0.34)` alongside tap-then-tap. Driven with a real
+finger through Chrome's touch emulation on a Pixel 7: a tap selects, a
+swipe spends a move, no errors.
+
+What was missing was everything that makes it an *app* rather than a
+page you happened to open.
+
+**An icon drawn by the game.** `tools/icon.js` opens the built game,
+calls its own `drawLogo()` into a 512px canvas and writes the PNGs, so
+the thing on the home screen is drawn by the same code as the thing in
+the top bar. There is a maskable variant with the mark inside the middle
+56%, because Android crops to a circle on some launchers and a squircle
+on others, and a 180px one for iOS.
+
+**A manifest and a service worker**, as sibling files. They only exist
+where the game is *served*; opened as a single file both simply 404, the
+registration is wrapped, and nothing changes. Where they are served, the
+game installs to the home screen, opens standalone with no address bar,
+and locks to portrait.
+
+**Offline, including the typefaces.** A service worker does not control
+the page that installed it, so on the visit that installs this one the
+fonts are never requested through it and never land in the cache — a
+player who installed the game and then lost signal would get the
+fallback stack on their first real launch. The worker fetches the Google
+Fonts stylesheet on activation and pulls in the seven woff2 files it
+names. Measured by cutting the network and reloading: boots, save
+intact, `Grandstander` resolved, no errors.
+
+**The strip above the top bar.** `theme-color` is set from the game's
+own `--bg` and updated whenever the theme changes, so a dark game does
+not sit under a cream status bar.
+
+**Double-tap zoom.** iOS reads two taps inside 300ms as a zoom, which on
+a board of 42px cells is an ordinary pair of matches.
+
+`node test/mobile.js` guards the parts that rot quietly — an icon
+renamed, a declared size that no longer matches the file's actual IHDR
+header, a shell entry that no longer exists. The browser's response to
+any of those is to silently decline to offer the install, which nobody
+would notice for months.

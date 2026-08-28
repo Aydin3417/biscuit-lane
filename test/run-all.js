@@ -12,6 +12,7 @@ const steps = [
   ['engine soak + level design audit', 'sim.js', []],
   ['the ice rule', 'ice.js', []],
   ['the care loop', 'care.js', []],
+  ['the mobile app layer', 'mobile.js', []],
   ['the pet move, breed by breed', 'charge.js', ['1', '60', '2']],
 ];
 

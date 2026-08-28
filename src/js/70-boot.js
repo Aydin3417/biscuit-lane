@@ -64,6 +64,51 @@ function onResize() {
   }, 140);
 }
 
+/* ---------------- installed on a phone ----------------
+
+   Three small things that decide whether this reads as a game you keep
+   or a page you happened to open.
+
+   The status bar takes the game's own background, so the strip above
+   the top bar is the same colour as the top bar rather than white — and
+   it follows Day and Dusk, because a dark game under a cream status bar
+   looks like a bug.
+
+   The service worker is a sibling file, so it is only there when the
+   game is served rather than opened as a single file. Registration is
+   wrapped: on file:// it throws, on a bare artifact host it 404s, and
+   neither is a reason for anything to go wrong.
+
+   And an installed app has no address bar to go back to, so the pull to
+   refresh that Android puts on a scrollable page is a way to lose a
+   level and nothing else. The layout is fixed, so it is already gone —
+   this only stops the double-tap zoom that survives it. */
+function themeColorSync() {
+  const m = document.querySelector('meta[name="theme-color"]');
+  if (!m) return;
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+  if (bg) m.setAttribute('content', bg);
+}
+
+function installApp() {
+  themeColorSync();
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* not served with one */ });
+    });
+  }
+  /* iOS fires a second tap as a zoom if two land inside 300ms, which on
+     a board of 42px cells is an ordinary pair of matches */
+  let lastTap = 0;
+  document.addEventListener('touchend', e => {
+    const t = Date.now();
+    if (t - lastTap < 320) e.preventDefault();
+    lastTap = t;
+  }, { passive: false });
+  /* two fingers on a puzzle board is never a pinch */
+  document.addEventListener('gesturestart', e => e.preventDefault());
+}
+
 function boot() {
   const had = loadSave();
   if (SAVE.settings.lang) LANG = SAVE.settings.lang;
@@ -71,6 +116,7 @@ function boot() {
 
   applyTheme();
   readPalette();
+  installApp();
   motesLayout();
   AMB.last = performance.now();
   if (!reduceMotion()) AMB.raf = requestAnimationFrame(motesLoop);
@@ -206,7 +252,7 @@ window.BL = {
   openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, confirmQuit,
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
   simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY,
-  popScale, popAlpha, showWin, showLose, bestHint, hintScore,
+  popScale, popAlpha, showWin, showLose, bestHint, hintScore, drawLogo,
   /* render entry points, so a frame can be forced without rAF */
   renderGame, renderRoom, drawMap, layoutBoard, mapLayout, roomLayout, applyTheme,
   paintTile, paintCrate, paintMud, paintPup, paintGood, drawFace, drawBody,

@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const root = path.join(__dirname, '..');
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css',
-                '.png': 'image/png', '.json': 'application/json' };
+                '.png': 'image/png', '.json': 'application/json',
+                '.webmanifest': 'application/manifest+json' };
 http.createServer((req, res) => {
   let p = decodeURIComponent(req.url.split('?')[0]);
   if (p === '/') p = '/test/integration.html';
