@@ -1528,13 +1528,68 @@ function renderGame(dt) {
   /* idle hint */
   if (!G.busy && !G.over) {
     G.hintT += dt;
-    if (G.hintT > 5 && !G.hint) {
-      const m = allMoves(G.B);
-      if (m.length) G.hint = pick(m);
-    }
+    if (G.hintT > 5 && !G.hint) G.hint = bestHint();
   } else { G.hint = null; }
 
   drawCompanion(dt);
+}
+
+/* The best move on the board, not a move on the board.
+
+   A player who has stopped for five seconds has stopped because they
+   cannot see anything. Pointing them at a plain three while a five sits
+   two rows down is worse than useless: it is the game telling them that
+   what they could not find is all there was.
+
+   Every legal swap is tried on the real board and put straight back —
+   findMatches() does not mutate, and the swap is undone before anything
+   else can see it. Scored by how much it clears, with a special worth
+   more than its size and anything touching a goal worth more again.
+   Sixty-odd swaps once, five seconds after the player went quiet. */
+function hintScore(a, b) {
+  const ca = G.B.cell[a[0]][a[1]], cb = G.B.cell[b[0]][b[1]];
+  if (!ca || !cb || !ca.tile || !cb.tile) return -1;
+  /* two specials together, or anything with a rainbow, beats any match */
+  if (ca.tile.sp === SP.RAIN || cb.tile.sp === SP.RAIN) return 200;
+  if (ca.tile.sp !== SP.NONE && cb.tile.sp !== SP.NONE) return 180;
+  let best = 0, wanted = 0;
+  const collect = G.goals.filter(g => g.kind === GK.COLLECT && g.have < g.need).map(g => g.arg);
+  /* The swap happens on the live board, so putting it back is not
+     optional and not conditional. Anything thrown in between would
+     otherwise leave two tiles transposed with no move having been made. */
+  swapTiles(G.B, a, b);
+  try {
+    findMatches(G.B).forEach(run => {
+      if (run.len > best) best = run.len;
+      run.cells.forEach(([r2, c2]) => {
+        const cell = openCell(G.B, r2, c2);
+        if (!cell) return;
+        if (cell.mud) wanted += 3;
+        if (cell.tile && collect.indexOf(cell.tile.type) >= 0) wanted += 1;
+        /* a match beside a crate is what breaks the crate */
+        [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(d => {
+          const nb = openCell(G.B, r2 + d[0], c2 + d[1]);
+          if (nb && nb.crate) wanted += 2;
+        });
+      });
+    });
+  } finally {
+    swapTiles(G.B, a, b);
+  }
+  /* four and five in a row make specials, which are worth more than the
+     one extra tile they clear */
+  const shape = best >= 5 ? 40 : best >= 4 ? 18 : best;
+  return shape + wanted;
+}
+function bestHint() {
+  const moves = allMoves(G.B);
+  if (!moves.length) return null;
+  let best = null, bestScore = -1;
+  moves.forEach(m => {
+    const v = hintScore(m[0], m[1]);
+    if (v > bestScore) { bestScore = v; best = m; }
+  });
+  return best;
 }
 
 /* the pet on the rail, watching */

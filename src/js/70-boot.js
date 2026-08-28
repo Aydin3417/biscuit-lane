@@ -206,7 +206,7 @@ window.BL = {
   openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, confirmQuit,
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
   simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY,
-  popScale, popAlpha, showWin, showLose,
+  popScale, popAlpha, showWin, showLose, bestHint, hintScore,
   /* render entry points, so a frame can be forced without rAF */
   renderGame, renderRoom, drawMap, layoutBoard, mapLayout, roomLayout, applyTheme,
   paintTile, paintCrate, paintMud, paintPup, paintGood, drawFace, drawBody,

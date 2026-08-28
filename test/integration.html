@@ -965,6 +965,49 @@ async function run() {
     return 'low end: ' + notes.join(', ') + '; every one-shot varies';
   });
 
+  await test('the hint points at the best move, and puts the board back', () => {
+    /* It used to pick at random from the legal moves. A player who has
+       stopped for five seconds has stopped because they cannot see
+       anything, and pointing them at a plain three while a five sits two
+       rows down tells them that what they could not find was all there
+       was.
+
+       It also tries every swap on the live board, so the second half of
+       this matters as much as the first: a hint that leaves two tiles
+       transposed has made a move nobody asked for. */
+    const snapshot = () => {
+      const B = BL.game.B, out = [];
+      for (let r = 0; r < B.h; r++) for (let c = 0; c < B.w; c++) {
+        const t = B.cell[r][c].tile;
+        out.push(t ? t.type + ':' + t.sp : '-');
+      }
+      return out.join(',');
+    };
+    let better = 0, total = 0, corrupted = 0;
+    for (let n = 4; n <= 40; n += 4) {
+      BL.startLevel(n, { perks: [] });
+      const before = snapshot();
+      const moves = BL.allMoves(BL.game.B);
+      if (moves.length < 3) continue;
+      const hint = BL.bestHint();
+      if (!hint) continue;
+      if (snapshot() !== before) { corrupted++; continue; }
+      const scores = moves.map(m => BL.hintScore(m[0], m[1]));
+      if (snapshot() !== before) { corrupted++; continue; }
+      const top = Math.max.apply(null, scores);
+      const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+      total++;
+      if (BL.hintScore(hint[0], hint[1]) >= top) better++;
+      /* and it should be meaningfully above the average move, or the
+         scoring is not doing anything */
+      assert(top >= mean, 'level ' + n + ': best ' + top + ' below mean ' + mean.toFixed(1));
+    }
+    assert(corrupted === 0, corrupted + ' levels had tiles left transposed after hinting');
+    assert(total >= 5, 'only ' + total + ' levels had enough moves to judge');
+    assert(better === total, better + ' of ' + total + ' hints were the best move available');
+    return better + ' of ' + total + ' hints were the best move, board untouched every time';
+  });
+
   await test('a matched tile pops rather than deflating', () => {
     /* the curve used to be (1 + k*.5) * (1 - k), which never rises
        above 1 — so the single most common event in the game, clearing

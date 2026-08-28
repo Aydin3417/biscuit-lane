@@ -80,7 +80,7 @@ per frame, for a picture that never changes. A board holds thirty of
 them. It is cached now, the way a tile is.
 
 Open `test/integration.html` in the preview for the browser layer: it
-loads the built game in an iframe and runs 34 checks, driving the real
+loads the built game in an iframe and runs 35 checks, driving the real
 thing through `window.BL`. They cover:
 
 - **the save** — migration, corrupt values, unreadable files, timestamps
@@ -1252,3 +1252,28 @@ that helped. Two things were wrong:
 Lighter wood, a defined dark edge, five grain lines instead of ten, and
 a quieter brace. Nothing was removed; the drawing is the same drawing at
 a size where it is legible.
+
+## A hint that points somewhere worth going
+
+The board offers a hint after five seconds of stillness, which was the
+right idea executed as `pick(allMoves(B))` — a uniformly random legal
+swap.
+
+A player who has stopped for five seconds has stopped because they
+cannot see anything. Ringing a plain three while a five sits two rows
+down is worse than no hint at all: it tells them that what they could
+not find was all there was.
+
+Every legal swap is now scored — how long the run is, with four and five
+worth more than the one extra tile they clear because they make
+specials, and anything that lands on mud, or beside a crate, or on a
+colour the level is asking for, worth more again. Two specials together,
+or anything involving a rainbow, beats every ordinary match.
+
+The scoring tries each swap on the live board and undoes it, so the undo
+is in a `finally`: a hint that throws halfway through would otherwise
+leave two tiles transposed with no move having been made. The test
+checks both halves — that the hint is the highest-scoring move available
+on ten levels, and that the board is byte-identical afterwards.
+
+Sixty-odd swaps, once, five seconds after the player went quiet.
