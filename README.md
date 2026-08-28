@@ -1175,3 +1175,31 @@ Level 3 still spends its whole budget, which is what a score level is
 for. Levels 1 and 2 now read `TRIVIAL` to `test/ai.js`, and that is the
 correct verdict for them — the flag has no notion of position, and a
 first level a new player cannot lose is the point rather than a fault.
+
+## Turkish that is Turkish
+
+The two language books have been at full key parity for a long time,
+which is a different thing from both of them being written properly.
+
+`goalLine()` built a collect goal by appending the breed to the end of
+the translated phrase:
+
+```
+T('goal_collect', { n }) + ' ' + breedName(...)
+```
+
+In English that gives "Collect 44 Marmalade". In Turkish it gives
+**"44 tane topla Marmelat"** — English word order wearing Turkish words.
+The breed belongs inside the sentence, so it is a placeholder now and
+each language orders its own: `'Collect {n} {breed}'` against
+`'{n} {breed} topla'`. Collect is thirty-five percent of every goal in
+the game, so this was the most frequently read line in it.
+
+The brand line under the logo was `Ev` — the word "home", on its own,
+as a tagline. It is `Pati Evi` now, which is what the place would
+actually be called.
+
+Everything else held up: the level card's perk chips wrap onto two rows
+in Turkish without spilling, the shop cards take the longer names, and
+the settings sheet's three-way light control still gets its own line
+where it needs it.

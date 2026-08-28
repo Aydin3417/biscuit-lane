@@ -941,7 +941,12 @@ const NAME_POOL = {
 function goalLine(g) {
   if (g.kind === GK.SCORE) return T('goal_score', { n: fmt(g.need !== undefined ? g.need : g[2]) });
   const n = g.need !== undefined ? g.need : g[2];
-  if (g.kind === GK.COLLECT) return T('goal_collect', { n }) + ' ' + breedName(g.arg !== undefined ? g.arg : g[1]);
+  /* The breed goes inside the sentence, not after it. Glued on the end
+     it reads "Collect 44 Marmalade" in English and "44 tane topla
+     Marmelat" in Turkish, which is English word order wearing Turkish
+     words. Each language orders its own sentence. */
+  if (g.kind === GK.COLLECT)
+    return T('goal_collect', { n, breed: breedName(g.arg !== undefined ? g.arg : g[1]) });
   if (g.kind === GK.CRATE) return T('goal_crate', { n });
   if (g.kind === GK.MUD) return T('goal_mud', { n });
   if (g.kind === GK.BRAMBLE) return T('goal_bramble', { n });

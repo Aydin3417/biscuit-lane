@@ -154,7 +154,7 @@ const STRINGS = {
     /* generic */
     ok: 'Alright', cancel: 'Cancel', close: 'Close',
     goal_score: 'Score {n}',
-    goal_collect: 'Collect {n}',
+    goal_collect: 'Collect {n} {breed}',
     goal_crate: 'Break {n} crates',
     goal_mud: 'Clean {n} muddy tiles',
     goal_rescue: 'Walk {n} home',
@@ -236,7 +236,7 @@ const STRINGS = {
   },
 
   tr: {
-    brandSub: 'Ev',
+    brandSub: 'Pati Evi',
     tab_home: 'Ev', tab_play: 'Oyna', tab_shop: 'Dükkan', tab_family: 'Aile',
 
     onb_hi: 'Kapının önüne bir sepet bırakmışlar',
@@ -374,7 +374,7 @@ const STRINGS = {
 
     ok: 'Tamam', cancel: 'Vazgeç', close: 'Kapat',
     goal_score: '{n} puan',
-    goal_collect: '{n} tane topla',
+    goal_collect: '{n} {breed} topla',
     goal_crate: '{n} kasa kır',
     goal_mud: '{n} çamurlu kare temizle',
     goal_rescue: '{n} tanesini eve götür',
