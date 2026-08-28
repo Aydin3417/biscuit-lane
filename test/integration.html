@@ -1,0 +1,1095 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Biscuit Lane — integration tests</title>
+<style>
+  body { font: 14px/1.5 ui-monospace, Menlo, Consolas, monospace; margin: 0; background: #131A26; color: #F6EDE0; }
+  header { padding: 14px 18px; border-bottom: 1px solid #2B3745; display: flex; gap: 14px; align-items: baseline; }
+  h1 { font: 700 15px/1.2 system-ui, sans-serif; margin: 0; }
+  #summary { margin-left: auto; font-weight: 700; }
+  ol { margin: 0; padding: 10px 18px 40px 44px; }
+  li { padding: 3px 0; }
+  .pass { color: #7FBFA3; }
+  .fail { color: #E8798A; }
+  .skip { color: #7B8899; }
+  .detail { color: #A7B4C4; }
+  iframe { position: fixed; right: 8px; bottom: 8px; width: 375px; height: 640px; border: 1px solid #2B3745; border-radius: 8px; opacity: .25; }
+</style>
+<header>
+  <h1>Biscuit Lane — integration tests</h1>
+  <span id="status">booting the game…</span>
+  <span id="summary"></span>
+</header>
+<ol id="out"></ol>
+<iframe id="app" src="../index.html"></iframe>
+
+<script>
+/* Runs the real built game inside an iframe and drives it through the
+   flows that only exist in the DOM: input, modals, screens, the save
+   round-trip. The engine itself is covered by test/sim.js; the level
+   numbers by test/ai.js. This is the layer neither of those can reach. */
+
+const out = document.getElementById('out');
+const RESULTS = window.RESULTS = { pass: 0, fail: 0, tests: [] };
+const tick = () => new Promise(r => Promise.resolve().then(r));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function record(name, ok, detail) {
+  RESULTS.tests.push({ name, ok, detail });
+  ok ? RESULTS.pass++ : RESULTS.fail++;
+  const li = document.createElement('li');
+  li.className = ok ? 'pass' : 'fail';
+  li.textContent = (ok ? '✓ ' : '✗ ') + name + (detail ? '  ' : '');
+  if (detail) {
+    const s = document.createElement('span');
+    s.className = 'detail';
+    s.textContent = detail;
+    li.appendChild(s);
+  }
+  out.appendChild(li);
+}
+async function test(name, fn) {
+  try {
+    const detail = await fn();
+    record(name, true, typeof detail === 'string' ? detail : '');
+  } catch (e) {
+    record(name, false, e && e.message ? e.message : String(e));
+  }
+}
+function assert(cond, msg) { if (!cond) throw new Error(msg || 'assertion failed'); }
+function eq(a, b, msg) { if (a !== b) throw new Error((msg || 'expected') + ': got ' + a + ', wanted ' + b); }
+
+/* ---------- helpers against the running game ---------- */
+let W, D, BL;
+const veilsGone = () => D.querySelectorAll('.veil').forEach(v => v.remove());
+function boardProblems(label) {
+  const G = BL.game, B = G.B, bad = [];
+  let empty = 0, wrong = 0;
+  for (let r = 0; r < B.h; r++) for (let c = 0; c < B.w; c++) {
+    const cl = B.cell[r][c];
+    if (cl.mud < 0 || cl.crate < 0 || cl.ice < 0 || cl.bram < 0) wrong++;
+    if (cl.hole || cl.crate > 0) { if (cl.tile) wrong++; continue; }
+    if (!cl.tile) empty++;
+    else if (cl.tile.type !== -1 && (cl.tile.type < 0 || cl.tile.type >= B.types)) wrong++;
+  }
+  if (empty) bad.push(empty + ' empty cells');
+  if (wrong) bad.push(wrong + ' malformed cells');
+  if (G.moves < 0) bad.push('negative moves');
+  if (!isFinite(G.score) || G.score < 0) bad.push('bad score');
+  if (!isFinite(G.charge) || G.charge < 0 || G.charge > 100) bad.push('charge ' + G.charge);
+  return bad.length ? label + ': ' + bad.join(', ') : null;
+}
+function seedPlayer(opts) {
+  opts = opts || {};
+  const p = BL.makePet(opts.breed || 0, 0, 0, opts.name || 'Tester');
+  BL.save.pets = [p];
+  BL.save.activePet = p.id;
+  BL.save.seen = { swap: 1, pet: 1, special: 1, rescue: 1, bramble: 1 };
+  BL.save.coins = opts.coins === undefined ? 5000 : opts.coins;
+  BL.save.treats = opts.treats === undefined ? 30 : opts.treats;
+  BL.save.hearts = opts.hearts === undefined ? 5 : opts.hearts;
+  BL.save.reached = opts.reached || 60;
+  D.getElementById('onb').classList.remove('on');
+  veilsGone();
+  return p;
+}
+async function playLevel(n, maxMoves) {
+  const G = BL.game;
+  BL.startLevel(n, { perks: BL.perksFor(BL.activePet()) });
+  BL.layoutBoard();
+  G.busy = false;
+  let moves = 0, guard = 0;
+  while (!G.over && G.moves > 0 && guard++ < (maxMoves || 60)) {
+    const ms = BL.allMoves(G.B);
+    if (!ms.length) break;
+    const m = ms[(Math.random() * ms.length) | 0];
+    await BL.tryMove(m[0], m[1]);
+    moves++;
+    /* the winning move hands over to the finish sequence, which clears
+       and refills the board on its own schedule — checking mid-flight
+       would catch a legitimately half-empty board */
+    if (G.over) break;
+    const bad = boardProblems('L' + n + ' move ' + moves);
+    if (bad) throw new Error(bad);
+  }
+  /* let any finish sequence run to the end, then check the final board */
+  for (let i = 0; i < 3000 && !D.getElementById('wNext') && !D.getElementById('lRetry'); i++) await tick();
+  const settled = boardProblems('L' + n + ' after the level ended');
+  if (settled) throw new Error(settled);
+  veilsGone();
+  G.over = true;
+  return moves;
+}
+
+/* ---------- the suite ---------- */
+async function run() {
+  const frame = document.getElementById('app');
+  const t0 = performance.now();
+  for (let i = 0; i < 400; i++) {
+    W = frame.contentWindow;
+    if (W && W.BL && W.BL.save) break;
+    await sleep(50);
+  }
+  D = W.document;
+  BL = W.BL;
+  document.getElementById('status').textContent =
+    'game booted in ' + Math.round(performance.now() - t0) + 'ms';
+  BL.fast = true;
+
+  await test('boots and exposes its debug handle', () => {
+    assert(BL && BL.save && BL.game, 'BL missing');
+    return 'v' + BL.save.v;
+  });
+
+  /* ---- save layer ---- */
+  await test('fresh save has sane defaults', () => {
+    const f = BL.freshSave();
+    assert(f.coins > 0 && f.hearts > 0, 'currency');
+    assert(Array.isArray(f.pets) && f.pets.length === 0, 'pets');
+    assert(f.daily && f.badges, 'new sections');
+    return 'coins ' + f.coins + ', hearts ' + f.hearts;
+  });
+  await test('a v1 save migrates without loss', () => {
+    W.localStorage.setItem('biscuit-lane-v1', JSON.stringify({
+      v: 1, coins: 500, reached: 9, stars: { 1: 3, 2: 2 },
+      pets: [{ id: 'a', breed: 2, coat: 1, name: 'Old', bond: 3, hat: 'crown' }], activePet: 'a'
+    }));
+    BL.loadSave();
+    eq(BL.save.coins, 500, 'coins');
+    eq(BL.save.reached, 9, 'reached');
+    eq(BL.save.pets.length, 1, 'pets');
+    eq(BL.save.pets[0].name, 'Old', 'name');
+    eq(BL.save.pets[0].hat, 'crown', 'hat');
+    assert(BL.save.pets[0].care, 'care added');
+    return 'v1 → v' + BL.save.v;
+  });
+  await test('corrupt values are clamped, not trusted', () => {
+    W.localStorage.setItem('biscuit-lane-v1', JSON.stringify({
+      v: 1, coins: 'lots', treats: -5, hearts: 99, reached: -3,
+      pets: [null, [], { id: 'b', breed: 99, coat: 7, food: null, bond: -4 }],
+      activePet: 'nope', stars: { 3: 9, 4: 'x' }, room: { theme: 'gone', placed: ['nope', 'rug'] }
+    }));
+    BL.loadSave();
+    eq(BL.save.coins, 0, 'coins'); eq(BL.save.treats, 0, 'treats');
+    eq(BL.save.hearts, 5, 'hearts'); eq(BL.save.reached, 1, 'reached');
+    eq(BL.save.pets.length, 1, 'only the real pet survives');
+    assert(BL.save.pets[0].breed <= 5, 'breed clamped');
+    eq(BL.save.stars[3], 3, 'stars clamped'); assert(!BL.save.stars[4], 'junk star dropped');
+    eq(BL.save.room.theme, 'oat', 'theme'); eq(BL.save.room.placed.length, 1, 'placed filtered');
+
+    /* a wall clock that has moved backwards leaves timestamps in the
+       future; the hearts used to freeze until real time caught up, and
+       the chip would say the next one was a day away */
+    W.localStorage.setItem('biscuit-lane-v1', JSON.stringify({
+      v: 2, coins: 50, hearts: 2, reached: 3, pets: [],
+      heartAt: Date.now() + 24 * 3600 * 1000,
+      lastSeen: Date.now() + 24 * 3600 * 1000
+    }));
+    BL.loadSave();
+    assert(BL.save.heartAt <= Date.now() + 1000,
+      'a timestamp from the future survived the load');
+    assert(BL.save.lastSeen <= Date.now() + 1000, 'lastSeen is in the future');
+    return 'all values inside range, no timestamp in the future';
+  });
+  await test('unreadable save falls back instead of throwing', () => {
+    W.localStorage.setItem('biscuit-lane-v1', 'definitely not json');
+    BL.loadSave();
+    assert(BL.save && BL.save.coins > 0, 'no fresh save');
+    return 'recovered';
+  });
+
+  /* ---- the board ---- */
+  seedPlayer();
+  await test('every handcrafted level builds and plays clean', async () => {
+    let moves = 0;
+    for (let n = 1; n <= 60; n++) moves += await playLevel(n, 40);
+    return '60 levels, ' + moves + ' moves, no bad board state';
+  });
+  await test('the endless run keeps its shape', async () => {
+    let moves = 0;
+    for (let n = 61; n <= 80; n++) moves += await playLevel(n, 30);
+    return '20 generated levels, ' + moves + ' moves';
+  });
+  await test('a level ending does not corrupt the next one', async () => {
+    const G = BL.game;
+    BL.startLevel(20, { perks: [] }); BL.layoutBoard(); G.busy = false;
+    const ms = BL.allMoves(G.B);
+    BL.tryMove(ms[0][0], ms[0][1]);       /* deliberately not awaited */
+    BL.confirmQuit(); veilsGone();
+    BL.startLevel(7, { perks: [] }); BL.layoutBoard(); G.busy = false;
+    for (let i = 0; i < 400; i++) await tick();
+    const bad = boardProblems('after quitting mid-cascade');
+    assert(!bad, bad);
+    return 'epoch guard holds';
+  });
+
+  /* ---- results ---- */
+  await test('a win awards stars, coins and the next level', async () => {
+    const G = BL.game;
+    BL.save.coins = 100; BL.save.reached = 1; BL.save.stars = {};
+    BL.startLevel(1, { perks: [] }); BL.layoutBoard(); G.busy = false;
+    G.goals.forEach(g => { if (g.kind !== 'score') g.have = g.need; });
+    G.score = G.starTargets[2] + 500; G.moves = 2;
+    const ms = BL.allMoves(G.B);
+    await BL.tryMove(ms[0][0], ms[0][1]);
+    for (let i = 0; i < 400 && !D.getElementById('wNext'); i++) await tick();
+    assert(D.getElementById('wNext'), 'no win sheet');
+    eq(BL.save.stars[1], 3, 'stars');
+    eq(BL.save.reached, 2, 'unlock');
+    assert(BL.save.coins > 100, 'no coins');
+    veilsGone();
+    return 'coins ' + BL.save.coins + ', 3 stars, level 2 open';
+  });
+  await test('running out of moves offers a retry', async () => {
+    const G = BL.game;
+    BL.startLevel(3, { perks: [] }); BL.layoutBoard(); G.busy = false;
+    G.moves = 1; G.goals.forEach(g => g.have = 0); G.score = 1;
+    const ms = BL.allMoves(G.B);
+    await BL.tryMove(ms[0][0], ms[0][1]);
+    for (let i = 0; i < 400 && !D.getElementById('lRetry'); i++) await tick();
+    assert(D.getElementById('lRetry'), 'no lose sheet');
+    veilsGone();
+    return 'lose sheet shown';
+  });
+
+  /* ---- boosters ---- */
+  await test('boosters are spent and cleared', async () => {
+    const G = BL.game;
+    BL.save.boosters = { moves: 5, hammer: 9, swap: 9, shuffle: 9 };
+    BL.startLevel(25, { perks: [] }); BL.layoutBoard(); G.busy = false;
+    const cv = D.getElementById('board'), rect = cv.getBoundingClientRect();
+    const at = (r, c) => ({ clientX: rect.left + G.ox + G.cell * (c + .5), clientY: rect.top + G.oy + G.cell * (r + .5), bubbles: true, pointerId: 1 });
+    const h0 = BL.save.boosters.hammer;
+    D.querySelector('.booster[data-id="hammer"]').click();
+    cv.dispatchEvent(new W.PointerEvent('pointerdown', at(2, 2)));
+    for (let i = 0; i < 400 && G.busy; i++) await tick();
+    eq(BL.save.boosters.hammer, h0 - 1, 'hammer');
+    const s0 = BL.save.boosters.shuffle;
+    D.querySelector('.booster[data-id="shuffle"]').click();
+    for (let i = 0; i < 400 && G.busy; i++) await tick();
+    eq(BL.save.boosters.shuffle, s0 - 1, 'shuffle');
+    assert(BL.hasMove(G.B), 'shuffle left a dead board');
+    const bad = boardProblems('after boosters');
+    assert(!bad, bad);
+    return 'hammer, shuffle';
+  });
+
+  /* ---- daily walk ---- */
+  await test('the daily walk is free and leaves progress alone', async () => {
+    const G = BL.game;
+    BL.save.hearts = 0;
+    const stars0 = JSON.stringify(BL.save.stars), reached0 = BL.save.reached;
+    BL.startLevel(BL.DAILY_LEVEL, { perks: [] }); BL.layoutBoard(); G.busy = false;
+    eq(BL.save.hearts, 0, 'a heart was taken');
+    await playLevelInline(G, 20);
+    eq(JSON.stringify(BL.save.stars), stars0, 'stars changed');
+    eq(BL.save.reached, reached0, 'reached changed');
+    assert(BL.save.stars['-1'] === undefined, 'daily wrote a star entry');
+    return 'no heart, no star entry';
+  });
+  await test('the daily board is the same all day and changes overnight', () => {
+    const a = JSON.stringify(BL.dailyLevel(30, 20692));
+    const b = JSON.stringify(BL.dailyLevel(30, 20692));
+    const c = JSON.stringify(BL.dailyLevel(30, 20693));
+    assert(a === b, 'not deterministic');
+    assert(a !== c, 'same board tomorrow');
+    return 'seeded by the date';
+  });
+  await test('the daily pays out once a day and keeps a streak', () => {
+    BL.save.daily = { day: BL.dayNumber(), done: false, best: 0, streak: 2 };
+    const c0 = BL.save.coins;
+    const first = BL.dailyDone(5000);
+    const again = BL.dailyDone(9000);
+    assert(first.first === true, 'first clear not rewarded');
+    assert(again.first === false, 'paid twice');
+    eq(BL.save.daily.best, 9000, 'best score');
+    eq(BL.save.daily.streak, 3, 'streak');
+    BL.save.daily = { day: BL.dayNumber() - 3, done: true, best: 1, streak: 4 };
+    eq(BL.dailyState().streak, 0, 'a gap should reset the streak');
+    return 'coins +' + (BL.save.coins - c0);
+  });
+
+  /* ---- pets ---- */
+  await test('a trait is earned from how a pet is raised', () => {
+    const p = BL.makePet(1, 0, 0, 'Trait');
+    p.bond = 5; p.care = { feed: 0, play: 0, wash: 6, sleep: 0 };
+    eq(BL.settleTrait(p), 'tidy', 'trait');
+    eq(BL.traitMoveBonus(p), 1, 'tidy should be worth a move');
+    const q = BL.makePet(1, 0, 0, 'Greedy');
+    q.bond = 5; q.care = { feed: 9, play: 1, wash: 0, sleep: 0 };
+    eq(BL.settleTrait(q), 'greedy', 'trait');
+    assert(BL.traitCoinScale(q) > 1, 'greedy should pay more');
+    const young = BL.makePet(1, 0, 0, 'Young');
+    young.bond = 1; young.care = { feed: 9, play: 0, wash: 0, sleep: 0 };
+    assert(BL.settleTrait(young) === null, 'settled too early');
+    return 'tidy, greedy, and not before bond 3';
+  });
+  await test('badges unlock once and pay once', () => {
+    BL.save.badges = {};
+    BL.save.stats.cleared = 12; BL.save.stats.bestCombo = 6; BL.save.stats.rescued = 11;
+    BL.save.stars = { 1: 3, 2: 3, 3: 2 };
+    const c0 = BL.save.coins;
+    const won = BL.checkBadges();
+    assert(won.length > 0, 'nothing unlocked');
+    assert(BL.save.coins > c0, 'no reward');
+    eq(BL.checkBadges().length, 0, 'unlocked twice');
+    return won.length + ' unlocked, coins +' + (BL.save.coins - c0);
+  });
+
+  /* ---- keyboard ---- */
+  await test('the board can be played without a pointer', async () => {
+    const G = BL.game;
+    BL.startLevel(5, { perks: [] }); BL.layoutBoard(); G.busy = false;
+    const board = D.getElementById('board');
+    eq(board.tabIndex, 0, 'not focusable');
+    eq(board.getAttribute('role'), 'application', 'no role');
+    const key = k => board.dispatchEvent(new W.KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+    key('ArrowRight');
+    assert(G.cursor, 'no cursor after the first key');
+    const m = BL.allMoves(G.B)[0];
+    G.cursor = [m[0][0], m[0][1]];
+    const before = G.moves;
+    key('Enter');
+    assert(G.sel, 'Enter did not pick a tile up');
+    const dr = m[1][0] - m[0][0], dc = m[1][1] - m[0][1];
+    key(dr === -1 ? 'ArrowUp' : dr === 1 ? 'ArrowDown' : dc === -1 ? 'ArrowLeft' : 'ArrowRight');
+    for (let i = 0; i < 400 && G.busy; i++) await tick();
+    eq(G.moves, before - 1, 'the swap did not happen');
+    await sleep(80);            /* say() debounces briefly */
+    assert(D.getElementById('live').textContent.length > 0, 'nothing was announced');
+    return 'arrows, Enter, live region: "' + D.getElementById('live').textContent.slice(0, 40) + '"';
+  });
+
+  /* ---- presentation ---- */
+  await test('nothing spills or is cut off, in either language, on a small phone', async () => {
+    /* This used to set SAVE.settings.lang and re-render, which does
+       nothing: LANG is a module variable only the settings sheet wrote.
+       Both passes were measuring English — and Turkish is the longer of
+       the two, so the one that overflows was the one never looked at. */
+    const problems = [];
+    const frameEl = D.getElementById('frame');
+    const iframe = document.getElementById('app');
+    const wasWidth = iframe.style.width;
+    const langWas = BL.save.settings.lang;
+    BL.save.pets[0].name = 'Bartholomew';
+    BL.save.coins = 999999; BL.save.treats = 8888;
+
+    for (const width of ['320px', '430px']) {
+      iframe.style.width = width;
+      await sleep(90);
+      for (const lang of ['en', 'tr']) {
+        BL.setLang(lang);
+        /* the labels only a screen reader hears live in the markup, so
+           nothing would ever translate them unless something says to */
+        if (width === '320px') {
+          BL.setScreen('home');
+          await sleep(30);
+          ['#btnSettings', '#btnQuit', '#companion', '#board'].forEach(sel => {
+            const el = D.querySelector(sel);
+            if (!el) return;
+            const label = el.getAttribute('aria-label') || '';
+            if (!label) { problems.push(lang + ' ' + sel + ' has no label'); return; }
+            const turkish = /[çğıöşüÇĞİÖŞÜ]|tuşları|Ayarlar|Bölümden|Dostunun/.test(label);
+            if (lang === 'tr' && !turkish) problems.push('tr ' + sel + ' still reads "' + label.slice(0, 26) + '"');
+          });
+        }
+        for (const sc of ['home', 'map', 'shop', 'family']) {
+          BL.setScreen(sc);
+          if (sc === 'shop') BL.renderShop();
+          if (sc === 'family') BL.renderFamily();
+          if (sc === 'home') BL.renderHome();
+          await sleep(30);
+          const frame = frameEl.getBoundingClientRect();
+          const where = width + '/' + lang + '/' + sc + ' ';
+          D.querySelectorAll('.screen.on *').forEach(el => {
+            const cs = W.getComputedStyle(el);
+            if (cs.display === 'none' || cs.visibility === 'hidden') return;
+            const r = el.getBoundingClientRect();
+            if (!r.width || !r.height) return;
+            if (r.right > frame.right + 1 || r.left < frame.left - 1) {
+              problems.push(where + 'spills: ' + (el.className || el.tagName).split(' ')[0]);
+            }
+            /* text cut off inside its own box, which no overflow check sees */
+            if (el.children.length === 0 &&
+                el.scrollWidth > el.clientWidth + 1 &&
+                cs.overflowX !== 'auto' && cs.overflowX !== 'scroll' &&
+                (el.textContent || '').trim().length > 1) {
+              problems.push(where + 'cut off: "' + el.textContent.trim().slice(0, 24) + '"');
+            }
+          });
+        }
+      }
+    }
+    iframe.style.width = wasWidth || '375px';
+    BL.setLang(langWas);
+    await sleep(60);
+    assert(!problems.length, [...new Set(problems)].slice(0, 4).join('; '));
+    return 'clean at 320 and 430px, English and Turkish';
+  });
+
+  await test('every colour the game writes text in is readable', async () => {
+    /* Light mode was never measured. The accent, which draws coin counts
+       and level numbers, carried 2.66:1 on its own surface — below even
+       the threshold for large text — and the status pills, which carry
+       a pet's stats at 11px, were at 2.8. Dark mode was fine, which is
+       why nobody noticed: the game is dark by default. */
+    const lum = (r, g, b) => {
+      const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+      return .2126 * f(r) + .7152 * f(g) + .0722 * f(b);
+    };
+    const parse = str => {
+      const m = str.match(/rgba?\(([^)]+)\)/);
+      if (m) { const p = m[1].split(',').map(Number); return [p[0], p[1], p[2]]; }
+      const h = str.trim().replace('#', '');
+      if (h.length === 6) return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+      return null;
+    };
+    const ratio = (a, b) => {
+      const A = lum(a[0], a[1], a[2]) + .05, B = lum(b[0], b[1], b[2]) + .05;
+      return Math.max(A, B) / Math.min(A, B);
+    };
+    /* every pair the stylesheet actually puts text on */
+    const PAIRS = [
+      ['text on surface', '--text', '--surface'],
+      ['text on bg', '--text', '--bg'],
+      ['dim on surface', '--text-dim', '--surface'],
+      ['faint on surface', '--text-faint', '--surface'],
+      ['accent as text', '--accent-strong', '--surface'],
+      ['pill ok', '--sage', '--sage-soft'],
+      ['pill warn', '--accent-strong', '--accent-soft'],
+      ['pill bad', '--rose', '--rose-soft'],
+      ['heart chip', '--rose', '--bg'],
+      ['treat chip', '--plum', '--bg'],
+      ['ink on accent', '--accent-ink', '--accent']
+    ];
+    const bad = [];
+    let worst = 99, worstAt = '';
+    const themeWas = BL.save.settings.theme;
+    for (const th of ['light', 'dark']) {
+      BL.save.settings.theme = th;
+      BL.applyTheme();
+      await sleep(80);
+      const cs = W.getComputedStyle(D.documentElement);
+      for (const [label, fg, bg] of PAIRS) {
+        const A = parse(cs.getPropertyValue(fg).trim());
+        const B = parse(cs.getPropertyValue(bg).trim());
+        if (!A || !B) { bad.push(th + ' ' + label + ': token missing'); continue; }
+        const r = ratio(A, B);
+        if (r < worst) { worst = r; worstAt = th + ' ' + label; }
+        if (r < 4.5) bad.push(th + ' ' + label + ' ' + r.toFixed(2));
+      }
+    }
+    /* and the numerals the canvas draws, which are not CSS and so were
+       not covered: a cleared level's number is white on sage, which is
+       fine on a deep green and 2.1:1 on a pale mint */
+    const coatLum = hex => {
+      const c = parse(hex);
+      return (c[0] * .2126 + c[1] * .7152 + c[2] * .0722) / 255;
+    };
+    const inkOn = hex => (coatLum(hex) > .45 ? '#22271C' : '#FFFFFF');
+    for (const th of ['light', 'dark']) {
+      BL.save.settings.theme = th;
+      BL.applyTheme();
+      await sleep(70);
+      [['lane cleared node', BL.PAL.sage], ['lane current node', BL.PAL.accent]]
+        .forEach(([label, fill]) => {
+          const r = ratio(parse(inkOn(fill)), parse(fill));
+          if (r < worst) { worst = r; worstAt = th + ' ' + label; }
+          if (r < 4.5) bad.push(th + ' ' + label + ' ' + r.toFixed(2));
+        });
+    }
+
+    BL.save.settings.theme = themeWas;
+    BL.applyTheme();
+    assert(!bad.length, bad.slice(0, 4).join('; ') + ' (4.5:1 is the line for small text)');
+    return 'all above 4.5:1, worst ' + worst.toFixed(2) + ' at ' + worstAt;
+  });
+
+  await test('every screen renders in both themes', () => {
+    for (const th of ['light', 'dark', 'auto']) {
+      BL.save.settings.theme = th; BL.applyTheme();
+      BL.setScreen('home'); BL.renderHome(); BL.roomLayout();
+      for (let i = 0; i < 3; i++) BL.renderRoom(1 / 60);
+      BL.setScreen('map'); BL.mapLayout(); BL.drawMap();
+      BL.setScreen('game'); BL.startLevel(39, { perks: [] }); BL.layoutBoard();
+      for (let i = 0; i < 3; i++) BL.renderGame(1 / 60);
+    }
+    return 'light, dark, auto';
+  });
+  await test('the lane does not grow a canvas as you progress', () => {
+    const sizes = [12, 80, 500, 5000].map(n => {
+      BL.save.reached = n;
+      BL.setScreen('map'); BL.mapLayout(); BL.drawMap();
+      const cv = D.getElementById('mapCanvas');
+      return cv.width * cv.height;
+    });
+    assert(new Set(sizes).size === 1, 'canvas grew: ' + sizes.join(', '));
+    BL.save.reached = 60;
+    return (sizes[0] * 4 / 1048576).toFixed(1) + 'MB at every level';
+  });
+  await test('a frame stays inside the 60fps budget', () => {
+    BL.setScreen('game'); BL.startLevel(39, { perks: [] }); BL.layoutBoard();
+    for (let i = 0; i < 20; i++) BL.renderGame(1 / 60);
+    const t = performance.now();
+    for (let i = 0; i < 120; i++) BL.renderGame(1 / 60);
+    const ms = (performance.now() - t) / 120;
+    assert(ms < 16.7, 'frame took ' + ms.toFixed(2) + 'ms');
+
+    /* And under load: the effects layer asked for the heaviest thing it
+       can be given, every cell on the board bursting at once, which is
+       what the end of a whole-board combo looks like.
+
+       Judged on the ninetieth percentile of twenty-four frames, not on
+       the worst one. The worst one is not a measure of this renderer: a
+       three-hundred-particle burst spikes to 21ms on the same machine
+       and in the same second that an eight-hundred-particle burst runs
+       at 9ms, because what that frame caught was a garbage collection
+       or another process. Sustained cost is what decides whether the
+       animation looks smooth; a single late frame in four hundred
+       milliseconds is not visible and not fixable here. The worst frame
+       is still held to a ceiling that a real stall would break. */
+    const G = BL.game;
+    for (let r2 = 0; r2 < G.B.h; r2++)
+      for (let c2 = 0; c2 < G.B.w; c2++) {
+        BL.FX.pop(G.ox + (c2 + .5) * G.cell, G.oy + (r2 + .5) * G.cell,
+          BL.PAL.accent, G.cell, { n: 9 });
+      }
+    const born = BL.FX.count();
+    const f = [];
+    for (let i = 0; i < 24; i++) {
+      const t2 = performance.now();
+      BL.renderGame(1 / 60);
+      f.push(performance.now() - t2);
+    }
+    f.sort((a2, b2) => a2 - b2);
+    const med = f[12], p90 = f[21], worst = f[23];
+    assert(p90 < 16.7, born + ' particles: nine frames in ten cost ' + p90.toFixed(1) + 'ms');
+    assert(worst < 45, born + ' particles pushed a frame to ' + worst.toFixed(1) + 'ms');
+    return ms.toFixed(2) + 'ms per frame; with ' + born + ' particles alive ' +
+      med.toFixed(1) + 'ms median, ' + p90.toFixed(1) + 'ms at the 90th';
+  });
+
+  await test('nothing on the board arrives unexplained', async () => {
+    /* Crates, mud and ice used to appear with no word about them: the
+       first crate turned up on level 6 and nothing said that clearing a
+       tile beside it is what breaks it. Working out the rules is not the
+       puzzle. */
+    const FIRST = {};
+    for (let n = 1; n <= 60 && Object.keys(FIRST).length < 5; n++) {
+      const def = BL.levelDef(n);
+      const map = def.map ? def.map.join('') : '';
+      const goals = def.goals.map(g => g[0]);
+      if (/[cC]/.test(map) && !FIRST.crate) FIRST.crate = n;
+      if (/[mM]/.test(map) && !FIRST.mud) FIRST.mud = n;
+      if (/i/.test(map) && !FIRST.ice) FIRST.ice = n;
+      if (goals.indexOf('bramble') >= 0 && !FIRST.bramble) FIRST.bramble = n;
+      if (goals.indexOf('rescue') >= 0 && !FIRST.rescue) FIRST.rescue = n;
+    }
+    const missing = [];
+    for (const key of Object.keys(FIRST)) {
+      const n = FIRST[key];
+      BL.save.seen = {};
+      Object.keys(FIRST).forEach(k => { if (k !== key) BL.save.seen[k] = 1; });
+      BL.save.seen.swap = 1; BL.save.seen.pet = 1; BL.save.seen.special = 1;
+      BL.save.hearts = 5;
+      BL.save.reached = 60;
+      D.querySelectorAll('.veil').forEach(v => v.remove());
+      BL.setScreen('map');
+      BL.openLevelIntro(n);
+      await sleep(140);
+      const go = D.getElementById('liGo');
+      if (!go) { missing.push(key + ': no way into level ' + n); continue; }
+      go.click();
+      await sleep(700);
+      const card = D.querySelector('.sheet');
+      const said = card ? card.textContent.replace(/\s+/g, ' ').trim() : '';
+      if (!said) missing.push(key + ' (first on level ' + n + ') is never explained');
+      D.querySelectorAll('.veil').forEach(v => v.remove());
+      BL.game.over = true;
+    }
+    BL.save.seen = {};
+    assert(!missing.length, missing.join('; '));
+    return Object.keys(FIRST).map(k => k + ' L' + FIRST[k]).join(', ');
+  });
+
+  await test('a dialog takes the keyboard with it', async () => {
+    /* Open the settings during a level and press the arrow keys to move
+       around it, and the board behind used to receive every one of them:
+       the cursor walked over the tiles and Enter spent a move on a swap
+       nobody chose. The players who hit this are the ones playing by
+       keyboard. */
+    BL.fast = true;
+    D.querySelectorAll('.veil').forEach(v => v.remove());
+    BL.setScreen('game');
+    BL.startLevel(5, { perks: [] });
+    BL.layoutBoard();
+    await sleep(320);
+    BL.game.busy = false;
+    const board = D.getElementById('board');
+    board.focus();
+    const key = k => board.dispatchEvent(new W.KeyboardEvent('keydown', { key: k, bubbles: true }));
+    key('ArrowRight'); key('ArrowRight');
+    await sleep(60);
+    const cursorBefore = JSON.stringify(BL.game.cursor);
+    const movesBefore = BL.game.moves;
+
+    BL.openSettings();
+    await sleep(220);
+    const active = D.activeElement;
+    assert(active && active.closest && active.closest('.sheet'),
+      'the dialog did not take focus (it went to ' + (active ? active.tagName : 'nothing') + ')');
+
+    key('ArrowDown'); key('ArrowDown'); key('Enter'); key('ArrowRight'); key('Enter');
+    await sleep(360);
+    assert(JSON.stringify(BL.game.cursor) === cursorBefore,
+      'the board cursor moved behind the dialog');
+    assert(BL.game.moves === movesBefore,
+      'a move was spent behind the dialog');
+
+    /* Escape closes the top sheet, and focus comes back */
+    const veil = D.querySelector('.veil');
+    veil.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await sleep(360);
+    assert(!D.querySelector('.veil'), 'Escape did not close the dialog');
+
+    BL.fast = false;
+    BL.game.over = true;
+    D.querySelectorAll('.veil').forEach(v => v.remove());
+    return 'focus moves in, keys stay in, Escape closes';
+  });
+
+  await test('tapping twice does not pay twice', async () => {
+    /* A modal stays in the document for 300ms while it fades, so it goes
+       on taking taps the whole time. Three taps on Play used to spend
+       three hearts and start one level. */
+    D.querySelectorAll('.veil').forEach(v => v.remove());
+    BL.save.hearts = 5;
+    BL.setScreen('map');
+    BL.openLevelIntro(1);
+    await sleep(160);
+    const go = D.getElementById('liGo');
+    assert(go, 'the level card has no Play button');
+    go.click(); go.click(); go.click();
+    await sleep(240);
+    assert(BL.save.hearts === 4,
+      'three taps on Play cost ' + (5 - BL.save.hearts) + ' hearts');
+
+    /* and the same shape in the shop: one hat, one payment */
+    D.querySelectorAll('.veil').forEach(v => v.remove());
+    BL.game.over = true;
+    BL.setScreen('shop');
+    BL.save.coins = 1000;
+    BL.save.hats = {};
+    BL.renderShop();
+    await sleep(120);
+    const style = [...D.querySelectorAll('#scr-shop button')].filter(b => /Style|Stil/.test(b.textContent))[0];
+    if (style) { style.click(); await sleep(140); }
+    const hat = [...D.querySelectorAll('#scr-shop [data-buy]')]
+      .find(b => b.dataset.kind === 'hat' && b.dataset.buy !== 'none');
+    assert(hat, 'no hat on sale');
+    const before = BL.save.coins;
+    hat.click(); hat.click(); hat.click();
+    await sleep(200);
+    const spent = before - BL.save.coins;
+    const cost = BL.save.coins === before ? 0 : spent;
+    assert(BL.save.hats[hat.dataset.buy] === 1, 'the hat was not bought');
+    assert(spent > 0 && spent === cost && spent < before,
+      'three taps spent ' + spent + ' coins');
+    /* the real assertion: it cost one hat's worth, not three */
+    const dup = spent;
+    assert(dup <= 300, 'a single hat cost ' + dup + ' coins');
+
+    /* and the same on the losing sheet, which is a different handler
+       spending the same heart. Every button in a sheet is disabled the
+       moment it starts closing, so this covers the ones not written yet
+       as well as Retry. */
+    D.querySelectorAll('.veil').forEach(v => v.remove());
+    BL.fast = true;
+    BL.save.hearts = 5;
+    BL.setScreen('game');
+    BL.startLevel(30, { perks: [] });
+    BL.layoutBoard();
+    await sleep(320);
+    BL.game.moves = 0; BL.game.busy = false; BL.game.over = false;
+    const legal = BL.allMoves(BL.game.B);
+    if (legal.length) await BL.tryMove(legal[0][0], legal[0][1]);
+    await sleep(700);
+    const lose = [...D.querySelectorAll('.sheet')].find(x => x.querySelector('#lRetry'));
+    if (lose) {
+      const h0 = BL.save.hearts;
+      const retry = lose.querySelector('#lRetry');
+      retry.click(); retry.click(); retry.click();
+      await sleep(500);
+      assert(BL.save.hearts === h0 - 1,
+        'three taps on Retry cost ' + (h0 - BL.save.hearts) + ' hearts');
+    }
+    BL.fast = false;
+    BL.game.over = true;
+    D.querySelectorAll('.veil').forEach(v => v.remove());
+    return 'one heart to play, one hat, one heart to retry';
+  });
+
+  await test('every sound makes a sound, and the loud ones are the loud ones', async () => {
+    /* Rendered offline and measured. Nothing else in the suite can hear
+       anything, so a sound that is silent, clipped, or swallowed by its
+       own filter is otherwise invisible — the chain reward was ten times
+       quieter than the match it crowns and nobody could have known. */
+    const OAC = W.OfflineAudioContext || W.webkitOfflineAudioContext;
+    if (!OAC) return 'no offline audio here — skipped';
+    /* Leave the board and wait for it to go quiet. A level that is still
+       filling pours its own sounds into whatever context is current,
+       which is the one being measured — and starting a fresh level to
+       stop it only fills another board. */
+    BL.fast = false;
+    BL.setScreen('map');
+    const SR = 44100;
+    const cases = [
+      ['tap', []], ['select', []], ['bad', []], ['swap', []],
+      ['pop', [1, 0, 0]], ['combo', [2]], ['rocket', [0]], ['bomb', [0]],
+      ['rainbow', []], ['crate', [0]], ['ice', [0]], ['creak', []], ['snip', [0]],
+      ['mud', [0]], ['drop', [0]], ['land', [.8, 0]], ['whoosh', [0]],
+      ['coin', []], ['star', [0]], ['chargeReady', []], ['win', []], ['lose', []],
+      ['levelup', []], ['meow', [1]], ['bark', [1]], ['purr', [1]], ['eat', []],
+      ['splash', []], ['snore', []], ['tension', [.7]], ['swish', [true]], ['brush', []]
+    ];
+    const realAC = W.AudioContext, realWK = W.webkitAudioContext;
+    const peaks = {};
+    const bad = [];
+    /* a control: render a context nobody was asked to play into. If that
+       is not silent, something else in the page is making noise and every
+       number below is meaningless. */
+    const measure = async (fn) => {
+      const off = new OAC(2, SR * 3, SR);
+      off.resume = () => Promise.resolve();
+      W.AudioContext = function () { return off; };
+      W.webkitAudioContext = undefined;
+      BL.audio.reset();
+      BL.audio.init();
+      let err = null;
+      try { fn(); } catch (e) { err = e.message; }
+      W.AudioContext = realAC; W.webkitAudioContext = realWK;
+      const d = (await off.startRendering()).getChannelData(0);
+      let peak = 0, clipped = 0, last = 0;
+      for (let i = 0; i < d.length; i++) {
+        const a = Math.abs(d[i]);
+        if (a > peak) peak = a;
+        if (a > .999) clipped++;
+        if (a > .0015) last = i;
+      }
+      return { peak, clipped, secs: last / SR, err };
+    };
+    let control = { peak: 1 };
+    for (let i = 0; i < 10 && control.peak >= .004; i++) {
+      await sleep(200);
+      control = await measure(() => { });
+    }
+    assert(control.peak < .004,
+      'the page would not go quiet (control peak ' + control.peak.toFixed(3) + ')');
+    for (const [name, args] of cases) {
+      if (typeof BL.SFX[name] !== 'function') { bad.push(name + ' is missing'); continue; }
+      const off = new OAC(2, SR * 3, SR);
+      off.resume = () => Promise.resolve();
+      W.AudioContext = function () { return off; };
+      W.webkitAudioContext = undefined;
+      BL.audio.reset();
+      BL.audio.init();
+      try { BL.SFX[name].apply(null, args); }
+      catch (e) { bad.push(name + ' threw: ' + e.message); }
+      W.AudioContext = realAC; W.webkitAudioContext = realWK;
+      let buf;
+      try { buf = await off.startRendering(); }
+      catch (e) { bad.push(name + ' would not render'); continue; }
+      const d = buf.getChannelData(0);
+      let peak = 0, clipped = 0, last = 0;
+      for (let i = 0; i < d.length; i++) {
+        const a = Math.abs(d[i]);
+        if (a > peak) peak = a;
+        if (a > .999) clipped++;
+        if (a > .0015) last = i;
+      }
+      peaks[name] = peak;
+      if (peak < .012) bad.push(name + ' is inaudible (peak ' + peak.toFixed(4) + ')');
+      if (clipped) bad.push(name + ' clips');
+      if (last / SR > 2.2) bad.push(name + ' runs ' + (last / SR).toFixed(1) + 's');
+    }
+    BL.audio.reset();
+    /* the shape of the mix, not just the presence of it */
+    if (peaks.combo <= peaks.pop) bad.push('the chain reward is quieter than the match it crowns');
+    if (peaks.win <= peaks.star) bad.push('winning is quieter than a star');
+    if (peaks.tap > peaks.bomb) bad.push('a tap (' + peaks.tap + ') is louder than a bomb (' + peaks.bomb + ')');
+    /* and the bed it all plays over. It bypasses the compressor that
+       holds the effects together, so nothing but this keeps it down —
+       it used to peak level with the win fanfare. */
+    const BEAT = .52;
+    const off = new OAC(2, SR * 14, SR);
+    off.resume = () => Promise.resolve();
+    W.AudioContext = function () { return off; };
+    W.webkitAudioContext = undefined;
+    BL.audio.reset();
+    BL.audio.init();
+    BL.audio.au.musBus.gain.value = .13;
+    BL.audio.step = 0;
+    for (let i = 0; i < Math.floor(11 / BEAT); i++) {
+      BL.audio.beat(.1 + i * BEAT);
+      BL.audio.step = i + 1;
+    }
+    W.AudioContext = realAC; W.webkitAudioContext = realWK;
+    const md = (await off.startRendering()).getChannelData(0);
+    let mPeak = 0, mSum = 0, mClip = 0;
+    for (let i = 0; i < md.length; i++) {
+      const a = Math.abs(md[i]);
+      if (a > mPeak) mPeak = a;
+      if (a > .999) mClip++;
+      mSum += md[i] * md[i];
+    }
+    BL.audio.reset();
+    const mRms = Math.sqrt(mSum / md.length);
+    if (mClip) bad.push('the music clips');
+    if (mPeak < .04) bad.push('the music is inaudible (peak ' + mPeak.toFixed(3) + ')');
+    if (mPeak > peaks.win) bad.push('the music (' + mPeak.toFixed(3) +
+      ') is louder than winning (' + peaks.win.toFixed(3) + ')');
+
+    assert(!bad.length, bad.slice(0, 4).join('; '));
+    return cases.length + ' sounds, peaks ' +
+      Math.min.apply(null, Object.values(peaks)).toFixed(3) + '-' +
+      Math.max.apply(null, Object.values(peaks)).toFixed(3) +
+      '; music peak ' + mPeak.toFixed(3) + ' rms ' + mRms.toFixed(4) + '; none clipped';
+  });
+
+  await test('sounds have weight, and no two plays are the same', async () => {
+    /* Two things that separate a game that sounds made from one that
+       sounds cheap, and neither of them is audible to any other check
+       in this file.
+
+       Weight: almost everything here lived above 200Hz, which is why it
+       all sounded like a phone speaker even on headphones. An impact
+       needs energy underneath the part you hear.
+
+       Variation: a one-shot played twice used to be the same samples
+       twice. A run of them — which is exactly what a board of matches
+       is — reads as a machine gun rather than as a thing being struck
+       repeatedly. */
+    const OAC = W.OfflineAudioContext || W.webkitOfflineAudioContext;
+    if (!OAC) return 'no offline audio here — skipped';
+    BL.fast = false;
+    BL.setScreen('map');
+    const SR = 44100;
+    const realAC = W.AudioContext, realWK = W.webkitAudioContext;
+    const render = async (fn) => {
+      const off = new OAC(2, SR * 2, SR);
+      off.resume = () => Promise.resolve();
+      W.AudioContext = function () { return off; };
+      W.webkitAudioContext = undefined;
+      BL.audio.reset(); BL.audio.init();
+      try { fn(); } catch (e) { }
+      W.AudioContext = realAC; W.webkitAudioContext = realWK;
+      return (await off.startRendering()).getChannelData(0);
+    };
+    /* energy below roughly 150Hz, as a share of the whole */
+    const lowShare = d => {
+      const k = Math.exp(-2 * Math.PI * 150 / SR);
+      let lp = 0, lo = 0, all = 0;
+      for (let i = 0; i < d.length; i++) {
+        lp = (1 - k) * d[i] + k * lp;
+        lo += lp * lp; all += d[i] * d[i];
+      }
+      return all > 0 ? lo / all : 0;
+    };
+    const bad = [], notes = [];
+    for (const [name, args, want] of [
+      ['pop', [1, 0, 0], .10], ['swap', [], .10],
+      ['crate', [0], .12], ['bomb', [0], .30], ['land', [.9, 0], .18]
+    ]) {
+      const share = lowShare(await render(() => BL.SFX[name].apply(null, args)));
+      notes.push(name + ' ' + Math.round(share * 100) + '%');
+      if (share < want) bad.push(name + ' has no bottom (' + Math.round(share * 100) +
+        '% under 150Hz, wanted ' + Math.round(want * 100) + '%)');
+    }
+    /* the same call twice must not produce the same samples */
+    for (const [name, args] of [['tap', []], ['pop', [1, 0, 0]], ['crate', [0]]]) {
+      const a = await render(() => BL.SFX[name].apply(null, args));
+      const b = await render(() => BL.SFX[name].apply(null, args));
+      let diff = 0, n = Math.min(a.length, b.length);
+      for (let i = 0; i < n; i++) diff += Math.abs(a[i] - b[i]);
+      diff /= n;
+      if (diff < 1e-5) bad.push(name + ' is identical every time it plays');
+    }
+    if (bad.length) assert(false, bad.join('; '));
+    return 'low end: ' + notes.join(', ') + '; every one-shot varies';
+  });
+
+  await test('a matched tile pops rather than deflating', () => {
+    /* the curve used to be (1 + k*.5) * (1 - k), which never rises
+       above 1 — so the single most common event in the game, clearing
+       three tiles, had no moment in it at all */
+    let peak = 0, peakAt = 0;
+    for (let i = 0; i <= 100; i++) {
+      const v = BL.popScale(i / 100);
+      if (v > peak) { peak = v; peakAt = i / 100; }
+    }
+    assert(peak > 1.12, 'the tile never grows: peak scale ' + peak.toFixed(3));
+    assert(peakAt > .12 && peakAt < .5, 'it peaks at ' + peakAt.toFixed(2) + ' of the way through');
+    assert(BL.popScale(1) < .02, 'it does not finish at zero: ' + BL.popScale(1).toFixed(3));
+    assert(BL.popAlpha(0) === 1 && BL.popAlpha(1) < .02, 'it does not fade out cleanly');
+    assert(BL.popAlpha(.4) === 1, 'it starts fading before it has finished swelling');
+    return 'swells to ' + peak.toFixed(2) + 'x at ' + Math.round(peakAt * 100) + '% before it goes';
+  });
+
+  await test('re-rendering a screen does not grow its canvases', () => {
+    /* fitCanvas() sets the backing store to size x dpr, so reading
+       cv.width back and passing it in again squares the ratio every
+       render: 56, 112, 224. The family screen's pet grew until it
+       pushed its own name out of the row and the card read as broken. */
+    BL.setScreen('family');
+    const size = () => {
+      const cv = D.querySelector('.petrow canvas');
+      return cv ? Math.round(cv.getBoundingClientRect().width) : 0;
+    };
+    const first = size();
+    BL.renderFamily(); BL.renderFamily(); BL.renderFamily();
+    const after = size();
+    assert(first > 0, 'no pet canvas to measure');
+    assert(after === first, 'canvas went from ' + first + 'px to ' + after + 'px over three renders');
+    return 'stable at ' + first + 'px across four renders';
+  });
+
+  await test('a tired pet can still be played with', () => {
+    /* the dead end: joy is only raised by playing, playing used to be
+       gated on energy, and energy has no in-session remedy — so a pet
+       that ran down stayed miserable for good, and the more attentively
+       it was cared for the faster it got there */
+    const pet = BL.activePet();
+    const keep = { joy: pet.joy, energy: pet.energy, asleep: pet.asleep, clean: pet.clean, food: pet.food };
+    BL.save.toys.yarn = 1;
+    pet.asleep = false; pet.energy = 4; pet.joy = 10;
+    BL.carePlay();
+    const gained = pet.joy - 10;
+    Object.assign(pet, keep);
+    assert(gained > 0, 'a pet at 4 energy gained ' + gained + ' joy');
+    return 'plays at reduced return rather than refusing (+' + gained + ' joy at 4 energy)';
+  });
+
+  await test('a pet left alone sleeps and recovers', () => {
+    /* one flat multiply across the whole gap can never model a state
+       change, so a pet that ran out mid-absence used to stand awake for
+       thirty hours burning energy it had no way to get back */
+    const pet = BL.activePet();
+    const keep = { joy: pet.joy, energy: pet.energy, asleep: pet.asleep, clean: pet.clean, food: pet.food };
+    pet.asleep = false; pet.energy = 100; pet.food = 100; pet.joy = 100; pet.clean = 100;
+    BL.simulatePet(pet, 24 * 3600 * 1000);
+    const after = { energy: Math.round(pet.energy), asleep: pet.asleep, food: Math.round(pet.food) };
+    Object.assign(pet, keep);
+    assert(after.energy >= 70, 'after a day away energy is ' + after.energy);
+    assert(after.food > 0, 'after a day away food is ' + after.food);
+    return 'a day away leaves it asleep at ' + after.energy + ' energy, ' + after.food + ' food';
+  });
+
+  await test('no perk grows without a ceiling', () => {
+    /* an uncapped move bonus retunes every level in the game: measured
+       over 60 levels it took the clear rate from 76% to 88% */
+    const pet = BL.activePet();
+    const was = pet.bond;
+    const moveTotal = () => BL.perksFor(pet)
+      .filter(p => p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait')
+      .reduce((n, p) => n + p.v, 0);
+    pet.bond = 14; const atGrown = moveTotal();
+    pet.bond = 400; const atAbsurd = moveTotal();
+    pet.bond = was;
+    assert(atAbsurd === atGrown,
+      'bond 400 gives ' + atAbsurd + ' moves, bond 14 gives ' + atGrown);
+    assert(atGrown <= 5, 'a fully raised pet is worth ' + atGrown + ' moves');
+    return 'capped at ' + atGrown + ' moves however long you play';
+  });
+
+  await test('no frame sends a NaN to the canvas', async () => {
+    /* canvas swallows NaN silently, so nothing else would ever notice */
+    const WATCH = ['translate', 'scale', 'rotate', 'setTransform', 'transform',
+                   'moveTo', 'lineTo', 'arc', 'ellipse', 'rect', 'fillRect',
+                   'bezierCurveTo', 'quadraticCurveTo', 'drawImage'];
+    const bad = [];
+    const undo = [];
+    const watch = (ctx, where) => {
+      if (!ctx || ctx.__watched) return;
+      ctx.__watched = true;
+      WATCH.forEach(name => {
+        const orig = ctx[name];
+        if (typeof orig !== 'function') return;
+        undo.push(() => { ctx[name] = orig; ctx.__watched = false; });
+        ctx[name] = function () {
+          for (let i = 0; i < arguments.length; i++) {
+            const a = arguments[i];
+            if (typeof a === 'number' && !isFinite(a)) {
+              if (bad.length < 6) bad.push(where + '.' + name + ' arg ' + i + ' = ' + a);
+              break;
+            }
+          }
+          return orig.apply(this, arguments);
+        };
+      });
+    };
+
+    /* the room, including a stage change and every idle behaviour */
+    BL.setScreen('home');
+    BL.roomLayout();
+    watch(BL.room.ctx, 'room');
+    const pet = BL.activePet();
+    const bondWas = pet.bond;
+    for (const b of [0, 8, 18]) {
+      pet.bond = b;
+      for (const k of [null, 'groom', 'stretch', 'shake', 'stare']) {
+        BL.room.idleKind = k; BL.room.idleLeft = 1.2;
+        for (let f = 0; f < 12; f++) BL.renderRoom(1 / 60);
+      }
+    }
+    /* and the pathological step the loop must survive */
+    BL.renderRoom(undefined); BL.renderRoom(NaN); BL.renderRoom(1 / 60);
+    assert(isFinite(BL.room.t), 'the room clock did not heal: ' + BL.room.t);
+    pet.bond = bondWas;
+
+    /* the board, played for real */
+    BL.setScreen('game');
+    BL.startLevel(12, { perks: [] });
+    BL.layoutBoard();
+    watch(D.getElementById('board').getContext('2d'), 'board');
+    for (let i = 0; i < 30; i++) BL.renderGame(1 / 60);
+    for (let n = 0; n < 12; n++) {
+      const ms = BL.allMoves(BL.game.B);
+      if (!ms.length) break;
+      const m = ms[(Math.random() * ms.length) | 0];
+      await BL.tryMove(m[0], m[1]);
+      for (let i = 0; i < 4; i++) BL.renderGame(1 / 60);
+    }
+    undo.forEach(f => f());
+    assert(!bad.length, bad.join('; '));
+    return 'room and board, geometry all finite';
+  });
+
+  BL.fast = false;
+  try { W.localStorage.clear(); } catch (e) { }
+  const s = document.getElementById('summary');
+  s.textContent = RESULTS.fail
+    ? RESULTS.fail + ' failed, ' + RESULTS.pass + ' passed'
+    : 'all ' + RESULTS.pass + ' passed';
+  s.className = RESULTS.fail ? 'fail' : 'pass';
+  RESULTS.done = true;
+}
+
+/* small inline helper used by the daily test */
+async function playLevelInline(G, maxMoves) {
+  let guard = 0;
+  while (!G.over && G.moves > 0 && guard++ < maxMoves) {
+    const ms = BL.allMoves(G.B);
+    if (!ms.length) break;
+    const m = ms[(Math.random() * ms.length) | 0];
+    await BL.tryMove(m[0], m[1]);
+  }
+  await tick();
+  D.querySelectorAll('.veil').forEach(v => v.remove());
+  G.over = true;
+}
+
+run().catch(e => {
+  record('suite crashed', false, e.message);
+  RESULTS.done = true;
+  document.getElementById('summary').textContent = 'crashed';
+});
+</script>

@@ -1,0 +1,100 @@
+<div class="stage">
+  <canvas id="motes" aria-hidden="true"></canvas>
+
+  <div class="frame" id="frame">
+
+    <header class="topbar" id="topbar">
+      <div class="brandmark">
+        <canvas id="logo" width="60" height="60" aria-hidden="true"></canvas>
+        <div class="bn">Biscuit Lane<small id="brandSub">Pet Home</small></div>
+      </div>
+      <div class="purse">
+        <div class="chip hearts" id="chipHearts" title="Hearts"></div>
+        <div class="chip coins" id="chipCoins" title="Coins"></div>
+        <div class="chip treats" id="chipTreats" title="Treats"></div>
+      </div>
+      <button class="iconbtn" id="btnSettings" aria-label="Settings"></button>
+    </header>
+
+    <div class="screens" id="screens">
+
+      <!-- ============ HOME (pet room) ============ -->
+      <section class="screen" id="scr-home">
+        <div class="roomwrap">
+          <canvas id="room"></canvas>
+          <div class="roomtop">
+            <div class="namecard">
+              <div class="nm" id="petName">—</div>
+              <div class="mt" id="petMeta">—</div>
+            </div>
+            <span class="pill info stagechip" id="petStage">—</span>
+          </div>
+          <div class="moodbubble" id="moodBubble"></div>
+        </div>
+        <div class="scroller">
+          <div class="pad" id="homePad"></div>
+        </div>
+      </section>
+
+      <!-- ============ MAP ============ -->
+      <section class="screen" id="scr-map">
+        <div class="mapwrap" id="mapWrap">
+          <div id="mapSpacer"><canvas id="mapCanvas"></canvas></div>
+        </div>
+      </section>
+
+      <!-- ============ SHOP ============ -->
+      <section class="screen" id="scr-shop">
+        <div class="scroller">
+          <div class="pad" id="shopPad"></div>
+        </div>
+      </section>
+
+      <!-- ============ FAMILY ============ -->
+      <section class="screen" id="scr-family">
+        <div class="scroller">
+          <div class="pad" id="familyPad"></div>
+        </div>
+      </section>
+
+      <!-- ============ GAME ============ -->
+      <section class="screen" id="scr-game">
+        <div class="gtop">
+          <button class="iconbtn" id="btnQuit" aria-label="Leave level"></button>
+          <div class="moves" id="movesBox"><b id="movesN">0</b><span id="movesLbl">moves</span></div>
+          <div class="goals" id="goalsBox"></div>
+        </div>
+        <div class="scorebar">
+          <div class="scoreline"><span id="scoreLbl">Score</span><span class="sv num" id="scoreN">0</span></div>
+          <div class="starTrack" id="starTrack"><i id="starFill"></i></div>
+        </div>
+        <div class="boardwrap" id="boardWrap">
+          <canvas id="scene" aria-hidden="true"></canvas>
+          <canvas id="board" tabindex="0" role="application"
+                  aria-label="Match-3 board. Arrow keys to move, Enter to pick up a tile, then an arrow to swap it."></canvas>
+        </div>
+        <div class="gbottom">
+          <button class="companion" id="companion" aria-label="Pet ability">
+            <canvas id="compCanvas" width="120" height="120"></canvas>
+          </button>
+          <div class="chargewrap">
+            <div class="cl" id="chargeLbl">—</div>
+            <div class="bar"><i id="chargeBar" style="width:0%;background:linear-gradient(90deg,var(--accent),var(--rose))"></i></div>
+          </div>
+          <div class="boosters" id="boosters"></div>
+        </div>
+      </section>
+
+    </div>
+
+    <nav class="tabbar" id="tabbar"></nav>
+  </div>
+</div>
+
+<p id="live" class="sronly" aria-live="polite" role="status"></p>
+<p id="liveAssertive" class="sronly" aria-live="assertive" role="alert"></p>
+
+<div id="modals"></div>
+<div id="toasts"></div>
+
+<div id="onb"><div class="onbInner"><div class="onbCard" id="onbCard"></div></div></div>

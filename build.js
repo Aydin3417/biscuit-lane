@@ -1,0 +1,27 @@
+/* Concatenates src/ into a single self-contained artifact page. */
+const fs = require('fs');
+const path = require('path');
+
+const root = __dirname;
+const src = p => fs.readFileSync(path.join(root, 'src', p), 'utf8');
+
+const jsDir = path.join(root, 'src', 'js');
+/* modules not yet wired into the app */
+const EXCLUDE = (process.env.BL_EXCLUDE || '').split(',').filter(Boolean);
+const jsFiles = fs.readdirSync(jsDir)
+  .filter(f => f.endsWith('.js') && EXCLUDE.indexOf(f) < 0)
+  .sort();
+
+const parts = [];
+parts.push(src('head.html').trim());
+parts.push('<style>\n' + src('style.css').trim() + '\n</style>');
+parts.push(src('body.html').trim());
+parts.push('<script>\n(function(){\n' + jsFiles.map(f => {
+  return '/* ===== ' + f + ' ===== */\n' + fs.readFileSync(path.join(jsDir, f), 'utf8').trim();
+}).join('\n\n') + '\n})();\n<\/script>');
+
+const out = parts.join('\n\n') + '\n';
+const dest = path.join(root, 'biscuit-lane.html');
+fs.writeFileSync(dest, out, 'utf8');
+fs.writeFileSync(path.join(root, 'index.html'), out, 'utf8');
+console.log('built ' + dest + '  ' + (out.length / 1024).toFixed(1) + ' KB  (' + jsFiles.length + ' modules)');
