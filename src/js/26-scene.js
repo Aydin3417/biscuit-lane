@@ -1004,24 +1004,47 @@ function drawHintRing(c, cx, cy, s, t, col) {
 }
 
 /* ---------------- scenery pieces ---------------- */
+/* Two trees, chosen by position so a given tree is always the same
+   tree. A lane lined with one silhouette repeated at three sizes reads
+   as a tiled background; a second shape and a second green is enough to
+   stop the eye noticing the repeat. */
 function drawTree(c, x, y, s, t) {
   c.save(); c.translate(x, y);
+  const kind = Math.floor(mulberry(Math.round(x) * 131 + Math.round(y))() * 2);
   const sway = Math.sin(t * .7 + x * .01) * .03;
   c.fillStyle = rgba('#2A1E12', .18);
   ellipse(c, 0, 0, s * .5, s * .12); c.fill();
-  c.fillStyle = PAL.dark ? '#4A3A2A' : '#8A6A4A';
-  c.beginPath();
-  c.moveTo(-s * .09, 0); c.lineTo(-s * .05, -s * .7);
-  c.lineTo(s * .05, -s * .7); c.lineTo(s * .09, 0); c.closePath(); c.fill();
-  c.save();
-  c.translate(0, -s * .7); c.rotate(sway);
-  const cols = PAL.dark ? ['#2E4A38', '#3C5C46'] : ['#4E8F63', '#63A876'];
-  c.fillStyle = cols[0];
-  ellipse(c, 0, -s * .2, s * .55, s * .48); c.fill();
-  c.fillStyle = cols[1];
-  ellipse(c, -s * .22, -s * .3, s * .32, s * .28); c.fill();
-  ellipse(c, s * .24, -s * .26, s * .3, s * .26); c.fill();
-  c.restore();
+  const trunk = PAL.dark ? '#4A3A2A' : '#8A6A4A';
+  const cols = PAL.dark
+    ? (kind ? ['#27412F', '#33523D'] : ['#2E4A38', '#3C5C46'])
+    : (kind ? ['#44815A', '#5C9A6C'] : ['#4E8F63', '#63A876']);
+  if (kind) {
+    /* the taller one: a narrow crown in three tiers */
+    c.fillStyle = trunk;
+    c.beginPath();
+    c.moveTo(-s * .07, 0); c.lineTo(-s * .04, -s * .84);
+    c.lineTo(s * .04, -s * .84); c.lineTo(s * .07, 0); c.closePath(); c.fill();
+    c.save(); c.translate(0, -s * .84); c.rotate(sway);
+    c.fillStyle = cols[0];
+    ellipse(c, 0, -s * .10, s * .34, s * .30); c.fill();
+    ellipse(c, 0, -s * .32, s * .27, s * .24); c.fill();
+    c.fillStyle = cols[1];
+    ellipse(c, -s * .10, -s * .24, s * .18, s * .16); c.fill();
+    ellipse(c, s * .11, -s * .44, s * .15, s * .13); c.fill();
+    c.restore();
+  } else {
+    c.fillStyle = trunk;
+    c.beginPath();
+    c.moveTo(-s * .09, 0); c.lineTo(-s * .05, -s * .7);
+    c.lineTo(s * .05, -s * .7); c.lineTo(s * .09, 0); c.closePath(); c.fill();
+    c.save(); c.translate(0, -s * .7); c.rotate(sway);
+    c.fillStyle = cols[0];
+    ellipse(c, 0, -s * .2, s * .55, s * .48); c.fill();
+    c.fillStyle = cols[1];
+    ellipse(c, -s * .22, -s * .3, s * .32, s * .28); c.fill();
+    ellipse(c, s * .24, -s * .26, s * .3, s * .26); c.fill();
+    c.restore();
+  }
   c.restore();
 }
 function drawBush(c, x, y, s) {
@@ -1064,32 +1087,52 @@ function drawCottage(c, x, y, s, seed) {
   c.restore();
 }
 function drawLampPost(c, x, y, s, warmth, t) {
+  /* At map scale this was a hairline pole with a pale trapezoid over it,
+     both the colour of the sky behind them: two thin shapes that read as
+     a broken picture rather than as a lamp. It is drawn with weight now
+     — a tapered post, a crossbar, and a shade with a dark rim so its
+     silhouette survives being forty pixels tall on a green field. */
+  const dark = PAL.dark;
   c.save(); c.translate(x, y);
-  c.strokeStyle = PAL.dark ? '#4A5568' : '#7B6448';
-  c.lineWidth = s * .07; c.lineCap = 'round';
-  c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -s * .82); c.stroke();
-  /* a cap and a collar: without them the shade hangs off the top of the
-     pole with a gap under it and reads as two separate objects */
-  c.fillStyle = PAL.dark ? '#4A5568' : '#7B6448';
-  rr(c, -s * .05, -s * .86, s * .1, s * .07, s * .02); c.fill();
-  c.fillStyle = warmth > .3 ? '#FFE6A8' : (PAL.dark ? '#3A4557' : '#E8DCC6');
+  c.fillStyle = rgba('#2A1E12', dark ? .4 : .16);
+  ellipse(c, 0, 0, s * .17, s * .05); c.fill();
+  const post = dark ? '#46536A' : '#6B563C';
+  /* a post with a base and a taper, not a line */
+  c.fillStyle = post;
   c.beginPath();
-  c.moveTo(-s * .13, -s * .82); c.lineTo(s * .13, -s * .82);
-  c.lineTo(s * .08, -s * 1.02); c.lineTo(-s * .08, -s * 1.02); c.closePath(); c.fill();
-  c.fillStyle = PAL.dark ? '#4A5568' : '#7B6448';
-  rr(c, -s * .105, -s * 1.06, s * .21, s * .05, s * .02); c.fill();
-  if (warmth > .3) {
+  c.moveTo(-s * .07, 0); c.lineTo(s * .07, 0);
+  c.lineTo(s * .035, -s * .84); c.lineTo(-s * .035, -s * .84);
+  c.closePath(); c.fill();
+  rr(c, -s * .10, -s * .07, s * .2, s * .07, s * .02); c.fill();
+  /* the crossbar the lamp hangs off */
+  rr(c, -s * .12, -s * .86, s * .24, s * .05, s * .02); c.fill();
+  /* the shade: a solid body with a rim, so it is an object */
+  const lit = warmth > .3;
+  c.beginPath();
+  c.moveTo(-s * .16, -s * .86); c.lineTo(s * .16, -s * .86);
+  c.lineTo(s * .09, -s * 1.06); c.lineTo(-s * .09, -s * 1.06);
+  c.closePath();
+  c.fillStyle = lit ? '#FFE1A0' : (dark ? '#3A4557' : '#E4D6BC');
+  c.fill();
+  c.strokeStyle = post; c.lineWidth = Math.max(1, s * .035); c.stroke();
+  c.fillStyle = post;
+  rr(c, -s * .11, -s * 1.10, s * .22, s * .05, s * .02); c.fill();
+  if (lit) {
+    /* the pool of light it throws, not a halo around the bulb */
     c.save();
     c.globalCompositeOperation = 'lighter';
-    const g = c.createRadialGradient(0, -s * .9, 0, 0, -s * .9, s * .9);
-    g.addColorStop(0, rgba('#FFCE84', .22 * warmth * (1 + Math.sin(t * 6 + x) * .04)));
+    const g = c.createRadialGradient(0, -s * .9, 0, 0, -s * .9, s * .95);
+    g.addColorStop(0, rgba('#FFCE84', .26 * warmth * (1 + Math.sin(t * 6 + x) * .05)));
     g.addColorStop(1, rgba('#FFCE84', 0));
     c.fillStyle = g;
-    c.beginPath(); c.arc(0, -s * .9, s * .9, 0, 6.2832); c.fill();
+    c.beginPath(); c.arc(0, -s * .9, s * .95, 0, 6.2832); c.fill();
     c.restore();
+    c.fillStyle = rgba('#FFF3D4', .5);
+    ellipse(c, 0, -s * .02, s * .3, s * .09); c.fill();
   }
   c.restore();
 }
+
 
 /* ============================================================
    Small illustrations used by the UI.

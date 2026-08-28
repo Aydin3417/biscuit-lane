@@ -36,6 +36,19 @@
   --sky:           #3C86C4;
   /* One radius scale, so nothing is 16px next to 18px next to 20px for
      no reason anybody could name. */
+  /* Six type sizes, because there were eighteen — thirteen of them
+     inside a six-pixel range, which is not a scale, it is a series of
+     separate decisions that happened to be near each other. Nothing
+     moved more than a pixel and a half; the point is that a caption is
+     now the same size as every other caption. */
+  --t-nano:        9.5px;
+  --t-micro:       11px;
+  --t-small:       13px;
+  --t-body:        15px;
+  --t-title:       17px;
+  --t-h2:          22px;
+  --t-hero:        27px;
+
   --r-xs:          9px;
   --r-sm:          13px;
   --r-md:          17px;
@@ -144,7 +157,7 @@ body{
   background:var(--bg-deep);
   color:var(--text);
   font-family:"Karla","Segoe UI",system-ui,-apple-system,sans-serif;
-  font-size:15px; line-height:1.5;
+  font-size:var(--t-body); line-height:1.5;
   -webkit-font-smoothing:antialiased;
   -webkit-tap-highlight-color:transparent;
   overscroll-behavior:none;
@@ -193,21 +206,21 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 }
 .brandmark{ display:flex; align-items:center; gap:8px; margin-right:auto; min-width:0; }
 .brandmark canvas{ width:30px; height:30px; flex:0 0 auto; }
-.brandmark .bn{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:14.5px; letter-spacing:-.02em; white-space:nowrap; line-height:1.1; }
-.brandmark .bn small{ display:block; font-family:"Karla",sans-serif; font-weight:500; font-size:9px; letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); margin-top:1px; }
+.brandmark .bn{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); letter-spacing:-.02em; white-space:nowrap; line-height:1.1; }
+.brandmark .bn small{ display:block; font-family:"Karla",sans-serif; font-weight:500; font-size:var(--t-nano); letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); margin-top:1px; }
 .purse{ display:flex; align-items:center; gap:6px; }
 .chip{
   display:inline-flex; align-items:center; gap:5px;
   padding:5px 10px 5px 6px; border-radius:999px;
   background:var(--surface-2); border:1px solid var(--line-soft);
-  font-weight:700; font-size:12.5px; font-variant-numeric:tabular-nums;
+  font-weight:700; font-size:var(--t-small); font-variant-numeric:tabular-nums;
   box-shadow:var(--shadow-1); white-space:nowrap;
 }
 .chip svg{ width:17px; height:17px; display:block; flex:0 0 auto; }
 .chip.hearts{ color:var(--rose); }
 .chip.coins{ color:var(--accent-strong); }
 .chip.treats{ color:var(--plum); }
-.chip .sub{ font-size:9.5px; color:var(--text-faint); font-weight:600; margin-left:1px; }
+.chip .sub{ font-size:var(--t-nano); color:var(--text-faint); font-weight:600; margin-left:1px; }
 .chip.bump{ animation:chipbump .5s cubic-bezier(.2,1.5,.4,1); }
 @keyframes chipbump{ 40%{ transform:scale(1.16) } }
 .iconbtn{
@@ -241,7 +254,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .tab{
   display:flex; flex-direction:column; align-items:center; gap:2px;
   padding:6px 2px 5px; border-radius:14px; color:var(--text-faint);
-  font-size:10.5px; font-weight:700; letter-spacing:.02em;
+  font-size:var(--t-micro); font-weight:700; letter-spacing:.02em;
   transition:color .16s ease, background .16s ease, transform .12s ease;
   position:relative;
 }
@@ -251,7 +264,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .tab .badge{
   position:absolute; top:2px; right:calc(50% - 21px);
   min-width:16px; height:16px; padding:0 4px; border-radius:999px;
-  background:var(--rose); color:#fff; font-size:9.5px; line-height:16px; font-weight:800;
+  background:var(--rose); color:#fff; font-size:var(--t-nano); line-height:16px; font-weight:800;
   box-shadow:0 0 0 2px var(--surface);
 }
 
@@ -264,14 +277,14 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 }
 .card.pad16{ padding:15px; }
 .sectitle{ display:flex; align-items:baseline; gap:8px; padding:0 3px; }
-.sectitle h3{ font-size:16px; }
-.sectitle .hint{ font-size:11.5px; color:var(--text-faint); margin-left:auto; font-weight:600; }
-.eyebrow{ font-size:10px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--text-faint); }
+.sectitle h3{ font-size:var(--t-title); }
+.sectitle .hint{ font-size:var(--t-micro); color:var(--text-faint); margin-left:auto; font-weight:600; }
+.eyebrow{ font-size:var(--t-micro); font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--text-faint); }
 
 .btn{
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
   padding:12px 18px; border-radius:var(--r-md); font-family:"Grandstander",sans-serif;
-  font-weight:700; font-size:15px; letter-spacing:-.01em;
+  font-weight:700; font-size:var(--t-body); letter-spacing:-.01em;
   background:var(--surface-2); color:var(--text); border:1px solid var(--line);
   box-shadow:var(--edge-hi), var(--shadow-1);
   transition:transform .11s cubic-bezier(.2,.8,.3,1), filter .15s ease, box-shadow .11s ease;
@@ -319,13 +332,13 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 }
 .btn.ghost:active{ background:color-mix(in srgb,var(--text) 6%, transparent); transform:translateY(1px); }
 .btn.wide{ width:100%; }
-.btn.sm{ padding:8px 13px; font-size:13px; border-radius:var(--r-sm); }
+.btn.sm{ padding:8px 13px; font-size:var(--t-small); border-radius:var(--r-sm); }
 .btn.sm svg{ width:15px; height:15px; }
 
 .bar{ height:9px; border-radius:999px; background:var(--surface-3); overflow:hidden; position:relative; }
 .bar > i{ display:block; height:100%; border-radius:999px; transition:width .45s cubic-bezier(.22,1,.36,1); }
 
-.pill{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:11px; font-weight:700; }
+.pill{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:var(--t-micro); font-weight:700; }
 .pill.ok{ background:var(--sage-soft); color:var(--sage); }
 .pill.warn{ background:var(--accent-soft); color:var(--accent-strong); }
 .pill.bad{ background:var(--rose-soft); color:var(--rose); }
@@ -341,13 +354,13 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   backdrop-filter:blur(9px); -webkit-backdrop-filter:blur(9px);
   border:1px solid var(--line-soft); border-radius:16px; padding:7px 12px; box-shadow:var(--shadow-1);
 }
-.namecard .nm{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:16px; line-height:1.15; }
-.namecard .mt{ font-size:11px; color:var(--text-dim); font-weight:600; }
+.namecard .nm{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-title); line-height:1.15; }
+.namecard .mt{ font-size:var(--t-micro); color:var(--text-dim); font-weight:600; }
 .stagechip{ margin-left:auto; pointer-events:auto; }
 .moodbubble{
   position:absolute; pointer-events:none; z-index:4;
   background:var(--surface); border:1px solid var(--line-soft); border-radius:14px;
-  padding:7px 11px; font-size:12.5px; font-weight:600; box-shadow:var(--shadow-2);
+  padding:7px 11px; font-size:var(--t-small); font-weight:600; box-shadow:var(--shadow-2);
   max-width:200px; opacity:0; transform:translateY(6px) scale(.95);
   transition:opacity .3s ease, transform .3s cubic-bezier(.22,1,.36,1);
 }
@@ -359,7 +372,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 }
 .stats{ display:grid; grid-template-columns:1fr 1fr; gap:10px 13px; }
 .stat{ display:flex; flex-direction:column; gap:4px; }
-.stat .lb{ display:flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:var(--text-dim); }
+.stat .lb{ display:flex; align-items:center; gap:5px; font-size:var(--t-micro); font-weight:700; color:var(--text-dim); }
 .stat .lb .v{ margin-left:auto; font-variant-numeric:tabular-nums; color:var(--text-faint); font-weight:600; }
 .stat svg{ width:13px; height:13px; flex:0 0 auto; color:var(--tint,var(--text-dim)); }
 .stat .bar > i{ background:linear-gradient(90deg,
@@ -369,7 +382,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
    four different jobs rather than four grey squares */
 .care{
   display:flex; flex-direction:column; align-items:center; gap:3px; padding:10px 3px 8px;
-  border-radius:16px; font-size:11px; font-weight:700; box-shadow:var(--shadow-1);
+  border-radius:16px; font-size:var(--t-micro); font-weight:700; box-shadow:var(--shadow-1);
   background:linear-gradient(180deg,
     color-mix(in srgb,var(--tint,var(--accent)) 13%, var(--surface)),
     color-mix(in srgb,var(--tint,var(--accent)) 5%, var(--surface)));
@@ -385,7 +398,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
     color-mix(in srgb,var(--tint,var(--accent)) 26%, var(--surface)),
     color-mix(in srgb,var(--tint,var(--accent)) 11%, var(--surface)));
 }
-.care .cost{ font-size:9.5px; color:var(--text-faint); font-weight:600; }
+.care .cost{ font-size:var(--t-nano); color:var(--text-faint); font-weight:600; }
 .care[disabled]{ opacity:.4; }
 /* looks unavailable, still takes the tap so it can say why */
 .care.dim{ opacity:.45; }
@@ -409,15 +422,15 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   width:58px; height:50px; border-radius:15px; background:var(--surface-2);
   border:1px solid var(--line-soft); box-shadow:var(--shadow-1); flex:0 0 auto;
 }
-.moves b{ font-family:"Grandstander",sans-serif; font-size:22px; line-height:1; font-variant-numeric:tabular-nums; }
-.moves span{ font-size:8.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--text-faint); font-weight:700; margin-top:1px; }
+.moves b{ font-family:"Grandstander",sans-serif; font-size:var(--t-h2); line-height:1; font-variant-numeric:tabular-nums; }
+.moves span{ font-size:var(--t-nano); letter-spacing:.13em; text-transform:uppercase; color:var(--text-faint); font-weight:700; margin-top:1px; }
 .moves.low b{ color:var(--rose); }
 .moves.tick{ animation:chipbump .4s cubic-bezier(.2,1.5,.4,1); }
 .goals{ display:flex; gap:6px; flex:1 1 auto; justify-content:center; flex-wrap:wrap; }
 .goal{
   display:flex; align-items:center; gap:5px; padding:4px 9px 4px 4px; border-radius:14px;
   background:var(--surface-2); border:1px solid var(--line-soft); box-shadow:var(--shadow-1);
-  font-weight:800; font-size:13px; font-variant-numeric:tabular-nums;
+  font-weight:800; font-size:var(--t-small); font-variant-numeric:tabular-nums;
 }
 .goal canvas{ width:26px; height:26px; display:block; }
 .goal.done{ background:var(--sage-soft); border-color:var(--sage); color:var(--sage); }
@@ -429,11 +442,13 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   box-shadow:0 1px 0 rgba(255,255,255,.5) inset, 0 6px 16px -8px rgba(70,45,20,.35);
   position:relative; z-index:2;
 }
-.scoreline{ display:flex; align-items:center; gap:8px; font-size:9.5px; font-weight:700;
+.scoreline{ display:flex; align-items:center; gap:8px; font-size:var(--t-nano); font-weight:700;
   letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); margin-bottom:5px; }
-.scoreline .sv{ margin-left:auto; font-family:"Grandstander",sans-serif; font-size:15px;
+.scoreline .sv{ margin-left:auto; font-family:"Grandstander",sans-serif; font-size:var(--t-body);
   letter-spacing:-.01em; text-transform:none; color:var(--text); font-variant-numeric:tabular-nums; }
-.starTrack{ position:relative; height:7px; border-radius:999px; background:var(--surface-3); }
+/* inset by half a star, so the marker for three stars sits on the end of
+   the track rather than half off the side of the screen */
+.starTrack{ position:relative; height:7px; border-radius:var(--r-full); background:var(--surface-3); margin:0 10px; }
 .starTrack > i{ position:absolute; left:0; top:0; bottom:0; border-radius:999px; background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 55%, var(--rose))); transition:width .4s cubic-bezier(.22,1,.36,1); width:0; }
 .starTrack > s{ position:absolute; top:-6px; width:19px; height:19px; margin-left:-9.5px; }
 .starTrack > s svg{ width:19px; height:19px; display:block; }
@@ -466,7 +481,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 @keyframes petready{ 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
 @keyframes petpulse{ 0%,100%{opacity:.42} 50%{opacity:1} }
 .chargewrap{ flex:1 1 auto; min-width:0; }
-.chargewrap .cl{ display:flex; align-items:center; gap:6px; font-size:10.5px; font-weight:700; color:var(--text-dim); margin-bottom:4px; }
+.chargewrap .cl{ display:flex; align-items:center; gap:6px; font-size:var(--t-micro); font-weight:700; color:var(--text-dim); margin-bottom:4px; }
 .chargewrap .cl b{ color:var(--accent-strong); }
 .boosters{ display:flex; gap:6px; flex:0 0 auto; }
 .booster{
@@ -479,7 +494,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .booster .ct{
   position:absolute; right:-4px; top:-4px; min-width:17px; height:17px; padding:0 3px; border-radius:999px;
   background:var(--surface-3); color:var(--text); border:1px solid var(--line);
-  font-size:9.5px; font-weight:800; line-height:15px; text-align:center; font-variant-numeric:tabular-nums;
+  font-size:var(--t-nano); font-weight:800; line-height:15px; text-align:center; font-variant-numeric:tabular-nums;
 }
 .booster.armed{ border-color:var(--accent-strong); background:color-mix(in srgb,var(--accent) 20%, var(--surface-2)); }
 .booster.armed::after{ content:""; position:absolute; inset:-4px; border-radius:18px; box-shadow:0 0 0 2px var(--accent); animation:petpulse 1.1s ease-in-out infinite; }
@@ -487,7 +502,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 
 /* ---------- shop ---------- */
 .tabs{ display:flex; gap:5px; padding:3px; background:var(--surface-2); border-radius:14px; border:1px solid var(--line-soft); }
-.tabs button{ flex:1; padding:8px 3px; border-radius:11px; font-weight:700; font-size:12.5px; color:var(--text-dim); transition:.16s; }
+.tabs button{ flex:1; padding:8px 3px; border-radius:11px; font-weight:700; font-size:var(--t-small); color:var(--text-dim); transition:.16s; }
 .tabs button.on{ background:var(--surface); color:var(--text); box-shadow:var(--shadow-1); }
 .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
 .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
@@ -509,15 +524,15 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
              inset 0 -1px 0 color-mix(in srgb,#FFFFFF 45%, transparent);
 }
 .good .art canvas{ display:block; }
-.good .nm{ font-weight:700; font-size:13px; line-height:1.2; }
-.good .ds{ font-size:10.5px; color:var(--text-faint); line-height:1.35; min-height:28px; }
-.good .have{ font-size:10.5px; color:var(--text-faint); }
+.good .nm{ font-weight:700; font-size:var(--t-small); line-height:1.2; }
+.good .ds{ font-size:var(--t-micro); color:var(--text-faint); line-height:1.35; min-height:28px; }
+.good .have{ font-size:var(--t-micro); color:var(--text-faint); }
 /* the price sits at the end of the card, sized to itself */
 /* Price, not a slab. Four full gold buttons down a shop screen is four
    things all shouting the same thing; the goods are what the player is
    choosing between, so the goods get the colour and the control gets an
    outline. */
-.good .btn{ align-self:flex-end; width:auto; margin-top:auto; border-radius:var(--r-full); padding:7px 13px; font-size:12px; }
+.good .btn{ align-self:flex-end; width:auto; margin-top:auto; border-radius:var(--r-full); padding:7px 13px; font-size:var(--t-small); }
 /* How many you already own belongs on the thing you own, not on a line
    of its own underneath it. */
 .good .art{ position:relative; }
@@ -525,7 +540,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   position:absolute; right:6px; bottom:5px;
   padding:1px 7px; border-radius:var(--r-full);
   background:color-mix(in srgb,var(--text) 72%, transparent); color:var(--surface);
-  font-size:10.5px; font-weight:800; font-variant-numeric:tabular-nums;
+  font-size:var(--t-micro); font-weight:800; font-variant-numeric:tabular-nums;
   letter-spacing:.01em;
 }
 .btn.price{
@@ -546,8 +561,8 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .petrow{ display:flex; align-items:center; gap:11px; padding:11px; }
 .petrow canvas{ width:56px; height:56px; flex:0 0 auto; }
 .petrow .info{ flex:1 1 auto; min-width:0; }
-.petrow .info .nm{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:15px; }
-.petrow .info .br{ font-size:11.5px; color:var(--text-faint); font-weight:600; }
+.petrow .info .nm{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); }
+.petrow .info .br{ font-size:var(--t-micro); color:var(--text-faint); font-weight:600; }
 .petrow.active{ border-color:var(--accent-strong); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 40%, transparent), var(--shadow-1); }
 
 /* ---------- modal ---------- */
@@ -567,8 +582,8 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   display:flex; flex-direction:column; gap:13px; text-align:center;
 }
 .veil.on .sheet{ transform:none; opacity:1; }
-.sheet h2{ font-size:22px; }
-.sheet p{ margin:0; color:var(--text-dim); font-size:13.5px; }
+.sheet h2{ font-size:var(--t-h2); }
+.sheet p{ margin:0; color:var(--text-dim); font-size:var(--t-small); }
 /* A sheet is a scrolling flex column, and a flex item's default is to
    shrink. Cards inside one carry their own overflow:hidden, so when the
    sheet ran out of room the card was squeezed and quietly cut its
@@ -589,8 +604,8 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   background:linear-gradient(135deg, var(--accent-soft), var(--surface) 62%);
 }
 .playHero .ph-l{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
-.playHero .ph-l b{ font-family:"Grandstander",sans-serif; font-size:20px; line-height:1.1; }
-.playHero .ph-l small{ color:var(--text-dim); font-size:11.5px; line-height:1.35; }
+.playHero .ph-l b{ font-family:"Grandstander",sans-serif; font-size:var(--t-h2); line-height:1.1; }
+.playHero .ph-l small{ color:var(--text-dim); font-size:var(--t-micro); line-height:1.35; }
 .playHero .ph-best{ align-self:flex-start; margin-top:4px; }
 .playHero .ph-best svg{ width:12px; height:12px; }
 .playHero .ph-go{ flex:0 0 auto; padding:12px 20px; }
@@ -608,7 +623,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 }
 .ladder .d i{ display:grid; place-items:center; width:19px; height:19px; color:var(--text-faint); }
 .ladder .d i svg{ width:19px; height:19px; display:block; }
-.ladder .d b{ font-size:10px; font-weight:800; color:var(--text-faint); font-variant-numeric:tabular-nums; }
+.ladder .d b{ font-size:var(--t-micro); font-weight:800; color:var(--text-faint); font-variant-numeric:tabular-nums; }
 .ladder .d.past{ background:var(--sage-soft); border-color:transparent; }
 .ladder .d.past i, .ladder .d.past b{ color:var(--sage); }
 .ladder .d.now{ background:var(--accent-soft); border-color:var(--accent-strong); }
@@ -617,22 +632,22 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .ladder .d.jack{ border-style:dashed; border-color:var(--plum); }
 .ladder .d.jack i{ color:var(--plum); }
 .ladder .d.jack.past{ border-style:solid; }
-.ladderNote{ font-size:12px; }
-.ladderMiss{ font-size:11px; color:var(--text-faint); margin-top:-6px; }
+.ladderNote{ font-size:var(--t-small); }
+.ladderMiss{ font-size:var(--t-micro); color:var(--text-faint); margin-top:-6px; }
 .giftWait{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; text-align:left; }
 .giftWait .gi{ display:grid; place-items:center; width:30px; height:30px; color:var(--accent-strong); flex:0 0 auto; }
 .giftWait .gi svg{ width:22px; height:22px; }
 .giftWait .gt{ flex:1 1 auto; min-width:0; }
-.giftWait .gt b{ font-family:"Grandstander",sans-serif; font-size:14px; display:block; }
-.giftWait .gt small{ display:block; color:var(--text-faint); font-size:11.5px; }
+.giftWait .gt b{ font-family:"Grandstander",sans-serif; font-size:var(--t-body); display:block; }
+.giftWait .gt small{ display:block; color:var(--text-faint); font-size:var(--t-micro); }
 .giftWait .ladder{ flex:1 1 100%; }
-.reward{ display:flex; align-items:center; gap:6px; font-weight:800; font-size:15px; font-variant-numeric:tabular-nums; }
+.reward{ display:flex; align-items:center; gap:6px; font-weight:800; font-size:var(--t-body); font-variant-numeric:tabular-nums; }
 .reward svg{ width:21px; height:21px; }
 .goalList{ display:flex; flex-direction:column; gap:8px; }
 .goalItem{ display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:15px; background:var(--surface-2); border:1px solid var(--line-soft); text-align:left; }
 .goalItem canvas{ width:32px; height:32px; flex:0 0 auto; }
-.goalItem .t{ flex:1 1 auto; font-size:12.5px; font-weight:600; color:var(--text-dim); }
-.goalItem .t b{ color:var(--text); font-size:13.5px; display:block; font-family:"Grandstander",sans-serif; }
+.goalItem .t{ flex:1 1 auto; font-size:var(--t-small); font-weight:600; color:var(--text-dim); }
+.goalItem .t b{ color:var(--text); font-size:var(--t-small); display:block; font-family:"Grandstander",sans-serif; }
 
 /* ---------- onboarding ---------- */
 #onb{ position:fixed; inset:0; z-index:80; display:none; }
@@ -652,8 +667,8 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .choice canvas{ display:block; }
 .choice.on{ background:linear-gradient(180deg,
   color-mix(in srgb,var(--accent) 14%, var(--surface)), var(--surface)); }
-.choice .nm{ font-family:"Grandstander",sans-serif; font-weight:700; font-size:14px; }
-.choice .ds{ font-size:10.5px; color:var(--text-faint); text-align:center; line-height:1.3; }
+.choice .nm{ font-family:"Grandstander",sans-serif; font-weight:700; font-size:var(--t-body); }
+.choice .ds{ font-size:var(--t-micro); color:var(--text-faint); text-align:center; line-height:1.3; }
 .choice.on{ border-color:var(--accent-strong); transform:translateY(-2px); box-shadow:var(--shadow-2); }
 .choice:active{ transform:scale(.96); }
 .swatches{ display:flex; gap:9px; justify-content:center; flex-wrap:wrap; }
@@ -662,7 +677,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .field{
   width:100%; padding:13px 15px; border-radius:16px; background:var(--surface);
   border:1px solid var(--line); color:var(--text); font-family:"Grandstander",sans-serif;
-  font-weight:700; font-size:17px; text-align:center;
+  font-weight:700; font-size:var(--t-title); text-align:center;
 }
 .field::placeholder{ color:var(--text-faint); font-weight:400; }
 /* .row was only ever styled inside .sheet, so in the onboarding the two
@@ -679,13 +694,13 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 }
 .dots i.on{ background:var(--accent-strong); width:20px; border-radius:var(--r-full); }
 .nameSuggest{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
-.nameSuggest button{ padding:5px 11px; border-radius:999px; background:var(--surface-2); border:1px solid var(--line-soft); font-size:12px; font-weight:600; color:var(--text-dim); }
+.nameSuggest button{ padding:5px 11px; border-radius:999px; background:var(--surface-2); border:1px solid var(--line-soft); font-size:var(--t-small); font-weight:600; color:var(--text-dim); }
 
 /* ---------- toasts ---------- */
 #toasts{ position:fixed; left:0; right:0; bottom:98px; z-index:70; display:flex; flex-direction:column; align-items:center; gap:7px; pointer-events:none; }
 .toast{
   background:var(--surface); color:var(--text); border:1px solid var(--line-soft);
-  padding:9px 15px; border-radius:999px; font-weight:700; font-size:13px; box-shadow:var(--shadow-2);
+  padding:9px 15px; border-radius:999px; font-weight:700; font-size:var(--t-small); box-shadow:var(--shadow-2);
   display:flex; align-items:center; gap:7px; max-width:82vw;
   animation:toastin .35s cubic-bezier(.22,1.3,.36,1) both;
 }
@@ -696,17 +711,17 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 
 /* ---------- misc ---------- */
 .switchRow{ display:flex; align-items:center; gap:12px; padding:11px 14px; }
-.switchRow .lb{ flex:1 1 auto; font-weight:700; font-size:13.5px; }
-.switchRow .lb small{ display:block; font-weight:500; font-size:11px; color:var(--text-faint); line-height:1.35; }
+.switchRow .lb{ flex:1 1 auto; font-weight:700; font-size:var(--t-small); }
+.switchRow .lb small{ display:block; font-weight:500; font-size:var(--t-micro); color:var(--text-faint); line-height:1.35; }
 .sw2{ width:48px; height:28px; border-radius:999px; background:var(--surface-3); position:relative; transition:background .2s; flex:0 0 auto; }
 .sw2::after{ content:""; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%; background:var(--surface); box-shadow:var(--shadow-1); transition:transform .22s cubic-bezier(.22,1.4,.36,1); }
 .sw2.on{ background:var(--accent); }
 .sw2.on::after{ transform:translateX(20px); }
 .seg{ display:flex; gap:3px; background:var(--surface-2); border-radius:12px; padding:3px; border:1px solid var(--line-soft); flex:0 0 auto; }
-.seg button{ padding:6px 10px; border-radius:9px; font-size:12px; font-weight:700; color:var(--text-dim); }
+.seg button{ padding:6px 10px; border-radius:9px; font-size:var(--t-small); font-weight:700; color:var(--text-dim); }
 .seg button.on{ background:var(--surface); color:var(--text); box-shadow:var(--shadow-1); }
 .divide{ height:1px; background:var(--line-soft); }
-.empty{ text-align:center; padding:26px 16px; color:var(--text-faint); font-size:13px; }
+.empty{ text-align:center; padding:26px 16px; color:var(--text-faint); font-size:var(--t-small); }
 .fx-shake{ animation:shake .34s ease; }
 @keyframes shake{ 10%,90%{transform:translateX(-2px)} 30%,70%{transform:translateX(4px)} 50%{transform:translateX(-5px)} }
 .spin{ animation:spin 1s linear infinite; }
@@ -734,8 +749,8 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .trophy.got{ opacity:1; background:var(--surface); border-color:var(--accent-strong); box-shadow:var(--shadow-1); }
 .trophy .bi{ width:22px; height:22px; display:block; color:var(--text-faint); }
 .trophy.got .bi{ color:var(--accent-strong); }
-.trophy .bn{ font-family:"Grandstander",sans-serif; font-weight:700; font-size:11.5px; line-height:1.2; }
-.trophy .bp{ font-size:9.5px; color:var(--text-faint); line-height:1.3; font-variant-numeric:tabular-nums; }
+.trophy .bn{ font-family:"Grandstander",sans-serif; font-weight:700; font-size:var(--t-micro); line-height:1.2; }
+.trophy .bp{ font-size:var(--t-nano); color:var(--text-faint); line-height:1.3; font-variant-numeric:tabular-nums; }
 .trophy.got .bp{ color:var(--text-dim); }
 
 /* the three care figures on a pet row: they must wrap rather than push
@@ -758,7 +773,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .switchRow.themeRow{ flex-wrap:wrap; }
 .switchRow .seg{ margin-left:auto; }
 @media (max-width:360px){
-  .seg button{ padding:6px 8px; font-size:11.5px; }
+  .seg button{ padding:6px 8px; font-size:var(--t-micro); }
   .switchRow{ gap:8px; padding:11px 12px; }
 }
 
@@ -780,10 +795,10 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 }
 .todayTile .dt, .todayTile .gt{ flex:1 1 auto; min-width:0; width:100%; }
 .todayTile .dt b, .todayTile .gt b{
-  font-family:"Grandstander",sans-serif; font-size:14px; display:block; line-height:1.2;
+  font-family:"Grandstander",sans-serif; font-size:var(--t-body); display:block; line-height:1.2;
 }
 .todayTile .dt small, .todayTile .gt small{
-  display:block; color:var(--text-faint); font-size:11px; line-height:1.35; margin-top:2px;
+  display:block; color:var(--text-faint); font-size:var(--t-micro); line-height:1.35; margin-top:2px;
 }
 .todayTile .btn{ width:100%; margin-top:auto; }
 /* With nothing beside it there is no reason to keep the narrow column:
@@ -802,8 +817,8 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .howRow{ display:flex; align-items:center; gap:11px; text-align:left; }
 .howArt{ display:flex; align-items:center; gap:2px; flex:0 0 auto; }
 .howTile{ width:40px; height:40px; display:block; }
-.howPlus{ font-family:"Grandstander",sans-serif; font-weight:700; color:var(--text-faint); font-size:13px; }
-.howText{ font-size:12px; line-height:1.4; color:var(--text-dim); }
+.howPlus{ font-family:"Grandstander",sans-serif; font-weight:700; color:var(--text-faint); font-size:var(--t-small); }
+.howText{ font-size:var(--t-small); line-height:1.4; color:var(--text-dim); }
 
 /* A button's label does not wrap. "Open it" broken over two lines, or
    "Back to the lane" over two, is the whole card looking broken. */
@@ -835,7 +850,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .statPills .pill svg{ width:12px; height:12px; margin-right:-1px; }
 
 .perkchips{ display:flex; flex-wrap:wrap; gap:4px; margin-top:4px; }
-.perkchips .pill{ font-size:10.5px; padding:2px 8px; }
+.perkchips .pill{ font-size:var(--t-micro); padding:2px 8px; }
 
 /* The sheet says the pet is pleased with you, so the pet is in it. It
    is the only place the two halves of the game meet at the moment they
@@ -849,7 +864,7 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
    for; the two errands beside it are offers, not instructions, and
    three gold buttons in one view means none of them is the one. Their
    accent lives in the icon and the border instead. */
-.todayTile .btn{ font-size:12.5px; padding:9px 12px; }
+.todayTile .btn{ font-size:var(--t-small); padding:9px 12px; }
 .giftCard .btn{ color:var(--accent-strong); border-color:color-mix(in srgb,var(--accent-strong) 34%, var(--line)); }
 .dailyCard .btn{ color:var(--sage); border-color:color-mix(in srgb,var(--sage) 34%, var(--line)); }
 
@@ -866,8 +881,8 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   text-align:left;
 }
 .offer .ot{ flex:1 1 auto; min-width:0; }
-.offer .ot b{ display:block; font-family:"Grandstander",sans-serif; font-size:13.5px; line-height:1.2; }
-.offer .ot small{ display:block; color:var(--text-faint); font-size:11px; margin-top:1px; }
+.offer .ot b{ display:block; font-family:"Grandstander",sans-serif; font-size:var(--t-small); line-height:1.2; }
+.offer .ot small{ display:block; color:var(--text-faint); font-size:var(--t-micro); margin-top:1px; }
 .offer .btn{ flex:0 0 auto; white-space:nowrap; color:var(--plum);
   border-color:color-mix(in srgb,var(--plum) 40%, var(--line)); }
 </style>
@@ -6835,24 +6850,47 @@ function drawHintRing(c, cx, cy, s, t, col) {
 }
 
 /* ---------------- scenery pieces ---------------- */
+/* Two trees, chosen by position so a given tree is always the same
+   tree. A lane lined with one silhouette repeated at three sizes reads
+   as a tiled background; a second shape and a second green is enough to
+   stop the eye noticing the repeat. */
 function drawTree(c, x, y, s, t) {
   c.save(); c.translate(x, y);
+  const kind = Math.floor(mulberry(Math.round(x) * 131 + Math.round(y))() * 2);
   const sway = Math.sin(t * .7 + x * .01) * .03;
   c.fillStyle = rgba('#2A1E12', .18);
   ellipse(c, 0, 0, s * .5, s * .12); c.fill();
-  c.fillStyle = PAL.dark ? '#4A3A2A' : '#8A6A4A';
-  c.beginPath();
-  c.moveTo(-s * .09, 0); c.lineTo(-s * .05, -s * .7);
-  c.lineTo(s * .05, -s * .7); c.lineTo(s * .09, 0); c.closePath(); c.fill();
-  c.save();
-  c.translate(0, -s * .7); c.rotate(sway);
-  const cols = PAL.dark ? ['#2E4A38', '#3C5C46'] : ['#4E8F63', '#63A876'];
-  c.fillStyle = cols[0];
-  ellipse(c, 0, -s * .2, s * .55, s * .48); c.fill();
-  c.fillStyle = cols[1];
-  ellipse(c, -s * .22, -s * .3, s * .32, s * .28); c.fill();
-  ellipse(c, s * .24, -s * .26, s * .3, s * .26); c.fill();
-  c.restore();
+  const trunk = PAL.dark ? '#4A3A2A' : '#8A6A4A';
+  const cols = PAL.dark
+    ? (kind ? ['#27412F', '#33523D'] : ['#2E4A38', '#3C5C46'])
+    : (kind ? ['#44815A', '#5C9A6C'] : ['#4E8F63', '#63A876']);
+  if (kind) {
+    /* the taller one: a narrow crown in three tiers */
+    c.fillStyle = trunk;
+    c.beginPath();
+    c.moveTo(-s * .07, 0); c.lineTo(-s * .04, -s * .84);
+    c.lineTo(s * .04, -s * .84); c.lineTo(s * .07, 0); c.closePath(); c.fill();
+    c.save(); c.translate(0, -s * .84); c.rotate(sway);
+    c.fillStyle = cols[0];
+    ellipse(c, 0, -s * .10, s * .34, s * .30); c.fill();
+    ellipse(c, 0, -s * .32, s * .27, s * .24); c.fill();
+    c.fillStyle = cols[1];
+    ellipse(c, -s * .10, -s * .24, s * .18, s * .16); c.fill();
+    ellipse(c, s * .11, -s * .44, s * .15, s * .13); c.fill();
+    c.restore();
+  } else {
+    c.fillStyle = trunk;
+    c.beginPath();
+    c.moveTo(-s * .09, 0); c.lineTo(-s * .05, -s * .7);
+    c.lineTo(s * .05, -s * .7); c.lineTo(s * .09, 0); c.closePath(); c.fill();
+    c.save(); c.translate(0, -s * .7); c.rotate(sway);
+    c.fillStyle = cols[0];
+    ellipse(c, 0, -s * .2, s * .55, s * .48); c.fill();
+    c.fillStyle = cols[1];
+    ellipse(c, -s * .22, -s * .3, s * .32, s * .28); c.fill();
+    ellipse(c, s * .24, -s * .26, s * .3, s * .26); c.fill();
+    c.restore();
+  }
   c.restore();
 }
 function drawBush(c, x, y, s) {
@@ -6895,32 +6933,52 @@ function drawCottage(c, x, y, s, seed) {
   c.restore();
 }
 function drawLampPost(c, x, y, s, warmth, t) {
+  /* At map scale this was a hairline pole with a pale trapezoid over it,
+     both the colour of the sky behind them: two thin shapes that read as
+     a broken picture rather than as a lamp. It is drawn with weight now
+     — a tapered post, a crossbar, and a shade with a dark rim so its
+     silhouette survives being forty pixels tall on a green field. */
+  const dark = PAL.dark;
   c.save(); c.translate(x, y);
-  c.strokeStyle = PAL.dark ? '#4A5568' : '#7B6448';
-  c.lineWidth = s * .07; c.lineCap = 'round';
-  c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -s * .82); c.stroke();
-  /* a cap and a collar: without them the shade hangs off the top of the
-     pole with a gap under it and reads as two separate objects */
-  c.fillStyle = PAL.dark ? '#4A5568' : '#7B6448';
-  rr(c, -s * .05, -s * .86, s * .1, s * .07, s * .02); c.fill();
-  c.fillStyle = warmth > .3 ? '#FFE6A8' : (PAL.dark ? '#3A4557' : '#E8DCC6');
+  c.fillStyle = rgba('#2A1E12', dark ? .4 : .16);
+  ellipse(c, 0, 0, s * .17, s * .05); c.fill();
+  const post = dark ? '#46536A' : '#6B563C';
+  /* a post with a base and a taper, not a line */
+  c.fillStyle = post;
   c.beginPath();
-  c.moveTo(-s * .13, -s * .82); c.lineTo(s * .13, -s * .82);
-  c.lineTo(s * .08, -s * 1.02); c.lineTo(-s * .08, -s * 1.02); c.closePath(); c.fill();
-  c.fillStyle = PAL.dark ? '#4A5568' : '#7B6448';
-  rr(c, -s * .105, -s * 1.06, s * .21, s * .05, s * .02); c.fill();
-  if (warmth > .3) {
+  c.moveTo(-s * .07, 0); c.lineTo(s * .07, 0);
+  c.lineTo(s * .035, -s * .84); c.lineTo(-s * .035, -s * .84);
+  c.closePath(); c.fill();
+  rr(c, -s * .10, -s * .07, s * .2, s * .07, s * .02); c.fill();
+  /* the crossbar the lamp hangs off */
+  rr(c, -s * .12, -s * .86, s * .24, s * .05, s * .02); c.fill();
+  /* the shade: a solid body with a rim, so it is an object */
+  const lit = warmth > .3;
+  c.beginPath();
+  c.moveTo(-s * .16, -s * .86); c.lineTo(s * .16, -s * .86);
+  c.lineTo(s * .09, -s * 1.06); c.lineTo(-s * .09, -s * 1.06);
+  c.closePath();
+  c.fillStyle = lit ? '#FFE1A0' : (dark ? '#3A4557' : '#E4D6BC');
+  c.fill();
+  c.strokeStyle = post; c.lineWidth = Math.max(1, s * .035); c.stroke();
+  c.fillStyle = post;
+  rr(c, -s * .11, -s * 1.10, s * .22, s * .05, s * .02); c.fill();
+  if (lit) {
+    /* the pool of light it throws, not a halo around the bulb */
     c.save();
     c.globalCompositeOperation = 'lighter';
-    const g = c.createRadialGradient(0, -s * .9, 0, 0, -s * .9, s * .9);
-    g.addColorStop(0, rgba('#FFCE84', .22 * warmth * (1 + Math.sin(t * 6 + x) * .04)));
+    const g = c.createRadialGradient(0, -s * .9, 0, 0, -s * .9, s * .95);
+    g.addColorStop(0, rgba('#FFCE84', .26 * warmth * (1 + Math.sin(t * 6 + x) * .05)));
     g.addColorStop(1, rgba('#FFCE84', 0));
     c.fillStyle = g;
-    c.beginPath(); c.arc(0, -s * .9, s * .9, 0, 6.2832); c.fill();
+    c.beginPath(); c.arc(0, -s * .9, s * .95, 0, 6.2832); c.fill();
     c.restore();
+    c.fillStyle = rgba('#FFF3D4', .5);
+    ellipse(c, 0, -s * .02, s * .3, s * .09); c.fill();
   }
   c.restore();
 }
+
 
 /* ============================================================
    Small illustrations used by the UI.
@@ -11039,7 +11097,7 @@ function renderHome() {
         <button class="care ${(pet.energy < 30 && !pet.asleep) || (pet.asleep && pet.energy >= 95) ? 'hot' : ''}" id="careSleep" style="--tint:var(--sage)">
           ${pet.asleep ? IC.sun : IC.moon}<span>${pet.asleep ? T('care_wake') : T('care_sleep')}</span><span class="cost">&nbsp;</span></button>
       </div>
-      <div style="font-size:11px;color:var(--text-faint);text-align:center">${T('home_care_hint')}</div>
+      <div style="font-size:var(--t-micro);color:var(--text-faint);text-align:center">${T('home_care_hint')}</div>
     </div>
 
     ${giftReady() ? '' : `
@@ -11059,14 +11117,14 @@ function renderHome() {
       <div class="divide"></div>
       <div class="eyebrow">${LANG === 'tr' ? 'Karakter' : 'Who they are'}</div>
       ${pet.trait
-      ? `<div style="font-size:12.5px"><b style="font-family:Grandstander,sans-serif">${traitName(pet.trait)}.</b>
+      ? `<div style="font-size:var(--t-small)"><b style="font-family:Grandstander,sans-serif">${traitName(pet.trait)}.</b>
          <span style="color:var(--text-dim)">${traitDesc(pet.trait)}</span></div>`
-      : `<div style="font-size:12.5px;color:var(--text-faint)">${T('trait_none')} ${T('trait_pending', { n: TRAIT_AT_BOND })}</div>`}
+      : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('trait_none')} ${T('trait_pending', { n: TRAIT_AT_BOND })}</div>`}
       <div class="divide"></div>
       <div class="eyebrow">${T('home_perk')}</div>
       ${perks.length
       ? '<div style="display:flex;gap:6px;flex-wrap:wrap">' + perks.map(p => `<span class="pill ok">${IC.check}${perkLabel(p)}</span>`).join('') + '</div>'
-      : `<div style="font-size:12.5px;color:var(--text-faint)">${T('home_perk_none', { name: pet.name })}</div>`}
+      : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('home_perk_none', { name: pet.name })}</div>`}
     </div>
 
   `;
@@ -11467,7 +11525,7 @@ function renderShop() {
     ${body}
     <div class="card pad16" style="text-align:center">
       <div class="eyebrow" style="margin-bottom:6px">${T('shop_treats_t')}</div>
-      <div style="font-size:12px;color:var(--text-faint);line-height:1.5">${T('shop_treats_s')}</div>
+      <div style="font-size:var(--t-small);color:var(--text-faint);line-height:1.5">${T('shop_treats_s')}</div>
     </div>`;
   $$('.tabs button', pad).forEach(b => b.addEventListener('click', () => { SFX.tap(); SHOP_TAB = b.dataset.t; renderShop(); }));
   paintArtCanvases(pad);
@@ -11522,7 +11580,7 @@ function shopStyle() {
     const worn = pet && pet.hat === h.id;
     return `<div class="good ${worn ? 'owned' : ''}" style="padding:9px 7px">
       <div class="art"><canvas data-hat="${h.id}" width="64" height="64"></canvas></div>
-      <div class="nm" style="font-size:11.5px;text-align:center">${goodName(h)}</div>
+      <div class="nm" style="font-size:var(--t-micro);text-align:center">${goodName(h)}</div>
       ${owned
         ? `<button class="btn sm ${worn ? 'ghost' : ''}" data-equip="${h.id}" data-kind="hat">${worn ? T('shop_worn') : T('shop_wear')}</button>`
         : `<button class="btn sm price" data-buy="${h.id}" data-kind="hat">${priceTag(h.cost)}</button>`}
@@ -11534,7 +11592,7 @@ function shopStyle() {
     const worn = pet && pet.collar === h.id;
     return `<div class="good ${worn ? 'owned' : ''}" style="padding:9px 7px">
       <div class="art"><canvas data-collar="${h.id}" width="64" height="64"></canvas></div>
-      <div class="nm" style="font-size:11.5px;text-align:center">${goodName(h)}</div>
+      <div class="nm" style="font-size:var(--t-micro);text-align:center">${goodName(h)}</div>
       ${owned
         ? `<button class="btn sm ${worn ? 'ghost' : ''}" data-equip="${h.id}" data-kind="collar">${worn ? T('shop_worn') : T('shop_wear')}</button>`
         : `<button class="btn sm price" data-buy="${h.id}" data-kind="collar">${priceTag(h.cost)}</button>`}
@@ -11655,15 +11713,15 @@ function renderFamily() {
     ${canAdopt ? `
     <div class="card pad16" style="display:flex;flex-direction:column;gap:11px">
       <div class="sectitle"><h3>${T('fam_adopt')}</h3></div>
-      <div style="font-size:12.5px;color:var(--text-faint)">${T('fam_adopt_sub')}</div>
+      <div style="font-size:var(--t-small);color:var(--text-faint)">${T('fam_adopt_sub')}</div>
       <div class="grid3">
         ${BREEDS.map((b, i) => ownedBreeds.indexOf(i) >= 0 ? '' : `
           <button class="choice" data-adopt="${i}" style="padding:10px 6px">
             <canvas data-face="${i}" width="56" height="56"></canvas>
-            <span class="nm" style="font-size:12px">${breedName(i)}</span>
+            <span class="nm" style="font-size:var(--t-small)">${breedName(i)}</span>
           </button>`).join('')}
       </div>
-      <div style="display:flex;align-items:center;gap:8px;justify-content:center;font-size:12.5px;font-weight:700">
+      <div style="display:flex;align-items:center;gap:8px;justify-content:center;font-size:var(--t-small);font-weight:700">
         ${SAVE.reached >= need
         ? `<span class="pill warn">${T('fam_cost', { n: cost })}</span>`
         : `<span class="pill bad">${IC.lock}${T('fam_locked', { n: need })}</span>`}
@@ -11784,7 +11842,7 @@ function customiseSheet(breedIdx, done) {
   $('#csCoats', m.el).innerHTML = BREEDS[breedIdx].coats.map((co, i) => `
     <button class="choice ${i === coat ? 'on' : ''}" data-coat="${i}" style="padding:9px 4px">
       <canvas data-face="${breedIdx}" data-coat="${i}" width="46" height="46"></canvas>
-      <span class="nm" style="font-size:11px">${LANG === 'tr' ? co.tr : co.en}</span>
+      <span class="nm" style="font-size:var(--t-micro)">${LANG === 'tr' ? co.tr : co.en}</span>
     </button>`).join('');
   $('#csEyes', m.el).innerHTML = EYE_COLORS.map((e, i) =>
     `<button class="sw ${i === eye ? 'on' : ''}" data-eye="${i}" style="background:${e.hex}"></button>`).join('');
@@ -12346,8 +12404,8 @@ function openSettings() {
     </div>
     <button class="btn ghost wide" id="setHow">${T('how_open')}</button>
     <button class="btn ghost wide" id="setKeys">${T('a11y_help_t')}</button>
-    <div style="font-size:11.5px;color:var(--text-faint);line-height:1.5">${T('set_credits')}</div>
-    <div style="font-size:11.5px;color:var(--text-faint);display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <div style="font-size:var(--t-micro);color:var(--text-faint);line-height:1.5">${T('set_credits')}</div>
+    <div style="font-size:var(--t-micro);color:var(--text-faint);display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <span>${LANG === 'tr' ? 'Oynanan' : 'Played'}: <b class="num">${SAVE.stats.played}</b></span>
       <span>${LANG === 'tr' ? 'Geçilen' : 'Cleared'}: <b class="num">${SAVE.stats.cleared}</b></span>
       <span>${LANG === 'tr' ? 'En iyi kombo' : 'Best combo'}: <b class="num">x${SAVE.stats.bestCombo || 0}</b></span>
@@ -12461,7 +12519,7 @@ function maybeTutorial(def) {
     SAVE.seen[s.k] = 1; persist();
     const m = modal(`
       <canvas id="tutArt" width="120" height="120" style="width:120px;height:120px;align-self:center"></canvas>
-      <p style="font-size:14.5px;color:var(--text)">${s.text}</p>
+      <p style="font-size:var(--t-body);color:var(--text)">${s.text}</p>
       <button class="btn primary wide" id="tutOk">${T('tut_got')}</button>
     `, { dismissable: false });
     const c = fitCanvas($('#tutArt', m.el), 120, 120);
@@ -12493,7 +12551,7 @@ function runOnboarding() {
     if (step === 0) {
       card.innerHTML = `
         <canvas id="obHero" width="180" height="180" style="width:180px;height:180px;align-self:center"></canvas>
-        <h1 style="font-size:27px">${T('onb_hi')}</h1>
+        <h1 style="font-size:var(--t-hero)">${T('onb_hi')}</h1>
         <p style="color:var(--text-dim)">${T('onb_hi_sub')}</p>
         <button class="btn primary wide" id="obNext">${T('onb_start')}</button>
         ${dots(0)}`;
@@ -12503,7 +12561,7 @@ function runOnboarding() {
     } else if (step === 1) {
       card.innerHTML = `
         <h2>${T('onb_pick')}</h2>
-        <p style="font-size:12.5px">${T('onb_pick_sub')}</p>
+        <p style="font-size:var(--t-small)">${T('onb_pick_sub')}</p>
         <div class="choiceGrid" style="grid-template-columns:repeat(3,1fr)">
           ${BREEDS.map((b, i) => `
             <button class="choice ${i === breedIdx ? 'on' : ''}" data-b="${i}">
@@ -12526,12 +12584,12 @@ function runOnboarding() {
       card.innerHTML = `
         <canvas id="obArt" width="150" height="122" style="width:150px;height:122px;align-self:center"></canvas>
         <h2>${T('onb_coat')}</h2>
-        <p style="font-size:12.5px">${T('onb_coat_sub')}</p>
+        <p style="font-size:var(--t-small)">${T('onb_coat_sub')}</p>
         <div class="choiceGrid" style="grid-template-columns:repeat(3,1fr)">
           ${BREEDS[breedIdx].coats.map((co, i) => `
             <button class="choice ${i === coat ? 'on' : ''}" data-c="${i}" style="padding:10px 5px">
               <canvas data-face="${breedIdx}" data-coat="${i}" width="66" height="66"></canvas>
-              <span class="nm" style="font-size:12px">${LANG === 'tr' ? co.tr : co.en}</span>
+              <span class="nm" style="font-size:var(--t-small)">${LANG === 'tr' ? co.tr : co.en}</span>
             </button>`).join('')}
         </div>
         <div class="eyebrow">${T('onb_eyes')}</div>
@@ -12555,9 +12613,9 @@ function runOnboarding() {
       card.innerHTML = `
         <canvas id="obArt" width="146" height="118" style="width:146px;height:118px;align-self:center"></canvas>
         <h2>${T('onb_name')}</h2>
-        <p style="font-size:12.5px">${T('onb_name_sub')}</p>
+        <p style="font-size:var(--t-small)">${T('onb_name_sub')}</p>
         <input class="field" id="obName" maxlength="14" placeholder="${T('onb_placeholder')}" value="${name}">
-        <div style="font-size:11px;color:var(--text-faint)">${T('onb_suggest')}</div>
+        <div style="font-size:var(--t-micro);color:var(--text-faint)">${T('onb_suggest')}</div>
         <div class="nameSuggest">${names.slice(0, 6).map(n => `<button data-n="${n}">${n}</button>`).join('')}</div>
         <div class="row"><button class="btn ghost" id="obBack">${T('onb_back')}</button>
         <button class="btn primary" id="obNext">${T('onb_done')}</button></div>

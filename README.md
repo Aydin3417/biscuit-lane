@@ -1203,3 +1203,28 @@ Everything else held up: the level card's perk chips wrap onto two rows
 in Turkish without spilling, the shop cards take the longer names, and
 the settings sheet's three-way light control still gets its own line
 where it needs it.
+
+## Eighteen type sizes
+
+A count of the stylesheet found eighteen distinct `font-size`
+declarations, thirteen of them inside a six-pixel range: 9, 9.5, 10,
+10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15. That is not a scale.
+It is a series of separate decisions that happened to land near each
+other, and the reason two captions on the same screen were never quite
+the same size.
+
+Seven steps now — nano, micro, small, body, title, h2, hero — as tokens,
+with every declaration snapped to the nearest. Nothing moved more than a
+pixel and a half, so this is not a redesign; the point is that a caption
+is now the same size as every other caption, and adding one later means
+choosing a step rather than inventing a number.
+
+Two things it turned up on the way past: the third marker on the star
+track sat centred on the end of the bar, so half of it hung off the side
+of the screen, and the lamppost on the lane was a hairline post under a
+pale trapezoid — two thin shapes the colour of the sky behind them,
+which read as a broken picture rather than a lamp. The post has a base
+and a taper and the shade has a dark rim now, so its silhouette survives
+being forty pixels tall on a green field. The trees come in two forms
+instead of one, because a lane lined with a single silhouette repeated
+at three sizes reads as a tiled background.

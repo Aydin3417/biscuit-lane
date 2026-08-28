@@ -164,7 +164,7 @@ function renderHome() {
         <button class="care ${(pet.energy < 30 && !pet.asleep) || (pet.asleep && pet.energy >= 95) ? 'hot' : ''}" id="careSleep" style="--tint:var(--sage)">
           ${pet.asleep ? IC.sun : IC.moon}<span>${pet.asleep ? T('care_wake') : T('care_sleep')}</span><span class="cost">&nbsp;</span></button>
       </div>
-      <div style="font-size:11px;color:var(--text-faint);text-align:center">${T('home_care_hint')}</div>
+      <div style="font-size:var(--t-micro);color:var(--text-faint);text-align:center">${T('home_care_hint')}</div>
     </div>
 
     ${giftReady() ? '' : `
@@ -184,14 +184,14 @@ function renderHome() {
       <div class="divide"></div>
       <div class="eyebrow">${LANG === 'tr' ? 'Karakter' : 'Who they are'}</div>
       ${pet.trait
-      ? `<div style="font-size:12.5px"><b style="font-family:Grandstander,sans-serif">${traitName(pet.trait)}.</b>
+      ? `<div style="font-size:var(--t-small)"><b style="font-family:Grandstander,sans-serif">${traitName(pet.trait)}.</b>
          <span style="color:var(--text-dim)">${traitDesc(pet.trait)}</span></div>`
-      : `<div style="font-size:12.5px;color:var(--text-faint)">${T('trait_none')} ${T('trait_pending', { n: TRAIT_AT_BOND })}</div>`}
+      : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('trait_none')} ${T('trait_pending', { n: TRAIT_AT_BOND })}</div>`}
       <div class="divide"></div>
       <div class="eyebrow">${T('home_perk')}</div>
       ${perks.length
       ? '<div style="display:flex;gap:6px;flex-wrap:wrap">' + perks.map(p => `<span class="pill ok">${IC.check}${perkLabel(p)}</span>`).join('') + '</div>'
-      : `<div style="font-size:12.5px;color:var(--text-faint)">${T('home_perk_none', { name: pet.name })}</div>`}
+      : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('home_perk_none', { name: pet.name })}</div>`}
     </div>
 
   `;
@@ -592,7 +592,7 @@ function renderShop() {
     ${body}
     <div class="card pad16" style="text-align:center">
       <div class="eyebrow" style="margin-bottom:6px">${T('shop_treats_t')}</div>
-      <div style="font-size:12px;color:var(--text-faint);line-height:1.5">${T('shop_treats_s')}</div>
+      <div style="font-size:var(--t-small);color:var(--text-faint);line-height:1.5">${T('shop_treats_s')}</div>
     </div>`;
   $$('.tabs button', pad).forEach(b => b.addEventListener('click', () => { SFX.tap(); SHOP_TAB = b.dataset.t; renderShop(); }));
   paintArtCanvases(pad);
@@ -647,7 +647,7 @@ function shopStyle() {
     const worn = pet && pet.hat === h.id;
     return `<div class="good ${worn ? 'owned' : ''}" style="padding:9px 7px">
       <div class="art"><canvas data-hat="${h.id}" width="64" height="64"></canvas></div>
-      <div class="nm" style="font-size:11.5px;text-align:center">${goodName(h)}</div>
+      <div class="nm" style="font-size:var(--t-micro);text-align:center">${goodName(h)}</div>
       ${owned
         ? `<button class="btn sm ${worn ? 'ghost' : ''}" data-equip="${h.id}" data-kind="hat">${worn ? T('shop_worn') : T('shop_wear')}</button>`
         : `<button class="btn sm price" data-buy="${h.id}" data-kind="hat">${priceTag(h.cost)}</button>`}
@@ -659,7 +659,7 @@ function shopStyle() {
     const worn = pet && pet.collar === h.id;
     return `<div class="good ${worn ? 'owned' : ''}" style="padding:9px 7px">
       <div class="art"><canvas data-collar="${h.id}" width="64" height="64"></canvas></div>
-      <div class="nm" style="font-size:11.5px;text-align:center">${goodName(h)}</div>
+      <div class="nm" style="font-size:var(--t-micro);text-align:center">${goodName(h)}</div>
       ${owned
         ? `<button class="btn sm ${worn ? 'ghost' : ''}" data-equip="${h.id}" data-kind="collar">${worn ? T('shop_worn') : T('shop_wear')}</button>`
         : `<button class="btn sm price" data-buy="${h.id}" data-kind="collar">${priceTag(h.cost)}</button>`}
@@ -780,15 +780,15 @@ function renderFamily() {
     ${canAdopt ? `
     <div class="card pad16" style="display:flex;flex-direction:column;gap:11px">
       <div class="sectitle"><h3>${T('fam_adopt')}</h3></div>
-      <div style="font-size:12.5px;color:var(--text-faint)">${T('fam_adopt_sub')}</div>
+      <div style="font-size:var(--t-small);color:var(--text-faint)">${T('fam_adopt_sub')}</div>
       <div class="grid3">
         ${BREEDS.map((b, i) => ownedBreeds.indexOf(i) >= 0 ? '' : `
           <button class="choice" data-adopt="${i}" style="padding:10px 6px">
             <canvas data-face="${i}" width="56" height="56"></canvas>
-            <span class="nm" style="font-size:12px">${breedName(i)}</span>
+            <span class="nm" style="font-size:var(--t-small)">${breedName(i)}</span>
           </button>`).join('')}
       </div>
-      <div style="display:flex;align-items:center;gap:8px;justify-content:center;font-size:12.5px;font-weight:700">
+      <div style="display:flex;align-items:center;gap:8px;justify-content:center;font-size:var(--t-small);font-weight:700">
         ${SAVE.reached >= need
         ? `<span class="pill warn">${T('fam_cost', { n: cost })}</span>`
         : `<span class="pill bad">${IC.lock}${T('fam_locked', { n: need })}</span>`}
@@ -909,7 +909,7 @@ function customiseSheet(breedIdx, done) {
   $('#csCoats', m.el).innerHTML = BREEDS[breedIdx].coats.map((co, i) => `
     <button class="choice ${i === coat ? 'on' : ''}" data-coat="${i}" style="padding:9px 4px">
       <canvas data-face="${breedIdx}" data-coat="${i}" width="46" height="46"></canvas>
-      <span class="nm" style="font-size:11px">${LANG === 'tr' ? co.tr : co.en}</span>
+      <span class="nm" style="font-size:var(--t-micro)">${LANG === 'tr' ? co.tr : co.en}</span>
     </button>`).join('');
   $('#csEyes', m.el).innerHTML = EYE_COLORS.map((e, i) =>
     `<button class="sw ${i === eye ? 'on' : ''}" data-eye="${i}" style="background:${e.hex}"></button>`).join('');
@@ -1471,8 +1471,8 @@ function openSettings() {
     </div>
     <button class="btn ghost wide" id="setHow">${T('how_open')}</button>
     <button class="btn ghost wide" id="setKeys">${T('a11y_help_t')}</button>
-    <div style="font-size:11.5px;color:var(--text-faint);line-height:1.5">${T('set_credits')}</div>
-    <div style="font-size:11.5px;color:var(--text-faint);display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <div style="font-size:var(--t-micro);color:var(--text-faint);line-height:1.5">${T('set_credits')}</div>
+    <div style="font-size:var(--t-micro);color:var(--text-faint);display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <span>${LANG === 'tr' ? 'Oynanan' : 'Played'}: <b class="num">${SAVE.stats.played}</b></span>
       <span>${LANG === 'tr' ? 'Geçilen' : 'Cleared'}: <b class="num">${SAVE.stats.cleared}</b></span>
       <span>${LANG === 'tr' ? 'En iyi kombo' : 'Best combo'}: <b class="num">x${SAVE.stats.bestCombo || 0}</b></span>
@@ -1586,7 +1586,7 @@ function maybeTutorial(def) {
     SAVE.seen[s.k] = 1; persist();
     const m = modal(`
       <canvas id="tutArt" width="120" height="120" style="width:120px;height:120px;align-self:center"></canvas>
-      <p style="font-size:14.5px;color:var(--text)">${s.text}</p>
+      <p style="font-size:var(--t-body);color:var(--text)">${s.text}</p>
       <button class="btn primary wide" id="tutOk">${T('tut_got')}</button>
     `, { dismissable: false });
     const c = fitCanvas($('#tutArt', m.el), 120, 120);
@@ -1618,7 +1618,7 @@ function runOnboarding() {
     if (step === 0) {
       card.innerHTML = `
         <canvas id="obHero" width="180" height="180" style="width:180px;height:180px;align-self:center"></canvas>
-        <h1 style="font-size:27px">${T('onb_hi')}</h1>
+        <h1 style="font-size:var(--t-hero)">${T('onb_hi')}</h1>
         <p style="color:var(--text-dim)">${T('onb_hi_sub')}</p>
         <button class="btn primary wide" id="obNext">${T('onb_start')}</button>
         ${dots(0)}`;
@@ -1628,7 +1628,7 @@ function runOnboarding() {
     } else if (step === 1) {
       card.innerHTML = `
         <h2>${T('onb_pick')}</h2>
-        <p style="font-size:12.5px">${T('onb_pick_sub')}</p>
+        <p style="font-size:var(--t-small)">${T('onb_pick_sub')}</p>
         <div class="choiceGrid" style="grid-template-columns:repeat(3,1fr)">
           ${BREEDS.map((b, i) => `
             <button class="choice ${i === breedIdx ? 'on' : ''}" data-b="${i}">
@@ -1651,12 +1651,12 @@ function runOnboarding() {
       card.innerHTML = `
         <canvas id="obArt" width="150" height="122" style="width:150px;height:122px;align-self:center"></canvas>
         <h2>${T('onb_coat')}</h2>
-        <p style="font-size:12.5px">${T('onb_coat_sub')}</p>
+        <p style="font-size:var(--t-small)">${T('onb_coat_sub')}</p>
         <div class="choiceGrid" style="grid-template-columns:repeat(3,1fr)">
           ${BREEDS[breedIdx].coats.map((co, i) => `
             <button class="choice ${i === coat ? 'on' : ''}" data-c="${i}" style="padding:10px 5px">
               <canvas data-face="${breedIdx}" data-coat="${i}" width="66" height="66"></canvas>
-              <span class="nm" style="font-size:12px">${LANG === 'tr' ? co.tr : co.en}</span>
+              <span class="nm" style="font-size:var(--t-small)">${LANG === 'tr' ? co.tr : co.en}</span>
             </button>`).join('')}
         </div>
         <div class="eyebrow">${T('onb_eyes')}</div>
@@ -1680,9 +1680,9 @@ function runOnboarding() {
       card.innerHTML = `
         <canvas id="obArt" width="146" height="118" style="width:146px;height:118px;align-self:center"></canvas>
         <h2>${T('onb_name')}</h2>
-        <p style="font-size:12.5px">${T('onb_name_sub')}</p>
+        <p style="font-size:var(--t-small)">${T('onb_name_sub')}</p>
         <input class="field" id="obName" maxlength="14" placeholder="${T('onb_placeholder')}" value="${name}">
-        <div style="font-size:11px;color:var(--text-faint)">${T('onb_suggest')}</div>
+        <div style="font-size:var(--t-micro);color:var(--text-faint)">${T('onb_suggest')}</div>
         <div class="nameSuggest">${names.slice(0, 6).map(n => `<button data-n="${n}">${n}</button>`).join('')}</div>
         <div class="row"><button class="btn ghost" id="obBack">${T('onb_back')}</button>
         <button class="btn primary" id="obNext">${T('onb_done')}</button></div>
