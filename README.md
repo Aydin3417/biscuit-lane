@@ -80,7 +80,7 @@ per frame, for a picture that never changes. A board holds thirty of
 them. It is cached now, the way a tile is.
 
 Open `test/integration.html` in the preview for the browser layer: it
-loads the built game in an iframe and runs 33 checks, driving the real
+loads the built game in an iframe and runs 34 checks, driving the real
 thing through `window.BL`. They cover:
 
 - **the save** — migration, corrupt values, unreadable files, timestamps
@@ -977,6 +977,42 @@ the four separate places that start a level, so any other route showed
 an empty bar — and those marks are the only thing that says how far off
 two stars you are. It is built inside `startLevel()` now, beside the
 goal chips. A thing every caller must remember is a thing that breaks.
+
+## The language switch nobody could reach
+
+A `.sheet` is a scrolling flex column, and a flex item's default is to
+shrink. The cards inside one carry their own `overflow:hidden`, so when
+the sheet ran short of room the card was squeezed and quietly cut its
+own contents off rather than letting the sheet scroll to them.
+
+On the settings sheet that meant the card ended halfway through the
+light control — and the row under it, **the English/Türkçe switch, could
+not be reached at all.** A game written twice over, at full key parity
+in both languages, with no way to change language from inside it.
+
+Two smaller faults on the same sheet:
+
+- `flex-wrap:wrap` had been put on every `.switchRow` so that the
+  three-way light control could drop onto its own line in Turkish, where
+  it is wider. The side effect was that any row with a long enough
+  description pushed its own toggle down too: "Tile symbols" had its
+  switch sitting underneath its own text. Only the light row wraps now;
+  the others let the label shrink.
+- `.btn.ghost` was fully transparent with a hairline border, which is
+  legible on a card and invisible on the onboarding's cream stage.
+  "Back" read as a piece of text that happened to be next to a button.
+
+## The loudest button on the failure screen
+
+Losing a level offered three controls, and the largest and most coloured
+of them — a full-width rose bar — was **Buy 5 more moves · 2 treats**.
+Carrying on and walking away are both free; the one that spent the
+player's currency was the one the eye went to first.
+
+Trying again is the primary now, going back is the secondary, and the
+five moves are offered underneath in a dashed panel that reads as an
+offer rather than an instruction. Nothing about the transaction changed.
+Which of the three a tired player hits without reading did.
 
 ## Dead code
 

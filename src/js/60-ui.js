@@ -1179,11 +1179,18 @@ function showLose() {
       </div>`).join('')}
     </div>
     ${pet ? `<p>${T('lose_petline', { name: pet.name })}</p>` : ''}
-    ${G.usedExtra ? '' : `<button class="btn rose wide" id="lExtra">${T('lose_extra')} · ${T('lose_extra_sub', { n: 2 })}</button>`}
     <div class="row">
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn primary" id="lRetry">${T('retry')}</button>
     </div>
+    ${G.usedExtra ? '' : `
+    <div class="offer">
+      <span class="ot">
+        <b>${T('lose_extra')}</b>
+        <small>${T('lose_extra_sub', { n: 2 })}</small>
+      </span>
+      <button class="btn sm" id="lExtra">${T('shop_buy')}</button>
+    </div>`}
   `, { dismissable: false });
   paintGoalIcons(m.el);
   paintArtCanvases(m.el);
@@ -1440,7 +1447,7 @@ function openSettings() {
       ${row('music', T('set_music'), T('set_music_s'), SAVE.settings.music)}
       ${row('haptics', T('set_haptics'), T('set_haptics_s'), SAVE.settings.haptics)}
       ${row('marks', T('set_marks'), T('set_marks_s'), SAVE.settings.marks)}
-      <div class="switchRow">
+      <div class="switchRow themeRow">
         <span class="lb">${T('set_theme')}<small>${T('set_theme_s')}</small></span>
         <span class="seg" id="segTheme">
           <button data-th="auto" class="${SAVE.settings.theme === 'auto' ? 'on' : ''}">${T('set_auto')}</button>

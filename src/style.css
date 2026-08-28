@@ -561,6 +561,12 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .veil.on .sheet{ transform:none; opacity:1; }
 .sheet h2{ font-size:22px; }
 .sheet p{ margin:0; color:var(--text-dim); font-size:13.5px; }
+/* A sheet is a scrolling flex column, and a flex item's default is to
+   shrink. Cards inside one carry their own overflow:hidden, so when the
+   sheet ran out of room the card was squeezed and quietly cut its
+   contents off — the settings sheet clipped the light control in half
+   rather than letting the sheet scroll to it. */
+.sheet > *{ flex:0 0 auto; }
 .sheet .row{ display:flex; gap:9px; }
 .sheet .row .btn{ flex:1; }
 .starsRow{ display:flex; justify-content:center; gap:5px; }
@@ -732,9 +738,16 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .petrow .info .br{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
 
 /* A settings row is label + control. In Turkish the three-way light
-   control is wider than the space left over, so the row is allowed to
-   wrap the control onto its own line rather than push past the card. */
-.switchRow{ flex-wrap:wrap; }
+   control is wider than the space left over, so *that* row is allowed to
+   wrap its control onto its own line rather than push past the card.
+
+   It used to be every row. A long description then pushed its own toggle
+   onto a second line — "Tile symbols" had its switch sitting under its
+   own text, and the card clipped whatever fell past the bottom. The
+   label shrinks instead; only the segmented control gets to wrap. */
+.switchRow{ flex-wrap:nowrap; }
+.switchRow .lb{ min-width:0; }
+.switchRow.themeRow{ flex-wrap:wrap; }
 .switchRow .seg{ margin-left:auto; }
 @media (max-width:360px){
   .seg button{ padding:6px 8px; font-size:11.5px; }
@@ -831,3 +844,21 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .todayTile .btn{ font-size:12.5px; padding:9px 12px; }
 .giftCard .btn{ color:var(--accent-strong); border-color:color-mix(in srgb,var(--accent-strong) 34%, var(--line)); }
 .dailyCard .btn{ color:var(--sage); border-color:color-mix(in srgb,var(--sage) 34%, var(--line)); }
+
+/* An offer, under the free choices, not a command above them.
+   The loudest control on a screen that has just told the player they
+   lost should not be the one that spends their treats. Carrying on and
+   walking away are both free; buying five more moves is a thing the
+   player may want, and it is offered the way a shop offers something. */
+.offer{
+  display:flex; align-items:center; gap:11px; margin-top:2px;
+  padding:10px 11px 10px 13px; border-radius:var(--r-md);
+  background:color-mix(in srgb,var(--plum) 8%, var(--surface-2));
+  border:1px dashed color-mix(in srgb,var(--plum) 38%, var(--line));
+  text-align:left;
+}
+.offer .ot{ flex:1 1 auto; min-width:0; }
+.offer .ot b{ display:block; font-family:"Grandstander",sans-serif; font-size:13.5px; line-height:1.2; }
+.offer .ot small{ display:block; color:var(--text-faint); font-size:11px; margin-top:1px; }
+.offer .btn{ flex:0 0 auto; white-space:nowrap; color:var(--plum);
+  border-color:color-mix(in srgb,var(--plum) 40%, var(--line)); }

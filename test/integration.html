@@ -426,6 +426,54 @@ async function run() {
     return 'clean at 320 and 430px, English and Turkish';
   });
 
+  await test('every control in a sheet can actually be reached', async () => {
+    /* The settings sheet clipped its own card in half, and with it the
+       English/Turkish switch — a game written twice over with no way to
+       change language from inside it. The existing layout check looks
+       for things spilling past the screen; this one looks for the
+       opposite, a control swallowed by an ancestor's overflow:hidden.
+       Nothing spills, and nothing is eaten either. */
+    const sheets = [
+      ['settings', () => BL.openSettings()],
+      ['how to play', () => BL.howToPlay()],
+      ['keyboard help', () => BL.keyboardHelp()]
+    ];
+    const bad = [];
+    let checked = 0;
+    for (const [name, open] of sheets) {
+      veilsGone();
+      open();
+      await sleep(240);
+      const sheet = D.querySelector('.veil .sheet');
+      if (!sheet) { bad.push(name + ' did not open'); continue; }
+      /* let the sheet scroll: a control below the fold is fine, a
+         control clipped by a box that cannot scroll is not */
+      sheet.scrollTop = sheet.scrollHeight;
+      await sleep(60);
+      const controls = sheet.querySelectorAll('button, input, select, [data-th], [data-lang]');
+      controls.forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.width < 2 || r.height < 2) return;      /* not laid out; not this test's business */
+        checked++;
+        for (let p = el.parentElement; p && p !== sheet.parentElement; p = p.parentElement) {
+          const cs = W.getComputedStyle(p);
+          if (cs.overflow === 'visible' && cs.overflowY === 'visible') continue;
+          if (p.scrollHeight > p.clientHeight + 2 && cs.overflowY !== 'hidden') continue;  /* it scrolls */
+          const pr = p.getBoundingClientRect();
+          const cut = Math.max(0, r.bottom - pr.bottom) + Math.max(0, pr.top - r.top);
+          if (cut > 3) {
+            bad.push(name + ': "' + (el.textContent || el.value || el.id).trim().slice(0, 22) +
+              '" is cut off by ' + Math.round(cut) + 'px inside ' + (p.className || p.tagName));
+            break;
+          }
+        }
+      });
+      veilsGone();
+    }
+    if (bad.length) assert(false, [...new Set(bad)].slice(0, 4).join('; '));
+    return checked + ' controls across three sheets, none clipped';
+  });
+
   await test('every colour the game writes text in is readable', async () => {
     /* Light mode was never measured. The accent, which draws coin counts
        and level numbers, carried 2.66:1 on its own surface — below even

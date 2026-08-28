@@ -82,12 +82,26 @@ const URL = 'http://localhost:5173/biscuit-lane.html';
   await page.evaluate(() => { BL.setScreen('map'); BL.openLevelIntro(12); });
   await shot('08-levelcard', 700);
 
+  await page.evaluate(() => { document.querySelectorAll('.veil').forEach(v => v.remove()); BL.openSettings(); });
+  await shot('14-settings-sheet', 700);
+  await page.evaluate(() => { document.querySelectorAll('.veil').forEach(v => v.remove()); BL.howToPlay(); });
+  await shot('15-howto-sheet', 700);
+  await page.evaluate(() => { document.querySelectorAll('.veil').forEach(v => v.remove());
+    BL.startLevel(20, { perks: [] }); BL.setScreen('game'); });
+  await page.waitForTimeout(1500);
+  await page.evaluate(() => { BL.game.moves = 0; BL.showLose && BL.showLose(); });
+  await shot('16-lose-sheet', 900);
+
   /* dark */
   await page.evaluate(() => { document.querySelector('.veil') && document.querySelector('.veil').remove();
                               BL.save.settings.theme = 'dark'; BL.applyTheme(); BL.setScreen('home'); });
   await shot('09-room-dark', 900);
   await page.evaluate(() => BL.setScreen('map'));
   await shot('10-map-dark', 700);
+  await page.evaluate(() => { document.querySelectorAll('.veil').forEach(v => v.remove()); BL.setScreen('shop'); });
+  await shot('17-shop-dark', 700);
+  await page.evaluate(() => { document.querySelectorAll('.veil').forEach(v => v.remove()); BL.setScreen('family'); });
+  await shot('18-family-dark', 700);
 
   await browser.close();
   console.log('shots in ' + out);
