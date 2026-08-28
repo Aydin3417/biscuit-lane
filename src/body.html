@@ -91,6 +91,24 @@
   </div>
 </div>
 
+<!-- A portrait game says so, rather than shrinking the board to a
+     quarter of its size and hoping. Only on a short landscape viewport:
+     a tablet has the height to play as it is. -->
+<div id="rotate" aria-hidden="true">
+  <div class="rotWrap">
+    <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <rect x="20" y="6" width="24" height="42" rx="5" stroke="currentColor" stroke-width="3"/>
+      <circle cx="32" cy="42" r="2" fill="currentColor"/>
+      <path d="M14 52a22 22 0 0 0 36 0" stroke="currentColor" stroke-width="3"
+            stroke-linecap="round" stroke-dasharray="4 5"/>
+      <path d="M50 46v7h-7" stroke="currentColor" stroke-width="3"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <b id="rotT">Turn your phone back</b>
+    <small id="rotS">Biscuit Lane is played the tall way up.</small>
+  </div>
+</div>
+
 <p id="live" class="sronly" aria-live="polite" role="status"></p>
 <p id="liveAssertive" class="sronly" aria-live="assertive" role="alert"></p>
 

@@ -1328,3 +1328,51 @@ renamed, a declared size that no longer matches the file's actual IHDR
 header, a shell entry that no longer exists. The browser's response to
 any of those is to silently decline to offer the install, which nobody
 would notice for months.
+
+## What a phone actually asks for
+
+Three things came out of driving the built game on an emulated Pixel 7.
+
+**Landscape.** Turned sideways, the board is height-constrained: it
+collapsed to 204px with 22px cells, floating in a wide empty field with
+most of the screen unused. That is not a landscape layout, it is the
+portrait one apologising. The manifest asks for portrait when the game
+is installed; in a browser tab it can only ask nicely, so it does —
+gated on `max-height: 520px`, so a tablet, which has the room, is left
+alone.
+
+**The effects layer had no idea how the device was coping.** The game
+loop clamps its timestep to 50ms so the physics cannot tunnel, which
+means a phone having a hard time runs in slow motion rather than
+breaking — and also that the game never notices. `FX.load()` is handed
+the real gap before the clamp; a device that is not keeping up gets
+bursts scaled down to a third, and recovers on its own. Nothing changes
+on hardware that can afford it and there is no setting to find.
+
+**A phone in a pocket was still running a game loop.** Hiding the tab
+stopped the music and saved the game, but left both render loops going.
+The browser throttles rAF for a hidden tab, but throttled is not
+stopped, and an installed app spends most of its life in the background.
+Stopping them also fixes the first frame back: both loops take their
+timestamp when they start, so one left running across ten minutes in a
+pocket wakes with ten minutes to account for.
+
+### On measuring a phone from a desktop
+
+Chrome's CPU throttling is a poor model of a slow device and it is worth
+writing down why, because the numbers it gives are inviting.
+
+Timing a *synchronous* loop under it is meaningless: the throttler pauses
+the main thread in slices, and those pauses land inside the loop. Measured
+that way an unthrottled 1.2ms frame became 25ms at 4× and 249ms at 6× —
+a 200× penalty for a 6× setting.
+
+Counting real `requestAnimationFrame` frames is honest, and gives 60fps
+unthrottled, 20fps at 4×, and 2fps at 6×. But the step from 4× to 6× is a
+cliff rather than a slope, which is a property of the throttler and not
+of any real phone. What the measurement does say, and this part is
+trustworthy, is that under main-thread pressure it is the **baseline
+board render** that dominates and not the particles: with the effects
+switched off entirely the numbers barely move. A relayout storm was the
+obvious suspect and was ruled out — zero calls to `layoutBoard()` across
+two seconds at every rate.

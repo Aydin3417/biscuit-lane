@@ -123,6 +123,9 @@ function boot() {
 
   paintLogo();
   $('#brandSub').textContent = T('brandSub');
+  { const rt = $('#rotT'), rs = $('#rotS');
+    if (rt) rt.textContent = T('rot_t');
+    if (rs) rs.textContent = T('rot_s'); }
   buildTabs();
   bindBoard();
   bindMap();
@@ -154,13 +157,23 @@ function boot() {
     const h = () => { if (SAVE.settings.theme === 'auto') applyTheme(); };
     mq.addEventListener ? mq.addEventListener('change', h) : mq.addListener(h);
   }
+  /* A phone in a pocket should not be running a game loop. The browser
+     throttles rAF for a hidden tab anyway, but "throttled" is not
+     "stopped", and an installed app spends a lot of its life in the
+     background. Stopping them also fixes the first frame back: both
+     loops take their timestamp when they start, so a loop left running
+     across ten minutes in a pocket wakes up with a ten-minute gap to
+     account for. */
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { musicStop(); persist(true); }
-    else {
+    if (document.hidden) {
+      musicStop(); persist(true);
+      gameLoopStop(); roomStop();
+    } else {
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
       if (SAVE.hearts < HEART_MAX) heartClockStart();
       if (SAVE.settings.music) musicStart();
-      if (SCREEN === 'home') renderHome();
+      if (SCREEN === 'home') { renderHome(); roomLayout(); roomStart(); }
+      if (SCREEN === 'game') { layoutBoard(); gameLoopStart(); }
     }
   });
   window.addEventListener('beforeunload', () => persist(true));

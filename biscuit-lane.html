@@ -908,6 +908,25 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .offer .ot small{ display:block; color:var(--text-faint); font-size:var(--t-micro); margin-top:1px; }
 .offer .btn{ flex:0 0 auto; white-space:nowrap; color:var(--plum);
   border-color:color-mix(in srgb,var(--plum) 40%, var(--line)); }
+
+/* ---------- turned sideways ----------
+   A board that shrinks to 22px cells in a wide empty field is not a
+   landscape layout, it is the portrait one apologising. The manifest
+   asks for portrait when the game is installed; in a browser tab it can
+   only ask nicely. Height-gated so a tablet, which has the room, is left
+   alone. */
+#rotate{
+  position:fixed; inset:0; z-index:200; display:none;
+  background:var(--stage); color:var(--text);
+  place-items:center; text-align:center; padding:24px;
+}
+.rotWrap{ display:flex; flex-direction:column; align-items:center; gap:11px; max-width:320px; }
+#rotate svg{ width:64px; height:64px; color:var(--accent-strong); }
+#rotate b{ font-family:"Grandstander",sans-serif; font-size:var(--t-h2); }
+#rotate small{ font-size:var(--t-small); color:var(--text-dim); line-height:1.45; }
+@media (orientation:landscape) and (max-height:520px){
+  #rotate{ display:grid; }
+}
 </style>
 
 <div class="stage">
@@ -1000,6 +1019,24 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
     </div>
 
     <nav class="tabbar" id="tabbar"></nav>
+  </div>
+</div>
+
+<!-- A portrait game says so, rather than shrinking the board to a
+     quarter of its size and hoping. Only on a short landscape viewport:
+     a tablet has the height to play as it is. -->
+<div id="rotate" aria-hidden="true">
+  <div class="rotWrap">
+    <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <rect x="20" y="6" width="24" height="42" rx="5" stroke="currentColor" stroke-width="3"/>
+      <circle cx="32" cy="42" r="2" fill="currentColor"/>
+      <path d="M14 52a22 22 0 0 0 36 0" stroke="currentColor" stroke-width="3"
+            stroke-linecap="round" stroke-dasharray="4 5"/>
+      <path d="M50 46v7h-7" stroke="currentColor" stroke-width="3"
+            stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <b id="rotT">Turn your phone back</b>
+    <small id="rotS">Biscuit Lane is played the tall way up.</small>
   </div>
 </div>
 
@@ -1348,6 +1385,8 @@ function fmtTime(ms) {
 const STRINGS = {
   en: {
     brandSub: 'Pet Home',
+    rot_t: 'Turn your phone back',
+    rot_s: 'Biscuit Lane is played the tall way up.',
     tab_home: 'Home', tab_play: 'Play', tab_shop: 'Shop', tab_family: 'Family',
 
     /* onboarding */
@@ -1581,6 +1620,8 @@ const STRINGS = {
 
   tr: {
     brandSub: 'Pati Evi',
+    rot_t: 'Telefonu geri çevir',
+    rot_s: 'Biscuit Lane dikey oynanıyor.',
     tab_home: 'Ev', tab_play: 'Oyna', tab_shop: 'Dükkan', tab_family: 'Aile',
 
     onb_hi: 'Kapının önüne bir sepet bırakmışlar',
@@ -7307,10 +7348,34 @@ function pClear() { for (let i = 0; i < P_MAX; i++) POOL[i].on = false; pAlive =
    drop frames, the emitters thin out as the pool fills: the first
    burst of a cascade is lavish, the twentieth is a sketch, and the
    eye never notices because by then the screen is already busy.  */
+/* How much the effects layer is allowed to spend.
+
+   Two limits, and a burst gets the smaller of them.
+
+   The first is how full the pool already is, which stops one cascade
+   from starving the next.
+
+   The second is what the last few frames actually cost. The game loop
+   clamps its timestep to 50ms so the physics cannot tunnel, which means
+   a phone having a hard time runs in slow motion rather than breaking —
+   but it also means the game never notices. FX.load() is handed the
+   real gap before the clamp, and a device that is not keeping up gets
+   smaller bursts until it is. Nothing changes on hardware that can
+   afford it, and there is no setting to find. */
+let fxFrame = 0;                 // smoothed seconds per frame, 0 until told
+function fxLoad(sec) {
+  if (!(sec > 0) || sec > 2) return;        /* a tab coming back from the background */
+  fxFrame = fxFrame ? fxFrame * .88 + sec * .12 : sec;
+}
+function loadScale() {
+  if (!fxFrame) return 1;
+  /* full quality up to 20ms a frame, tapering to a third by 70ms */
+  return clamp(1 - (fxFrame - .020) / .050, .34, 1);
+}
 function density() {
   const load = pAlive / P_MAX;
-  if (load < .28) return 1;
-  return clamp(1 - (load - .28) * 1.8, .15, 1);
+  const pool = load < .28 ? 1 : clamp(1 - (load - .28) * 1.8, .15, 1);
+  return Math.min(pool, loadScale());
 }
 function count(n) { return Math.max(1, Math.round(n * density())); }
 
@@ -8104,6 +8169,8 @@ const FX = {
   clear: pClear,
   count: () => pAlive,
   step: physStep,
+  load: fxLoad,
+  quality: loadScale,
   draw: drawParticles,
   text: fxText,
   drawText: floatsDraw,
@@ -8564,7 +8631,6 @@ function boardCellFor(wrap, B) {
     (wrap.clientHeight - 6 - BOARD_PAD * 2) / B.h)));
 }
 function layoutBoard() {
-  G.__lb = (G.__lb || 0) + 1;   /* EXPERIMENT */
   const wrap = $('#boardWrap');
   const cv = $('#board');
   const availW = wrap.clientWidth - 6;
@@ -9792,8 +9858,12 @@ function gameLoopStart() {
   G.lastT = performance.now();
   const loop = t => {
     if (!G.running) return;
-    const dt = Math.min(.05, (t - G.lastT) / 1000);
+    const raw = (t - G.lastT) / 1000;
+    const dt = Math.min(.05, raw);
     G.lastT = t;
+    /* the real gap, before the clamp hides it: the effects layer scales
+       itself down on a device that is not keeping up */
+    FX.load(raw);
     renderGame(dt);
     G.raf = requestAnimationFrame(loop);
   };
@@ -12565,6 +12635,9 @@ function relabelControls() {
 }
 function relabelEverything() {
   $('#brandSub').textContent = T('brandSub');
+  const rt = $('#rotT'), rs = $('#rotS');
+  if (rt) rt.textContent = T('rot_t');
+  if (rs) rs.textContent = T('rot_s');
   relabelControls();
   buildTabs();
   renderHome();
@@ -12886,6 +12959,9 @@ function boot() {
 
   paintLogo();
   $('#brandSub').textContent = T('brandSub');
+  { const rt = $('#rotT'), rs = $('#rotS');
+    if (rt) rt.textContent = T('rot_t');
+    if (rs) rs.textContent = T('rot_s'); }
   buildTabs();
   bindBoard();
   bindMap();
@@ -12917,13 +12993,23 @@ function boot() {
     const h = () => { if (SAVE.settings.theme === 'auto') applyTheme(); };
     mq.addEventListener ? mq.addEventListener('change', h) : mq.addListener(h);
   }
+  /* A phone in a pocket should not be running a game loop. The browser
+     throttles rAF for a hidden tab anyway, but "throttled" is not
+     "stopped", and an installed app spends a lot of its life in the
+     background. Stopping them also fixes the first frame back: both
+     loops take their timestamp when they start, so a loop left running
+     across ten minutes in a pocket wakes up with a ten-minute gap to
+     account for. */
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) { musicStop(); persist(true); }
-    else {
+    if (document.hidden) {
+      musicStop(); persist(true);
+      gameLoopStop(); roomStop();
+    } else {
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
       if (SAVE.hearts < HEART_MAX) heartClockStart();
       if (SAVE.settings.music) musicStart();
-      if (SCREEN === 'home') renderHome();
+      if (SCREEN === 'home') { renderHome(); roomLayout(); roomStart(); }
+      if (SCREEN === 'game') { layoutBoard(); gameLoopStart(); }
     }
   });
   window.addEventListener('beforeunload', () => persist(true));

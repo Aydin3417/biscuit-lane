@@ -36,7 +36,6 @@ function boardCellFor(wrap, B) {
     (wrap.clientHeight - 6 - BOARD_PAD * 2) / B.h)));
 }
 function layoutBoard() {
-  G.__lb = (G.__lb || 0) + 1;   /* EXPERIMENT */
   const wrap = $('#boardWrap');
   const cv = $('#board');
   const availW = wrap.clientWidth - 6;
@@ -1264,8 +1263,12 @@ function gameLoopStart() {
   G.lastT = performance.now();
   const loop = t => {
     if (!G.running) return;
-    const dt = Math.min(.05, (t - G.lastT) / 1000);
+    const raw = (t - G.lastT) / 1000;
+    const dt = Math.min(.05, raw);
     G.lastT = t;
+    /* the real gap, before the clamp hides it: the effects layer scales
+       itself down on a device that is not keeping up */
+    FX.load(raw);
     renderGame(dt);
     G.raf = requestAnimationFrame(loop);
   };

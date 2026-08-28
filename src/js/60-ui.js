@@ -1543,6 +1543,9 @@ function relabelControls() {
 }
 function relabelEverything() {
   $('#brandSub').textContent = T('brandSub');
+  const rt = $('#rotT'), rs = $('#rotS');
+  if (rt) rt.textContent = T('rot_t');
+  if (rs) rs.textContent = T('rot_s');
   relabelControls();
   buildTabs();
   renderHome();

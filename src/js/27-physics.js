@@ -75,10 +75,34 @@ function pClear() { for (let i = 0; i < P_MAX; i++) POOL[i].on = false; pAlive =
    drop frames, the emitters thin out as the pool fills: the first
    burst of a cascade is lavish, the twentieth is a sketch, and the
    eye never notices because by then the screen is already busy.  */
+/* How much the effects layer is allowed to spend.
+
+   Two limits, and a burst gets the smaller of them.
+
+   The first is how full the pool already is, which stops one cascade
+   from starving the next.
+
+   The second is what the last few frames actually cost. The game loop
+   clamps its timestep to 50ms so the physics cannot tunnel, which means
+   a phone having a hard time runs in slow motion rather than breaking —
+   but it also means the game never notices. FX.load() is handed the
+   real gap before the clamp, and a device that is not keeping up gets
+   smaller bursts until it is. Nothing changes on hardware that can
+   afford it, and there is no setting to find. */
+let fxFrame = 0;                 // smoothed seconds per frame, 0 until told
+function fxLoad(sec) {
+  if (!(sec > 0) || sec > 2) return;        /* a tab coming back from the background */
+  fxFrame = fxFrame ? fxFrame * .88 + sec * .12 : sec;
+}
+function loadScale() {
+  if (!fxFrame) return 1;
+  /* full quality up to 20ms a frame, tapering to a third by 70ms */
+  return clamp(1 - (fxFrame - .020) / .050, .34, 1);
+}
 function density() {
   const load = pAlive / P_MAX;
-  if (load < .28) return 1;
-  return clamp(1 - (load - .28) * 1.8, .15, 1);
+  const pool = load < .28 ? 1 : clamp(1 - (load - .28) * 1.8, .15, 1);
+  return Math.min(pool, loadScale());
 }
 function count(n) { return Math.max(1, Math.round(n * density())); }
 
@@ -872,6 +896,8 @@ const FX = {
   clear: pClear,
   count: () => pAlive,
   step: physStep,
+  load: fxLoad,
+  quality: loadScale,
   draw: drawParticles,
   text: fxText,
   drawText: floatsDraw,

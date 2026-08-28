@@ -877,3 +877,22 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .offer .ot small{ display:block; color:var(--text-faint); font-size:var(--t-micro); margin-top:1px; }
 .offer .btn{ flex:0 0 auto; white-space:nowrap; color:var(--plum);
   border-color:color-mix(in srgb,var(--plum) 40%, var(--line)); }
+
+/* ---------- turned sideways ----------
+   A board that shrinks to 22px cells in a wide empty field is not a
+   landscape layout, it is the portrait one apologising. The manifest
+   asks for portrait when the game is installed; in a browser tab it can
+   only ask nicely. Height-gated so a tablet, which has the room, is left
+   alone. */
+#rotate{
+  position:fixed; inset:0; z-index:200; display:none;
+  background:var(--stage); color:var(--text);
+  place-items:center; text-align:center; padding:24px;
+}
+.rotWrap{ display:flex; flex-direction:column; align-items:center; gap:11px; max-width:320px; }
+#rotate svg{ width:64px; height:64px; color:var(--accent-strong); }
+#rotate b{ font-family:"Grandstander",sans-serif; font-size:var(--t-h2); }
+#rotate small{ font-size:var(--t-small); color:var(--text-dim); line-height:1.45; }
+@media (orientation:landscape) and (max-height:520px){
+  #rotate{ display:grid; }
+}
