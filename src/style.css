@@ -301,7 +301,14 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 1px 0 color-mix(in srgb, var(--rose) 56%, #000);
   transform:translateY(2px);
 }
-.btn.ghost{ background:transparent; box-shadow:none; border-color:var(--line); }
+/* A ghost button still has to look like a button. Fully transparent, it
+   read as bare text on the onboarding's cream stage — the only thing
+   telling you "Back" was tappable was that it happened to be next to
+   something that was. */
+.btn.ghost{
+  background:color-mix(in srgb, var(--surface) 62%, transparent);
+  box-shadow:var(--shadow-0); border-color:var(--line);
+}
 .btn.ghost:active{ background:color-mix(in srgb,var(--text) 6%, transparent); transform:translateY(1px); }
 .btn.wide{ width:100%; }
 .btn.sm{ padding:8px 13px; font-size:13px; border-radius:var(--r-sm); }
@@ -619,12 +626,18 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 .onbInner{ position:absolute; inset:0; background:var(--stage); display:flex; align-items:center; justify-content:center; padding:18px; overflow-y:auto; }
 .onbCard{ width:min(430px,100%); display:flex; flex-direction:column; gap:15px; text-align:center; }
 .choiceGrid{ display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+/* The thing being chosen is the thing you can see. These held a 44px
+   face in a 150px card, which made the choice the smallest element on
+   the first screen anybody ever sees. */
 .choice{
-  display:flex; flex-direction:column; align-items:center; gap:5px; padding:13px 8px 11px;
-  border-radius:20px; background:var(--surface); border:2px solid var(--line-soft);
-  box-shadow:var(--shadow-1); transition:transform .14s ease, border-color .16s;
+  display:flex; flex-direction:column; align-items:center; gap:5px; padding:11px 7px 10px;
+  border-radius:var(--r-lg); background:var(--surface-lit); border:2px solid var(--line-soft);
+  box-shadow:var(--edge-hi), var(--shadow-1);
+  transition:transform .14s cubic-bezier(.2,.8,.3,1), border-color .16s, box-shadow .16s;
 }
 .choice canvas{ display:block; }
+.choice.on{ background:linear-gradient(180deg,
+  color-mix(in srgb,var(--accent) 14%, var(--surface)), var(--surface)); }
 .choice .nm{ font-family:"Grandstander",sans-serif; font-weight:700; font-size:14px; }
 .choice .ds{ font-size:10.5px; color:var(--text-faint); text-align:center; line-height:1.3; }
 .choice.on{ border-color:var(--accent-strong); transform:translateY(-2px); box-shadow:var(--shadow-2); }
@@ -638,9 +651,19 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   font-weight:700; font-size:17px; text-align:center;
 }
 .field::placeholder{ color:var(--text-faint); font-weight:400; }
+/* .row was only ever styled inside .sheet, so in the onboarding the two
+   buttons had no layout at all and sat jammed against each other,
+   centred by the card's text-align. */
+.onbCard .row{ display:flex; gap:10px; justify-content:center; margin-top:2px; }
+.onbCard .row .btn{ flex:1 1 0; max-width:180px; }
 .dots{ display:flex; gap:6px; justify-content:center; }
-.dots i{ width:7px; height:7px; border-radius:50%; background:var(--line); transition:.2s; }
-.dots i.on{ background:var(--accent); width:20px; border-radius:999px; }
+/* the inactive dots were --line on a cream stage: a step counter that
+   only ever showed the step you were on */
+.dots i{
+  width:7px; height:7px; border-radius:50%; transition:.2s;
+  background:color-mix(in srgb,var(--text) 22%, transparent);
+}
+.dots i.on{ background:var(--accent-strong); width:20px; border-radius:var(--r-full); }
 .nameSuggest{ display:flex; gap:6px; flex-wrap:wrap; justify-content:center; }
 .nameSuggest button{ padding:5px 11px; border-radius:999px; background:var(--surface-2); border:1px solid var(--line-soft); font-size:12px; font-weight:600; color:var(--text-dim); }
 

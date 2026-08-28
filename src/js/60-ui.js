@@ -1615,12 +1615,12 @@ function runOnboarding() {
       paintPup(c, 150, 0);
     } else if (step === 1) {
       card.innerHTML = `
-        <div class="eyebrow">${T('onb_pick')}</div>
-        <h2 style="font-size:21px">${T('onb_pick_sub')}</h2>
+        <h2>${T('onb_pick')}</h2>
+        <p style="font-size:12.5px">${T('onb_pick_sub')}</p>
         <div class="choiceGrid" style="grid-template-columns:repeat(3,1fr)">
           ${BREEDS.map((b, i) => `
             <button class="choice ${i === breedIdx ? 'on' : ''}" data-b="${i}">
-              <canvas data-face="${i}" width="62" height="62"></canvas>
+              <canvas data-face="${i}" width="84" height="84"></canvas>
               <span class="nm">${breedName(i)}</span>
               <span class="ds">${breedDesc(i)}</span>
             </button>`).join('')}
@@ -1637,13 +1637,13 @@ function runOnboarding() {
       }));
     } else if (step === 2) {
       card.innerHTML = `
-        <canvas id="obArt" width="160" height="160" style="width:160px;height:160px;align-self:center"></canvas>
-        <div class="eyebrow">${T('onb_coat')}</div>
+        <canvas id="obArt" width="150" height="122" style="width:150px;height:122px;align-self:center"></canvas>
+        <h2>${T('onb_coat')}</h2>
         <p style="font-size:12.5px">${T('onb_coat_sub')}</p>
         <div class="choiceGrid" style="grid-template-columns:repeat(3,1fr)">
           ${BREEDS[breedIdx].coats.map((co, i) => `
             <button class="choice ${i === coat ? 'on' : ''}" data-c="${i}" style="padding:10px 5px">
-              <canvas data-face="${breedIdx}" data-coat="${i}" width="52" height="52"></canvas>
+              <canvas data-face="${breedIdx}" data-coat="${i}" width="66" height="66"></canvas>
               <span class="nm" style="font-size:12px">${LANG === 'tr' ? co.tr : co.en}</span>
             </button>`).join('')}
         </div>
@@ -1656,8 +1656,8 @@ function runOnboarding() {
         ${dots(2)}`;
       paintArtCanvases(card);
       const art = () => {
-        const c = fitCanvas($('#obArt'), 160, 160);
-        c.translate(80, 18);
+        const c = fitCanvas($('#obArt'), 150, 122);
+        c.translate(75, 12);
         drawBody(c, specOf(breedIdx, BREEDS[breedIdx].coats[coat], EYE_COLORS[eye].hex), 74, { mouth: 'smile' });
       };
       art();
@@ -1666,7 +1666,7 @@ function runOnboarding() {
     } else {
       const names = NAME_POOL[BREEDS[breedIdx].species];
       card.innerHTML = `
-        <canvas id="obArt" width="150" height="150" style="width:150px;height:150px;align-self:center"></canvas>
+        <canvas id="obArt" width="146" height="118" style="width:146px;height:118px;align-self:center"></canvas>
         <h2>${T('onb_name')}</h2>
         <p style="font-size:12.5px">${T('onb_name_sub')}</p>
         <input class="field" id="obName" maxlength="14" placeholder="${T('onb_placeholder')}" value="${name}">
@@ -1675,8 +1675,8 @@ function runOnboarding() {
         <div class="row"><button class="btn ghost" id="obBack">${T('onb_back')}</button>
         <button class="btn primary" id="obNext">${T('onb_done')}</button></div>
         ${dots(3)}`;
-      const c = fitCanvas($('#obArt'), 150, 150);
-      c.translate(75, 16);
+      const c = fitCanvas($('#obArt'), 146, 118);
+      c.translate(73, 11);
       drawBody(c, specOf(breedIdx, BREEDS[breedIdx].coats[coat], EYE_COLORS[eye].hex), 68, { mouth: 'smile' });
       $$('[data-n]', card).forEach(b => b.addEventListener('click', () => {
         name = b.dataset.n; $('#obName').value = name; SFX.tap();
