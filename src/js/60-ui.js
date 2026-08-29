@@ -834,7 +834,7 @@ function openPetSheet(id) {
   paintArtCanvases(m.el);
   const act = $('#psActive', m.el);
   if (act) act.addEventListener('click', () => {
-    SAVE.activePet = p.id; persist(true); m.close();
+    SAVE.activePet = p.id; castChanged(); persist(true); m.close();
     renderFamily(); renderHome();
     petVoice(p, 1); toast(T('fam_active'), 'paw');
   });

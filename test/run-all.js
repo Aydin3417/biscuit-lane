@@ -80,5 +80,5 @@ for (const [label, first, last, perks] of CURVES) {
 }
 
 process.stdout.write('\n' + (failed ? failed + ' suite(s) failed\n' : 'all suites passed\n'));
-process.stdout.write('browser layer: open test/integration.html (37 checks)\n');
+process.stdout.write('browser layer: open test/integration.html (39 checks)\n');
 process.exitCode = failed ? 1 : 0;

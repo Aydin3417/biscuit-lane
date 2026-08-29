@@ -120,6 +120,7 @@ function loadSave() {
     SAVE.pets = (Array.isArray(d.pets) ? d.pets : []).map(healPet).filter(Boolean);
     if (!SAVE.pets.some(p => p.id === SAVE.activePet)) {
       SAVE.activePet = SAVE.pets.length ? SAVE.pets[0].id : null;
+      CAST = null;   /* the walker leads the cast, so a repaired one rebuilds it */
     }
     /* currencies and counters can only be sane numbers */
     SAVE.coins = Math.max(0, Math.round(+SAVE.coins || 0));
@@ -267,6 +268,17 @@ let CAST_SIG = '';
 function castRebuild() {
   const mine = [];
   const pets = (typeof SAVE === 'object' && SAVE && SAVE.pets) ? SAVE.pets : [];
+  /* The one you are walking with leads.
+
+     Not vanity: a level with five types only shows the first five slots,
+     so with six pets the sixth stood in a slot no board ever drew. You
+     could take that pet down the lane and its own face would not be on
+     the board — and the charge meter, which wants the slot its breed is
+     in, quietly fell back to slot 0 and told you to match somebody
+     else's pet. Putting the walker first makes that impossible to
+     arrange, and it means switching pets visibly changes the board. */
+  const walker = pets.filter(p => p && p.id === SAVE.activePet)[0];
+  if (walker) mine.push(walker.breed);
   pets.forEach(p => { if (p && mine.indexOf(p.breed) < 0) mine.push(p.breed); });
   const rest = [];
   for (let i = 0; i < BREEDS.length; i++) if (mine.indexOf(i) < 0) rest.push(i);

@@ -6,7 +6,7 @@ const G = {
   moves: 0, score: 0, goals: [],
   busy: true, over: false, running: false,
   sel: null, pointer: null,
-  charge: 0, scoreMul: 1,
+  charge: 0, scoreMul: 1, spending: false,
   chain: 0, bestChain: 0,
   particles: [], floats: [], beams: [], rings: [],
   cell: 40, ox: 0, oy: 0, boardW: 0, boardH: 0,
@@ -149,6 +149,7 @@ function startLevel(n, opts) {
      energy to the level and gaining it to the nap at the same time */
   const walker = activePet();
   if (walker && walker.asleep) walker.asleep = false;
+  G.spending = false;      /* nothing is mid-ability on a fresh board */
   G.n = n;
   G.epoch++;                          /* anything still running belongs to the old board */
   G.def = levelDef(n);
@@ -659,9 +660,9 @@ function applyCounts(ctx) {
       if (g.have !== was) bumped = i;
     }
   });
-  /* charge the pet on its own breed */
+  /* charge the pet on its own breed — but never off its own ability */
   const pet = activePet();
-  if (pet && !G.over) {
+  if (pet && !G.over && !G.spending) {
     const fav = favType();
     let add = 0;
     for (const k in ctx.collect) add += (+k === fav ? CHARGE_FAV : CHARGE_OTHER) * ctx.collect[k];
@@ -1012,6 +1013,12 @@ async function firePetAbility() {
   if (!pet || G.busy || G.over || G.charge < 100) return;
   G.busy = true;
   G.charge = 0;
+  /* An ability's own clears must not refill the meter that paid for it.
+     They did, and firing costs no move — so a chorus that took out three
+     crosses handed back seventy-six percent of its own cost for free,
+     and a lucky board could have handed back all of it. You charge the
+     meter by playing, not by spending it. */
+  G.spending = true;
   syncHud();
   petVoice(pet, 1);
   buzz([12, 40, 18]);   /* the ability: a wind-up and a release */
@@ -1050,7 +1057,7 @@ async function firePetAbility() {
     SFX.select();
     await wait(420);
     if (stale(_ep)) return;
-    G.busy = false;
+    G.busy = false; G.spending = false;
     checkEnd();
     return;
   } else if (kind === 'fetch') {
@@ -1077,7 +1084,7 @@ async function firePetAbility() {
     if (stale(_ep)) return;
     await resolveBoard(null);
     if (stale(_ep)) return;
-    G.busy = false;
+    G.busy = false; G.spending = false;
     checkEnd();
     return;
   }
@@ -1087,7 +1094,7 @@ async function firePetAbility() {
   if (stale(_ep)) return;
   await resolveBoard(null);
   if (stale(_ep)) return;
-  G.busy = false;
+  G.busy = false; G.spending = false;
   checkEnd();
 }
 /* Which tile the pet is charged by and aims at on this board. The
@@ -1377,7 +1384,11 @@ function renderGame(dt) {
     c.translate(px, py);
     c.scale(sc * sx, sc * sy);
     if (t.type === PUP) {
-      paintPup(c, G.cell * .94, activePet() ? activePet().breed : 0);
+      /* a slot, not a breed: paintPup resolves through the cast now, so
+         handing it a breed index shows whoever happens to stand in the
+         slot with that number — the basket held a Siamese for a player
+         walking a Pug */
+      paintPup(c, G.cell * .94, activePet() ? castSlot(activePet().breed) : 0);
     } else {
       const sp = tileSprite(t.type, t.sp, G.cell * .90, SAVE.settings.marks,
         t.blinkT > 0 && !t.dying);

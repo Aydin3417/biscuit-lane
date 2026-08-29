@@ -82,7 +82,7 @@ per frame, for a picture that never changes. A board holds thirty of
 them. It is cached now, the way a tile is.
 
 Open `test/integration.html` in the preview for the browser layer: it
-loads the built game in an iframe and runs 37 checks, driving the real
+loads the built game in an iframe and runs 39 checks, driving the real
 thing through `window.BL`. They cover:
 
 - **the save** — migration, corrupt values, unreadable files, timestamps
@@ -1491,3 +1491,52 @@ Three invariants hold it up, and `test/integration.html` checks each:
 
 The charge meter needed one correction: it wanted the pet's breed index,
 which is no longer the slot that breed is standing in.
+
+## The bug hunt
+
+`node tools/hunt.js` is the wide net: it drives the built game on an
+emulated phone through every screen, every shop tab, every sheet,
+thirteen levels with real moves, both languages, both themes, and an
+adoption mid-flight — collecting page errors, console errors, failed
+requests, and a set of invariants re-checked after every step (no NaN
+positions, no tile type above the level's maximum, the cast still a
+permutation, the save still serialisable, no stat out of range).
+
+Four things came out of it and the two tests written alongside.
+
+**The basket held the wrong animal.** `paintPup` resolves through the
+cast now, and one caller was still handing it the pet's *breed index*
+where a *slot* was wanted. With pets `[Pug, Sable]` the cast is
+`5,2,0,1,3,4`, so slot 5 is a Siamese — a player walking a Pug saw a
+Siamese in the basket.
+
+**`breed is not defined`.** A blind find-and-replace put `tilePath(c,
+breed, …)` into `drawTileFx`, where no such variable exists. It threw on
+every board carrying a special tile. This is exactly what the wide net
+is for: the suites did not touch that path.
+
+**The pet you walk with was not always on the board.** A five-type level
+draws the first five slots, so with six pets the sixth stood in a slot
+nothing ever drew — you could take that pet down the lane and its own
+face was absent, while the charge meter, which wants the slot its breed
+stands in, quietly fell back to slot 0 and told you to match somebody
+else's pet. The walker leads the cast now, which makes it impossible to
+arrange and means switching pets visibly changes the board.
+
+**An ability refilled the meter that paid for it.** Firing costs no
+move, and the ability's own clears were charging the meter through the
+ordinary path — a grown chorus taking out three crosses handed back
+**76%** of its own cost, and a luckier board could have handed back all
+of it. You charge the meter by playing, not by spending it.
+
+Two of the four were found by a new test — `every breed ability fires
+and leaves the board playable` — which fires all six on a level carrying
+crates, mud and baskets and then insists the board is still a board.
+Six abilities, the single mechanic that puts the pet's hand directly on
+the tiles, and until now the largest thing in the game with no test at
+all.
+
+For the record, two failures that test reported first were **mine, not
+the game's**: a crate occupies its cell instead of holding a tile, so
+"no tile here" is not a fault; and asserting the meter reads zero
+afterwards is wrong once ordinary play refills it.

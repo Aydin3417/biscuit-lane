@@ -1152,6 +1152,9 @@ function paintRainbow(c, s) {
 function drawTileFx(c, type, sp, s, t, seed) {
   if (sp === SP.NONE) return;
   const ph = t + (seed || 0) * .7;
+  /* the silhouette belongs to whoever stands in the slot, same as the
+     tile it is drawn over */
+  const breed = slotBreed(type);
 
   if (sp === SP.BOMB) {
     /* the fuse spark: jitters, flickers, throws light on the tile */
