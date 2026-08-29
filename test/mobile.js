@@ -105,7 +105,12 @@ const built = read('index.html');
   if (built.indexOf(n) < 0) problems.push('the built game is missing ' + n);
 });
 if (built.indexOf('serviceWorker') < 0) problems.push('the built game never registers the worker');
-ok.push('the built file carries the install metadata');
+/* and it has to stand its own manifest up when there is nothing beside
+   it, which is how the game is most often handed to somebody */
+['standInApp', 'standInIcon', 'createObjectURL'].forEach(n2 => {
+  if (built.indexOf(n2) < 0) problems.push('the built game cannot stand in for a missing ' + n2);
+});
+ok.push('the built file carries the install metadata, and a stand-in for when it is alone');
 
 console.log('the mobile app layer:');
 ok.forEach(o => console.log('  ok   ' + o));

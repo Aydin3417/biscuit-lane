@@ -12967,8 +12967,65 @@ function themeColorSync() {
   if (bg) m.setAttribute('content', bg);
 }
 
+/* When the game is one file with nothing beside it — which is how it is
+   most often handed to somebody — the manifest and the icon are simply
+   not there. The game does not care; it 404s them and runs. But iOS will
+   still add it to a home screen from the meta tags alone, and it would
+   use a screenshot of the page as the icon.
+
+   So if the real files are missing, both are rebuilt at runtime from the
+   same drawLogo() that paints the top bar: the icon as a data URI, the
+   manifest as a blob, which is same-origin and so allowed where a data
+   URI would not be. Costs nothing when the files are there, and nothing
+   in the file when they are not.
+
+   What this cannot do is offline. A service worker has to be fetched
+   from a real same-origin path; there is no way to register one from a
+   blob. Offline needs the game to be served, and that is the honest
+   limit of a single file. */
+function standInIcon(px) {
+  try {
+    const cv = document.createElement('canvas');
+    cv.width = px; cv.height = px;
+    const c = cv.getContext('2d');
+    const g = c.createLinearGradient(0, 0, 0, px);
+    g.addColorStop(0, '#F6E3C4'); g.addColorStop(1, '#E2C79E');
+    c.fillStyle = g; c.fillRect(0, 0, px, px);
+    const pad = px * .11;
+    c.translate(pad, pad);
+    drawLogo(c, px - pad * 2);
+    return cv.toDataURL('image/png');
+  } catch (e) { return null; }
+}
+function standInApp() {
+  const icon = standInIcon(180);
+  if (icon) {
+    const link = document.querySelector('link[rel="apple-touch-icon"]');
+    if (link) link.href = icon;
+  }
+  const big = standInIcon(512);
+  const man = document.querySelector('link[rel="manifest"]');
+  if (!man || !big) return;
+  try {
+    const body = {
+      name: 'Biscuit Lane', short_name: 'Biscuit Lane',
+      start_url: location.href, scope: './', display: 'standalone',
+      orientation: 'portrait', background_color: '#F6EADA', theme_color: '#F6EADA',
+      icons: [{ src: big, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }]
+    };
+    man.href = URL.createObjectURL(new Blob([JSON.stringify(body)], { type: 'application/manifest+json' }));
+  } catch (e) { /* the meta tags alone still work */ }
+}
+
 function installApp() {
   themeColorSync();
+  /* only if the real ones are not being served */
+  const man = document.querySelector('link[rel="manifest"]');
+  if (man) {
+    fetch(man.href, { method: 'GET' })
+      .then(r => { if (!r.ok) standInApp(); })
+      .catch(() => standInApp());
+  }
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => { /* not served with one */ });

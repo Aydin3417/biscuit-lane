@@ -1417,3 +1417,35 @@ while sitting plainly in the file.
 Which means any run made shortly after a rebuild may have been checking
 the previous build. The frame is now given its source with a timestamp
 on every run.
+
+## What "installable" actually means here
+
+Worth being exact, because the answer differs by how the game is handed
+over, and only one of the two columns is a real app.
+
+| | one file, nothing beside it | served with its siblings |
+|---|---|---|
+| plays, touch, haptics | yes | yes |
+| iOS: add to home screen | yes | yes |
+| iOS: with the right icon | yes, drawn at runtime | yes |
+| standalone, no address bar | yes | yes |
+| portrait lock | yes | yes |
+| Android: offers to install | **no** | yes |
+| works with no signal | **no** | yes |
+
+The manifest and the icons can be rebuilt at runtime when the files are
+missing — the same `drawLogo()` that paints the top bar, into a canvas,
+out as a data URI, wrapped in a blob for the manifest because a blob URL
+is same-origin and a data URI is not. That costs nothing when the real
+files are there and nothing in the file when they are not.
+
+What it cannot do is offline. **A service worker has to be fetched from
+a real same-origin path**; there is no way to register one from a blob,
+and Chrome will not offer to install a site that has none. Offline and
+the Android install prompt both need the game to be *served* rather than
+opened, and that is the honest limit of a single file.
+
+So: the format is complete in the code and verified in both shapes, but
+a phone can only install it from somewhere that serves `index.html`,
+`manifest.webmanifest`, `sw.js` and `icons/` together. GitHub Pages does
+that for free — on a public repository.
