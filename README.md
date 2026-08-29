@@ -82,7 +82,7 @@ per frame, for a picture that never changes. A board holds thirty of
 them. It is cached now, the way a tile is.
 
 Open `test/integration.html` in the preview for the browser layer: it
-loads the built game in an iframe and runs 35 checks, driving the real
+loads the built game in an iframe and runs 36 checks, driving the real
 thing through `window.BL`. They cover:
 
 - **the save** — migration, corrupt values, unreadable files, timestamps
@@ -1376,3 +1376,44 @@ board render** that dominates and not the particles: with the effects
 switched off entirely the numbers barely move. A relayout storm was the
 obvious suspect and was ruled out — zero calls to `layoutBoard()` across
 two seconds at every rate.
+
+## What the phone says
+
+Haptics are the one channel a phone has that a desktop does not, and
+they were carrying four events: a swap, a best chain, the ability, and a
+win. Two things were wrong with that.
+
+**A refused swap felt exactly like an accepted one.** `buzz(8)` fired
+before the board had decided whether the move was legal. That is the
+single moment a player most needs telling apart, and with the sound off
+it was the only signal available.
+
+**The most common event in the game said nothing.** Tiles clearing —
+the thing you do more than anything else — had no haptic at all.
+
+There is a vocabulary now, in `HAP`, so the same event feels the same
+everywhere and the difference between two events is a decision rather
+than an accident: a tick for picking a tile up, a slightly firmer one
+for a swap, a stutter for a refusal, a tap for a clear scaled by how
+much went, a rise for a chain, a knock for something breaking rather
+than matching, a tick per star, and a longer shape for a win and a loss.
+
+Everything that can fire repeatedly goes through `buzzOften()`, because
+a cascade calls `resolveBoard` every hundred and forty milliseconds and
+a motor held on for the whole of one is a buzz rather than a series of
+taps — unpleasant in the hand and rude to the battery.
+
+Measured by stubbing `navigator.vibrate` and playing both moves: a
+refusal is `[15, 45, 15]`, an acceptance is `9` and then `12`.
+
+### A test harness that was testing yesterday's build
+
+Chasing that test turned up something worse. `test/integration.html`
+holds the game in an iframe with a static `src`, and the frame caches
+that document on its own — independently of whatever reloaded the suite
+page. A new export on the debug handle came back "is not a function"
+while sitting plainly in the file.
+
+Which means any run made shortly after a rebuild may have been checking
+the previous build. The frame is now given its source with a timestamp
+on every run.

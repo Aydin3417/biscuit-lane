@@ -374,6 +374,7 @@ function syncStars() {
       s.innerHTML = IC.star;
       s.style.color = 'var(--accent)';
       SFX.star(i);
+      buzz(HAP.star);
     }
   });
   G.starsEarned = earned;
@@ -493,6 +494,7 @@ function hitCell(B, r, c, ctx, direct) {
     ctx.crate += (cell.crate === 0 ? 1 : 0);
     const [cx, cy, pan] = cellFX(r, c);
     SFX.crate(cell.crate > 0, pan);
+    buzzOften(HAP.crack, 110);
     FX.splinters(cx, cy, G.cell, cell.crate === 0);
     if (cell.crate === 0) ring(r, c, '#C79A62');
     return;
@@ -502,6 +504,7 @@ function hitCell(B, r, c, ctx, direct) {
     ctx.ice++;
     const [cx, cy, pan] = cellFX(r, c);
     SFX.ice(pan);
+    buzzOften(HAP.crack, 110);
     FX.shards(cx, cy, G.cell);
     return;
   }
@@ -609,6 +612,10 @@ async function blastWaves(startKeys, chain, silent) {
        makes more than any other — landed with nothing behind it. */
     if (!silent && ctx.removed.length) {
       G.shake = Math.max(G.shake, Math.min(5, 1.1 + ctx.removed.length * .32));
+      /* and so does the hand. Rate limited, because a long cascade calls
+         this every hundred and forty milliseconds and a motor held on
+         for the whole of it is a buzz, not a series of taps. */
+      buzzOften((chain || 1) > 1 ? HAP.chain(chain) : HAP.clear(ctx.removed.length), 90);
     }
     totalTiles += ctx.count;
     if (!silent && ctx.removed.length) {
@@ -710,7 +717,7 @@ async function clearGroups(groups, swapCells) {
       G.bestShown = true;
       toast(T('g_new_best', { n: G.chain }), 'star');
       SFX.star();
-      buzz([10, 40, 10]);
+      buzz(HAP.chain(G.chain));
     }
     /* One praise word at a time. A long cascade fires these a few frames
        apart and they used to stack into an unreadable pile, so a new one
@@ -970,7 +977,10 @@ async function tryMove(a, b) {
   setTarget(ta, b[1], b[0], .17);
   setTarget(tb, a[1], a[0], .17);
   SFX.swap();
-  buzz(8);
+  /* Not yet. This fired before the board had said whether the swap was
+     legal, so a move it refused felt in the hand exactly like one it
+     took — the one moment the player most needs telling apart. */
+  buzz(legal ? HAP.swap : HAP.no);
   await wait(180);
   if (stale(_ep)) return;
 
@@ -1004,7 +1014,7 @@ async function firePetAbility() {
   G.charge = 0;
   syncHud();
   petVoice(pet, 1);
-  buzz([12, 40, 18]);
+  buzz([12, 40, 18]);   /* the ability: a wind-up and a release */
   G.petMood = 'act'; G.petMoodT = 1.2;
   G.flash = .35;
   const stage = petStageIdx(pet);
@@ -1205,7 +1215,7 @@ async function finishWin() {
   const _ep = levelEpoch();
   G.busy = true;
   SFX.win();
-  buzz([16, 60, 16, 60, 30]);
+  buzz(HAP.win);
   FX.sweep(G.ox, G.oy, G.boardW, G.boardH, { ttl: .9, col: '#FFFFFF', a: .5 });
   FX.confetti(G.ox + G.boardW / 2, G.oy - 10, G.boardW, G.oy + G.boardH - G.cell * .2, 70);
   FX.punchZoom(1.2);
@@ -1249,6 +1259,7 @@ async function finishLose() {
   const _ep = levelEpoch();
   G.busy = true;
   SFX.lose();
+  buzz(HAP.lose);
   const pet = activePet();
   if (pet) { G.petMood = 'sad'; G.petMoodT = 3; }
   await wait(600);

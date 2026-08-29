@@ -257,7 +257,7 @@ window.BL = {
     }
   },
   setScreen, startLevel, openLevelIntro, renderHome, renderShop, renderFamily,
-  levelDef, findMatches, allMoves, hasMove, tryMove, firePetAbility, persist, wipeSave,
+  levelDef, findMatches, allMoves, hasMove, tryMove, canSwap, firePetAbility, persist, wipeSave,
   perksFor, activePet, makePet, healPet, loadSave, freshSave, BREEDS, LEVELS,
   checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,

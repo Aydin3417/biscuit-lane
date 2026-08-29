@@ -20,7 +20,7 @@
   <span id="summary"></span>
 </header>
 <ol id="out"></ol>
-<iframe id="app" src="../index.html"></iframe>
+<iframe id="app"></iframe>
 
 <script>
 /* Runs the real built game inside an iframe and drives it through the
@@ -123,6 +123,12 @@ async function playLevel(n, maxMoves) {
 /* ---------- the suite ---------- */
 async function run() {
   const frame = document.getElementById('app');
+  /* The frame caches ../index.html on its own, independently of
+     whatever reloaded this page — so a suite run after a rebuild could
+     quietly be testing the previous build, and did: a new export on the
+     debug handle came back "is not a function" while sitting in the
+     file. It is asked for by name every run now. */
+  frame.src = '../index.html?built=' + Date.now();
   const t0 = performance.now();
   for (let i = 0; i < 400; i++) {
     W = frame.contentWindow;
@@ -963,6 +969,70 @@ async function run() {
     }
     if (bad.length) assert(false, bad.join('; '));
     return 'low end: ' + notes.join(', ') + '; every one-shot varies';
+  });
+
+  await test('the phone says something different when the board says no', async () => {
+    /* Haptics are the one channel a phone has that a desktop does not,
+       and buzz(8) used to fire before the board had decided whether the
+       swap was legal — so a move it refused felt in the hand exactly
+       like one it took. That is the single moment a player most needs
+       telling apart, and with the sound off it was the only signal. */
+    const felt = [];
+    const real = W.navigator.vibrate;
+    try {
+      Object.defineProperty(W.navigator, 'vibrate',
+        { value: p => { felt.push(JSON.stringify(p)); return true; }, configurable: true });
+    } catch (e) { return 'vibrate cannot be stubbed here — skipped'; }
+    BL.save.settings.haptics = true;
+    /* real timing, deliberately: the clear is rate limited against the
+       swap that caused it, and fast mode collapses the hundred and
+       eighty milliseconds between them into the same instant */
+    BL.fast = false;
+
+    const findIllegal = () => {
+      const B = BL.game.B, legal = new Set(BL.allMoves(B).map(m => m.join('|')));
+      for (let r = 0; r < B.h; r++) for (let c = 0; c < B.w - 1; c++) {
+        const key = [[r, c], [r, c + 1]].join('|');
+        if (legal.has(key)) continue;
+        if (!B.cell[r][c].tile || !B.cell[r][c + 1].tile) continue;
+        if (!BL.canSwap(B, [r, c], [r, c + 1])) continue;
+        return [[r, c], [r, c + 1]];
+      }
+      return null;
+    };
+
+    /* a fixed sleep is not enough: the opening fill has its own cascade
+       and tryMove returns straight back out while the board is busy */
+    const settled = async () => {
+      for (let i = 0; i < 200 && BL.game.busy; i++) await sleep(25);
+      await sleep(40);
+    };
+    BL.setScreen('game'); BL.startLevel(4, { perks: [] });
+    await settled();
+    const bad = findIllegal();
+    assert(bad, 'no refusable pair on the board to test with');
+    felt.length = 0;
+    await BL.tryMove(bad[0], bad[1]);
+    await settled();
+    const onRefusal = felt.slice();
+
+    BL.startLevel(4, { perks: [] });
+    await settled();
+    const good = BL.allMoves(BL.game.B)[0];
+    felt.length = 0;
+    await BL.tryMove(good[0], good[1]);
+    await settled();
+    const onAccept = felt.slice();
+
+    try { Object.defineProperty(W.navigator, 'vibrate', { value: real, configurable: true }); } catch (e) { }
+
+    assert(onRefusal.length, 'a refused swap said nothing at all');
+    assert(onAccept.length, 'an accepted swap said nothing at all');
+    assert(onRefusal[0] !== onAccept[0],
+      'both feel the same: ' + onRefusal[0] + ' vs ' + onAccept[0]);
+    /* and clearing tiles should say something of its own, after the swap */
+    assert(onAccept.length >= 2, 'the tiles clearing added nothing to the swap');
+    return 'refused ' + onRefusal[0] + ', accepted ' + onAccept.slice(0, 2).join(' then ');
   });
 
   await test('the hint points at the best move, and puts the board back', () => {

@@ -305,13 +305,43 @@ function sheetIsOpen() {
   return false;
 }
 
-/* ---------- haptics ---------- */
+/* ---------- haptics ----------
+
+   The one channel a phone has that a desktop does not, and it was
+   carrying four events: a swap, a best chain, the ability, and a win.
+   The most common thing in the game — tiles clearing — said nothing at
+   all, and a swap the board refused felt exactly like one it accepted.
+
+   Two rules underneath. Different events must feel different, or the
+   motor is just noise; and a cascade must not hold the motor on for a
+   second and a half, which is both unpleasant in the hand and rude to
+   the battery. */
+let lastBuzzAt = 0;
 function buzz(pattern) {
   try {
     if (!SAVE || !SAVE.settings.haptics) return;
     if (navigator.vibrate) navigator.vibrate(pattern);
+    lastBuzzAt = Date.now();
   } catch (e) { /* unsupported */ }
 }
+/* for anything that can fire many times in a row */
+function buzzOften(pattern, gapMs) {
+  if (Date.now() - lastBuzzAt < (gapMs === undefined ? 70 : gapMs)) return;
+  buzz(pattern);
+}
+/* The vocabulary, so the same event feels the same everywhere and the
+   difference between two events is a decision rather than an accident. */
+const HAP = {
+  tap: 6,                       // picking a tile up
+  swap: 9,                      // two tiles changing places
+  no: [15, 45, 15],             // the board refusing: a stutter, not a knock
+  clear: n => Math.round(Math.min(26, 7 + n * 1.6)),   // scaled by how much went
+  chain: d => [8, 30, Math.round(Math.min(30, 8 + d * 4))],
+  crack: 20,                    // something breaking rather than matching
+  star: 12,
+  win: [16, 60, 16, 60, 30],
+  lose: [34, 70, 46]
+};
 
 /* ---------- number formatting ---------- */
 function fmt(n) {
