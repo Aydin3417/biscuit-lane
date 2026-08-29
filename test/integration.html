@@ -1035,6 +1035,60 @@ async function run() {
     return 'refused ' + onRefusal[0] + ', accepted ' + onAccept.slice(0, 2).join(' then ');
   });
 
+  await test('the animals on the board are the animals you keep', async () => {
+    /* The premise of the game, which for a long time was not true: every
+       player saw the same six stock breeds in the same six slots forever,
+       and adopting was a change of portrait. A level's types are slots
+       now and the cast says who stands in each — your own first, in the
+       order you took them in.
+
+       Three things have to hold. The cast must be a permutation, or a
+       breed goes missing from the game or appears twice. A slot's look
+       must follow whoever is in it, or a Pug turns up on an orange tile.
+       And the number of types a level offers must not move, because
+       every difficulty figure in this project was measured against it. */
+    const saved = BL.save.pets.slice();
+    const perm = c => {
+      const seen = c.slice().sort((a, b) => a - b);
+      return seen.length === BL.BREEDS.length && seen.every((v, i) => v === i);
+    };
+    const typesBefore = [4, 12, 28, 39].map(n => BL.levelDef(n).types);
+
+    BL.save.pets = [BL.makePet(3, 0, 0, 'A')];
+    BL.castRebuild();
+    const one = BL.castOf().slice();
+    assert(perm(one), 'the cast is not a permutation: ' + one.join(','));
+    assert(one[0] === 3, 'the pet you keep is not first on the board: slot 0 holds breed ' + one[0]);
+
+    BL.save.pets = [BL.makePet(5, 0, 0, 'A'), BL.makePet(2, 1, 0, 'B'), BL.makePet(0, 0, 0, 'C')];
+    BL.castRebuild();
+    const three = BL.castOf().slice();
+    assert(perm(three), 'the cast is not a permutation with three pets');
+    assert(three[0] === 5 && three[1] === 2 && three[2] === 0,
+      'the family is not in adoption order: ' + three.slice(0, 3).join(','));
+    assert(one.join(',') !== three.join(','), 'two different families got the same board');
+
+    /* identity travels with the breed, not with the slot number */
+    for (let s = 0; s < BL.BREEDS.length; s++) {
+      const breed = BL.castBreed(s);
+      assert(BL.slotGem(s) === BL.BREEDS[breed].gem,
+        'slot ' + s + ' is painted ' + BL.slotGem(s) + ' but holds ' + BL.BREEDS[breed].en);
+    }
+    /* and the charge meter still points at the pet you are walking with */
+    BL.save.activePet = BL.save.pets[1].id;
+    assert(BL.castBreed(BL.castSlot(BL.save.pets[1].breed)) === BL.save.pets[1].breed,
+      'the charge meter lost track of the walker');
+
+    const typesAfter = [4, 12, 28, 39].map(n => BL.levelDef(n).types);
+    assert(typesBefore.join(',') === typesAfter.join(','),
+      'the number of types on a level moved: ' + typesBefore + ' -> ' + typesAfter);
+
+    BL.save.pets = saved;
+    BL.castRebuild();
+    return 'one pet ' + one.join('') + ', three pets ' + three.join('') +
+      '; a permutation both times, colours follow the breed, level types unmoved';
+  });
+
   await test('the hint points at the best move, and puts the board back', () => {
     /* It used to pick at random from the legal moves. A player who has
        stopped for five seconds has stopped because they cannot see

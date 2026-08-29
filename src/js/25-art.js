@@ -524,6 +524,17 @@ function drawCollar(c, id, s, y) {
 }
 
 /* ---------------- the face ---------------- */
+/* The face on a board tile. A slot is not a breed any more — the cast
+   says who is standing in it, and if that is one of your pets it wears
+   the coat and the eyes you chose for it rather than the breed's stock
+   ones. Falls back to the plain breed when there is no save, which is
+   how the engine tests and the level-design audit see it. */
+function slotSpec(slot) {
+  if (typeof castBreed !== 'function') return specOf(slot);
+  const breed = castBreed(slot);
+  const p = castPet(slot);
+  return p ? specOf(breed, petCoat(p), petEye(p)) : specOf(breed);
+}
 function specOf(breedIdx, coat, eyeHex) {
   const b = BREEDS[breedIdx];
   const co = coat || b.coats[0];
@@ -822,7 +833,10 @@ const SP = { NONE: 0, ROW: 1, COL: 2, BOMB: 3, RAIN: 4 };
 const spriteCache = new Map();
 function tileSprite(type, sp, px, marks, blink) {
   const key = type + '|' + sp + '|' + Math.round(px) + '|' + (marks ? 1 : 0)
-    + '|' + (blink ? 'b' : '_') + '|' + (PAL.dark ? 'd' : 'l');
+    + '|' + (blink ? 'b' : '_') + '|' + (PAL.dark ? 'd' : 'l')
+    /* who is standing in the slot, and in what coat: adopting a pet or
+       buying it a new coat has to reach the board */
+    + '|' + (typeof CAST_SIG === 'string' ? CAST_SIG : '');
   let cv = spriteCache.get(key);
   if (cv) return cv;
   const pad = Math.round(px * .16);
@@ -881,7 +895,9 @@ function clearSprites() {
 }
 
 function paintTile(c, type, sp, px, marks, blink) {
-  const b = BREEDS[type];
+  /* the look belongs to whoever is standing in the slot, not to the slot */
+  const breed = slotBreed(type);
+  const b = BREEDS[breed];
   const s = px;
   if (sp === SP.RAIN) { paintRainbow(c, s); return; }
   const gem = b.gem, gem2 = b.gem2;
@@ -900,11 +916,11 @@ function paintTile(c, type, sp, px, marks, blink) {
   eg.addColorStop(.78, gem);
   eg.addColorStop(1, shade(gem2, -.14));
   c.fillStyle = eg;
-  tilePath(c, type, -s * .47, -s * .47, s * .94, s * .94);
+  tilePath(c, breed, -s * .47, -s * .47, s * .94, s * .94);
   c.fill();
 
   c.save();
-  tilePath(c, type, -s * .47, -s * .47, s * .94, s * .94);
+  tilePath(c, breed, -s * .47, -s * .47, s * .94, s * .94);
   c.clip();
 
   /* light bouncing back up off the cell below it */
@@ -929,7 +945,7 @@ function paintTile(c, type, sp, px, marks, blink) {
   c.strokeStyle = rgba(ink, .5);
   c.lineWidth = s * .10;
   c.translate(0, s * .028);
-  tilePath(c, type, -s * .47, -s * .47, s * .94, s * .94);
+  tilePath(c, breed, -s * .47, -s * .47, s * .94, s * .94);
   c.stroke();
   c.restore();
 
@@ -937,7 +953,7 @@ function paintTile(c, type, sp, px, marks, blink) {
   c.strokeStyle = rgba('#FFFFFF', .62);
   c.lineWidth = s * .055;
   c.save(); c.translate(0, s * .034);
-  tilePath(c, type, -s * .47, -s * .47, s * .94, s * .94);
+  tilePath(c, breed, -s * .47, -s * .47, s * .94, s * .94);
   c.stroke();
   c.restore();
 
@@ -958,7 +974,7 @@ function paintTile(c, type, sp, px, marks, blink) {
   /* the line that cuts it out of the board */
   c.strokeStyle = rgba(ink, .85);
   c.lineWidth = s * .045;
-  tilePath(c, type, -s * .47, -s * .47, s * .94, s * .94);
+  tilePath(c, breed, -s * .47, -s * .47, s * .94, s * .94);
   c.stroke();
 
   /* Speed stripes go on before the face. Painted over it, the
@@ -966,8 +982,8 @@ function paintTile(c, type, sp, px, marks, blink) {
   if (sp === SP.ROW || sp === SP.COL) paintRocket(c, s, sp === SP.COL, type);
 
   /* the animal */
-  const spec = specOf(type);
-  const shape = tileShape(type);
+  const spec = slotSpec(type);
+  const shape = tileShape(breed);
   c.save();
   c.translate(0, s * (.015 + shape.faceY));
   drawFace(c, spec, s * .715 * shape.faceScale, { mouth: 'smile', blink: blink ? 1 : 0 });
@@ -1158,7 +1174,7 @@ function drawTileFx(c, type, sp, s, t, seed) {
   if (sp === SP.RAIN) {
     /* the swirl turns and the surface shimmers */
     c.save();
-    tilePath(c, type, -s * .45, -s * .45, s * .90, s * .90);
+    tilePath(c, breed, -s * .45, -s * .45, s * .90, s * .90);
     c.clip();
     c.rotate(ph * .55);
     c.globalCompositeOperation = 'lighter';
@@ -1180,7 +1196,7 @@ function drawTileFx(c, type, sp, s, t, seed) {
 
   /* rockets: a light running along the axis it will fire down */
   c.save();
-  tilePath(c, type, -s * .45, -s * .45, s * .90, s * .90);
+  tilePath(c, breed, -s * .45, -s * .45, s * .90, s * .90);
   c.clip();
   if (sp === SP.COL) c.rotate(Math.PI / 2);
   const k = ((ph * .8) % 1);
@@ -1605,7 +1621,7 @@ function paintIce(c, s) {
 }
 /* the little one you walk home */
 function paintPup(c, s, type) {
-  const spec = specOf(type === undefined ? 0 : type);
+  const spec = slotSpec(type === undefined ? 0 : type);
   c.save();
   /* woven basket */
   c.fillStyle = '#C79A62';

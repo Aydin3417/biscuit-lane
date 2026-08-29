@@ -82,7 +82,7 @@ per frame, for a picture that never changes. A board holds thirty of
 them. It is cached now, the way a tile is.
 
 Open `test/integration.html` in the preview for the browser layer: it
-loads the built game in an iframe and runs 36 checks, driving the real
+loads the built game in an iframe and runs 37 checks, driving the real
 thing through `window.BL`. They cover:
 
 - **the save** — migration, corrupt values, unreadable files, timestamps
@@ -1449,3 +1449,45 @@ So: the format is complete in the code and verified in both shapes, but
 a phone can only install it from somewhere that serves `index.html`,
 `manifest.webmanifest`, `sw.js` and `icons/` together. GitHub Pages does
 that for free — on a public repository.
+
+## The animals on the board are the animals you keep
+
+This is the sentence the whole game is built on, and it was not true.
+
+Every player saw the same six stock breeds, in the same six slots, in
+the same six colours, forever. The pet sat on a rail beside the board
+handing out buffs — and you could have replaced it with a power-up meter
+and lost nothing at all. Adopting was a change of portrait. That is why
+the game read as a match-3 with pets painted on it rather than a game
+about pets: the premise was decoration.
+
+**A level's tile types are slots now, and a cast says who stands in
+each.** Your own come first, in the order you took them in; the rest of
+the lane fills the slots behind them. So a player with one pet plays a
+board with one friend and five strangers on it, and the board fills with
+their own as they go — and the face on the tile is *their* pet, in the
+coat they chose for it at adoption, not the breed's stock coat. Two
+players on level 12 are now looking at two different boards.
+
+The first attempt got this half right and looked wrong: the colour and
+the silhouette stayed with the slot while the animal moved, so a Pug
+turned up on an orange circle. Identity follows the breed instead — a
+Pug is a pink clover on every board there has ever been. That costs
+nothing in readability, because the cast is a *permutation*: all six
+colours and all six shapes are still on the board and still unique. What
+changes is which breeds are there at all.
+
+Three invariants hold it up, and `test/integration.html` checks each:
+
+- **The cast is a permutation.** Anything else loses a breed from the
+  game or shows one twice.
+- **A slot is painted by whoever is in it**, so colour and animal never
+  disagree.
+- **The number of types a level offers does not move.** Every difficulty
+  figure in this project was measured against that number, and the
+  engine compares type indices and has never known what a breed is — so
+  the four curves are untouched by this, and measured after the change
+  they are: 72% / 84% / 70% / 81%.
+
+The charge meter needed one correction: it wanted the pet's breed index,
+which is no longer the slot that breed is standing in.

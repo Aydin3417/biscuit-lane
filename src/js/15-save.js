@@ -242,6 +242,69 @@ function activePet() {
   return SAVE.pets.find(p => p.id === SAVE.activePet) || SAVE.pets[0];
 }
 function petBreed(p) { return BREEDS[p.breed]; }
+/* ---------------- the cast ----------------
+
+   The premise of this game is that the animals on the board are the
+   animals you keep. For a long time that was simply not true: every
+   player saw the same six stock breeds in the same six slots, whatever
+   was upstairs, forever. The pet sat on a rail beside the board handing
+   out buffs, and you could have replaced it with a power-up meter
+   without losing anything. Adoption was a change of portrait.
+
+   So a level's tile types are slots now, not breeds, and the cast says
+   who stands in each. Your own come first, in the order you took them
+   in; the rest of the lane fills the slots behind them. A player with
+   one pet plays a board with one friend and five strangers on it, and
+   the board fills with their own as they go — and the face on the tile
+   is their pet's face, in the coat they chose for it, not the breed's
+   stock coat.
+
+   None of this touches how many types a level has, so every difficulty
+   figure measured against the old board still holds. */
+let CAST = null;
+let CAST_SIG = '';
+
+function castRebuild() {
+  const mine = [];
+  const pets = (typeof SAVE === 'object' && SAVE && SAVE.pets) ? SAVE.pets : [];
+  pets.forEach(p => { if (p && mine.indexOf(p.breed) < 0) mine.push(p.breed); });
+  const rest = [];
+  for (let i = 0; i < BREEDS.length; i++) if (mine.indexOf(i) < 0) rest.push(i);
+  CAST = mine.concat(rest);
+  /* the signature is what the tile sprites are cached against: a coat
+     changed in the shop has to reach the board */
+  CAST_SIG = CAST.join('') + '|' + pets.map(p => p.breed + ':' + p.coat + ':' + p.eye).join(',');
+  return CAST;
+}
+function castOf() { return CAST || castRebuild(); }
+/* which breed stands in a board slot */
+function castBreed(slot) {
+  const c = castOf();
+  const i = Math.max(0, Math.round(+slot || 0));
+  return c[i % c.length];
+}
+/* the pet standing in it, if it is one of yours */
+function castPet(slot) {
+  const b = castBreed(slot);
+  const pets = (typeof SAVE === 'object' && SAVE && SAVE.pets) ? SAVE.pets : [];
+  for (let i = 0; i < pets.length; i++) if (pets[i].breed === b) return pets[i];
+  return null;
+}
+/* the slot a breed is standing in — what the charge meter wants */
+function castSlot(breed) {
+  const c = castOf();
+  const i = c.indexOf(Math.max(0, Math.round(+breed || 0)));
+  return i < 0 ? 0 : i;
+}
+function castName(slot) { return breedName(castBreed(slot)); }
+/* a pet arriving or leaving, or a coat bought, changes the board */
+function castChanged() {
+  const was = CAST_SIG;
+  castRebuild();
+  if (was !== CAST_SIG && typeof clearSprites === 'function') clearSprites();
+  return was !== CAST_SIG;
+}
+
 function petCoat(p) { const b = petBreed(p); return b.coats[p.coat] || b.coats[0]; }
 function petEye(p) { return (EYE_COLORS[p.eye] || { hex: petBreed(p).eyes }).hex; }
 function petStageIdx(p) {

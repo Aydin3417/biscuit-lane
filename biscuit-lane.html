@@ -2253,6 +2253,20 @@ function traitHow(id) { const t = TRAITS[id]; return t ? (LANG === 'tr' ? t.trHo
    So the favourite is the breed while the breed is dealt, and the tile
    beside it when it is not. Every reader goes through here, and the
    interface says which tile it landed on rather than assuming. */
+/* The breed standing in a board slot, and its colours. A slot's look
+   follows whoever is in it rather than the slot number: the cast is a
+   permutation of the same six breeds, so all six gem colours and all six
+   silhouettes are still on the board and still unique — a Pug is a pink
+   clover on every board there has ever been, it is just that whether
+   there is a Pug on your board at all depends on who you have taken in. */
+function slotBreed(slot) {
+  return (typeof castBreed === 'function') ? castBreed(slot)
+    : Math.max(0, Math.round(+slot || 0)) % BREEDS.length;
+}
+function slotGem(slot) {
+  const b = BREEDS[slotBreed(slot)];
+  return b ? b.gem : '#888888';
+}
 function favTypeFor(breed, types) {
   const b = Math.max(0, Math.round(+breed || 0));
   if (!(types > 0)) return b;
@@ -3060,6 +3074,69 @@ function activePet() {
   return SAVE.pets.find(p => p.id === SAVE.activePet) || SAVE.pets[0];
 }
 function petBreed(p) { return BREEDS[p.breed]; }
+/* ---------------- the cast ----------------
+
+   The premise of this game is that the animals on the board are the
+   animals you keep. For a long time that was simply not true: every
+   player saw the same six stock breeds in the same six slots, whatever
+   was upstairs, forever. The pet sat on a rail beside the board handing
+   out buffs, and you could have replaced it with a power-up meter
+   without losing anything. Adoption was a change of portrait.
+
+   So a level's tile types are slots now, not breeds, and the cast says
+   who stands in each. Your own come first, in the order you took them
+   in; the rest of the lane fills the slots behind them. A player with
+   one pet plays a board with one friend and five strangers on it, and
+   the board fills with their own as they go — and the face on the tile
+   is their pet's face, in the coat they chose for it, not the breed's
+   stock coat.
+
+   None of this touches how many types a level has, so every difficulty
+   figure measured against the old board still holds. */
+let CAST = null;
+let CAST_SIG = '';
+
+function castRebuild() {
+  const mine = [];
+  const pets = (typeof SAVE === 'object' && SAVE && SAVE.pets) ? SAVE.pets : [];
+  pets.forEach(p => { if (p && mine.indexOf(p.breed) < 0) mine.push(p.breed); });
+  const rest = [];
+  for (let i = 0; i < BREEDS.length; i++) if (mine.indexOf(i) < 0) rest.push(i);
+  CAST = mine.concat(rest);
+  /* the signature is what the tile sprites are cached against: a coat
+     changed in the shop has to reach the board */
+  CAST_SIG = CAST.join('') + '|' + pets.map(p => p.breed + ':' + p.coat + ':' + p.eye).join(',');
+  return CAST;
+}
+function castOf() { return CAST || castRebuild(); }
+/* which breed stands in a board slot */
+function castBreed(slot) {
+  const c = castOf();
+  const i = Math.max(0, Math.round(+slot || 0));
+  return c[i % c.length];
+}
+/* the pet standing in it, if it is one of yours */
+function castPet(slot) {
+  const b = castBreed(slot);
+  const pets = (typeof SAVE === 'object' && SAVE && SAVE.pets) ? SAVE.pets : [];
+  for (let i = 0; i < pets.length; i++) if (pets[i].breed === b) return pets[i];
+  return null;
+}
+/* the slot a breed is standing in — what the charge meter wants */
+function castSlot(breed) {
+  const c = castOf();
+  const i = c.indexOf(Math.max(0, Math.round(+breed || 0)));
+  return i < 0 ? 0 : i;
+}
+function castName(slot) { return breedName(castBreed(slot)); }
+/* a pet arriving or leaving, or a coat bought, changes the board */
+function castChanged() {
+  const was = CAST_SIG;
+  castRebuild();
+  if (was !== CAST_SIG && typeof clearSprites === 'function') clearSprites();
+  return was !== CAST_SIG;
+}
+
 function petCoat(p) { const b = petBreed(p); return b.coats[p.coat] || b.coats[0]; }
 function petEye(p) { return (EYE_COLORS[p.eye] || { hex: petBreed(p).eyes }).hex; }
 function petStageIdx(p) {
@@ -4641,6 +4718,17 @@ function drawCollar(c, id, s, y) {
 }
 
 /* ---------------- the face ---------------- */
+/* The face on a board tile. A slot is not a breed any more — the cast
+   says who is standing in it, and if that is one of your pets it wears
+   the coat and the eyes you chose for it rather than the breed's stock
+   ones. Falls back to the plain breed when there is no save, which is
+   how the engine tests and the level-design audit see it. */
+function slotSpec(slot) {
+  if (typeof castBreed !== 'function') return specOf(slot);
+  const breed = castBreed(slot);
+  const p = castPet(slot);
+  return p ? specOf(breed, petCoat(p), petEye(p)) : specOf(breed);
+}
 function specOf(breedIdx, coat, eyeHex) {
   const b = BREEDS[breedIdx];
   const co = coat || b.coats[0];
@@ -4939,7 +5027,10 @@ const SP = { NONE: 0, ROW: 1, COL: 2, BOMB: 3, RAIN: 4 };
 const spriteCache = new Map();
 function tileSprite(type, sp, px, marks, blink) {
   const key = type + '|' + sp + '|' + Math.round(px) + '|' + (marks ? 1 : 0)
-    + '|' + (blink ? 'b' : '_') + '|' + (PAL.dark ? 'd' : 'l');
+    + '|' + (blink ? 'b' : '_') + '|' + (PAL.dark ? 'd' : 'l')
+    /* who is standing in the slot, and in what coat: adopting a pet or
+       buying it a new coat has to reach the board */
+    + '|' + (typeof CAST_SIG === 'string' ? CAST_SIG : '');
   let cv = spriteCache.get(key);
   if (cv) return cv;
   const pad = Math.round(px * .16);
@@ -4998,7 +5089,9 @@ function clearSprites() {
 }
 
 function paintTile(c, type, sp, px, marks, blink) {
-  const b = BREEDS[type];
+  /* the look belongs to whoever is standing in the slot, not to the slot */
+  const breed = slotBreed(type);
+  const b = BREEDS[breed];
   const s = px;
   if (sp === SP.RAIN) { paintRainbow(c, s); return; }
   const gem = b.gem, gem2 = b.gem2;
@@ -5017,11 +5110,11 @@ function paintTile(c, type, sp, px, marks, blink) {
   eg.addColorStop(.78, gem);
   eg.addColorStop(1, shade(gem2, -.14));
   c.fillStyle = eg;
-  tilePath(c, type, -s * .47, -s * .47, s * .94, s * .94);
+  tilePath(c, breed, -s * .47, -s * .47, s * .94, s * .94);
   c.fill();
 
   c.save();
-  tilePath(c, type, -s * .47, -s * .47, s * .94, s * .94);
+  tilePath(c, breed, -s * .47, -s * .47, s * .94, s * .94);
   c.clip();
 
   /* light bouncing back up off the cell below it */
@@ -5046,7 +5139,7 @@ function paintTile(c, type, sp, px, marks, blink) {
   c.strokeStyle = rgba(ink, .5);
   c.lineWidth = s * .10;
   c.translate(0, s * .028);
-  tilePath(c, type, -s * .47, -s * .47, s * .94, s * .94);
+  tilePath(c, breed, -s * .47, -s * .47, s * .94, s * .94);
   c.stroke();
   c.restore();
 
@@ -5054,7 +5147,7 @@ function paintTile(c, type, sp, px, marks, blink) {
   c.strokeStyle = rgba('#FFFFFF', .62);
   c.lineWidth = s * .055;
   c.save(); c.translate(0, s * .034);
-  tilePath(c, type, -s * .47, -s * .47, s * .94, s * .94);
+  tilePath(c, breed, -s * .47, -s * .47, s * .94, s * .94);
   c.stroke();
   c.restore();
 
@@ -5075,7 +5168,7 @@ function paintTile(c, type, sp, px, marks, blink) {
   /* the line that cuts it out of the board */
   c.strokeStyle = rgba(ink, .85);
   c.lineWidth = s * .045;
-  tilePath(c, type, -s * .47, -s * .47, s * .94, s * .94);
+  tilePath(c, breed, -s * .47, -s * .47, s * .94, s * .94);
   c.stroke();
 
   /* Speed stripes go on before the face. Painted over it, the
@@ -5083,8 +5176,8 @@ function paintTile(c, type, sp, px, marks, blink) {
   if (sp === SP.ROW || sp === SP.COL) paintRocket(c, s, sp === SP.COL, type);
 
   /* the animal */
-  const spec = specOf(type);
-  const shape = tileShape(type);
+  const spec = slotSpec(type);
+  const shape = tileShape(breed);
   c.save();
   c.translate(0, s * (.015 + shape.faceY));
   drawFace(c, spec, s * .715 * shape.faceScale, { mouth: 'smile', blink: blink ? 1 : 0 });
@@ -5275,7 +5368,7 @@ function drawTileFx(c, type, sp, s, t, seed) {
   if (sp === SP.RAIN) {
     /* the swirl turns and the surface shimmers */
     c.save();
-    tilePath(c, type, -s * .45, -s * .45, s * .90, s * .90);
+    tilePath(c, breed, -s * .45, -s * .45, s * .90, s * .90);
     c.clip();
     c.rotate(ph * .55);
     c.globalCompositeOperation = 'lighter';
@@ -5297,7 +5390,7 @@ function drawTileFx(c, type, sp, s, t, seed) {
 
   /* rockets: a light running along the axis it will fire down */
   c.save();
-  tilePath(c, type, -s * .45, -s * .45, s * .90, s * .90);
+  tilePath(c, breed, -s * .45, -s * .45, s * .90, s * .90);
   c.clip();
   if (sp === SP.COL) c.rotate(Math.PI / 2);
   const k = ((ph * .8) % 1);
@@ -5722,7 +5815,7 @@ function paintIce(c, s) {
 }
 /* the little one you walk home */
 function paintPup(c, s, type) {
-  const spec = specOf(type === undefined ? 0 : type);
+  const spec = slotSpec(type === undefined ? 0 : type);
   c.save();
   /* woven basket */
   c.fillStyle = '#C79A62';
@@ -8971,11 +9064,11 @@ function syncHud() {
    pet's own breed is not in play the line says so in the pet's name
    rather than silently naming somebody else's animal. */
 function chargeHint(pet) {
-  if (!pet) return T('g_charge_need', { breed: breedName(0) });
+  if (!pet) return T('g_charge_need', { breed: castName(0) });
   const fav = favType();
   return fav === pet.breed
-    ? T('g_charge_need', { breed: breedName(fav) })
-    : T('g_charge_swap', { name: pet.name, breed: breedName(fav) });
+    ? T('g_charge_need', { breed: castName(fav) })
+    : T('g_charge_swap', { name: pet.name, breed: castName(fav) });
 }
 function buildStarTrack() {
   const tr = $('#starTrack');
@@ -9174,7 +9267,7 @@ function hitCell(B, r, c, ctx, direct) {
 function specialKeys(B, r, c, sp, type) {
   const keys = [];
   const [sx, sy, span] = cellFX(r, c);
-  const gem = BREEDS[type] ? BREEDS[type].gem : PAL.accent;
+  const gem = slotGem(type);
   if (sp === SP.ROW) {
     for (let i = 0; i < B.w; i++) keys.push(r + ':' + i);
     beam(r, c, 'h'); SFX.rocket(span);
@@ -9221,7 +9314,7 @@ async function blastWaves(startKeys, chain, silent) {
     let gained = 0;
     ctx.removed.forEach((it, i) => {
       gained += 62 * Math.min(8, chain || 1);
-      burst(it.r, it.c, it.t.type >= 0 ? BREEDS[it.t.type].gem : PAL.accent, 7, 1);
+      burst(it.r, it.c, it.t.type >= 0 ? slotGem(it.t.type) : PAL.accent, 7, 1);
       if (!silent && i < 5) SFX.pop(chain || 1, i, cellFX(it.r, it.c)[2]);
       /* the tiles around it flinch. A board where only the matched
          cells react is a spreadsheet clearing rows; one where the
@@ -9364,7 +9457,7 @@ async function clearGroups(groups, swapCells) {
       cell.tile.sp = s.sp;
       cell.tile.scale = .4;
       cell.tile.jiggle = 1;
-      ring(s.r, s.c, BREEDS[s.type] ? BREEDS[s.type].gem : PAL.accent);
+      ring(s.r, s.c, s.type >= 0 ? slotGem(s.type) : PAL.accent);
       addScore(210);
       SFX.select();
     }
@@ -9670,7 +9763,7 @@ async function firePetAbility() {
       const t = B.cell[r][c].tile;
       t.sp = Math.random() < .5 ? SP.ROW : SP.COL;
       t.jiggle = 1; t.scale = .5;
-      ring(r, c, BREEDS[t.type].gem);
+      ring(r, c, slotGem(t.type));
     });
     SFX.select();
     await wait(420);
@@ -9720,7 +9813,9 @@ async function firePetAbility() {
    so no ability is ever pointed at a colour that is not in play. */
 function favType() {
   const pet = activePet();
-  return favTypeFor(pet ? pet.breed : 0, G.B ? G.B.types : 0);
+  /* the slot the pet is standing in, not its breed index: with the cast
+     putting your own first, those are no longer the same number */
+  return favTypeFor(pet ? castSlot(pet.breed) : 0, G.B ? G.B.types : 0);
 }
 /* "Sniffs out tiles and turns them into what you actually need."
 
@@ -12006,6 +12101,9 @@ function tryAdopt(breedIdx, cost, need) {
     SAVE.coins -= cost;
     const p = makePet(breedIdx, coat, eye, name);
     SAVE.pets.push(p);
+    /* the lane fills with your own: one fewer stranger on every board
+       from here on, and this one wearing the coat you just picked */
+    castChanged();
     persist(true);
     SFX.levelup();
     petVoice(p, 1.1);
@@ -12079,7 +12177,7 @@ function goalLine(g) {
      Marmelat" in Turkish, which is English word order wearing Turkish
      words. Each language orders its own sentence. */
   if (g.kind === GK.COLLECT)
-    return T('goal_collect', { n, breed: breedName(g.arg !== undefined ? g.arg : g[1]) });
+    return T('goal_collect', { n, breed: castName(g.arg !== undefined ? g.arg : g[1]) });
   if (g.kind === GK.CRATE) return T('goal_crate', { n });
   if (g.kind === GK.MUD) return T('goal_mud', { n });
   if (g.kind === GK.BRAMBLE) return T('goal_bramble', { n });
@@ -12849,6 +12947,7 @@ function runOnboarding() {
     const p = makePet(breedIdx, coat, eye, nm);
     SAVE.pets = [p];
     SAVE.activePet = p.id;
+    castChanged();
     persist(true);
     $('#onb').classList.remove('on');
     petVoiceBreed(breedIdx);
@@ -13045,6 +13144,7 @@ function installApp() {
 
 function boot() {
   const had = loadSave();
+  castRebuild();          /* who stands in each board slot, before anything draws */
   if (SAVE.settings.lang) LANG = SAVE.settings.lang;
   else { LANG = (navigator.language || 'en').toLowerCase().indexOf('tr') === 0 ? 'tr' : 'en'; SAVE.settings.lang = LANG; }
 
@@ -13199,6 +13299,7 @@ window.BL = {
   openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, confirmQuit,
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
   simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY,
+  castOf, castBreed, castSlot, castName, castRebuild, slotGem, slotBreed,
   popScale, popAlpha, showWin, showLose, bestHint, hintScore, drawLogo,
   /* render entry points, so a frame can be forced without rAF */
   renderGame, renderRoom, drawMap, layoutBoard, mapLayout, roomLayout, applyTheme,

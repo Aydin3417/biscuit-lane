@@ -873,6 +873,9 @@ function tryAdopt(breedIdx, cost, need) {
     SAVE.coins -= cost;
     const p = makePet(breedIdx, coat, eye, name);
     SAVE.pets.push(p);
+    /* the lane fills with your own: one fewer stranger on every board
+       from here on, and this one wearing the coat you just picked */
+    castChanged();
     persist(true);
     SFX.levelup();
     petVoice(p, 1.1);
@@ -946,7 +949,7 @@ function goalLine(g) {
      Marmelat" in Turkish, which is English word order wearing Turkish
      words. Each language orders its own sentence. */
   if (g.kind === GK.COLLECT)
-    return T('goal_collect', { n, breed: breedName(g.arg !== undefined ? g.arg : g[1]) });
+    return T('goal_collect', { n, breed: castName(g.arg !== undefined ? g.arg : g[1]) });
   if (g.kind === GK.CRATE) return T('goal_crate', { n });
   if (g.kind === GK.MUD) return T('goal_mud', { n });
   if (g.kind === GK.BRAMBLE) return T('goal_bramble', { n });
@@ -1716,6 +1719,7 @@ function runOnboarding() {
     const p = makePet(breedIdx, coat, eye, nm);
     SAVE.pets = [p];
     SAVE.activePet = p.id;
+    castChanged();
     persist(true);
     $('#onb').classList.remove('on');
     petVoiceBreed(breedIdx);

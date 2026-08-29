@@ -346,11 +346,11 @@ function syncHud() {
    pet's own breed is not in play the line says so in the pet's name
    rather than silently naming somebody else's animal. */
 function chargeHint(pet) {
-  if (!pet) return T('g_charge_need', { breed: breedName(0) });
+  if (!pet) return T('g_charge_need', { breed: castName(0) });
   const fav = favType();
   return fav === pet.breed
-    ? T('g_charge_need', { breed: breedName(fav) })
-    : T('g_charge_swap', { name: pet.name, breed: breedName(fav) });
+    ? T('g_charge_need', { breed: castName(fav) })
+    : T('g_charge_swap', { name: pet.name, breed: castName(fav) });
 }
 function buildStarTrack() {
   const tr = $('#starTrack');
@@ -549,7 +549,7 @@ function hitCell(B, r, c, ctx, direct) {
 function specialKeys(B, r, c, sp, type) {
   const keys = [];
   const [sx, sy, span] = cellFX(r, c);
-  const gem = BREEDS[type] ? BREEDS[type].gem : PAL.accent;
+  const gem = slotGem(type);
   if (sp === SP.ROW) {
     for (let i = 0; i < B.w; i++) keys.push(r + ':' + i);
     beam(r, c, 'h'); SFX.rocket(span);
@@ -596,7 +596,7 @@ async function blastWaves(startKeys, chain, silent) {
     let gained = 0;
     ctx.removed.forEach((it, i) => {
       gained += 62 * Math.min(8, chain || 1);
-      burst(it.r, it.c, it.t.type >= 0 ? BREEDS[it.t.type].gem : PAL.accent, 7, 1);
+      burst(it.r, it.c, it.t.type >= 0 ? slotGem(it.t.type) : PAL.accent, 7, 1);
       if (!silent && i < 5) SFX.pop(chain || 1, i, cellFX(it.r, it.c)[2]);
       /* the tiles around it flinch. A board where only the matched
          cells react is a spreadsheet clearing rows; one where the
@@ -739,7 +739,7 @@ async function clearGroups(groups, swapCells) {
       cell.tile.sp = s.sp;
       cell.tile.scale = .4;
       cell.tile.jiggle = 1;
-      ring(s.r, s.c, BREEDS[s.type] ? BREEDS[s.type].gem : PAL.accent);
+      ring(s.r, s.c, s.type >= 0 ? slotGem(s.type) : PAL.accent);
       addScore(210);
       SFX.select();
     }
@@ -1045,7 +1045,7 @@ async function firePetAbility() {
       const t = B.cell[r][c].tile;
       t.sp = Math.random() < .5 ? SP.ROW : SP.COL;
       t.jiggle = 1; t.scale = .5;
-      ring(r, c, BREEDS[t.type].gem);
+      ring(r, c, slotGem(t.type));
     });
     SFX.select();
     await wait(420);
@@ -1095,7 +1095,9 @@ async function firePetAbility() {
    so no ability is ever pointed at a colour that is not in play. */
 function favType() {
   const pet = activePet();
-  return favTypeFor(pet ? pet.breed : 0, G.B ? G.B.types : 0);
+  /* the slot the pet is standing in, not its breed index: with the cast
+     putting your own first, those are no longer the same number */
+  return favTypeFor(pet ? castSlot(pet.breed) : 0, G.B ? G.B.types : 0);
 }
 /* "Sniffs out tiles and turns them into what you actually need."
 

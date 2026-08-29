@@ -373,6 +373,20 @@ function traitHow(id) { const t = TRAITS[id]; return t ? (LANG === 'tr' ? t.trHo
    So the favourite is the breed while the breed is dealt, and the tile
    beside it when it is not. Every reader goes through here, and the
    interface says which tile it landed on rather than assuming. */
+/* The breed standing in a board slot, and its colours. A slot's look
+   follows whoever is in it rather than the slot number: the cast is a
+   permutation of the same six breeds, so all six gem colours and all six
+   silhouettes are still on the board and still unique — a Pug is a pink
+   clover on every board there has ever been, it is just that whether
+   there is a Pug on your board at all depends on who you have taken in. */
+function slotBreed(slot) {
+  return (typeof castBreed === 'function') ? castBreed(slot)
+    : Math.max(0, Math.round(+slot || 0)) % BREEDS.length;
+}
+function slotGem(slot) {
+  const b = BREEDS[slotBreed(slot)];
+  return b ? b.gem : '#888888';
+}
 function favTypeFor(breed, types) {
   const b = Math.max(0, Math.round(+breed || 0));
   if (!(types > 0)) return b;
