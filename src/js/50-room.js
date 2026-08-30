@@ -486,6 +486,7 @@ function drawMap() {
   c.restore();                            /* undo the scroll translate */
 }
 function drawMapNode(c, n) {
+  const gate = typeof isGate === 'function' && isGate(n.n);
   const cleared = SAVE.stars[n.n] > 0;
   const unlocked = n.n <= SAVE.reached;
   const current = n.n === SAVE.reached;
@@ -505,6 +506,21 @@ function drawMapNode(c, n) {
   ellipse(c, n.x, n.y, R, R); c.fill();
   c.strokeStyle = rgba('#FFFFFF', .5); c.lineWidth = 2.4;
   ellipse(c, n.x, n.y - 1, R - 2, R - 2); c.stroke();
+  /* The gate at the end of a block wears a ring of its own, so it can be
+     seen coming from four levels away — which is the whole point of
+     putting one there. */
+  if (gate && unlocked && !cleared) {
+    c.save();
+    c.strokeStyle = PAL.rose; c.lineWidth = 2.6;
+    c.setLineDash([5, 4]);
+    ellipse(c, n.x, n.y, R + 4, R + 4); c.stroke();
+    c.restore();
+  } else if (gate && cleared) {
+    c.save();
+    c.strokeStyle = rgba(PAL.rose, .5); c.lineWidth = 2;
+    ellipse(c, n.x, n.y, R + 4, R + 4); c.stroke();
+    c.restore();
+  }
   if (current) {
     c.strokeStyle = PAL.accent; c.lineWidth = 3;
     c.globalAlpha = .35 + (Math.sin(performance.now() / 380) + 1) / 2 * .5;

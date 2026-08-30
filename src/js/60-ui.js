@@ -988,6 +988,10 @@ function openLevelIntro(n) {
   const m = modal(`
     <div class="eyebrow">${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
     <h2>${T('lvl_goals')}</h2>
+    ${def.gate ? `<div class="goalItem gateNote">
+      <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
+      <span class="t"><b>${T('gate_t')}</b>${T('gate_s')}</span>
+    </div>` : ''}
     ${firstTreats ? `<div class="goalItem" style="background:color-mix(in srgb,var(--plum) 12%, var(--surface-2))">
       <span style="width:32px;display:grid;place-items:center;color:var(--plum)">${IC.treat}</span>
       <span class="t"><b>${T('lvl_first_treats', { n: firstTreats })}</b></span>

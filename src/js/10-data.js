@@ -758,19 +758,75 @@ function shapeMask(name, w, h, r) {
 }
 const SHAPES = ['bands', 'columns', 'diamond', 'ring', 'corners', 'checker', 'wedge', 'blob'];
 
-function levelDef(n) {
+/* `ref` builds the level as it would be with no target at all: the
+   generator's own move count, its own goal sizes, nothing solved for.
+
+   That exists to break a circle. The response curves in 12-curve.js are
+   measured by playing levels, and the generator reads those curves to
+   decide how many moves a level gets — so measuring the generator's own
+   output would be measuring the curve against itself, and the numbers
+   would describe nothing. Calibration plays reference builds, which
+   depend on no measurement, and the curve then says what a budget does
+   *relative to that fixed point*. */
+function levelDef(n, ref) {
   if (n === DAILY_LEVEL) return dailyLevel(SAVE ? SAVE.reached : 1);
   if (n <= LEVELS.length) return normaliseGoals(LEVELS[n - 1]);
   const r = mulberry(n * 7919);
   const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE];
-  const kind = kinds[Math.floor(r() * kinds.length)];
+
+  /* What this level is for comes before what it is made of.
+
+     Measured, the goal kinds cannot all be made to feel the same way. A
+     rescue tops out around eighty percent however many moves it is
+     given — two baskets have to be walked the length of the board and
+     that takes what it takes — and a bramble patch grows back, which
+     puts a ceiling near seventy. Meanwhile a mud goal is a share of what
+     the map holds, so it stays winnable about half the time even at half
+     its budget.
+
+     So the level's target is chosen first, and then a kind that can
+     actually reach it. Rolling the kind first and hoping is how a relief
+     level ends up being a bramble patch nobody can clear. */
+  const want = targetClear(n);
+  const keyOf = k => (k === GK.BRAMBLE ? 'bramble' : k);
+  const fits = kinds.filter(k => {
+    const rng = budgetRange(keyOf(k));
+    return want >= rng[0] - .05 && want <= rng[1] + .05;
+  });
+  const pool = fits.length ? fits : kinds;
+  const kind = pool[Math.floor(r() * pool.length)];
   const tier = Math.min(4, Math.floor((n - 40) / 12));
   const h = 9, w = 8;
   /* the early tiers deal one colour fewer, which is how the handcrafted
      lane eases a player in — not by asking for less */
   const types = tier <= 1 ? 5 : 6;
   const key = kind === GK.BRAMBLE ? 'bramble' : kind;
-  const moves = (GEN[key] && GEN[key].moves ? GEN[key].moves : 28) + (tier % 2);
+
+  /* ---- how hard this level is meant to be, and how to get there ----
+
+     The old line was `moves = a constant + (tier % 2)`, which is to say
+     no level had an intended difficulty and the run was noise inside a
+     band. targetClear(n) says what share of games this level is meant to
+     be won; budgetFor() reads the measured response curve backwards and
+     answers with a move budget.
+
+     Some goals barely answer their budget at all — a mud level at half
+     its moves still clears three times in five, because a mud goal is a
+     share of what the map holds and the map is the same map. For those,
+     whatever the budget could not reach is carried into the work: more
+     mud, more crates, a wider patch. */
+  const reach = budgetRange(key);
+  /* aim below the target by the model's measured error, or every level
+     arrives about nine points easier than it was drawn */
+  const byMoves = clamp(want - MODEL_BIAS, reach[0], reach[1]);
+  const mult = ref ? 1 : budgetFor(key, byMoves);
+  /* what the budget could not do, the work has to. Positive means the
+     level needs to be harder than the moves alone can make it. */
+  const shortfall = byMoves - want;
+  const workMult = ref ? 1 : clamp(1 + shortfall * 1.6, .78, 1.34);
+
+  const baseMoves = (GEN[key] && GEN[key].moves ? GEN[key].moves : 28) + (tier % 2);
+  const moves = Math.max(8, Math.round(baseMoves * mult));
 
   /* a bramble patch is a blob, not a sprinkle: scattered single cells
      read as noise and give the spread nothing to work with */
@@ -838,7 +894,49 @@ function levelDef(n) {
      obstacles on a board cost many moves each, so asking for all of them
      turns the end of a level into a search */
   const stock = mapStock({ map });
-  const share = (have, frac) => Math.max(4, Math.round(have * frac));
+
+  /* A goal is priced in work, not in cells.
+
+     Two mud levels with the same count and the same budget measured at
+     21% and 100%. The difference was where the mud was: a cell in a
+     corner has two neighbours instead of four, so a match has to arrive
+     along one of two lines rather than one of six, and it costs several
+     times what an interior cell costs. Counting cells treats those as
+     the same thing, so the per-kind response curve had more variance
+     inside it than the move budget was moving.
+
+     So each cell is weighted by how awkward it is to reach, the player
+     is assumed to take the cheap ones first, and the goal is however
+     many cells fit inside a work budget of `frac` per cell. On an even
+     map that is exactly the old number; on a corner-heavy one the goal
+     comes down, which is what stops it being a wall. */
+  const cellCost = (y, x) => {
+    const edgeY = (y === 0 || y === h - 1), edgeX = (x === 0 || x === w - 1);
+    if (edgeY && edgeX) return 1.9;
+    if (edgeY || edgeX) return 1.35;
+    return 1;
+  };
+  const costsOf = chars => {
+    const out = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (chars.indexOf(map[y][x]) >= 0) out.push(cellCost(y, x));
+    }
+    return out.sort((a, b) => a - b);
+  };
+  /* An absolute work budget, not a share of whatever the map happened to
+     hold. The arrangements put anywhere between eighteen and thirty-six
+     cells of mud on a board, and a goal set as a fraction of that
+     inherited the whole spread — two mud levels with the same move
+     budget measured at 21% and 100%. The budget the moves were solved
+     for is a fixed amount of work, so the goal has to be one too. */
+  const workShare = (chars, have, units) => {
+    if (!have) return 0;
+    const costs = costsOf(chars);
+    let budget = units * workMult;
+    let taken = 0;
+    for (let i = 0; i < costs.length && budget >= costs[i]; i++) { budget -= costs[i]; taken++; }
+    return Math.max(4, Math.min(have, taken));
+  };
 
   const goals = [];
   let base;
@@ -850,25 +948,30 @@ function levelDef(n) {
     let b = Math.floor(r() * types);
     if (b === a) b = (b + 1) % types;          /* two different colours */
     const pair = collectPair(moves, types, tier);
-    goals.push([GK.COLLECT, a, pair[0]]);
-    goals.push([GK.COLLECT, b, pair[1]]);
+    goals.push([GK.COLLECT, a, Math.round(pair[0] * workMult)]);
+    goals.push([GK.COLLECT, b, Math.round(pair[1] * workMult)]);
     base = GEN.collect.base + tier * 500;
   } else if (kind === GK.MUD) {
-    goals.push([GK.MUD, 0, share(stock.mud, .74 + tier * .05)]);
+    goals.push([GK.MUD, 0, workShare('mM', stock.mud, 28.5 + tier * 2)]);
     base = GEN.mud.base + tier * 400;
   } else if (kind === GK.CRATE) {
-    goals.push([GK.CRATE, 0, share(stock.crate, .68 + tier * .045)]);
+    goals.push([GK.CRATE, 0, workShare('cC', stock.crate, 15.5 + tier * 1.4)]);
     base = GEN.crate.base + tier * 400;
   } else if (kind === GK.RESCUE) {
     /* three baskets down a board nobody designed measured at 0% */
     goals.push([GK.RESCUE, 0, 2]);
     base = GEN.rescue.base + tier * 400;
   } else {
-    goals.push([GK.BRAMBLE, 0, GEN.bramble.goal(tier)]);
+    goals.push([GK.BRAMBLE, 0, Math.round(GEN.bramble.goal(tier) * workMult)]);
     base = GEN.bramble.base + tier * 400;
   }
 
-  return normaliseGoals({ n, w, h, types, moves, goals, base, map });
+  /* The star targets are a score, and score is earned per move — a level
+     given fifteen percent fewer moves cannot reach the same number, and
+     three stars would quietly become unreachable. */
+  if (!ref) base = Math.round(base * (.35 + .65 * mult));
+
+  return normaliseGoals({ n, w, h, types, moves, goals, base, map, gate: isGate(n) });
 }
 /* ---------- the daily walk ----------
    Seeded from the date so everyone on a given day gets the same board,

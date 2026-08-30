@@ -927,6 +927,13 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 @media (orientation:landscape) and (max-height:520px){
   #rotate{ display:grid; }
 }
+
+/* The last level of a block is meant to be hard, so it says so. A wall
+   you did not know was coming is just an unfair level. */
+.gateNote{
+  background:color-mix(in srgb,var(--rose) 11%, var(--surface-2));
+  border:1px solid color-mix(in srgb,var(--rose) 30%, transparent);
+}
 </style>
 
 <div class="stage">
@@ -1415,6 +1422,8 @@ function fmtTime(ms) {
 const STRINGS = {
   en: {
     brandSub: 'Pet Home',
+    gate_t: 'The end of the block',
+    gate_s: 'Harder than the nine before it. Take your time.',
     rot_t: 'Turn your phone back',
     rot_s: 'Biscuit Lane is played the tall way up.',
     tab_home: 'Home', tab_play: 'Play', tab_shop: 'Shop', tab_family: 'Family',
@@ -1650,6 +1659,8 @@ const STRINGS = {
 
   tr: {
     brandSub: 'Pati Evi',
+    gate_t: 'Bölümün kapısı',
+    gate_s: 'Öncesindeki dokuzdan zor. Acele etme.',
     rot_t: 'Telefonu geri çevir',
     rot_s: 'Biscuit Lane dikey oynanıyor.',
     tab_home: 'Ev', tab_play: 'Oyna', tab_shop: 'Dükkan', tab_family: 'Aile',
@@ -2638,19 +2649,75 @@ function shapeMask(name, w, h, r) {
 }
 const SHAPES = ['bands', 'columns', 'diamond', 'ring', 'corners', 'checker', 'wedge', 'blob'];
 
-function levelDef(n) {
+/* `ref` builds the level as it would be with no target at all: the
+   generator's own move count, its own goal sizes, nothing solved for.
+
+   That exists to break a circle. The response curves in 12-curve.js are
+   measured by playing levels, and the generator reads those curves to
+   decide how many moves a level gets — so measuring the generator's own
+   output would be measuring the curve against itself, and the numbers
+   would describe nothing. Calibration plays reference builds, which
+   depend on no measurement, and the curve then says what a budget does
+   *relative to that fixed point*. */
+function levelDef(n, ref) {
   if (n === DAILY_LEVEL) return dailyLevel(SAVE ? SAVE.reached : 1);
   if (n <= LEVELS.length) return normaliseGoals(LEVELS[n - 1]);
   const r = mulberry(n * 7919);
   const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE];
-  const kind = kinds[Math.floor(r() * kinds.length)];
+
+  /* What this level is for comes before what it is made of.
+
+     Measured, the goal kinds cannot all be made to feel the same way. A
+     rescue tops out around eighty percent however many moves it is
+     given — two baskets have to be walked the length of the board and
+     that takes what it takes — and a bramble patch grows back, which
+     puts a ceiling near seventy. Meanwhile a mud goal is a share of what
+     the map holds, so it stays winnable about half the time even at half
+     its budget.
+
+     So the level's target is chosen first, and then a kind that can
+     actually reach it. Rolling the kind first and hoping is how a relief
+     level ends up being a bramble patch nobody can clear. */
+  const want = targetClear(n);
+  const keyOf = k => (k === GK.BRAMBLE ? 'bramble' : k);
+  const fits = kinds.filter(k => {
+    const rng = budgetRange(keyOf(k));
+    return want >= rng[0] - .05 && want <= rng[1] + .05;
+  });
+  const pool = fits.length ? fits : kinds;
+  const kind = pool[Math.floor(r() * pool.length)];
   const tier = Math.min(4, Math.floor((n - 40) / 12));
   const h = 9, w = 8;
   /* the early tiers deal one colour fewer, which is how the handcrafted
      lane eases a player in — not by asking for less */
   const types = tier <= 1 ? 5 : 6;
   const key = kind === GK.BRAMBLE ? 'bramble' : kind;
-  const moves = (GEN[key] && GEN[key].moves ? GEN[key].moves : 28) + (tier % 2);
+
+  /* ---- how hard this level is meant to be, and how to get there ----
+
+     The old line was `moves = a constant + (tier % 2)`, which is to say
+     no level had an intended difficulty and the run was noise inside a
+     band. targetClear(n) says what share of games this level is meant to
+     be won; budgetFor() reads the measured response curve backwards and
+     answers with a move budget.
+
+     Some goals barely answer their budget at all — a mud level at half
+     its moves still clears three times in five, because a mud goal is a
+     share of what the map holds and the map is the same map. For those,
+     whatever the budget could not reach is carried into the work: more
+     mud, more crates, a wider patch. */
+  const reach = budgetRange(key);
+  /* aim below the target by the model's measured error, or every level
+     arrives about nine points easier than it was drawn */
+  const byMoves = clamp(want - MODEL_BIAS, reach[0], reach[1]);
+  const mult = ref ? 1 : budgetFor(key, byMoves);
+  /* what the budget could not do, the work has to. Positive means the
+     level needs to be harder than the moves alone can make it. */
+  const shortfall = byMoves - want;
+  const workMult = ref ? 1 : clamp(1 + shortfall * 1.6, .78, 1.34);
+
+  const baseMoves = (GEN[key] && GEN[key].moves ? GEN[key].moves : 28) + (tier % 2);
+  const moves = Math.max(8, Math.round(baseMoves * mult));
 
   /* a bramble patch is a blob, not a sprinkle: scattered single cells
      read as noise and give the spread nothing to work with */
@@ -2718,7 +2785,49 @@ function levelDef(n) {
      obstacles on a board cost many moves each, so asking for all of them
      turns the end of a level into a search */
   const stock = mapStock({ map });
-  const share = (have, frac) => Math.max(4, Math.round(have * frac));
+
+  /* A goal is priced in work, not in cells.
+
+     Two mud levels with the same count and the same budget measured at
+     21% and 100%. The difference was where the mud was: a cell in a
+     corner has two neighbours instead of four, so a match has to arrive
+     along one of two lines rather than one of six, and it costs several
+     times what an interior cell costs. Counting cells treats those as
+     the same thing, so the per-kind response curve had more variance
+     inside it than the move budget was moving.
+
+     So each cell is weighted by how awkward it is to reach, the player
+     is assumed to take the cheap ones first, and the goal is however
+     many cells fit inside a work budget of `frac` per cell. On an even
+     map that is exactly the old number; on a corner-heavy one the goal
+     comes down, which is what stops it being a wall. */
+  const cellCost = (y, x) => {
+    const edgeY = (y === 0 || y === h - 1), edgeX = (x === 0 || x === w - 1);
+    if (edgeY && edgeX) return 1.9;
+    if (edgeY || edgeX) return 1.35;
+    return 1;
+  };
+  const costsOf = chars => {
+    const out = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (chars.indexOf(map[y][x]) >= 0) out.push(cellCost(y, x));
+    }
+    return out.sort((a, b) => a - b);
+  };
+  /* An absolute work budget, not a share of whatever the map happened to
+     hold. The arrangements put anywhere between eighteen and thirty-six
+     cells of mud on a board, and a goal set as a fraction of that
+     inherited the whole spread — two mud levels with the same move
+     budget measured at 21% and 100%. The budget the moves were solved
+     for is a fixed amount of work, so the goal has to be one too. */
+  const workShare = (chars, have, units) => {
+    if (!have) return 0;
+    const costs = costsOf(chars);
+    let budget = units * workMult;
+    let taken = 0;
+    for (let i = 0; i < costs.length && budget >= costs[i]; i++) { budget -= costs[i]; taken++; }
+    return Math.max(4, Math.min(have, taken));
+  };
 
   const goals = [];
   let base;
@@ -2730,25 +2839,30 @@ function levelDef(n) {
     let b = Math.floor(r() * types);
     if (b === a) b = (b + 1) % types;          /* two different colours */
     const pair = collectPair(moves, types, tier);
-    goals.push([GK.COLLECT, a, pair[0]]);
-    goals.push([GK.COLLECT, b, pair[1]]);
+    goals.push([GK.COLLECT, a, Math.round(pair[0] * workMult)]);
+    goals.push([GK.COLLECT, b, Math.round(pair[1] * workMult)]);
     base = GEN.collect.base + tier * 500;
   } else if (kind === GK.MUD) {
-    goals.push([GK.MUD, 0, share(stock.mud, .74 + tier * .05)]);
+    goals.push([GK.MUD, 0, workShare('mM', stock.mud, 28.5 + tier * 2)]);
     base = GEN.mud.base + tier * 400;
   } else if (kind === GK.CRATE) {
-    goals.push([GK.CRATE, 0, share(stock.crate, .68 + tier * .045)]);
+    goals.push([GK.CRATE, 0, workShare('cC', stock.crate, 15.5 + tier * 1.4)]);
     base = GEN.crate.base + tier * 400;
   } else if (kind === GK.RESCUE) {
     /* three baskets down a board nobody designed measured at 0% */
     goals.push([GK.RESCUE, 0, 2]);
     base = GEN.rescue.base + tier * 400;
   } else {
-    goals.push([GK.BRAMBLE, 0, GEN.bramble.goal(tier)]);
+    goals.push([GK.BRAMBLE, 0, Math.round(GEN.bramble.goal(tier) * workMult)]);
     base = GEN.bramble.base + tier * 400;
   }
 
-  return normaliseGoals({ n, w, h, types, moves, goals, base, map });
+  /* The star targets are a score, and score is earned per move — a level
+     given fifteen percent fewer moves cannot reach the same number, and
+     three stars would quietly become unreachable. */
+  if (!ref) base = Math.round(base * (.35 + .65 * mult));
+
+  return normaliseGoals({ n, w, h, types, moves, goals, base, map, gate: isGate(n) });
 }
 /* ---------- the daily walk ----------
    Seeded from the date so everyone on a given day gets the same board,
@@ -2827,6 +2941,192 @@ const DAILY_LEVEL = -1;
 function starTargets(def) {
   const b = def.base;
   return [Math.round(b * .55), Math.round(b * .8), b];
+}
+
+/* ===== 11-design.js ===== */
+/* ============================================================
+   THE SHAPE OF THE ENDLESS RUN
+   ============================================================
+
+   The sixty handcrafted levels were authored one at a time and then
+   measured. Everything after them was generated by rolling parameters
+   from fixed constants, which meant no level had any intended
+   difficulty at all. The run held inside its band because the constants
+   were tuned in aggregate — but inside that band it was noise. Two
+   hundred levels of the same thing, at random.
+
+   A run wants a shape. Not a straight climb, which is exhausting, and
+   not a flat line, which is boring: a rhythm. Relief after a hard one so
+   the player is allowed to feel good, a build across the middle, and a
+   gate at the end of each block that has to be earned. The gate is the
+   level people remember; the relief is what makes them try it again.
+
+   All figures here are the clear rate of the greedy solver in
+   test/ai.js, which plays about as well as an attentive human who is not
+   trying very hard. It is a proxy, and it is the one every difficulty
+   number in this project has been measured with.
+
+   They describe a player walking a *bare* pet, because that is the floor
+   and the basis everything else was measured on. A cared-for one brings
+   four more moves and twelve percent more score to the same board, and
+   measured, that put the run ninety-one percent cleared — above the
+   ceiling the whole project holds itself to. The numbers below are set
+   so the run sits inside the band for the player who actually turns up:
+   the one who feeds the animal.
+   ============================================================ */
+
+/* Ten levels to a block. The gate is the last of them; the level after a
+   gate is the softest thing in the game. */
+const BLOCK = 10;
+const RHYTHM = [
+  +.13,   /* 1  — relief. You have just come through a gate. */
+  +.06,   /* 2  — still gentle, but it asks for something */
+  +.02,   /* 3 */
+  -.03,   /* 4  — the first one that can go wrong */
+  +.05,   /* 5  — a breather in the middle of the block */
+  -.04,   /* 6 */
+  -.07,   /* 7 */
+  -.02,   /* 8  — a small step back before the run-up */
+  -.09,   /* 9  — the run-up */
+  -.15    /* 10 — the gate */
+];
+
+/* The floor the run settles toward, and how fast it gets there. Ninety
+   levels in it is most of the way down; it never reaches the floor, so
+   there is always somewhere left to go. */
+const RUN_START = 61;
+const EASE_FROM = .78, EASE_TO = .61, EASE_OVER = 210;
+
+/* Never certain, never impossible. A generated level outside these is a
+   bug in the model, not a design decision. */
+const CLEAR_FLOOR = .45, CLEAR_CEIL = .88;
+
+/* The generator lands about nine points easier than it aims for.
+
+   Measured twice over the run at different sample sizes — +7% across
+   levels 61-110 at fourteen games, +11% across 61-100 at ten — so it is
+   a systematic offset rather than a coin. It is the residual of the
+   model: the response curves know what a move budget does on an average
+   map of a kind, and the map in front of the player is not the average
+   one. Corrected in one place by aiming low, which is honest about
+   there being an error rather than hiding it in the constants. */
+const MODEL_BIAS = .09;
+
+/* What share of games this level is meant to be won. */
+function targetClear(n) {
+  if (n < RUN_START) return null;          /* the authored lane is not generated */
+  const k = n - RUN_START;
+  const ease = EASE_TO + (EASE_FROM - EASE_TO) * Math.exp(-k / EASE_OVER);
+  const beat = RHYTHM[k % BLOCK];
+  /* a little variation so the rhythm is felt rather than counted */
+  const jitter = (mulberry(n * 60013)() - .5) * .04;
+  return clamp(ease + beat + jitter, CLEAR_FLOOR, CLEAR_CEIL);
+}
+
+/* Whether this level is the one at the end of a block. The map screen
+   marks it, and the level card says so: a wall you did not know was
+   coming is just an unfair level. */
+function isGate(n) {
+  return n >= RUN_START && ((n - RUN_START) % BLOCK) === BLOCK - 1;
+}
+
+/* ===== 12-curve.js ===== */
+/* Generated by test/calibrate.js — do not edit by hand.
+
+   How each kind of goal answers its move budget, measured with the
+   greedy solver over 20 games a point. MOVE_SCALES are multiples of
+   the generator's own move count; CLEAR_AT[kind][i] is the share of games
+   the solver won at that budget.
+
+   The generator reads these backwards: it knows the clear rate a level is
+   meant to have and asks what budget produces it. */
+const MOVE_SCALES = [0.55,0.68,0.8,0.92,1,1.12,1.28,1.5];
+const CLEAR_AT = {
+  "collect": [
+    0.05,
+    0.2,
+    0.42,
+    0.72,
+    0.76,
+    0.9,
+    0.96,
+    1
+  ],
+  "mud": [
+    0.32,
+    0.52,
+    0.63,
+    0.74,
+    0.75,
+    0.87,
+    0.89,
+    0.99
+  ],
+  "crate": [
+    0.38,
+    0.45,
+    0.7,
+    0.79,
+    0.81,
+    0.84,
+    0.92,
+    0.95
+  ],
+  "rescue": [
+    0.33,
+    0.36,
+    0.57,
+    0.57,
+    0.64,
+    0.64,
+    0.7,
+    0.78
+  ],
+  "score": [
+    0.03,
+    0.06,
+    0.2,
+    0.47,
+    0.65,
+    0.81,
+    0.94,
+    0.99
+  ],
+  "bramble": [
+    0.25,
+    0.34,
+    0.44,
+    0.49,
+    0.49,
+    0.56,
+    0.67,
+    0.72
+  ]
+};
+
+/* The lowest and highest clear rate the budget alone can produce for a
+   kind. Outside that range the generator has to change the work, not the
+   moves — a mud level at half its budget still clears three times in
+   five, because a mud goal is a share of what the map holds. */
+function budgetRange(kind) {
+  const row = CLEAR_AT[kind];
+  return row ? [row[0], row[row.length - 1]] : [0, 1];
+}
+
+/* the budget multiplier that lands closest to a wanted clear rate */
+function budgetFor(kind, wantClear) {
+  const row = CLEAR_AT[kind];
+  if (!row) return 1;
+  /* the curve rises with the budget, so walk it until it passes the mark */
+  for (let i = 0; i < row.length; i++) {
+    if (row[i] >= wantClear) {
+      if (i === 0) return MOVE_SCALES[0];
+      const lo = row[i - 1], hi = row[i];
+      const t = hi === lo ? 0 : (wantClear - lo) / (hi - lo);
+      return MOVE_SCALES[i - 1] + (MOVE_SCALES[i] - MOVE_SCALES[i - 1]) * t;
+    }
+  }
+  return MOVE_SCALES[MOVE_SCALES.length - 1];
 }
 
 /* ===== 15-save.js ===== */
@@ -11141,6 +11441,7 @@ function drawMap() {
   c.restore();                            /* undo the scroll translate */
 }
 function drawMapNode(c, n) {
+  const gate = typeof isGate === 'function' && isGate(n.n);
   const cleared = SAVE.stars[n.n] > 0;
   const unlocked = n.n <= SAVE.reached;
   const current = n.n === SAVE.reached;
@@ -11160,6 +11461,21 @@ function drawMapNode(c, n) {
   ellipse(c, n.x, n.y, R, R); c.fill();
   c.strokeStyle = rgba('#FFFFFF', .5); c.lineWidth = 2.4;
   ellipse(c, n.x, n.y - 1, R - 2, R - 2); c.stroke();
+  /* The gate at the end of a block wears a ring of its own, so it can be
+     seen coming from four levels away — which is the whole point of
+     putting one there. */
+  if (gate && unlocked && !cleared) {
+    c.save();
+    c.strokeStyle = PAL.rose; c.lineWidth = 2.6;
+    c.setLineDash([5, 4]);
+    ellipse(c, n.x, n.y, R + 4, R + 4); c.stroke();
+    c.restore();
+  } else if (gate && cleared) {
+    c.save();
+    c.strokeStyle = rgba(PAL.rose, .5); c.lineWidth = 2;
+    ellipse(c, n.x, n.y, R + 4, R + 4); c.stroke();
+    c.restore();
+  }
   if (current) {
     c.strokeStyle = PAL.accent; c.lineWidth = 3;
     c.globalAlpha = .35 + (Math.sin(performance.now() / 380) + 1) / 2 * .5;
@@ -12242,6 +12558,10 @@ function openLevelIntro(n) {
   const m = modal(`
     <div class="eyebrow">${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
     <h2>${T('lvl_goals')}</h2>
+    ${def.gate ? `<div class="goalItem gateNote">
+      <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
+      <span class="t"><b>${T('gate_t')}</b>${T('gate_s')}</span>
+    </div>` : ''}
     ${firstTreats ? `<div class="goalItem" style="background:color-mix(in srgb,var(--plum) 12%, var(--surface-2))">
       <span style="width:32px;display:grid;place-items:center;color:var(--plum)">${IC.treat}</span>
       <span class="t"><b>${T('lvl_first_treats', { n: firstTreats })}</b></span>

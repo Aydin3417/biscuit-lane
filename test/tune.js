@@ -35,7 +35,7 @@ const ctx = {
   requestAnimationFrame: fn => 0, setTimeout, clearTimeout, Math, Date, JSON
 };
 vm.createContext(ctx);
-['00-util.js', '10-data.js', '30-engine.js'].forEach(f =>
+require('./_modules.js').CORE.forEach(f =>
   vm.runInContext(read(f).replace(/^'use strict';?$/m, ''), ctx, { filename: f }));
 const E = vm.runInContext(
   '({ makeBoard, findMatches, specialFor, settle, hasMove, allMoves, swapTiles,' +

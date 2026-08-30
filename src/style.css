@@ -896,3 +896,10 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 @media (orientation:landscape) and (max-height:520px){
   #rotate{ display:grid; }
 }
+
+/* The last level of a block is meant to be hard, so it says so. A wall
+   you did not know was coming is just an unfair level. */
+.gateNote{
+  background:color-mix(in srgb,var(--rose) 11%, var(--surface-2));
+  border:1px solid color-mix(in srgb,var(--rose) 30%, transparent);
+}

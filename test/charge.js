@@ -34,7 +34,7 @@ const ctx = {
   setTimeout, clearTimeout, Math, Date, JSON
 };
 vm.createContext(ctx);
-['00-util.js', '10-data.js', '30-engine.js'].forEach(f =>
+require('./_modules.js').CORE.forEach(f =>
   vm.runInContext(read(f).replace(/^.use strict.;?$/m, ''), ctx, { filename: f }));
 const X = vm.runInContext(
   '({ makeBoard: typeof makeBoard === "function" ? makeBoard : null,' +

@@ -4,6 +4,8 @@
 const STRINGS = {
   en: {
     brandSub: 'Pet Home',
+    gate_t: 'The end of the block',
+    gate_s: 'Harder than the nine before it. Take your time.',
     rot_t: 'Turn your phone back',
     rot_s: 'Biscuit Lane is played the tall way up.',
     tab_home: 'Home', tab_play: 'Play', tab_shop: 'Shop', tab_family: 'Family',
@@ -239,6 +241,8 @@ const STRINGS = {
 
   tr: {
     brandSub: 'Pati Evi',
+    gate_t: 'Bölümün kapısı',
+    gate_s: 'Öncesindeki dokuzdan zor. Acele etme.',
     rot_t: 'Telefonu geri çevir',
     rot_s: 'Biscuit Lane dikey oynanıyor.',
     tab_home: 'Ev', tab_play: 'Oyna', tab_shop: 'Dükkan', tab_family: 'Aile',

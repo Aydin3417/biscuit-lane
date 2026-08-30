@@ -30,7 +30,7 @@ const ctx = {
 };
 vm.createContext(ctx);
 vm.runInContext('var LANG = "en";', ctx);
-['00-util.js', '10-data.js', '15-save.js'].forEach(f =>
+require('./_modules.js').WITH_SAVE.forEach(f =>
   vm.runInContext(fs.readFileSync(path.join(jsDir, f), 'utf8'), ctx, { filename: f }));
 
 const X = vm.runInContext(
