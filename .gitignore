@@ -9,3 +9,6 @@ tools/*.py
 node_modules/
 .DS_Store
 Thumbs.db
+
+# The Gemini key. Never in the repository.
+design/.key

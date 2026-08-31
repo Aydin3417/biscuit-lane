@@ -1,0 +1,53 @@
+{
+ "why": "What the palette measured when it was last deliberately looked at. test/palette.js fails if a colour change moves any of these down.",
+ "tiles": {
+  "normal": {
+   "d": 37.6,
+   "pair": "marmalade / retriever"
+  },
+  "protanopia": {
+   "d": 24.4,
+   "pair": "beagle / void"
+  },
+  "deuteranopia": {
+   "d": 6.6,
+   "pair": "beagle / void"
+  },
+  "tritanopia": {
+   "d": 5.2,
+   "pair": "marmalade / pug"
+  }
+ },
+ "gems": [
+  {
+   "id": "marmalade",
+   "gem": "#F2843C",
+   "gem2": "#C85E1E"
+  },
+  {
+   "id": "beagle",
+   "gem": "#4E9EDE",
+   "gem2": "#2F72AC"
+  },
+  {
+   "id": "void",
+   "gem": "#8E6FD6",
+   "gem2": "#6647B0"
+  },
+  {
+   "id": "retriever",
+   "gem": "#F0C243",
+   "gem2": "#C39A20"
+  },
+  {
+   "id": "siamese",
+   "gem": "#4FBF95",
+   "gem2": "#2E8E6B"
+  },
+  {
+   "id": "pug",
+   "gem": "#EE7C97",
+   "gem2": "#C4506C"
+  }
+ ]
+}

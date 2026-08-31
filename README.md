@@ -2120,3 +2120,104 @@ forgotten the way nineteen escapes can. What it does, measured:
 
 A name is a short label, and the one place it is made is the place to
 make it safe.
+
+## Two models, one game
+
+The visual direction is Gemini's and the game feel is mine. That split
+only works if the handoff is a contract rather than a conversation, so
+it is four files and a loop.
+
+### What Gemini can and cannot hand over
+
+Not art. There are no image files in this game and there will not be,
+and the reason is arithmetic rather than pride. The player picks a
+breed, a coat and an eye colour, and *their* pet's colours appear on the
+board tiles: six breeds by coats by eye colours by four growth stages by
+six silhouettes by special states by two themes is thousands of sprites.
+As drawings it is a few hundred lines of Canvas. And Day and Dusk
+recolour everything at runtime from CSS custom properties, which a
+raster sprite cannot follow.
+
+So the handoff is **direction** — palette, proportion, shape language,
+lighting, weight, spacing — and the drawing stays code. That is not a
+consolation prize. Choosing the six tile hues is the highest-leverage
+visual decision in the game, and it is exactly the kind of decision a
+model that is good at images should be making.
+
+The architecture happened to be ready for it: one `:root` block in the
+stylesheet is the single source of truth, and `readPalette()` hands the
+same values to the Canvas art at runtime. A palette change lands in one
+place and reaches both the DOM and every drawn pixel.
+
+### The loop
+
+```
+node tools/shots.js look      the built game, photographed
+node tools/art-direct.js      Gemini judges it against design/DIRECTION.md
+                              → design/critique/NNN.json
+  ... I read the findings and build the ones that are right ...
+node tools/art-gate.js        does it still play?
+```
+
+`design/DIRECTION.md` is the contract, and the interesting half of it is
+the constraints: no image files, colour is gameplay, everything redraws
+at 60fps on a phone, both themes always, contrast is enforced. A
+director who does not know those proposes things that cannot be built,
+and every round trip spent discovering that again is wasted.
+
+Findings come back as structured JSON with required fields — screen,
+element, problem, why, fix, severity, confidence. That schema is doing
+real work: "the palette is warm and inviting" cannot be expressed in it.
+Nothing is applied automatically. A finding is an argument, and some
+arguments are wrong.
+
+### The gate, which is the point
+
+An art direction can break this game in ways a screenshot cannot show.
+
+`tools/art-gate.js` runs the checks this project already had, in the
+order that matters after a visual change: the palette, the strings, the
+module graph, 39 checks in a real browser, the frame budget, and the
+bug sweep. About three minutes. `--full` adds the difficulty sweep.
+
+The one that had to be written new is `test/palette.js`, and it is the
+one that matters most:
+
+> The solver compares type indices. It has never once looked at a
+> colour, so every clear rate in this README was measured by a player
+> who cannot be confused.
+
+Two tile colours moving closer together makes every board harder and
+**nothing in the difficulty suite would notice**. So the palette is now
+measured directly: every tile against every other tile, in normal vision
+and under protanopia, deuteranopia and tritanopia, against a recorded
+baseline in `design/palette-baseline.json`.
+
+Verified by breaking it — moving Sable's purple toward Beagle's blue:
+
+```
+normal          beagle / void    37.6 -> 10.7    x below the floor
+protanopia      beagle / void    24.4 ->  7.0    x worse than baseline
+deuteranopia    beagle / void     6.6 ->  3.5    x worse than baseline
+```
+
+### What it found on the first run
+
+A standing defect nobody had measured. With deuteranopia — the common
+kind, about one man in sixteen — Beagle blue and Sable purple sit **6.6
+dE apart**, which is to say a deuteranope cannot tell those two tiles
+apart by colour at all. With tritanopia, Marmalade and Pug collapse to
+5.2.
+
+The board does not rest on colour alone: each tile carries its own
+silhouette and those are always on, so the gap costs a deuteranope the
+glance rather than the game. But it is a real gap, it predates all of
+this, and moving one colour does not fix it — separating the purple just
+makes Siamese and Pug the new closest pair. Six hues that stay apart
+under three kinds of colour blindness is a design problem, which is
+precisely what the loop above is for. It is the first standing question
+in `DIRECTION.md`.
+
+The test does not fail on it. Failing every run for a known gap nobody
+is fixing this minute trains people to ignore the test. It fails on
+regression against the baseline, and reports the gap as a note.
