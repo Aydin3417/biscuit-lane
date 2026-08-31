@@ -2679,3 +2679,46 @@ on the board are the ones you keep.
 
 Generated images are useful here as a reference to aim at. They are not
 useful as the thing that ships.
+
+## The eyes were beads and the stripes were bars
+
+A second pass, at 440px this time, where the parts are large enough to
+judge on their own.
+
+**The eye had all the right pieces and the wrong values.** There was
+already a radial iris gradient, a slit pupil for cats, a lid, two
+highlights and a rim. It still read as a flat green disc with a black
+dot, because:
+
+- the lid was coat-coloured at half opacity, which is a brown smear
+  sitting on the eye rather than a shadow falling across it;
+- the primary highlight was a hard white ellipse at .92 — a sticker, not
+  a reflection;
+- there was nothing saying the iris is a wet ball under a lid.
+
+Two gradients fix the last one and they are most of the difference: a
+shadow across the top of the iris where the lid sits, and a bright
+bounce along the bottom where light comes back up off it. The pupil is
+narrower, the highlight has a falloff instead of an edge, and the rim
+went from `r * .1` to `r * .062`.
+
+**The tabby was three straight strokes with round caps** — at .045 of
+the head wide and .75 opaque, painted-on bars rather than fur, and the
+forehead ones read as scratches. `taperMark()` walks a quadratic spine
+and offsets it by a width that falls along its length, so a mark is
+thick where it leaves the brow and comes to a point. The forehead M fans
+out, the cheek bars curve back with the cheek, and both sit at about
+half the opacity they did.
+
+**The whiskers were three grey wires** the length of the head, stroked
+at an even width. They taper now, there are three a side rather than
+two, they droop, and they fade out at the tip.
+
+And the head got the fur edge the body already had, so its outline is
+made of hair rather than being a clean bezier.
+
+Checked at 48dp, which is a tile on a 320px phone: the extra detail
+still resolves rather than turning to noise, and the six animals are
+still told apart by silhouette and colour before anything else. A frame
+in a real browser went from 2.2ms to about 2.8ms at 803 particles,
+against a 16.7ms budget.

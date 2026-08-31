@@ -198,23 +198,57 @@ function headPath(c, spec, s) {
   c.closePath();
 }
 
+/* A tabby mark is thick where it leaves the spine and thin where it
+   ends, and it follows the curve of the skull. Stroked with a round cap
+   it is a bar with two dome ends, which is what these were: at .045 of
+   the head wide and .75 opaque they read as painted-on stripes rather
+   than fur.
+
+   This walks a quadratic spine and offsets it by a width that falls
+   from w0 to w1, so the mark tapers along its length. */
+function taperMark(c, x0, y0, cx, cy, x1, y1, w0, w1) {
+  const N = 14, L = [], R = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, u = 1 - t;
+    const px = u * u * x0 + 2 * u * t * cx + t * t * x1;
+    const py = u * u * y0 + 2 * u * t * cy + t * t * y1;
+    const tx = 2 * u * (cx - x0) + 2 * t * (x1 - cx);
+    const ty = 2 * u * (cy - y0) + 2 * t * (y1 - cy);
+    const len = Math.hypot(tx, ty) || 1;
+    const nx = -ty / len, ny = tx / len;
+    const w = (w0 + (w1 - w0) * t) * .5;
+    L.push([px + nx * w, py + ny * w]);
+    R.push([px - nx * w, py - ny * w]);
+  }
+  c.beginPath();
+  c.moveTo(L[0][0], L[0][1]);
+  for (let i = 1; i < L.length; i++) c.lineTo(L[i][0], L[i][1]);
+  for (let i = R.length - 1; i >= 0; i--) c.lineTo(R[i][0], R[i][1]);
+  c.closePath();
+}
+
 function drawMarkings(c, spec, s) {
   const b = spec.breed;
   c.save();
   headPath(c, spec, s); c.clip();
   if (b.mark === 'tabby') {
-    c.strokeStyle = rgba(spec.fur2, .75); c.lineWidth = s * .045; c.lineCap = 'round';
-    c.beginPath();
-    c.moveTo(-.14 * s, -.40 * s); c.lineTo(-.07 * s, -.24 * s);
-    c.moveTo(0, -.44 * s); c.lineTo(0, -.26 * s);
-    c.moveTo(.14 * s, -.40 * s); c.lineTo(.07 * s, -.24 * s);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(-.42 * s, -.12 * s); c.lineTo(-.26 * s, -.10 * s);
-    c.moveTo(-.42 * s, .02 * s); c.lineTo(-.28 * s, .02 * s);
-    c.moveTo(.42 * s, -.12 * s); c.lineTo(.26 * s, -.10 * s);
-    c.moveTo(.42 * s, .02 * s); c.lineTo(.28 * s, .02 * s);
-    c.stroke();
+    c.fillStyle = rgba(spec.fur2, .58);
+    /* the forehead's M, fanning out from the brow rather than three
+       parallel scratches */
+    taperMark(c, -.05 * s, -.22 * s, -.13 * s, -.34 * s, -.17 * s, -.44 * s, s * .052, s * .012);
+    c.fill();
+    taperMark(c, 0, -.24 * s, 0, -.36 * s, 0, -.47 * s, s * .050, s * .011);
+    c.fill();
+    taperMark(c, .05 * s, -.22 * s, .13 * s, -.34 * s, .17 * s, -.44 * s, s * .052, s * .012);
+    c.fill();
+    /* cheek bars, curving back with the cheek */
+    c.fillStyle = rgba(spec.fur2, .46);
+    [-1, 1].forEach(sx => {
+      taperMark(c, sx * .25 * s, -.13 * s, sx * .36 * s, -.14 * s, sx * .44 * s, -.09 * s, s * .046, s * .014);
+      c.fill();
+      taperMark(c, sx * .27 * s, .01 * s, sx * .37 * s, .02 * s, sx * .44 * s, .06 * s, s * .042, s * .013);
+      c.fill();
+    });
   } else if (b.mark === 'patch') {
     c.fillStyle = rgba(spec.fur2, .9);
     ellipse(c, -.20 * s, -.16 * s, .19 * s, .16 * s, -.2); c.fill();
@@ -346,23 +380,39 @@ function drawEye(c, x, y, r, spec, o, side) {
   eyePath(c, rx, ry, look.almond); c.fill();
 
   /* iris — lifted on a dark coat so it parts from both fur and pupil */
-  const ig = c.createRadialGradient(dx, dy - ry * .2, rx * .1, dx, dy, rx * .95);
   const iris = dk ? shade(spec.eyes, .34) : spec.eyes;
-  ig.addColorStop(0, shade(iris, .3));
+  const ig = c.createRadialGradient(dx, dy - ry * .2, rx * .1, dx, dy, rx * .95);
+  ig.addColorStop(0, shade(iris, .34));
   ig.addColorStop(.62, iris);
-  ig.addColorStop(1, shade(iris, -.3));
+  ig.addColorStop(1, shade(iris, -.34));
   c.fillStyle = ig;
+  ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
+  /* An eye is a wet ball under a lid, and two things say so: the lid
+     drops a shadow across the top of the iris, and light bounces back
+     off the bottom of it. Without them the iris is a flat disc, which
+     is what these were — a green circle with a black dot on it. */
+  const shadeTop = c.createLinearGradient(0, dy - ry * .9, 0, dy + ry * .15);
+  shadeTop.addColorStop(0, rgba('#100C16', .55));
+  shadeTop.addColorStop(1, rgba('#100C16', 0));
+  c.fillStyle = shadeTop;
+  ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
+  const bounce = c.createLinearGradient(0, dy + ry * .25, 0, dy + ry * .9);
+  bounce.addColorStop(0, rgba(shade(iris, .55), 0));
+  bounce.addColorStop(1, rgba(shade(iris, .55), .75));
+  c.fillStyle = bounce;
   ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
 
   /* pupil — a slit for cats, round for dogs */
   c.fillStyle = '#17141B';
-  if (spec.breed.species === 'cat') ellipse(c, dx, dy, rx * .26, ry * .68);
+  if (spec.breed.species === 'cat') ellipse(c, dx, dy, rx * .19, ry * .74);
   else ellipse(c, dx, dy, rx * .46, ry * .48);
   c.fill();
 
   /* the lid: what stops an eye looking like a bead */
   if (look.lid > .02) {
-    c.fillStyle = rgba(shade(spec.fur2, -.15), .55 * look.lid + .2);
+    /* a shadow, not a swatch of coat: at half-opaque fur colour this
+       read as a brown smear sitting on the eye */
+    c.fillStyle = rgba('#1A1420', .30 * look.lid + .12);
     c.beginPath();
     c.moveTo(-rx * 1.1, -ry * 1.1);
     c.lineTo(rx * 1.1, -ry * 1.1);
@@ -373,15 +423,22 @@ function drawEye(c, x, y, r, spec, o, side) {
   }
 
   /* highlights */
-  c.fillStyle = rgba('#FFFFFF', .92);
-  ellipse(c, -rx * .3 + dx, -ry * .34 + dy, rx * .27, ry * .25); c.fill();
-  c.fillStyle = rgba('#FFFFFF', .5);
-  ellipse(c, rx * .28 + dx, ry * .32 + dy, rx * .13, ry * .12); c.fill();
+  /* A hard white ellipse is a sticker. A reflection has a core and a
+     falloff, and a second, smaller one opposite it. */
+  const hx = -rx * .32 + dx, hy = -ry * .36 + dy, hr = rx * .30;
+  const hg = c.createRadialGradient(hx, hy, hr * .12, hx, hy, hr);
+  hg.addColorStop(0, rgba('#FFFFFF', .95));
+  hg.addColorStop(.55, rgba('#FFFFFF', .62));
+  hg.addColorStop(1, rgba('#FFFFFF', 0));
+  c.fillStyle = hg;
+  ellipse(c, hx, hy, hr, hr * .92); c.fill();
+  c.fillStyle = rgba('#FFFFFF', .40);
+  ellipse(c, rx * .30 + dx, ry * .34 + dy, rx * .10, ry * .09); c.fill();
   c.restore();
 
   /* the rim of the eye */
-  c.strokeStyle = dk ? rgba('#FFFFFF', .26) : rgba('#2A2118', .30);
-  c.lineWidth = r * .1;
+  c.strokeStyle = dk ? rgba('#FFFFFF', .20) : rgba('#2A2118', .22);
+  c.lineWidth = r * .062;
   eyePath(c, rx, ry, look.almond); c.stroke();
   c.restore();
 }
@@ -477,14 +534,21 @@ function drawNoseMouth(c, spec, s, o) {
   }
   /* whiskers */
   if (cat) {
-    c.strokeStyle = rgba(PAL.dark ? '#FFFFFF' : '#3A2E22', .32);
-    c.lineWidth = s * .018;
+    /* A whisker is thick at the pad and comes to a point, and it droops.
+       Stroked at an even width these were three grey wires the length of
+       the head — the most machine-looking thing on the face. */
+    const wc = PAL.dark ? '#FFFFFF' : '#3A2E22';
     [-1, 1].forEach(sx => {
       c.save(); c.scale(sx, 1);
-      c.beginPath();
-      c.moveTo(.14 * s, ny + .05 * s); c.quadraticCurveTo(.32 * s, ny - .02 * s, .46 * s, ny - .08 * s);
-      c.moveTo(.14 * s, ny + .09 * s); c.quadraticCurveTo(.33 * s, ny + .08 * s, .47 * s, ny + .07 * s);
-      c.stroke();
+      c.fillStyle = rgba(wc, .30);
+      taperMark(c, .15 * s, ny + .03 * s, .30 * s, ny - .06 * s, .44 * s, ny - .10 * s, s * .020, s * .002);
+      c.fill();
+      c.fillStyle = rgba(wc, .26);
+      taperMark(c, .15 * s, ny + .07 * s, .31 * s, ny + .05 * s, .46 * s, ny + .04 * s, s * .019, s * .002);
+      c.fill();
+      c.fillStyle = rgba(wc, .20);
+      taperMark(c, .14 * s, ny + .10 * s, .29 * s, ny + .15 * s, .41 * s, ny + .19 * s, s * .016, s * .002);
+      c.fill();
       c.restore();
     });
   }
@@ -612,6 +676,16 @@ function drawFace(c, spec, s, o) {
   headPath(c, spec, s); c.clip();
   c.strokeStyle = rgba('#FFFFFF', .28); c.lineWidth = s * .07;
   headPath(c, spec, s * .995); c.stroke();
+  c.restore();
+
+  /* fur along the jaw, so the head has an edge made of hair rather than
+     a bezier. The body already had this; the head was a smooth outline. */
+  c.save();
+  headPath(c, spec, s); c.clip();
+  furEdge(c, 0, .02 * s, .43 * s, .43 * s, Math.PI * .18, Math.PI * .82, 11, s * .030,
+    rgba(shade(spec.fur, -.12), .5));
+  furEdge(c, 0, .02 * s, .43 * s, .43 * s, Math.PI * 1.16, Math.PI * 1.84, 9, s * .026,
+    rgba(shade(spec.fur, .16), .45));
   c.restore();
 
   drawBlush(c, spec, s);
