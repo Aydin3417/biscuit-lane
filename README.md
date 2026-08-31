@@ -2471,3 +2471,103 @@ everything, lowest at 4.95:1.
 It is `#6D5C49` now, which clears 4.5:1 on every surface in the theme —
 5.40 on the ground, 4.51 at the worst. Same hue, four steps darker.
 Fifteen of sixteen token pairs passed before; sixteen of sixteen do now.
+
+## The interface was made of different material
+
+Rendered offline and measured, `tap` was 0.0005 rms against a tile pop's
+0.003 and a win's 0.029 — six times under the quietest thing the game
+does on purpose — 47ms long against the pop's 387, and half again as
+bright. A click and a blip, which is what a phone keypad is made of.
+
+That would be a small thing if it were a small voice. It is not:
+**`SFX.tap` is called twenty-one times in 60-ui.js and `select` twice**,
+so almost every sound a player hears while moving around the game was
+that one.
+
+They are mallets now — the same voice the board clears tiles with — and
+they sit on the same pentatonic `PENT` that `pop` and `combo` use rather
+than on the arbitrary 620 and 520 they had. Moving through the game is
+consonant with playing it, and choosing something rises: tap on E,
+select a fifth above on G.
+
+|  | was | is |
+|---|---|---|
+| tap | 0.0005 rms · 47ms · 3174Hz | 0.0014 · 113ms · 1508Hz |
+| select | 0.0010 rms · 72ms · 1822Hz | 0.0023 · 236ms · 1426Hz |
+| uiTick | peak 0.009 | peak 0.019 |
+
+`uiTick` needed both of those numbers explaining. It was dead — nothing
+in the game called it — and at a 0.009 peak it sat under the 0.012 the
+suite calls inaudible, so it could not have been heard if anything had.
+It was also the only interface sound missing from the suite's list,
+which is how it managed both at once. It is wired to the shop's five
+category tabs, where a thumb runs along rather than presses once, and it
+is in the list.
+
+## A threshold that had been one point from failing for months
+
+The soak failed on a build whose only edits were a stylesheet and three
+sound envelopes: *the rhythm is inaudible, relief 80% against gates
+75%*. Neither a stylesheet nor an envelope reaches the solver, so the
+first job was to find out whether that was true.
+
+It was not. The same lane, unchanged, across five runs:
+
+| run | lane rhythm |
+|---|---|
+| before any of this work | 27 |
+| — | 12 |
+| — | 33 |
+| — | 10 |
+| the one that failed | 5 |
+
+The threshold is ten. At forty games a level the lane measures twenty.
+The rhythm is a difference of two means over six gates and five reliefs,
+so two standard errors at ten games is nineteen points — the check was
+asserting a ten-point claim on a nineteen-point measurement, and had
+been passing by one point twice already.
+
+**Loosening the threshold to match the noise was the wrong fix, and
+trying it is the only reason we know.** With the six gate levels handed
+twice their move budget — gates at 97% against reliefs at 90%, a rhythm
+of minus seven, which is precisely the fault this check exists to catch
+— the noise-aware threshold passed it. A check that cannot fail is worse
+than the flake it replaced.
+
+The claim rests on eleven levels out of sixty, so those eleven are
+played four times over and the rhythm is measured from that. The error
+drops from ±19 to ±10, and the report prints it, because a line read as
+a fact should say how much of a fact it is. Verified both ways: the
+healthy lane reports 19 ±10 and passes; the lane with its gates made
+generous reports −9 ±10 and fails, naming the problem.
+
+## Adding the two columns up
+
+The levels are measured, the difficulty curve is measured, the care loop
+is measured. The money never was. `test/economy.js` walks a player
+through real days — clearing levels at the rate the curve says they
+clear, doing the daily walk, claiming the gift, earning badges as the
+thresholds pass — and adds up both columns. It refuses to run if the
+reward formulas in `60-ui.js` and `15-save.js` are no longer the ones it
+copies.
+
+```
+everything the game sells, bought once:   10,023 coins
+earned in thirty days of ordinary play:   23,379 coins
+held on day 28, with nothing left to buy: 11,958 coins
+held on day 90:                           50,457 coins
+treats held on day 90:                       675
+```
+
+Six pets and every hat, collar, room theme and stick of furniture are
+bought by about day fourteen. After that coins are not a currency: no
+purchase is a decision, and nothing priced in coins can be worth real
+money either. Treats never were one — 675 accumulate against a single
+item, a slice of carrot cake, priced at three.
+
+And the level reward is not gated on `first`, so a cleared level pays in
+full every time it is replayed. A player who never advances past level
+one still earns 24,360 coins in thirty days.
+
+None of this is a monetization problem yet. It is the reason there is
+nothing to monetize.

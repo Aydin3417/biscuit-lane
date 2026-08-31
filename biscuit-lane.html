@@ -4457,15 +4457,32 @@ function musicDuck(amount, time) {
 const SFX = {
 
   /* ---- interface ---- */
+  /* The interface used to be made of different material from the board.
+
+     Rendered offline and measured, tap was 0.0005 rms against a tile
+     pop's 0.003 and a win's 0.029 — six times under the quietest thing
+     the game does on purpose — 47ms long against the pop's 387, and
+     half again as bright. A click and a blip, which is what a phone
+     keypad is made of. And it is not a minor voice: tap is called
+     twenty-one times in 60-ui.js and select twice, so almost every
+     sound a player hears while moving around the game was that one.
+
+     They are mallets now, the same voice the board clears tiles with,
+     and they sit on the same pentatonic PENT that pop and combo use
+     rather than on the arbitrary 620 and 520 they had. Moving through
+     the game is consonant with playing it, and choosing something
+     rises: tap sits on E, select a fifth above it on G. The tick sits
+     higher than either, small and quick, because it marks a thumb
+     passing rather than answers a decision. */
   tap() {
-    click(6000, .05);
-    tone({ f: 620, f2: 780, dur: .07, type: 'triangle', gain: .075, send: .1 });
+    mallet(semi(PENT[7]), { gain: .085, dur: .17, send: .10,
+      partials: [[1, 1, 1], [3.94, .16, .40]] });
+    click(5200, .028);
   },
   select() {
-    click(5600, .06);
-    tone({ f: 520, f2: 700, dur: .1, type: 'triangle', gain: .105, send: .14 });
-    noiseBurst({ fc: 3400, dur: .04, gain: .038, q: 2 });
-    thump(150, .045, .07);
+    mallet(semi(PENT[8]), { gain: .105, dur: .24, send: .15 });
+    noiseBurst({ fc: 3400, dur: .04, gain: .03, q: 2 });
+    thump(150, .04, .07);
   },
   bad() {
     tone({ f: 200, f2: 140, dur: .16, type: 'sawtooth', gain: .09, filter: 'lowpass', fc: 700 });
@@ -4476,7 +4493,15 @@ const SFX = {
     noiseBurst({ fc: 1200, fc2: 2600, dur: .1, gain: .038, q: .8 });
     thump(120, .05, .08);
   },
-  uiTick() { click(7200, .035); tone({ f: 900, dur: .035, type: 'square', gain: .04 }); },
+  /* The lightest of the three, for a control a thumb runs along rather
+     than presses once — the shop's five category tabs, which used to
+     fire the full tap each time. It was also dead: nothing called it,
+     and at a 0.009 peak it was under the 0.012 the suite calls
+     inaudible, so it could not have been heard if anything had. It is
+     in the suite's list now. */
+  uiTick() {
+    mallet(semi(PENT[9]), { gain: .075, dur: .11, send: .05, partials: [[1, 1, 1]] });
+  },
 
   /* ---- the board ----
      `chain` is the cascade depth, `i` the index inside one clear,
@@ -12809,7 +12834,7 @@ function renderShop() {
       <div class="eyebrow" style="margin-bottom:6px">${T('shop_treats_t')}</div>
       <div style="font-size:var(--t-small);color:var(--text-faint);line-height:1.5">${T('shop_treats_s')}</div>
     </div>`;
-  $$('.tabs button', pad).forEach(b => b.addEventListener('click', () => { SFX.tap(); SHOP_TAB = b.dataset.t; renderShop(); }));
+  $$('.tabs button', pad).forEach(b => b.addEventListener('click', () => { SFX.uiTick(); SHOP_TAB = b.dataset.t; renderShop(); }));
   paintArtCanvases(pad);
   $$('[data-buy]', pad).forEach(b => b.addEventListener('click', () => buyThing(b.dataset.buy, b.dataset.kind)));
   $$('[data-equip]', pad).forEach(b => b.addEventListener('click', () => equipThing(b.dataset.equip, b.dataset.kind)));

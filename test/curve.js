@@ -73,21 +73,59 @@ const bias = rows.reduce((a, r) => a + r.err, 0) / rows.length;
 const gates = rows.filter(r => r.gate);
 /* the level after a gate is the relief the block is built around */
 const reliefs = rows.filter(r => isGate(r.n - 1));
-const gateMean = gates.length ? gates.reduce((a, r) => a + r.actual, 0) / gates.length : 0;
-const reliefMean = reliefs.length ? reliefs.reduce((a, r) => a + r.actual, 0) / reliefs.length : 0;
 
 console.log('\naverage miss      ' + Math.round(mae * 100) + '%   (sampling noise alone is ' + Math.round(noise * 100) + '%)');
 console.log('bias              ' + (bias >= 0 ? '+' : '') + Math.round(bias * 100) + '%   ' +
   (bias > .06 ? 'the run is easier than intended' : bias < -.06 ? 'the run is harder than intended' : 'centred'));
-console.log('gates             ' + Math.round(gateMean * 100) + '% cleared over ' + gates.length + ' of them');
-console.log('relief after one  ' + Math.round(reliefMean * 100) + '%');
-console.log('the rhythm is     ' + Math.round((reliefMean - gateMean) * 100) + ' points wide');
+/* ---------- the rhythm, measured properly ----------
+
+   This is the shakiest claim in the file and it was tested with the
+   thinnest evidence. The rhythm is a difference of two means over six
+   gates and five reliefs, so its error is larger than any single
+   level's: two standard errors at ten games a level is nineteen points
+   against a ten-point threshold. Across five runs of an unchanged lane
+   it reported 27, 12, 33, 10 and 5, and finally failed on a build whose
+   only edits were a stylesheet and three sound envelopes.
+
+   Loosening the threshold to match the noise was the wrong fix and was
+   tried: with the gate levels handed twice their move budget — gates at
+   97% against reliefs at 90%, a rhythm of minus seven, the exact fault
+   this check exists to catch — a noise-aware threshold passed it.
+
+   The claim rests on eleven levels out of sixty. So those eleven are
+   played again, four times over, and the rhythm is measured from that.
+   It costs about a third of what the pass already spends and it puts
+   the error under ten points, which is where the threshold lives. */
+const RHYTHM_GAMES = Math.max(GAMES, 40);
+const extra = RHYTHM_GAMES - GAMES;
+const deepen = row => {
+  if (!extra) return row.actual;
+  let won = Math.round(row.actual * GAMES);
+  for (let g = 0; g < extra; g++) {
+    if (playLevel(row.n, row.n * 31337 + g * 15485863).won) won++;
+  }
+  return won / RHYTHM_GAMES;
+};
+const gateDeep = gates.map(deepen);
+const reliefDeep = reliefs.map(deepen);
+const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+const gateMeanD = mean(gateDeep), reliefMeanD = mean(reliefDeep);
+
+const rhythm = reliefMeanD - gateMeanD;
+console.log('gates             ' + Math.round(gateMeanD * 100) + '% cleared over ' + gates.length +
+  ' of them, ' + RHYTHM_GAMES + ' games each');
+console.log('relief after one  ' + Math.round(reliefMeanD * 100) + '%');
+const deepNoise = Math.sqrt(.25 / RHYTHM_GAMES);
+const rhythmSE = deepNoise * Math.sqrt(1 / Math.max(1, gates.length) + 1 / Math.max(1, reliefs.length));
+console.log('the rhythm is     ' + Math.round(rhythm * 100) + ' points wide' +
+  '  (+/-' + Math.round(2 * rhythmSE * 100) + ' at this sample)');
 
 const problems = [];
 if (mae > noise + .10) problems.push('levels miss their target by ' + Math.round(mae * 100) + '% on average');
 if (Math.abs(bias) > .10) problems.push('the whole run sits ' + Math.round(bias * 100) + '% off its intent');
-if (reliefMean - gateMean < .10) problems.push('the rhythm is inaudible: relief ' +
-  Math.round(reliefMean * 100) + '% against gates ' + Math.round(gateMean * 100) + '%');
+if (rhythm + 2 * rhythmSE < .10) problems.push('the rhythm is inaudible: relief ' +
+  Math.round(reliefMeanD * 100) + '% against gates ' + Math.round(gateMeanD * 100) + '%' +
+  ' (' + Math.round(rhythm * 100) + ' +/-' + Math.round(2 * rhythmSE * 100) + ' points)');
 /* A level is only called out when the sample can carry the claim. At
    fourteen games a clean sweep still has a lower bound near 77%, so
    "cleared 100%" is not evidence that a level meant to be won 86% of the

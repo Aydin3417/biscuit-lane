@@ -608,7 +608,7 @@ function renderShop() {
       <div class="eyebrow" style="margin-bottom:6px">${T('shop_treats_t')}</div>
       <div style="font-size:var(--t-small);color:var(--text-faint);line-height:1.5">${T('shop_treats_s')}</div>
     </div>`;
-  $$('.tabs button', pad).forEach(b => b.addEventListener('click', () => { SFX.tap(); SHOP_TAB = b.dataset.t; renderShop(); }));
+  $$('.tabs button', pad).forEach(b => b.addEventListener('click', () => { SFX.uiTick(); SHOP_TAB = b.dataset.t; renderShop(); }));
   paintArtCanvases(pad);
   $$('[data-buy]', pad).forEach(b => b.addEventListener('click', () => buyThing(b.dataset.buy, b.dataset.kind)));
   $$('[data-equip]', pad).forEach(b => b.addEventListener('click', () => equipThing(b.dataset.equip, b.dataset.kind)));
