@@ -8,8 +8,15 @@
    gitignored. Nothing is ever written into the repository that carries
    it.
 
+     node tools/gemini.js --set-key       paste the key on stdin, once
      node tools/gemini.js --models        what this key can actually call
      node tools/gemini.js "a question"    a plain text round trip
+
+   Cotidie already calls this API from a Supabase edge function and reads
+   the same variable name, GEMINI_API_KEY, so a key that works there
+   works here. Its value lives in Supabase's secret store and not on this
+   disk, which is where it should live — --set-key is how it gets here
+   without going through a shell history or a chat transcript.
 */
 const fs = require('fs');
 const path = require('path');
@@ -113,6 +120,25 @@ module.exports = { ask, listModels, pickModel };
 if (require.main === module) {
   (async () => {
     try {
+      if (process.argv.includes('--set-key')) {
+        /* read from stdin rather than argv: a key on a command line is a
+           key in the shell history, and it is also a key in the terminal
+           scrollback of whoever is watching */
+        const key = await new Promise(res => {
+          let buf = '';
+          process.stdin.setEncoding('utf8');
+          process.stdin.on('data', d => buf += d);
+          process.stdin.on('end', () => res(buf.trim()));
+        });
+        if (!key) throw new Error('stdin boş geldi');
+        const dir = path.join(ROOT, 'design');
+        fs.mkdirSync(dir, { recursive: true });
+        fs.writeFileSync(path.join(dir, '.key'), key + '\n', { mode: 0o600 });
+        console.log('design/.key yazildi (' + key.length + ' karakter, gitignore icinde)');
+        const all = await listModels();
+        console.log('anahtar çalışıyor: ' + all.length + ' model, seçilen ' + await pickModel());
+        return;
+      }
       if (process.argv.includes('--models')) {
         const all = await listModels();
         console.log(all.join('\n'));
