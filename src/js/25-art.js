@@ -881,6 +881,7 @@ function blockerSprite(kind, px, hp) {
   else if (kind === 'ice') paintIce(c, px);
   else if (kind === 'bram') paintBramble(c, px, hp);
   else if (kind === 'bramOver') paintBrambleOver(c, px);
+  else if (kind === 'mole') paintMole(c, px, hp);
   cv._w = W;
   blockerCache.set(key, cv);
   return cv;
@@ -1216,6 +1217,43 @@ function drawTileFx(c, type, sp, s, t, seed) {
 }
 
 /* ---------------- blockers ---------------- */
+/* A molehill: a heap of turned earth with a hole in the top and a
+   couple of clods beside it. Two layers deep it is bigger and darker,
+   the way a crate is heavier at two.
+
+   Drawn rather than iconified, because it sits on the board next to the
+   animals and an icon would look like a button. The countdown is not
+   painted here — it changes every move and this is a cached sprite. */
+function paintMole(c, s, hp) {
+  const deep = hp > 1;
+  const r = s * (deep ? .46 : .40);
+  c.save();
+  /* the mound */
+  const g = c.createLinearGradient(0, -r, 0, r);
+  g.addColorStop(0, deep ? '#8A6A44' : '#9C7A50');
+  g.addColorStop(1, deep ? '#4C3722' : '#5E452C');
+  c.fillStyle = g;
+  c.beginPath();
+  c.moveTo(-r, r * .62);
+  c.bezierCurveTo(-r * .82, -r * .70, r * .82, -r * .70, r, r * .62);
+  c.closePath();
+  c.fill();
+  /* the hole */
+  c.fillStyle = '#241A10';
+  ellipse(c, 0, -r * .04, r * .30, r * .20); c.fill();
+  c.fillStyle = rgba('#000000', .35);
+  ellipse(c, 0, -r * .10, r * .30, r * .20); c.fill();
+  /* clods, so the heap reads as loose earth and not as a dome */
+  c.fillStyle = deep ? '#A5824F' : '#B08B57';
+  const cl = mulberry(hp * 977 + 31);
+  for (let i = 0; i < (deep ? 7 : 5); i++) {
+    const a = cl() * Math.PI * 2, d = r * (.45 + cl() * .45);
+    ellipse(c, Math.cos(a) * d, r * .44 + Math.sin(a) * r * .14,
+      r * (.07 + cl() * .06), r * (.05 + cl() * .04)); c.fill();
+  }
+  c.restore();
+}
+
 function paintCrate(c, s, hp) {
   /* a real crate: four planks, iron corners, nails, and damage
      that only shows once you have already hit it. */

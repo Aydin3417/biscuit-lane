@@ -72,8 +72,13 @@ function boardProblems(label) {
   let empty = 0, wrong = 0;
   for (let r = 0; r < B.h; r++) for (let c = 0; c < B.w; c++) {
     const cl = B.cell[r][c];
-    if (cl.mud < 0 || cl.crate < 0 || cl.ice < 0 || cl.bram < 0) wrong++;
-    if (cl.hole || cl.crate > 0) { if (cl.tile) wrong++; continue; }
+    if (cl.mud < 0 || cl.crate < 0 || cl.ice < 0 || cl.bram < 0 || cl.mole < 0) wrong++;
+    /* A molehill occupies its cell the way a crate does — nothing sits on
+       it and nothing falls through it — so an empty cell under one is the
+       rule rather than a fault. This check knew about crates and had to
+       be taught about hills, which is the same lesson the crate taught it
+       once already. */
+    if (cl.hole || cl.crate > 0 || cl.mole > 0) { if (cl.tile) wrong++; continue; }
     if (!cl.tile) empty++;
     else if (cl.tile.type !== -1 && (cl.tile.type < 0 || cl.tile.type >= B.types)) wrong++;
   }

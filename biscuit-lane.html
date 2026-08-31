@@ -1698,6 +1698,10 @@ const STRINGS = {
     trait_sub: '{name} was {how}, and it shows. {what}',
     trait_none: 'Still working out who they are.',
     trait_pending: 'A trait settles at bond level {n}.',
+    goal_mole: 'Fill in {n} molehills',
+    a11y_mole: 'a molehill, {n} moves until it pushes earth up',
+    a11y_mole_pushed: 'earth pushed up on {n} squares',
+    tut_mole: 'A molehill pushes earth up every few moves. Clear a tile beside it to fill it in.',
     goal_bramble: 'Cut back {n} brambles',
     a11y_bramble: 'under brambles',
     a11y_bramble_grew: 'The brambles took another tile.',
@@ -1921,6 +1925,10 @@ const STRINGS = {
     trait_sub: '{name} {how} ve belli oluyor. {what}',
     trait_none: 'Kim olduğunu henüz bulmaya çalışıyor.',
     trait_pending: 'Karakteri {n}. bağ seviyesinde belli olur.',
+    goal_mole: '{n} köstebek yuvasını kapat',
+    a11y_mole: 'köstebek yuvası, toprak çıkarmasına {n} hamle',
+    a11y_mole_pushed: '{n} kareye toprak çıktı',
+    tut_mole: 'Köstebek yuvası birkaç hamlede bir toprak çıkarır. Kapatmak için yanındaki bir taşı temizle.',
     goal_bramble: '{n} böğürtlen kes',
     a11y_bramble: 'böğürtlen altında',
     a11y_bramble_grew: 'Böğürtlenler bir kare daha aldı.',
@@ -2403,7 +2411,7 @@ function favTypeFor(breed, types) {
 const CHARGE_FAV = 4.2, CHARGE_OTHER = .55;
 
 /* ---------- goal kinds ---------- */
-const GK = { SCORE: 'score', COLLECT: 'collect', CRATE: 'crate', MUD: 'mud', RESCUE: 'rescue', BRAMBLE: 'bramble' };
+const GK = { SCORE: 'score', COLLECT: 'collect', CRATE: 'crate', MUD: 'mud', RESCUE: 'rescue', BRAMBLE: 'bramble', MOLE: 'mole' };
 /* how many cells a bramble patch may ever cover, as a share of the
    open board — without this a bad run could strangle the level */
 const BRAMBLE_CAP = 0.42;
@@ -2706,13 +2714,17 @@ function normaliseGoals(def) {
    the level number. These sit a little easier than the handcrafted run:
    the endless tail is somewhere to keep playing, not a difficulty wall.
    Measured with test/ai.js over the 41-70 run. */
+/* the level the run stops repeating itself */
+const MOLE_FROM = 76;
+
 const GEN = {
   mud:     { fill: .58, deep: .70, base: 8200,  moves: 22 },
   crate:   { fill: .46, deep: .38, base: 6400,  moves: 24 },
   bramble: { goal: n => 12 + n * 2, base: 11500, moves: 30 },
   collect: { base: 10500, moves: 30 },
   rescue:  { base: 10000, moves: 32 },
-  score:   { base: 13400, moves: 30 }
+  score:   { base: 13400, moves: 30 },
+  mole:    { base: 9800,  moves: 32 }
 };
 
 /* Tiles a move is worth, measured by playing: a solver on a five-colour
@@ -2811,7 +2823,16 @@ function levelDef(n, ref) {
     return def;
   }
   const r = mulberry(n * 7919);
-  const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE];
+  /* Molehills arrive part way through the run rather than at the start.
+
+     Three hundred levels of the same six goal kinds is the run's real
+     weakness, and a mechanic held back is worth more than a mechanic
+     handed over: level seventy-six is a long way into a game, and
+     something genuinely new turning up there is the difference between
+     a run that continues and a run that repeats. Before that the lane
+     has enough to teach. */
+  const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE]
+    .concat(n >= MOLE_FROM ? [GK.MOLE] : []);
 
   /* What this level is for comes before what it is made of.
 
@@ -2886,6 +2907,35 @@ function levelDef(n, ref) {
     ? shapeMask(SHAPES[Math.floor(r() * SHAPES.length)], w, h, r)
     : null;
 
+  /* Where the hills sit.
+
+     Spread out and never touching, because two hills side by side heal
+     each other's neighbourhood and the level stops being a race and
+     starts being a wall. Kept off the top and bottom rows so tiles can
+     still fall past them. */
+  const hills = new Set();
+  if (kind === GK.MOLE) {
+    /* Two to four.
+
+       Measured, five and six are not hard levels, they are walls: the
+       first generated batch ran three to six hills and came out at
+       nought to three percent cleared, because every hill heals every
+       four moves and a player cannot be in six places at once. Three is
+       where the mechanic is a race rather than a defeat. */
+    const wantHills = 2 + Math.min(2, Math.floor(tier * .5) + (r() < .4 ? 1 : 0));
+    let guard = 0;
+    while (hills.size < wantHills && guard++ < 200) {
+      const y = 1 + Math.floor(r() * (h - 2));
+      const x = Math.floor(r() * w);
+      let clash = false;
+      hills.forEach(k => {
+        const [hy, hx] = k.split(':').map(Number);
+        if (Math.abs(hy - y) <= 1 && Math.abs(hx - x) <= 1) clash = true;
+      });
+      if (!clash) hills.add(y + ':' + x);
+    }
+  }
+
   const map = [];
   for (let y = 0; y < h; y++) {
     let row = '';
@@ -2895,6 +2945,7 @@ function levelDef(n, ref) {
         row += blob.has(y + ':' + x) ? 'v' : '.';
         continue;
       }
+      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += r() < .3 ? 'O' : 'o'; continue; }
       if (kind === GK.MUD && shaped.has(y + ':' + x)) { row += r() < GEN.mud.deep ? 'M' : 'm'; continue; }
       if (kind === GK.CRATE && shaped.has(y + ':' + x) && y > 0 && y < h - 1) {
         /* a goal counts crates, not hits, so a second layer is the only
@@ -3000,6 +3051,12 @@ function levelDef(n, ref) {
     /* three baskets down a board nobody designed measured at 0% */
     goals.push([GK.RESCUE, 0, 2]);
     base = GEN.rescue.base + tier * 400;
+  } else if (kind === GK.MOLE) {
+    /* every hill on the board. Leaving one open means leaving the board
+       getting worse, and a goal that lets the player ignore the whole
+       mechanic teaches nobody what it is for. */
+    goals.push([GK.MOLE, 0, hills.size]);
+    base = GEN.mole.base + tier * 400;
   } else {
     goals.push([GK.BRAMBLE, 0, Math.round(GEN.bramble.goal(tier) * workMult)]);
     base = GEN.bramble.base + tier * 400;
@@ -3067,12 +3124,42 @@ function dailyLevel(reached, dayNo) {
     ? shapeMask(SHAPES[Math.floor(r() * SHAPES.length)], w, h, r)
     : null;
 
+  /* Where the hills sit.
+
+     Spread out and never touching, because two hills side by side heal
+     each other's neighbourhood and the level stops being a race and
+     starts being a wall. Kept off the top and bottom rows so tiles can
+     still fall past them. */
+  const hills = new Set();
+  if (kind === GK.MOLE) {
+    /* Two to four.
+
+       Measured, five and six are not hard levels, they are walls: the
+       first generated batch ran three to six hills and came out at
+       nought to three percent cleared, because every hill heals every
+       four moves and a player cannot be in six places at once. Three is
+       where the mechanic is a race rather than a defeat. */
+    const wantHills = 2 + Math.min(2, Math.floor(tier * .5) + (r() < .4 ? 1 : 0));
+    let guard = 0;
+    while (hills.size < wantHills && guard++ < 200) {
+      const y = 1 + Math.floor(r() * (h - 2));
+      const x = Math.floor(r() * w);
+      let clash = false;
+      hills.forEach(k => {
+        const [hy, hx] = k.split(':').map(Number);
+        if (Math.abs(hy - y) <= 1 && Math.abs(hx - x) <= 1) clash = true;
+      });
+      if (!clash) hills.add(y + ':' + x);
+    }
+  }
+
   const map = [];
   for (let y = 0; y < h; y++) {
     let row = '';
     for (let x = 0; x < w; x++) {
       const v = r();
       if (kind === GK.BRAMBLE) { row += blob.has(y + ':' + x) ? 'v' : '.'; continue; }
+      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += r() < .3 ? 'O' : 'o'; continue; }
       if (kind === GK.MUD && shaped.has(y + ':' + x)) { row += r() < GEN.mud.deep ? 'M' : 'm'; continue; }
       if (kind === GK.CRATE && shaped.has(y + ':' + x) && y > 0 && y < h - 1) {
         row += r() < GEN.crate.deep ? 'C' : 'c';
@@ -3098,6 +3185,13 @@ function dailyLevel(reached, dayNo) {
     base = GEN.collect.base + tier * 500;
   }
   else if (kind === GK.MUD) { goals.push([GK.MUD, 0, share(stock.mud, (.74 + tier * .05) * goalEase)]); base = GEN.mud.base; }
+  else if (kind === GK.MOLE) {
+    /* every hill on the board, because leaving one open means leaving
+       the board getting worse, and a goal that lets you ignore the
+       mechanic teaches nobody anything */
+    goals.push([GK.MOLE, 0, hills.size]);
+    base = GEN.mole.base;
+  }
   else if (kind === GK.CRATE) { goals.push([GK.CRATE, 0, share(stock.crate, (.68 + tier * .045) * goalEase)]); base = GEN.crate.base; }
   else if (kind === GK.RESCUE) { goals.push([GK.RESCUE, 0, Math.max(1, Math.round(2 * goalEase))]); base = GEN.rescue.base; }
   else { goals.push([GK.BRAMBLE, 0, Math.round(GEN.bramble.goal(tier) * goalEase)]); base = GEN.bramble.base; }
@@ -5640,6 +5734,7 @@ function blockerSprite(kind, px, hp) {
   else if (kind === 'ice') paintIce(c, px);
   else if (kind === 'bram') paintBramble(c, px, hp);
   else if (kind === 'bramOver') paintBrambleOver(c, px);
+  else if (kind === 'mole') paintMole(c, px, hp);
   cv._w = W;
   blockerCache.set(key, cv);
   return cv;
@@ -5975,6 +6070,43 @@ function drawTileFx(c, type, sp, s, t, seed) {
 }
 
 /* ---------------- blockers ---------------- */
+/* A molehill: a heap of turned earth with a hole in the top and a
+   couple of clods beside it. Two layers deep it is bigger and darker,
+   the way a crate is heavier at two.
+
+   Drawn rather than iconified, because it sits on the board next to the
+   animals and an icon would look like a button. The countdown is not
+   painted here — it changes every move and this is a cached sprite. */
+function paintMole(c, s, hp) {
+  const deep = hp > 1;
+  const r = s * (deep ? .46 : .40);
+  c.save();
+  /* the mound */
+  const g = c.createLinearGradient(0, -r, 0, r);
+  g.addColorStop(0, deep ? '#8A6A44' : '#9C7A50');
+  g.addColorStop(1, deep ? '#4C3722' : '#5E452C');
+  c.fillStyle = g;
+  c.beginPath();
+  c.moveTo(-r, r * .62);
+  c.bezierCurveTo(-r * .82, -r * .70, r * .82, -r * .70, r, r * .62);
+  c.closePath();
+  c.fill();
+  /* the hole */
+  c.fillStyle = '#241A10';
+  ellipse(c, 0, -r * .04, r * .30, r * .20); c.fill();
+  c.fillStyle = rgba('#000000', .35);
+  ellipse(c, 0, -r * .10, r * .30, r * .20); c.fill();
+  /* clods, so the heap reads as loose earth and not as a dome */
+  c.fillStyle = deep ? '#A5824F' : '#B08B57';
+  const cl = mulberry(hp * 977 + 31);
+  for (let i = 0; i < (deep ? 7 : 5); i++) {
+    const a = cl() * Math.PI * 2, d = r * (.45 + cl() * .45);
+    ellipse(c, Math.cos(a) * d, r * .44 + Math.sin(a) * r * .14,
+      r * (.07 + cl() * .06), r * (.05 + cl() * .04)); c.fill();
+  }
+  c.restore();
+}
+
 function paintCrate(c, s, hp) {
   /* a real crate: four planks, iron corners, nails, and damage
      that only shows once you have already hit it. */
@@ -9058,7 +9190,7 @@ function makeBoard(def, seed) {
   for (let r = 0; r < def.h; r++) {
     const row = [];
     for (let c = 0; c < def.w; c++) {
-      row.push({ hole: false, crate: 0, mud: 0, ice: 0, bram: 0, tile: null, r, c });
+      row.push({ hole: false, crate: 0, mud: 0, ice: 0, bram: 0, mole: 0, moleT: 0, tile: null, r, c });
     }
     B.cell.push(row);
   }
@@ -9074,6 +9206,9 @@ function makeBoard(def, seed) {
         else if (ch === 'M') cell.mud = 2;
         else if (ch === 'i') cell.ice = 1;
         else if (ch === 'v') cell.bram = 1;
+        /* a molehill: o is one layer of earth over it, O is two */
+        else if (ch === 'o') { cell.mole = 2; cell.moleT = MOLE_EVERY; }
+        else if (ch === 'O') { cell.mole = 3; cell.moleT = MOLE_EVERY; }
       }
     }
   }
@@ -9097,7 +9232,7 @@ function makeBoard(def, seed) {
 function openCell(B, r, c) {
   if (r < 0 || c < 0 || r >= B.h || c >= B.w) return null;
   const cell = B.cell[r][c];
-  return (cell.hole || cell.crate > 0) ? null : cell;
+  return (cell.hole || cell.crate > 0 || cell.mole > 0) ? null : cell;
 }
 function tileAt(B, r, c) {
   const cell = openCell(B, r, c);
@@ -9109,7 +9244,7 @@ function eachCell(B, fn) {
 
 function fillBoard(B) {
   eachCell(B, (cell, r, c) => {
-    if (cell.hole || cell.crate > 0) return;
+    if (cell.hole || cell.crate > 0 || cell.mole > 0) return;
     let t, guard = 0;
     do {
       t = Math.floor(B.rng() * B.types);
@@ -9302,7 +9437,7 @@ function settle(B) {
       let write = B.h - 1;
       for (let r = B.h - 1; r >= 0; r--) {
         const cell = B.cell[r][c];
-        if (cell.hole || cell.crate > 0 || cell.ice > 0) { write = r - 1; continue; }
+        if (cell.hole || cell.crate > 0 || cell.mole > 0 || cell.ice > 0) { write = r - 1; continue; }
         if (cell.tile) {
           if (write !== r && write >= 0) {
             const dst = B.cell[write][c];
@@ -9320,7 +9455,7 @@ function settle(B) {
         const cell = openCell(B, r, c);
         if (!cell || cell.tile || cell.ice > 0) continue;
         const above = B.cell[r - 1][c];
-        if (!above.hole && above.crate === 0 && above.ice === 0 && above.tile) continue;
+        if (!above.hole && above.crate === 0 && above.mole === 0 && above.ice === 0 && above.tile) continue;
         for (const dc of (B.rng() < .5 ? [-1, 1] : [1, -1])) {
           const src = openCell(B, r - 1, c + dc);
           if (src && src.tile && src.ice === 0) {
@@ -9337,7 +9472,7 @@ function settle(B) {
       let top = -1;
       for (let r = 0; r < B.h; r++) {
         const cell = B.cell[r][c];
-        if (cell.hole || cell.crate > 0) continue;
+        if (cell.hole || cell.crate > 0 || cell.mole > 0) continue;
         top = r; break;
       }
       if (top < 0) continue;
@@ -9352,7 +9487,7 @@ function settle(B) {
   }
   /* 4. anything still empty and unreachable simply appears */
   eachCell(B, (cell, r, c) => {
-    if (cell.hole || cell.crate > 0 || cell.tile) return;
+    if (cell.hole || cell.crate > 0 || cell.mole > 0 || cell.tile) return;
     const t = mkTile(nextSpawnType(B));
     t.x = c; t.y = r; t.scale = 0;
     cell.tile = t;
@@ -9392,6 +9527,92 @@ function spreadBramble(B) {
   }
   return null;
 }
+/* The molehill.
+
+   Every other blocker in this game is patient. A crate waits, mud waits,
+   ice waits; a bramble spreads, but it spreads slowly and everywhere at
+   once, so it never asks the player to care about one square in
+   particular.
+
+   This one does. It counts down in plain sight, and at zero it pushes up
+   a patch of earth on a neighbour and starts again. That is the decision
+   it adds: carry on with the goal, or spend two moves now shutting the
+   thing up. Nothing else on this board makes the player choose a place
+   rather than a match.
+
+   It is closed the way a crate is broken — by clearing a tile next to it
+   — because a mechanic that needs a new verb is a mechanic that needs a
+   tutorial nobody reads. */
+const MOLE_EVERY = 4, MOLE_MAX = 3;
+
+/* One layer a move, however big the match.
+
+   A hill damaged per cleared cell is a hill that a single four-in-a-row
+   beside it removes outright, which measured at a hundred percent
+   cleared and made the countdown decoration. Capping it to one layer per
+   move is what turns it into the thing it was built to be: something you
+   have to come back to, on purpose, several moves running, while the
+   clock on it runs.
+
+   The cap is keyed on the board rather than on the cell so that a
+   cascade — which is one move, resolved in several waves — cannot chip
+   the same hill four times on the way down. */
+function moleHit(B, cell) {
+  if (!cell || cell.mole <= 0) return false;
+  if (!B.moleHitThisMove) B.moleHitThisMove = new Set();
+  const key = cell.r + ':' + cell.c;
+  if (B.moleHitThisMove.has(key)) return false;
+  B.moleHitThisMove.add(key);
+  cell.mole--;
+  return true;
+}
+
+function moleCount(B) {
+  let n = 0;
+  for (let r = 0; r < B.h; r++) for (let c = 0; c < B.w; c++) if (B.cell[r][c].mole > 0) n++;
+  return n;
+}
+
+/* One tick for every hill still open. Returns the cells that threw up
+   earth, so the caller can animate and announce them. */
+function moleTick(B) {
+  const pushed = [];
+  B.moleHitThisMove = null;      /* a new move: every hill can be hit again */
+  for (let r = 0; r < B.h; r++) {
+    for (let c = 0; c < B.w; c++) {
+      const cell = B.cell[r][c];
+      if (cell.mole <= 0) continue;
+      if (--cell.moleT > 0) continue;
+      cell.moleT = MOLE_EVERY;
+      /* Earth goes onto a neighbour that has none. A hill that piled the
+         same square higher and higher would be a countdown the player
+         could safely ignore after the first one. */
+      const around = [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]]
+        .map(rc => B.cell[rc[0]] && B.cell[rc[0]][rc[1]])
+        .filter(x => x && !x.hole && x.crate === 0 && x.mole === 0 && x.ice === 0);
+      const clean = around.filter(x => x.mud === 0);
+      const pool = clean.length ? clean : around.filter(x => x.mud < 2);
+      if (!pool.length) continue;
+      const pick = pool[Math.floor(B.rng() * pool.length)];
+      pick.mud = Math.min(2, pick.mud + 1);
+      /* And it digs itself back in.
+
+         Without this the hill closed as a side effect of ordinary play:
+         adjacent clears happen constantly on a full board, so three of
+         them measured at a hundred percent cleared with a third of the
+         moves spare. A blocker that deals with itself is not a decision,
+         and the decision was the entire reason for building it.
+
+         Now it is a race. Land the clears inside the countdown and the
+         hill is gone; miss it and you are further back than when you
+         started. Which is what makes a player stop and choose a square. */
+      cell.mole = Math.min(MOLE_MAX, cell.mole + 1);
+      pushed.push([pick.r, pick.c]);
+    }
+  }
+  return pushed;
+}
+
 function brambleCount(B) {
   let n = 0;
   eachCell(B, cell => { if (cell.bram > 0) n++; });
@@ -9733,6 +9954,7 @@ function syncGoals(bumpIdx) {
         : g.kind === GK.COLLECT ? breedName(g.arg)
           : g.kind === GK.CRATE ? T('goal_crate', { n: g.need })
             : g.kind === GK.MUD ? T('goal_mud', { n: g.need })
+              : g.kind === GK.MOLE ? T('goal_mole', { n: g.need })
               : g.kind === GK.BRAMBLE ? T('goal_bramble', { n: g.need })
                 : T('goal_rescue', { n: g.need });
       const have = g.kind === GK.SCORE ? G.score : g.have;
@@ -9969,6 +10191,16 @@ function hitCell(B, r, c, ctx, direct) {
         SFX.crate(n.crate > 0, npan);
         FX.splinters(nx, ny, G.cell, n.crate === 0);
       }
+      /* A molehill is filled in from beside it, exactly as a crate is
+         broken from beside it. Same verb, so there is nothing new to
+         learn about how to deal with it — only about when. */
+      if (n && n.mole > 0 && moleHit(B, n)) {
+        if (n.mole === 0) { ctx.mole++; ring(r2, c2, '#8A6A44'); }
+        const [nx, ny, npan] = cellFX(r2, c2);
+        SFX.mud(npan);
+        buzzOften(HAP.crack, 110);
+        burst(r2, c2, '#6B4A2C', n.mole === 0 ? 12 : 6, 1);
+      }
     });
   }
 }
@@ -10079,6 +10311,7 @@ function applyCounts(ctx) {
     if (g.kind === GK.COLLECT && ctx.collect[g.arg]) { g.have += ctx.collect[g.arg]; bumped = i; }
     if (g.kind === GK.MUD && ctx.mud) { g.have += ctx.mud; bumped = i; }
     if (g.kind === GK.CRATE && ctx.crate) { g.have += ctx.crate; bumped = i; }
+    if (g.kind === GK.MOLE && ctx.mole) { g.have += ctx.mole; bumped = i; }
     if (g.kind === GK.BRAMBLE) {
       const left = brambleCount(G.B);
       const was = g.have;
@@ -10360,6 +10593,36 @@ async function runCombo(kind, a, b) {
    that is only in the comment is worse than no comment, so it is gone
    rather than half-built — if it is ever wanted, brambles have 47% of
    their move budget spare and the numbers would have to move with it. */
+/* The hills push earth up between moves.
+
+   Unlike the bramble this runs whether or not the level has a molehill
+   goal: a hill on a board is a hill on a board, and a level that put one
+   there as a hazard rather than as a target should still have to deal
+   with it. */
+async function workMoles() {
+  const _ep = levelEpoch();
+  if (G.over || !G.B) return;
+  if (moleCount(G.B) === 0) return;
+  const pushed = moleTick(G.B);
+  if (!pushed.length) return;
+  pushed.forEach(rc => {
+    ring(rc[0], rc[1], '#8A6A44');
+    burst(rc[0], rc[1], '#6B4A2C', 7, .8);
+  });
+  SFX.mud(G.B ? (pushed[0][1] / Math.max(1, G.B.w - 1)) * 1.6 - .8 : 0);
+  buzzOften(HAP.crack, 140);
+  say(T('a11y_mole_pushed', { n: pushed.length }));
+  /* a mud goal counts what is on the board, so earth arriving moves it
+     the wrong way and the player has to be shown that */
+  const g = G.goals.find(x => x.kind === GK.MUD);
+  if (g) syncGoals(G.goals.indexOf(g));
+  /* the render loop redraws every frame, so there is nothing to repaint
+     here — only a beat, so the earth is seen arriving rather than being
+     found already there */
+  await wait(reduceMotion() ? 30 : 160);
+  if (stale(_ep)) return;
+}
+
 async function creepBrambles() {
   const _ep = levelEpoch();
   if (G.over) return;
@@ -10427,6 +10690,7 @@ async function tryMove(a, b) {
   else await resolveBoard([a, b]);
   if (stale(_ep)) return;
   await creepBrambles();
+  await workMoles();
   if (stale(_ep)) return;
   G.busy = false;
   checkEnd();
@@ -10859,6 +11123,31 @@ function renderGame(dt) {
     if (cell.crate > 0) {
       drawBlocker(c, 'crate', cellX(c2) + G.cell / 2, cellY(r) + G.cell / 2, G.cell * .96, cell.crate);
     }
+    /* Molehills, and the number that makes them worth caring about.
+
+       The mound is a cached sprite; the count is not, because it changes
+       every move and is the entire point. It sits in a pale disc so it
+       reads against turned earth, and it goes warm on the last move
+       before something is pushed up — the one frame where a player
+       should feel like doing something about it. */
+    if (cell.mole > 0) {
+      const x = cellX(c2) + G.cell / 2, y = cellY(r) + G.cell / 2;
+      drawBlocker(c, 'mole', x, y, G.cell * .96, cell.mole);
+      const left = cell.moleT;
+      const soon = left <= 1;
+      const rr = G.cell * .17;
+      c.save();
+      c.beginPath(); c.arc(x, y + G.cell * .22, rr, 0, Math.PI * 2);
+      c.fillStyle = soon ? PAL.accent : rgba('#F6EADA', .92);
+      c.fill();
+      c.lineWidth = Math.max(1, G.cell * .022);
+      c.strokeStyle = rgba('#3A2A18', soon ? .5 : .3); c.stroke();
+      c.fillStyle = soon ? inkOn(PAL.accent) : '#3A2A18';
+      c.font = '800 ' + Math.round(G.cell * .24) + 'px Grandstander, sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(String(left), x, y + G.cell * .235);
+      c.restore();
+    }
   });
 
   /* selection + hint */
@@ -11131,6 +11420,7 @@ function describeCell(r, c) {
   if (cell.ice > 0) extra.push(T('a11y_ice'));
   if (cell.mud > 0) extra.push(T('a11y_mud', { n: cell.mud }));
   if (cell.bram > 0) extra.push(T('a11y_bramble'));
+  if (cell.mole > 0) extra.push(T('a11y_mole', { n: cell.moleT }));
   return what + (extra.length ? ', ' + extra.join(', ') : '');
 }
 function sayCell(r, c) {
@@ -13045,6 +13335,7 @@ function goalLine(g) {
   if (g.kind === GK.CRATE) return T('goal_crate', { n });
   if (g.kind === GK.MUD) return T('goal_mud', { n });
   if (g.kind === GK.BRAMBLE) return T('goal_bramble', { n });
+  if (g.kind === GK.MOLE) return T('goal_mole', { n });
   if (g.kind === GK.RESCUE) return T('goal_rescue', { n });
   return '';
 }
@@ -13075,7 +13366,15 @@ function openLevelIntro(n) {
 
   /* every fifth level pays treats the first time, and used to do it
      without warning anyone it was going to */
-  const firstTreats = (n !== DAILY_LEVEL && n % 5 === 0 && !SAVE.stars[n]) ? 2 : 0;
+  /* Treats are paid at the gates now, not every fifth level.
+
+     Modelled over ninety days, treats arrived about five a day and were
+     spent about never: four hundred of them piled up, which makes a
+     three-star clear pay in a currency the player has stopped counting.
+     Halving the faucet is most of the fix, and paying it at the gate is
+     the half that is also better design — the gate is the level somebody
+     remembers, and it should be the level that pays. */
+  const firstTreats = (n !== DAILY_LEVEL && isGate(n) && !SAVE.stars[n]) ? 2 : 0;
 
   const m = modal(`
     <div class="eyebrow">${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
@@ -13221,7 +13520,7 @@ function showWin() {
     * traitCoinScale(activePet()));
   let treats = 0;
   if (stars === 3 && prev < 3) treats += 1;
-  if (first && n % 5 === 0) treats += 2;
+  if (first && isGate(n)) treats += 2;      /* see the note in openLevelIntro */
   SAVE.coins += coins;
   SAVE.treats += treats;
   const pet = activePet();
@@ -13697,6 +13996,12 @@ function maybeTutorial(def) {
   if (def.goals.some(g => g[0] === GK.BRAMBLE) && !SAVE.seen.bramble) {
     steps.push({ k: 'bramble', text: T('tut_bramble') });
   }
+  /* Molehills turn up seventy-six levels in, so this is the one
+     explanation a player meets when they already know how to play. It
+     has to say the rule and the counter-move and nothing else. */
+  if (def.goals.some(g => g[0] === GK.MOLE) && !SAVE.seen.mole) {
+    steps.push({ k: 'mole', text: T('tut_mole'), art: 'mole' });
+  }
   if (def.goals.some(g => g[0] === GK.RESCUE) && !SAVE.seen.rescue) {
     steps.push({ k: 'rescue', text: LANG === 'tr' ? 'Sepetteki minikleri en alt sıraya indir; kapıdan çıkıp eve girerler.' : 'Walk the little ones down to the bottom row and they are home.' });
   }
@@ -13726,6 +14031,7 @@ function maybeTutorial(def) {
       c.translate(60, 60);
       if (s.art === 'crate') paintCrate(c, 82, 2);
       else if (s.art === 'mud') paintMud(c, 82, 2);
+      else if (s.art === 'mole') paintMole(c, 82, 2);
       else { paintTile(c, 1, SP.NONE, 78, SAVE.settings.marks); paintIce(c, 82); }
     } else {
       c.translate(60, 18);

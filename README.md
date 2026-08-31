@@ -2299,3 +2299,73 @@ because the daily gift alone cleared the coins-per-day bar it was
 measuring. Money per day says nothing. What says something is whether a
 player who turned up every day for three months actually got anywhere,
 so it asks that instead, and now reports *no second animal in 90 days*.
+
+## Something new at level seventy-six
+
+Three hundred levels of the same six goal kinds is the generated run's
+real weakness. It has a designed rhythm now, and a rhythm played on the
+same six instruments for three hundred bars is still the same six
+instruments.
+
+So there is a seventh, and it is held back: molehills start at level 76.
+A mechanic handed over at the start is a mechanic; a mechanic that turns
+up a long way in is an event.
+
+**What it does.** A molehill sits in a cell like a crate — nothing on it,
+nothing through it — and counts down in plain sight. At zero it pushes a
+patch of earth onto a neighbour and starts again. It is filled in the way
+a crate is broken, by clearing a tile beside it, because a mechanic that
+needs a new verb needs a tutorial nobody reads.
+
+**What it adds.** Every other blocker here is patient. A crate waits, mud
+waits, ice waits; a bramble spreads, but slowly and everywhere at once,
+so it never asks the player to care about one square in particular. This
+one does: carry on with the goal, or spend two moves now shutting the
+thing up. It is the first thing on this board that makes somebody choose
+a *place* rather than a match.
+
+### Three measurements, three different answers
+
+**One.** Three hills, closed by any adjacent clear: **100% cleared with a
+third of the moves spare.** A blocker that deals with itself is not a
+decision. So the hill digs itself back in — every push adds a layer.
+
+**Two.** Still 100%. A single four-in-a-row beside a hill was removing it
+outright, because damage was counted per cleared cell. It is one layer a
+move now, keyed on the board so a cascade cannot chip the same hill four
+times on the way down. That is what turned it into something you have to
+come back to on purpose, several moves running, while its clock runs.
+
+**Three.** The generated levels then measured **0% to 3% cleared** while a
+hand-built board with the same mechanic measured 95%.
+
+### The bug that would have poisoned everything after it
+
+`cloneBoard` in the solver copied cell fields by name:
+
+```js
+{ hole, crate, mud, ice, bram, r, c, tile }
+```
+
+Molehills were added to the engine and not to that list, so the solver
+evaluated every candidate move on a board where the hills **did not
+exist**. It could not see them, never chose to hit them, and only ever
+chipped one by accident.
+
+Nothing in the suite could have caught it, because the numbers it
+produced were plausible. A hard new mechanic measuring hard is exactly
+what you expect. It was only visible because the same mechanic on a
+hand-built board measured a hundred percent, and two numbers that far
+apart have to have a reason.
+
+The clone copies whatever scalars the cell has now, so the next blocker
+somebody invents is cloned correctly without anyone remembering to.
+
+With the fix, the same levels measure **28% to 69%**, and level 77 lands
+on its designed target exactly: 69% wanted, 69% measured.
+
+Two other things had to be taught about the new mechanic, and both had
+been taught the same lesson by crates once already: the board-invariant
+check counted the cell under a hill as empty, and the solver scored only
+*closed* hills, so a greedy player got no credit for the first two hits
+on a three-layer one and therefore never made them.

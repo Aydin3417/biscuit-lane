@@ -970,6 +970,7 @@ function goalLine(g) {
   if (g.kind === GK.CRATE) return T('goal_crate', { n });
   if (g.kind === GK.MUD) return T('goal_mud', { n });
   if (g.kind === GK.BRAMBLE) return T('goal_bramble', { n });
+  if (g.kind === GK.MOLE) return T('goal_mole', { n });
   if (g.kind === GK.RESCUE) return T('goal_rescue', { n });
   return '';
 }
@@ -1000,7 +1001,15 @@ function openLevelIntro(n) {
 
   /* every fifth level pays treats the first time, and used to do it
      without warning anyone it was going to */
-  const firstTreats = (n !== DAILY_LEVEL && n % 5 === 0 && !SAVE.stars[n]) ? 2 : 0;
+  /* Treats are paid at the gates now, not every fifth level.
+
+     Modelled over ninety days, treats arrived about five a day and were
+     spent about never: four hundred of them piled up, which makes a
+     three-star clear pay in a currency the player has stopped counting.
+     Halving the faucet is most of the fix, and paying it at the gate is
+     the half that is also better design — the gate is the level somebody
+     remembers, and it should be the level that pays. */
+  const firstTreats = (n !== DAILY_LEVEL && isGate(n) && !SAVE.stars[n]) ? 2 : 0;
 
   const m = modal(`
     <div class="eyebrow">${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
@@ -1146,7 +1155,7 @@ function showWin() {
     * traitCoinScale(activePet()));
   let treats = 0;
   if (stars === 3 && prev < 3) treats += 1;
-  if (first && n % 5 === 0) treats += 2;
+  if (first && isGate(n)) treats += 2;      /* see the note in openLevelIntro */
   SAVE.coins += coins;
   SAVE.treats += treats;
   const pet = activePet();
@@ -1622,6 +1631,12 @@ function maybeTutorial(def) {
   if (def.goals.some(g => g[0] === GK.BRAMBLE) && !SAVE.seen.bramble) {
     steps.push({ k: 'bramble', text: T('tut_bramble') });
   }
+  /* Molehills turn up seventy-six levels in, so this is the one
+     explanation a player meets when they already know how to play. It
+     has to say the rule and the counter-move and nothing else. */
+  if (def.goals.some(g => g[0] === GK.MOLE) && !SAVE.seen.mole) {
+    steps.push({ k: 'mole', text: T('tut_mole'), art: 'mole' });
+  }
   if (def.goals.some(g => g[0] === GK.RESCUE) && !SAVE.seen.rescue) {
     steps.push({ k: 'rescue', text: LANG === 'tr' ? 'Sepetteki minikleri en alt sıraya indir; kapıdan çıkıp eve girerler.' : 'Walk the little ones down to the bottom row and they are home.' });
   }
@@ -1651,6 +1666,7 @@ function maybeTutorial(def) {
       c.translate(60, 60);
       if (s.art === 'crate') paintCrate(c, 82, 2);
       else if (s.art === 'mud') paintMud(c, 82, 2);
+      else if (s.art === 'mole') paintMole(c, 82, 2);
       else { paintTile(c, 1, SP.NONE, 78, SAVE.settings.marks); paintIce(c, 82); }
     } else {
       c.translate(60, 18);

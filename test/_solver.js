@@ -6,6 +6,14 @@
 /* brambles creep: the patch takes one more cell every BRAMBLE_EVERY
    moves, exactly as the game does it */
 let creepTick = 0;
+/* The hills push earth up between the solver's moves too. Without this
+   the solver would measure a level that does not exist — and every
+   difficulty number in this project comes from the solver. */
+function moles(B) {
+  if (typeof moleCount !== 'function' || moleCount(B) === 0) return;
+  moleTick(B);
+}
+
 function creep(B, goals, t) {
   const g = goals.find(x => (x.kind !== undefined ? x.kind : x[0]) === GK.BRAMBLE);
   if (!g) return;
@@ -53,11 +61,13 @@ const X = vm.runInContext(
   '({ makeBoard, findMatches, specialFor, settle, hasMove, allMoves, canSwap,' +
   '   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,' +
   '   commonType, shuffleTypes, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,' +
+  '   moleCount, moleTick, moleHit, MOLE_EVERY,' +
 '   targetClear, isGate, budgetFor, budgetRange, LEVELS })', ctx);
 const {
   makeBoard, findMatches, specialFor, settle, hasMove, allMoves, canSwap,
   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,
-  commonType, shuffleTypes, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY
+  commonType, shuffleTypes, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,
+  moleCount, moleTick, moleHit
 } = X;
 
 /* ---------------- board copy ---------------- */
@@ -73,10 +83,29 @@ function cloneBoard(B) {
     const row = [];
     for (let c = 0; c < B.w; c++) {
       const s = B.cell[r][c];
-      row.push({
-        hole: s.hole, crate: s.crate, mud: s.mud, ice: s.ice, bram: s.bram, r, c,
-        tile: s.tile ? { id: s.tile.id, type: s.tile.type, sp: s.tile.sp, x: 0, y: 0, dying: 0 } : null
-      });
+      /* Every scalar on the cell, by name rather than by list.
+
+         The list was the bug that cost an afternoon: molehills were
+         added to the engine and not to this clone, so the solver
+         evaluated every candidate move on a board where the hills did
+         not exist. It could not see them, never chose to hit them, and
+         the generated levels measured at nought percent cleared — while
+         a hand-built board with the same mechanic measured a hundred.
+         Nothing in the suite could have caught it, because the numbers
+         it produced were plausible.
+
+         Copying whatever the cell has means the next blocker somebody
+         invents is cloned correctly without anyone remembering to. */
+      const cell = { r, c, tile: null };
+      for (const k in s) {
+        if (k === 'tile' || k === 'r' || k === 'c') continue;
+        const v = s[k];
+        if (typeof v === 'number' || typeof v === 'boolean' || v === null) cell[k] = v;
+      }
+      cell.tile = s.tile
+        ? { id: s.tile.id, type: s.tile.type, sp: s.tile.sp, x: 0, y: 0, dying: 0 }
+        : null;
+      row.push(cell);
     }
     C.cell.push(row);
   }
@@ -103,6 +132,7 @@ function hitCell(B, r, c, out, touched) {
   [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].forEach(([r2, c2]) => {
     const n = B.cell[r2] && B.cell[r2][c2];
     if (n && n.crate > 0) { n.crate--; if (n.crate === 0) out.crate++; }
+    if (n && n.mole > 0 && moleHit(B, n)) { out.moleHit++; if (n.mole === 0) out.mole++; }
   });
 }
 function specialKeys(B, r, c, sp, type) {
@@ -119,10 +149,11 @@ function specialKeys(B, r, c, sp, type) {
 function blast(B, keys, tally) {
   let wave = Array.from(keys), guard = 0;
   while (wave.length && guard++ < 24) {
-    const out = { chain: [], collect: {}, mud: 0, crate: 0, bram: 0, count: 0 };
+    const out = { chain: [], collect: {}, mud: 0, crate: 0, bram: 0, mole: 0, moleHit: 0, count: 0 };
     const touched = new Set();
     wave.forEach(k => { const [r, c] = k.split(':').map(Number); hitCell(B, r, c, out, touched); });
-    tally.mud += out.mud; tally.crate += out.crate; tally.bram += out.bram; tally.count += out.count;
+    tally.mud += out.mud; tally.crate += out.crate; tally.bram += out.bram;
+    tally.mole += out.mole || 0; tally.moleHit += out.moleHit || 0; tally.count += out.count;
     for (const k in out.collect) tally.collect[k] = (tally.collect[k] || 0) + out.collect[k];
     const next = [];
     out.chain.forEach(s => specialKeys(B, s.r, s.c, s.sp, s.type).forEach(k => next.push(k)));
@@ -166,7 +197,7 @@ function resolve(B, swapCells, tally) {
     settleFully(B, tally);
   }
 }
-const blankTally = () => ({ collect: {}, mud: 0, crate: 0, bram: 0, count: 0, rescued: 0, made: 0 });
+const blankTally = () => ({ collect: {}, mud: 0, crate: 0, bram: 0, mole: 0, moleHit: 0, count: 0, rescued: 0, made: 0 });
 
 /* ---------------- goal bookkeeping ---------------- */
 function mkGoals(def) { return def.goals.map(g => ({ kind: g[0], arg: g[1], need: g[2], have: 0 })); }
@@ -175,6 +206,7 @@ function applyTally(goals, tally, score, B) {
     if (g.kind === GK.COLLECT) g.have += tally.collect[g.arg] || 0;
     else if (g.kind === GK.MUD) g.have += tally.mud;
     else if (g.kind === GK.CRATE) g.have += tally.crate;
+    else if (g.kind === GK.MOLE) g.have += tally.mole;
     else if (g.kind === GK.BRAMBLE) g.have = Math.max(0, g.need - brambleCount(B));
     else if (g.kind === GK.RESCUE) g.have += tally.rescued;
     else if (g.kind === GK.SCORE) g.have = score;
@@ -194,6 +226,14 @@ function scoreMove(goals, tally, scoreGain) {
     if (g.kind === GK.COLLECT) got = tally.collect[g.arg] || 0;
     else if (g.kind === GK.MUD) got = tally.mud;
     else if (g.kind === GK.CRATE) got = tally.crate;
+    /* A hill closed moves the goal; a hill *chipped* moves nothing the
+       goal can see, and the first version scored only closures. A greedy
+       player given no credit for the first two hits on a three-layer
+       hill will never make them, and the generated levels measured at
+       nought percent while a hand-built one measured ninety-five. The
+       partial hit is the gradient — the player watching the mound shrink
+       has it, and the solver has to have it too. */
+    else if (g.kind === GK.MOLE) got = tally.mole * 6 + tally.moleHit * 2;
     else if (g.kind === GK.BRAMBLE) got = tally.bram * 2;
     else if (g.kind === GK.RESCUE) got = tally.rescued * 8;      // rescues are scarce
     else if (g.kind === GK.SCORE) got = scoreGain / 260;
@@ -281,6 +321,7 @@ function playLevel(n, seed, defOverride) {
     score += Math.round(t.count * 62 * scoreMul);
     applyTally(goals, t, score, B);
     creep(B, goals, t);
+    moles(B);
   }
   const stars = starTargets(def);
   let s = 0;

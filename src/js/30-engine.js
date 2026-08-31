@@ -23,7 +23,7 @@ function makeBoard(def, seed) {
   for (let r = 0; r < def.h; r++) {
     const row = [];
     for (let c = 0; c < def.w; c++) {
-      row.push({ hole: false, crate: 0, mud: 0, ice: 0, bram: 0, tile: null, r, c });
+      row.push({ hole: false, crate: 0, mud: 0, ice: 0, bram: 0, mole: 0, moleT: 0, tile: null, r, c });
     }
     B.cell.push(row);
   }
@@ -39,6 +39,9 @@ function makeBoard(def, seed) {
         else if (ch === 'M') cell.mud = 2;
         else if (ch === 'i') cell.ice = 1;
         else if (ch === 'v') cell.bram = 1;
+        /* a molehill: o is one layer of earth over it, O is two */
+        else if (ch === 'o') { cell.mole = 2; cell.moleT = MOLE_EVERY; }
+        else if (ch === 'O') { cell.mole = 3; cell.moleT = MOLE_EVERY; }
       }
     }
   }
@@ -62,7 +65,7 @@ function makeBoard(def, seed) {
 function openCell(B, r, c) {
   if (r < 0 || c < 0 || r >= B.h || c >= B.w) return null;
   const cell = B.cell[r][c];
-  return (cell.hole || cell.crate > 0) ? null : cell;
+  return (cell.hole || cell.crate > 0 || cell.mole > 0) ? null : cell;
 }
 function tileAt(B, r, c) {
   const cell = openCell(B, r, c);
@@ -74,7 +77,7 @@ function eachCell(B, fn) {
 
 function fillBoard(B) {
   eachCell(B, (cell, r, c) => {
-    if (cell.hole || cell.crate > 0) return;
+    if (cell.hole || cell.crate > 0 || cell.mole > 0) return;
     let t, guard = 0;
     do {
       t = Math.floor(B.rng() * B.types);
@@ -267,7 +270,7 @@ function settle(B) {
       let write = B.h - 1;
       for (let r = B.h - 1; r >= 0; r--) {
         const cell = B.cell[r][c];
-        if (cell.hole || cell.crate > 0 || cell.ice > 0) { write = r - 1; continue; }
+        if (cell.hole || cell.crate > 0 || cell.mole > 0 || cell.ice > 0) { write = r - 1; continue; }
         if (cell.tile) {
           if (write !== r && write >= 0) {
             const dst = B.cell[write][c];
@@ -285,7 +288,7 @@ function settle(B) {
         const cell = openCell(B, r, c);
         if (!cell || cell.tile || cell.ice > 0) continue;
         const above = B.cell[r - 1][c];
-        if (!above.hole && above.crate === 0 && above.ice === 0 && above.tile) continue;
+        if (!above.hole && above.crate === 0 && above.mole === 0 && above.ice === 0 && above.tile) continue;
         for (const dc of (B.rng() < .5 ? [-1, 1] : [1, -1])) {
           const src = openCell(B, r - 1, c + dc);
           if (src && src.tile && src.ice === 0) {
@@ -302,7 +305,7 @@ function settle(B) {
       let top = -1;
       for (let r = 0; r < B.h; r++) {
         const cell = B.cell[r][c];
-        if (cell.hole || cell.crate > 0) continue;
+        if (cell.hole || cell.crate > 0 || cell.mole > 0) continue;
         top = r; break;
       }
       if (top < 0) continue;
@@ -317,7 +320,7 @@ function settle(B) {
   }
   /* 4. anything still empty and unreachable simply appears */
   eachCell(B, (cell, r, c) => {
-    if (cell.hole || cell.crate > 0 || cell.tile) return;
+    if (cell.hole || cell.crate > 0 || cell.mole > 0 || cell.tile) return;
     const t = mkTile(nextSpawnType(B));
     t.x = c; t.y = r; t.scale = 0;
     cell.tile = t;
@@ -357,6 +360,92 @@ function spreadBramble(B) {
   }
   return null;
 }
+/* The molehill.
+
+   Every other blocker in this game is patient. A crate waits, mud waits,
+   ice waits; a bramble spreads, but it spreads slowly and everywhere at
+   once, so it never asks the player to care about one square in
+   particular.
+
+   This one does. It counts down in plain sight, and at zero it pushes up
+   a patch of earth on a neighbour and starts again. That is the decision
+   it adds: carry on with the goal, or spend two moves now shutting the
+   thing up. Nothing else on this board makes the player choose a place
+   rather than a match.
+
+   It is closed the way a crate is broken — by clearing a tile next to it
+   — because a mechanic that needs a new verb is a mechanic that needs a
+   tutorial nobody reads. */
+const MOLE_EVERY = 4, MOLE_MAX = 3;
+
+/* One layer a move, however big the match.
+
+   A hill damaged per cleared cell is a hill that a single four-in-a-row
+   beside it removes outright, which measured at a hundred percent
+   cleared and made the countdown decoration. Capping it to one layer per
+   move is what turns it into the thing it was built to be: something you
+   have to come back to, on purpose, several moves running, while the
+   clock on it runs.
+
+   The cap is keyed on the board rather than on the cell so that a
+   cascade — which is one move, resolved in several waves — cannot chip
+   the same hill four times on the way down. */
+function moleHit(B, cell) {
+  if (!cell || cell.mole <= 0) return false;
+  if (!B.moleHitThisMove) B.moleHitThisMove = new Set();
+  const key = cell.r + ':' + cell.c;
+  if (B.moleHitThisMove.has(key)) return false;
+  B.moleHitThisMove.add(key);
+  cell.mole--;
+  return true;
+}
+
+function moleCount(B) {
+  let n = 0;
+  for (let r = 0; r < B.h; r++) for (let c = 0; c < B.w; c++) if (B.cell[r][c].mole > 0) n++;
+  return n;
+}
+
+/* One tick for every hill still open. Returns the cells that threw up
+   earth, so the caller can animate and announce them. */
+function moleTick(B) {
+  const pushed = [];
+  B.moleHitThisMove = null;      /* a new move: every hill can be hit again */
+  for (let r = 0; r < B.h; r++) {
+    for (let c = 0; c < B.w; c++) {
+      const cell = B.cell[r][c];
+      if (cell.mole <= 0) continue;
+      if (--cell.moleT > 0) continue;
+      cell.moleT = MOLE_EVERY;
+      /* Earth goes onto a neighbour that has none. A hill that piled the
+         same square higher and higher would be a countdown the player
+         could safely ignore after the first one. */
+      const around = [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]]
+        .map(rc => B.cell[rc[0]] && B.cell[rc[0]][rc[1]])
+        .filter(x => x && !x.hole && x.crate === 0 && x.mole === 0 && x.ice === 0);
+      const clean = around.filter(x => x.mud === 0);
+      const pool = clean.length ? clean : around.filter(x => x.mud < 2);
+      if (!pool.length) continue;
+      const pick = pool[Math.floor(B.rng() * pool.length)];
+      pick.mud = Math.min(2, pick.mud + 1);
+      /* And it digs itself back in.
+
+         Without this the hill closed as a side effect of ordinary play:
+         adjacent clears happen constantly on a full board, so three of
+         them measured at a hundred percent cleared with a third of the
+         moves spare. A blocker that deals with itself is not a decision,
+         and the decision was the entire reason for building it.
+
+         Now it is a race. Land the clears inside the countdown and the
+         hill is gone; miss it and you are further back than when you
+         started. Which is what makes a player stop and choose a square. */
+      cell.mole = Math.min(MOLE_MAX, cell.mole + 1);
+      pushed.push([pick.r, pick.c]);
+    }
+  }
+  return pushed;
+}
+
 function brambleCount(B) {
   let n = 0;
   eachCell(B, cell => { if (cell.bram > 0) n++; });

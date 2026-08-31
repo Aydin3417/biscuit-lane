@@ -165,7 +165,7 @@ for (let day = 1; day <= DAYS; day++) {
       Math.min(PAYOUT[3], Math.floor(score / PAYOUT[2])));
     coins += gain; money.coinsIn += gain; earnedToday += gain;
     if (stars === 3) { treats += 1; money.treatsIn += 1; }
-    if (level % 5 === 0) { treats += 2; money.treatsIn += 2; }
+    if (level % 10 === 0) { treats += 2; money.treatsIn += 2; }   /* gates pay, not every fifth */
     level++;
   }
   /* the daily walk and its gift */
@@ -181,6 +181,10 @@ for (let day = 1; day <= DAYS; day++) {
     need -= bestValue.food;
     foodStock++;
   }
+
+  /* Treats buy hearts back. A player who has run out and wants one more
+     go pays three, which is the one thing this currency is really for. */
+  if (treats >= 3 && Math.random() < 0.5) { treats -= 3; money.treatsOut += 3; }
 
   /* Boosters, at the gates.
 
@@ -258,6 +262,8 @@ console.log('earned over ' + DAYS + ' days:' + ' '.repeat(Math.max(1, 26 - Strin
 console.log('spent:                                ' + money.coinsOut + ' coins');
 console.log('left over:                            ' + last.coins + ' coins');
 console.log('');
+console.log('treats: ' + money.treatsIn + ' in, ' + money.treatsOut + ' out, ' +
+  treats + ' left over');
 console.log('boosters bought over ' + DAYS + ' days:        ' + boosterSpend + ' coins' +
   '  (' + Math.round(boosterSpend / Math.max(1, money.coinsIn) * 100) + '% of income)');
 console.log('');

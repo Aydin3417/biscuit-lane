@@ -30,7 +30,7 @@ const SCALES = [.55, .68, .80, .92, 1.0, 1.12, 1.28, 1.50];
    model for a whole goal type */
 const SAMPLES = 5;
 
-const KINDS = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE];
+const KINDS = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE, GK.MOLE];
 
 /* find generated levels of each kind to measure */
 function levelsOfKind(kind, want) {
