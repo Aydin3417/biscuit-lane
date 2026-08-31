@@ -1398,14 +1398,21 @@ function renderGame(dt) {
     const bob = (t.tw || t.dying) ? 0 : idleBob(t, tsec);
     const lift = picked ? .10 : 0;
     const px = G.ox + (t.x + d[0]) * G.cell + G.cell / 2;
-    const py = G.oy + (t.y + d[1] + bob - lift) * G.cell + G.cell / 2;
+    let py = G.oy + (t.y + d[1] + bob - lift) * G.cell + G.cell / 2;
     let sc = t.scale * (1 + d[2] * .25) * (picked ? 1.07 : 1);
-    let sx = 1, sy = 1;
+    let sx = 1, sy = 1, rot = 0;
     let alpha = 1;
     if (t.dying > 0) {
       const k = clamp((t.dying - (t.dieDelay || 0)), 0, 1);
       sc = t.scale * popScale(k);
       alpha = popAlpha(k);
+      /* it jumps. popScale() alone swells the tile in place, which is a
+         balloon inflating; a hop off the floor with a tilt in it is a
+         small animal being pleased with itself. Sine over the first
+         two thirds, so it is back down before it fades out. */
+      const hop = Math.sin(Math.min(1, k / .66) * Math.PI);
+      py -= hop * G.cell * .22;
+      rot = Math.sin(k * 9.2) * .10 * (1 - k);
     }
     if (t.jiggle > 0) {
       /* squash on impact, then wobble out — volume stays put, so it
@@ -1422,6 +1429,7 @@ function renderGame(dt) {
     c.save();
     c.globalAlpha = alpha;
     c.translate(px, py);
+    if (rot) c.rotate(rot);
     c.scale(sc * sx, sc * sy);
     if (t.type === PUP) {
       /* a slot, not a breed: paintPup resolves through the cast now, so
@@ -1430,8 +1438,12 @@ function renderGame(dt) {
          walking a Pug */
       paintPup(c, G.cell * .94, activePet() ? castSlot(activePet().breed) : 0);
     } else {
+      /* A tile that has just been matched grins and jumps before it
+         goes. The board was a grid of identical polite smiles clearing
+         in silence; this is the half-second where the thing you did
+         lands, and it costs one more cached sprite per breed. */
       const sp = tileSprite(t.type, t.sp, G.cell * .90, SAVE.settings.marks,
-        t.blinkT > 0 && !t.dying);
+        t.blinkT > 0 && !t.dying, t.dying > 0);
       const w = sp._w;
       c.drawImage(sp, -w / 2, -w / 2, w, w);
       if (t.dying > 0) {

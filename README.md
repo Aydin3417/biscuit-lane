@@ -2803,3 +2803,35 @@ The board tiles got easier to tell apart rather than harder — at 48dp
 the eyes are the dominant feature, so cute proportions and small-size
 legibility turned out to want the same thing. A frame at 803 particles
 came back to about 3ms against 16.7.
+
+## A face that is actually feeling something
+
+Three expressions, all reading from the mood the room already computes.
+
+**The pupil opens and closes.** It widens when the animal is pleased or
+wants something and narrows when it is bored or half asleep — 1.16 down
+to .80 across the eight moods. It is the cheapest expression in the
+whole face: nothing else has to move and the pet still looks like it is
+feeling something.
+
+**The blush follows.** Strong when happy, faint on a miserable or tired
+one, gone almost entirely when bored. A fixed blush on a starving animal
+is the same mistake as a fixed ear — a face wearing an expression it
+does not have.
+
+**And a matched tile grins and jumps.** The board was a grid of
+identical polite smiles clearing in silence. A cleared tile now gets an
+open mouth, perked ears, a wide pupil and a hop with a tilt in it —
+`popScale()` alone swells it in place, which is a balloon inflating,
+where a hop off the floor is a small animal pleased with itself. It
+costs one more cached sprite per breed, keyed like the blink variant
+already was.
+
+### And a revert
+
+The two changes before these made it worse, so they are gone: the head
+went back to .82 of the body from .89, which had tipped the seated
+animals into bobbleheads, and the tabby marks went back to where they
+were. The second one is a shame — the high cheek bars really did stop
+the Marmalade reading wide — but it took the character out of the face
+to do it, and a plainer face is a worse trade than a slightly broad one.

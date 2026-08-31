@@ -78,6 +78,12 @@ function drawPip(c, kind, x, y, r, col) {
    `rot` turns the ear about its base, positive being outward and down.
    `droop` shortens it, which is what a tired ear does. `out` slides it
    off the skull a little for the alert poses. */
+/* how wide the pupil opens, by mood */
+const PUPIL_DILATE = {
+  happy: 1.16, content: 1, hungry: 1.12, lonely: .94,
+  dirty: .95, bored: .86, tired: .80, sleeping: .78
+};
+
 const EAR_POSE = {
   happy:    { rot: -.13, out: .020, droop: -.04 },
   content:  { rot: 0, out: 0, droop: 0 },
@@ -272,22 +278,21 @@ function drawMarkings(c, spec, s) {
   c.save();
   headPath(c, spec, s); c.clip();
   if (b.mark === 'tabby') {
-    c.fillStyle = rgba(spec.fur2, .52);
-    /* The M rides high in the forehead the big eyes opened up, and the
-       cheek bars moved up off the widest line of the head — run across
-       it they read as width, which is what made this the broadest face
-       of the six when it is meant to be the daintiest. */
-    taperMark(c, -.05 * s, -.30 * s, -.13 * s, -.40 * s, -.18 * s, -.47 * s, s * .048, s * .010);
+    c.fillStyle = rgba(spec.fur2, .58);
+    /* the forehead's M, fanning out from the brow rather than three
+       parallel scratches */
+    taperMark(c, -.05 * s, -.22 * s, -.13 * s, -.34 * s, -.17 * s, -.44 * s, s * .052, s * .012);
     c.fill();
-    taperMark(c, 0, -.32 * s, 0, -.42 * s, 0, -.50 * s, s * .046, s * .010);
+    taperMark(c, 0, -.24 * s, 0, -.36 * s, 0, -.47 * s, s * .050, s * .011);
     c.fill();
-    taperMark(c, .05 * s, -.30 * s, .13 * s, -.40 * s, .18 * s, -.47 * s, s * .048, s * .010);
+    taperMark(c, .05 * s, -.22 * s, .13 * s, -.34 * s, .17 * s, -.44 * s, s * .052, s * .012);
     c.fill();
-    c.fillStyle = rgba(spec.fur2, .40);
+    /* cheek bars, curving back with the cheek */
+    c.fillStyle = rgba(spec.fur2, .46);
     [-1, 1].forEach(sx => {
-      taperMark(c, sx * .30 * s, -.26 * s, sx * .38 * s, -.24 * s, sx * .43 * s, -.17 * s, s * .040, s * .012);
+      taperMark(c, sx * .25 * s, -.13 * s, sx * .36 * s, -.14 * s, sx * .44 * s, -.09 * s, s * .046, s * .014);
       c.fill();
-      taperMark(c, sx * .33 * s, -.13 * s, sx * .40 * s, -.11 * s, sx * .45 * s, -.05 * s, s * .036, s * .011);
+      taperMark(c, sx * .27 * s, .01 * s, sx * .37 * s, .02 * s, sx * .44 * s, .06 * s, s * .042, s * .013);
       c.fill();
     });
   } else if (b.mark === 'patch') {
@@ -464,9 +469,14 @@ function drawEye(c, x, y, r, spec, o, side) {
      fills the eye — every cat anyone has ever put on a T-shirt has one.
      The cat keeps a taller-than-wide shape so it is still a cat's eye,
      but it is wide enough to read as pupil rather than as a knife. */
+  /* A pupil is not a fixed hole. It opens when an animal is pleased or
+     wants something and closes when it is bored or half asleep, and it
+     is the cheapest expression in the whole face — nothing else here
+     moves and the pet still looks like it is feeling something. */
+  const dil = PUPIL_DILATE[(o && o.mood) || 'content'] || 1;
   c.fillStyle = '#17141B';
-  if (spec.breed.species === 'cat') ellipse(c, dx, dy, rx * .50, ry * .70);
-  else ellipse(c, dx, dy, rx * .54, ry * .56);
+  if (spec.breed.species === 'cat') ellipse(c, dx, dy, rx * .50 * dil, ry * .70 * dil);
+  else ellipse(c, dx, dy, rx * .54 * dil, ry * .56 * dil);
   c.fill();
 
   /* the lid: what stops an eye looking like a bead */
@@ -629,10 +639,21 @@ function drawNoseMouth(c, spec, s, o) {
   }
 }
 
-function drawBlush(c, spec, s) {
-  c.fillStyle = rgba('#E88494', PAL.dark ? .26 : .3);
-  ellipse(c, -.27 * s, .12 * s, .10 * s, .062 * s); c.fill();
-  ellipse(c, .27 * s, .12 * s, .10 * s, .062 * s); c.fill();
+/* Colour in the cheeks, by how it feels. A flat blush on a miserable
+   animal is the same mistake as a fixed ear: the face wearing an
+   expression it does not have. */
+const BLUSH_BY_MOOD = {
+  happy: 1.35, content: 1, hungry: .85, lonely: .55,
+  dirty: .55, bored: .5, tired: .4, sleeping: .7
+};
+function drawBlush(c, spec, s, o) {
+  const k = BLUSH_BY_MOOD[(o && o.mood) || 'content'];
+  const a = (PAL.dark ? .26 : .3) * (k === undefined ? 1 : k);
+  if (a < .02) return;
+  const w = .10 * s * (k > 1 ? 1.12 : 1);
+  c.fillStyle = rgba('#E88494', a);
+  ellipse(c, -.27 * s, .12 * s, w, .062 * s); c.fill();
+  ellipse(c, .27 * s, .12 * s, w, .062 * s); c.fill();
 }
 
 /* ---------------- hats ---------------- */
@@ -782,7 +803,7 @@ function drawFace(c, spec, s, o) {
     rgba(shade(spec.fur, .16), .45));
   c.restore();
 
-  drawBlush(c, spec, s);
+  drawBlush(c, spec, s, o);
   const look = lookOf(spec);
   drawBrows(c, spec, s);
   drawEye(c, -look.x * s, look.y * s, look.r * s, spec, o, -1);
@@ -1042,9 +1063,7 @@ function drawBody(c, spec, s, o) {
   c.save();
   c.translate(0, .02 * s + drop + breath * .012 * s);
   if (o.headTilt) c.rotate(o.headTilt);
-  /* the last piece of the baby schema is the head being too big for the
-     body it sits on */
-  drawFace(c, spec, s * (.89 + gb.head), o);
+  drawFace(c, spec, s * (.82 + gb.head), o);
   c.restore();
 
   c.restore();
@@ -1053,9 +1072,9 @@ function drawBody(c, spec, s, o) {
 /* ---------------- tiles ---------------- */
 const SP = { NONE: 0, ROW: 1, COL: 2, BOMB: 3, RAIN: 4 };
 const spriteCache = new Map();
-function tileSprite(type, sp, px, marks, blink) {
+function tileSprite(type, sp, px, marks, blink, cheer) {
   const key = type + '|' + sp + '|' + Math.round(px) + '|' + (marks ? 1 : 0)
-    + '|' + (blink ? 'b' : '_') + '|' + (PAL.dark ? 'd' : 'l')
+    + '|' + (blink ? 'b' : '_') + '|' + (cheer ? 'c' : '_') + '|' + (PAL.dark ? 'd' : 'l')
     /* who is standing in the slot, and in what coat: adopting a pet or
        buying it a new coat has to reach the board */
     + '|' + (typeof CAST_SIG === 'string' ? CAST_SIG : '');
@@ -1069,7 +1088,7 @@ function tileSprite(type, sp, px, marks, blink) {
   const c = cv.getContext('2d');
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   c.translate(W / 2, W / 2);
-  paintTile(c, type, sp, px, marks, blink);
+  paintTile(c, type, sp, px, marks, blink, cheer);
   cv._pad = pad; cv._w = W;
   spriteCache.set(key, cv);
   return cv;
@@ -1118,7 +1137,7 @@ function clearSprites() {
 }
 EV.on('cast', clearSprites);
 
-function paintTile(c, type, sp, px, marks, blink) {
+function paintTile(c, type, sp, px, marks, blink, cheer) {
   /* the look belongs to whoever is standing in the slot, not to the slot */
   const breed = slotBreed(type);
   const b = BREEDS[breed];
@@ -1210,7 +1229,9 @@ function paintTile(c, type, sp, px, marks, blink) {
   const shape = tileShape(breed);
   c.save();
   c.translate(0, s * (.015 + shape.faceY));
-  drawFace(c, spec, s * .715 * shape.faceScale, { mouth: 'smile', blink: blink ? 1 : 0 });
+  /* a matched tile is having the best moment of its short life */
+  drawFace(c, spec, s * .715 * shape.faceScale,
+    { mouth: cheer ? 'open' : 'smile', blink: blink ? 1 : 0, mood: cheer ? 'happy' : 'content' });
   c.restore();
 
   /* the casing goes on last, around the outside */
