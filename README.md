@@ -1976,3 +1976,56 @@ you do something and should put that first — the Family screen used to
 sit the adopt card underneath nineteen trophy cards. Bringing another
 animal home is what that screen is for. It comes second now, after the
 family it would join, and the shelf comes last.
+
+## Zeynep'a
+
+The Turkish string table is careful writing. Moods read like somebody
+watching an animal rather than like a translation — *Raftan üç şey
+düşürdü bile*, *Derin bir hakarete uğradı. Mis gibi kokuyor.* And nearly
+every line that mentions the pet keeps its name in the nominative, which
+in Turkish is the only way to use a name you did not choose:
+
+```
+{name} büyüdü!          {name} ile bağ          Hoş geldin {name}
+```
+
+One line broke the rule:
+
+```
+Hazır — {name}’a dokun
+```
+
+Turkish puts the case on the end of the noun, and the dative agrees with
+the last vowel: a, ı, o, u take **-a**; e, i, ö, ü take **-e**. A name
+ending in a vowel takes a buffer *y* first. So that line was right for
+Marlow and wrong for Zeynep'a, Şeker'a, Gül'a and Ayşe'a — and the name
+is whatever the player typed on the fourth screen of the game.
+
+`trDative()` is twelve lines and gets it right:
+
+```
+Marlow → Marlow’a     Zeynep → Zeynep’e     Şeker → Şeker’e
+Ayşe   → Ayşe’ye      Mila   → Mila’ya      Ali   → Ali’ye
+```
+
+The English string is untouched and both tables still carry the same
+placeholders, because what changes is the value passed in, not the
+sentence.
+
+## Verdicts against an intent
+
+`test/ai.js` printed a verdict per level: BRUTAL under 34% cleared,
+TRIVIAL over 96%. Those were reasonable when no level had an intended
+difficulty. Against a designed curve they are nonsense — a gate is *for*
+being near sixty and a relief is *for* being near ninety-five, and
+calling the relief trivial is calling the design a bug.
+
+It reports the distance from the intent now: the target beside the
+measurement, the average miss, the bias, and which levels are more than
+ten points plus two standard errors away from where they were aimed. The
+absolute bands survive only where they still mean something on their
+own — a level nobody can clear and a level nobody can lose are faults
+whatever they were aimed at, so those thresholds moved to 18% and 99.5%.
+
+Measured over levels 18-24 at sixteen games each: average miss 6%, bias
++2%, nothing off its mark.

@@ -135,8 +135,8 @@ if (process.env.STARS) {
 }
 const A = +(process.argv[2] || 1), Bn = +(process.argv[3] || 40), N = +(process.argv[4] || 12);
 const rows = [];
-console.log('lvl  goal              mv  clear%  avgScore  star3%  medLeft  verdict');
-console.log('---  ----------------  --  ------  --------  ------  -------  -------');
+console.log('lvl  goal                   mv  want  clear%  avgScore  star3%  medLeft  verdict');
+console.log('---  ---------------------  --  ----  ------  --------  ------  -------  -------');
 for (let n = A; n <= Bn; n++) {
   const def = levelDef(n);
   let wins = 0, scoreSum = 0, star3 = 0;
@@ -153,17 +153,40 @@ for (let n = A; n <= Bn; n++) {
   /* leftover moves judged against the budget: six spare on a twenty-move
      level is a different thing from six spare on a thirty-six-move one */
   const spare = medLeft / def.moves;
+
+  /* Every level has a stated intent now — targetClear(n) — so "hard" and
+     "easy" are no longer opinions about an absolute number. They are the
+     distance between what the level was aimed at and where it landed,
+     which is the only thing worth reporting once the aiming exists.
+
+     The old bands called any level under 34% BRUTAL and any level over
+     96% TRIVIAL. Both are wrong against a designed curve: a gate is
+     meant to be near sixty and a relief is meant to be near ninety-five,
+     and calling the relief trivial is calling the design a bug.
+
+     The absolute bands survive only where they mean something on their
+     own: a level nobody can clear and a level nobody can lose are faults
+     whatever they were aimed at. */
+  const want = targetClear(n);
+  const off = rate - want;
+  /* the spread on a clear rate over N games; a miss inside it is a coin */
+  const noise = Math.sqrt(Math.max(rate * (1 - rate), .04) / N);
   let verdict = 'ok';
-  if (rate < .34) verdict = 'BRUTAL';
-  else if (rate < .55) verdict = 'hard';
-  else if (rate > .96 && spare >= .33) verdict = 'TRIVIAL';
-  else if (rate > .9) verdict = 'easy';
+  if (rate < .18) verdict = 'BRUTAL';
+  else if (rate > .995 && spare >= .40) verdict = 'TRIVIAL';
+  else if (off < -2 * noise - .10) verdict = 'harder';
+  else if (off > 2 * noise + .10) verdict = 'easier';
   const goalTxt = def.goals.map(g => g[0] + (g[0] === 'collect' ? g[1] : '') + ':' + g[2]).join(' ');
-  rows.push({ n, rate, verdict, star3: star3 / N, medLeft });
+  rows.push({ n, rate, want, off, verdict, star3: star3 / N, medLeft });
   console.log(
-    String(n).padEnd(4) +
-    goalTxt.padEnd(18).slice(0, 18) +
+    String(n).padEnd(5) +
+    /* padEnd then slice to the same width leaves no gap when the text
+       is exactly that long, and the goal ran into the move count:
+       "rescue:1 score:9500" and 34 moves printed as "score:95034". One
+       character narrower than the field it sits in. */
+    goalTxt.padEnd(22).slice(0, 21) + ' ' +
     String(def.moves).padStart(2) + '  ' +
+    (Math.round(want * 100) + '%').padStart(4) + '  ' +
     (Math.round(rate * 100) + '%').padStart(6) + '  ' +
     String(Math.round(scoreSum / N)).padStart(8) + '  ' +
     (Math.round(star3 / N * 100) + '%').padStart(6) + '  ' +
@@ -171,6 +194,13 @@ for (let n = A; n <= Bn; n++) {
 }
 console.log('');
 const bad = rows.filter(r => r.verdict === 'BRUTAL' || r.verdict === 'TRIVIAL');
-console.log('overall clear rate  ' + Math.round(rows.reduce((a, r) => a + r.rate, 0) / rows.length * 100) + '%');
-console.log('three-star rate     ' + Math.round(rows.reduce((a, r) => a + r.star3, 0) / rows.length * 100) + '%');
+const wide = rows.filter(r => r.verdict === 'harder' || r.verdict === 'easier');
+const mean = f => rows.reduce((a, r) => a + f(r), 0) / rows.length;
+console.log('overall clear rate  ' + Math.round(mean(r => r.rate) * 100) + '%');
+console.log('three-star rate     ' + Math.round(mean(r => r.star3) * 100) + '%');
+console.log('average miss        ' + Math.round(mean(r => Math.abs(r.off)) * 100) + '%   ' +
+  'bias ' + (mean(r => r.off) >= 0 ? '+' : '') + Math.round(mean(r => r.off) * 100) + '%');
+console.log('off their mark      ' + (wide.length
+  ? wide.map(r => r.n + '(' + r.verdict + ' ' + (r.off > 0 ? '+' : '') + Math.round(r.off * 100) + ')').join(', ')
+  : 'none'));
 console.log('needs attention     ' + (bad.length ? bad.map(r => r.n + '(' + r.verdict + ')').join(', ') : 'none'));

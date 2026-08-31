@@ -314,7 +314,7 @@ const STRINGS = {
     lvl_buy_hearts: '{n} ödülle doldur',
 
     g_moves: 'hamle', g_score: 'Puan',
-    g_charge_ready: 'Hazır — {name}’a dokun',
+    g_charge_ready: 'Hazır — {name} dokun',
     g_charge_need: 'Doldurmak için {breed} eşle',
     g_charge_swap: '{name} bu tahtada {breed} peşinde',
     lvl_charges: 'Hamlesini dolduran',
@@ -464,6 +464,39 @@ const STRINGS = {
 };
 
 let LANG = 'en';
+/* Turkish puts the case on the end of the noun, and the noun here is a
+   name the player typed.
+
+   "Hazır — {name}'a dokun" had the suffix written into the string, so
+   it was right for Marlow and wrong for everybody whose name has front
+   vowels: Zeynep'a, Pamuk'e, Şeker'a. Every other line in the Turkish
+   table sidesteps this by keeping the name in the nominative — "{name}
+   büyüdü", "{name} ile bağ" — which is careful writing, and this one
+   line was the exception.
+
+   The dative agrees with the last vowel of the word: a, ı, o, u take
+   -a; e, i, ö, ü take -e. A name that ends in a vowel takes a buffer y
+   first, and a proper noun takes an apostrophe before the suffix. That
+   is the whole rule for this case, and it is worth the twelve lines
+   rather than asking players not to be called Zeynep. */
+const TR_BACK = 'aıouâû', TR_FRONT = 'eiöüî';
+function trDative(name) {
+  const w = String(name || '').toLocaleLowerCase('tr');
+  let last = '';
+  for (let i = w.length - 1; i >= 0; i--) {
+    if (TR_BACK.indexOf(w[i]) >= 0 || TR_FRONT.indexOf(w[i]) >= 0) { last = w[i]; break; }
+  }
+  const suffix = TR_FRONT.indexOf(last) >= 0 ? 'e' : 'a';
+  const endsInVowel = w.length > 0 &&
+    (TR_BACK.indexOf(w[w.length - 1]) >= 0 || TR_FRONT.indexOf(w[w.length - 1]) >= 0);
+  return '’' + (endsInVowel ? 'y' : '') + suffix;
+}
+
+/* the name as the sentence needs it: in Turkish, with the case on it */
+function petDative(name) {
+  return LANG === 'tr' ? name + trDative(name) : name;
+}
+
 function T(key, vars) {
   let s = (STRINGS[LANG] && STRINGS[LANG][key]) || STRINGS.en[key] || key;
   if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);

@@ -352,7 +352,7 @@ function syncHud() {
   $('#companion').classList.toggle('ready', ready && !G.over);
   $('#chargeBar').style.width = clamp(G.charge, 0, 100) + '%';
   $('#chargeLbl').innerHTML = ready
-    ? '<b>' + T('g_charge_ready', { name: pet ? pet.name : '' }) + '</b>'
+    ? '<b>' + T('g_charge_ready', { name: petDative(pet ? pet.name : '') }) + '</b>'
     : chargeHint(pet);
 }
 /* What to match, and never a tile the board does not deal. When the
