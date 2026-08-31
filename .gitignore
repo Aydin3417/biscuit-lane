@@ -1,6 +1,9 @@
 # Screenshots and captures the dev tools write while working.
 # Thirty-seven megabytes of working debris, regenerable with tools/shots.js.
 shots/
+# except the palette comparison, which is evidence for a decision
+!shots/palette/
+!shots/palette/*.png
 
 # One-off patch scripts. Each one edited the source once and has no
 # second use; they are kept on disk as a record, not as part of the project.

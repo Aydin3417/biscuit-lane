@@ -155,6 +155,30 @@ Do not pad the list. Six sharp findings beat twenty soft ones.`;
   } catch (e) { palette = (e.stdout || '') + (e.stderr || ''); }
   parts.push('\nThe palette, measured:\n\n' + palette);
 
+  /* Standing question 1 has been searched and rendered, so the round
+     asks "which of these reads as this game" rather than "what should
+     the colours be". Sending the boards matters more than sending the
+     hex codes: the cost of the candidate is visible and not measurable. */
+  const candFile = path.join(ROOT, 'design', 'palette-candidates.json');
+  const boards = path.join(ROOT, 'shots', 'palette');
+  if (fs.existsSync(candFile) && fs.existsSync(boards)) {
+    parts.push('\nOn standing question 1 the palette was searched rather than argued about. ' +
+      'Holding every hue where it is and moving only lightness and saturation, the worst ' +
+      'pair across normal vision and three kinds of colour blindness goes from 5.2 to 32.1, ' +
+      'and normal-vision separation improves too. The numbers:\n\n' +
+      fs.readFileSync(candFile, 'utf8'));
+    const shots = fs.readdirSync(boards).filter(f => f.endsWith('-board.png')).sort();
+    shots.forEach(f => {
+      parts.push('\nshots/palette/' + f + (/^today/.test(f)
+        ? ' - the board as it ships today'
+        : ' - the same board with a candidate palette applied'));
+      parts.push(path.join(boards, f));
+    });
+    parts.push('\nJudge those boards as a player would. The measured win is real; so is ' +
+      'the cost, which is that two tiles go pale and lose the jewel quality the others ' +
+      'keep. Say which way this should go and why.');
+  }
+
   parts.push('\nNow judge it against the direction. Answer the standing questions you can.');
 
   console.log('model: ' + await pickModel() + ', ' +
