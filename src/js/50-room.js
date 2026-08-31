@@ -534,6 +534,16 @@ function drawMap() {
        edge hangs half of itself off the screen */
     const at = (d, half) => clamp(n.x + side * d, (half || 20) + 6, W - (half || 20) - 6);
     const y = n.y + 16;
+    /* The end of a block gets a gate on the verge instead of whatever
+       the roll said. It is the one place on this lane where something
+       happens, and the map used to mark it with a ring around the node
+       and nothing in the world. It stands open once the level behind it
+       is cleared. */
+    if (typeof isGate === 'function' && isGate(n.n)) {
+      drawGateway(c, at(KERB + 52, 34), y + 8, 64, SAVE.stars[n.n] > 0);
+      if (r() > .45) drawBush(c, clamp(n.x - side * (KERB + 20 + r() * 40), 24, W - 24), y + 22, 9 + r() * 6);
+      return;
+    }
     if (kind === 0) drawTree(c, at(KERB + 34 + r() * 30, 26), y + 6, 28 + r() * 18, n.n * .7);
     else if (kind === 1) drawCottage(c, at(KERB + 62 + r() * 34, 30), y, 38 + r() * 14, n.n);
     else if (kind === 2) {

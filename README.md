@@ -2060,3 +2060,31 @@ Leaving the debounce alone was deliberate. Removing it would fix the
 symptom by making every drag of a desktop window rebuild the map, the
 sprite cache and the palette — a real cost, every frame, to avoid a
 cosmetic fault that lasts an eighth of a second.
+
+## A gate you can walk through
+
+Every tenth level is a gate. The map said so with a dashed ring around
+the node — which is a label, not a place. The lane itself had no idea
+anything happened there: three hundred levels of the same five props,
+with nothing to walk past and remember.
+
+So there is a gate in the hedge now, at the end of every block. It
+stands shut while the level in front of it is unbeaten and swings open
+once it is cleared, so scrolling back down the lane shows every gate you
+have come through standing open behind you.
+
+Two goes at drawing it, both wrong for the same reason and worth writing
+down.
+
+**An open gate cannot be a rotated gate.** The first version hinged the
+panel and rotated it forty-five degrees, which is what a gate does. In a
+flat elevation like this map it reads as a ladder falling over. Swung
+*toward* the viewer it foreshortens instead: same gate, narrow, still
+upright, still on its hinge, and instantly legible.
+
+**It cannot borrow the fence's colours.** The fence is drawn in cream at
+a hairline weight and reads perfectly, because a fence is a repeated row
+of pales — the eye reads the texture, not the line. One gate at that
+weight is three pale strokes on green and reads as nothing at all. In
+wood, one size up, with the ground shadow every other prop on this lane
+has, it reads as a gate from across the screen.

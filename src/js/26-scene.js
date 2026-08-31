@@ -1077,6 +1077,71 @@ function drawBush(c, x, y, s) {
   [[-.2, -.24], [.25, -.16], [0, -.34]].forEach(p => { ellipse(c, p[0] * s, p[1] * s, s * .07, s * .06); c.fill(); });
   c.restore();
 }
+/* A gate on the verge, at the end of every block.
+
+   The tenth level of each block is a gate, and the map said so with a
+   dashed ring around the node. A ring is a label. The lane itself had no
+   idea anything happened there — three hundred levels of the same five
+   props, with nothing to walk past and remember.
+
+   So there is a gate in the hedge. It stands shut while the level in
+   front of it is unbeaten and swings open once it is cleared, which
+   means scrolling back down the lane shows every gate you have come
+   through standing open behind you.
+
+   Drawn in the fence's own hand — the same two colours, the same round
+   caps, the same weight of line — because it is the same fence. */
+function drawGateway(c, x, y, s, open) {
+  /* Wood, not fence-cream. The first version borrowed the fence's own
+     colours, and a fence reads at that weight because it is a repeated
+     row of pales — a texture. One gate at the same weight is three pale
+     lines on green and reads as nothing at all. */
+  const post = PAL.dark ? '#7A6446' : '#9A7748';
+  const rail = PAL.dark ? '#8B7350' : '#B08B57';
+  c.save(); c.translate(x, y);
+  c.lineCap = 'round';
+
+  /* the ground shadow every other prop on this lane has */
+  c.fillStyle = rgba('#2A1E12', PAL.dark ? .32 : .14);
+  ellipse(c, 0, 2, s * .60, s * .10); c.fill();
+
+  /* the two posts it hangs between, heavier than a fence pale */
+  c.lineWidth = s * .11;
+  c.strokeStyle = post;
+  [-1, 1].forEach(sd => {
+    c.beginPath(); c.moveTo(sd * s * .5, 0); c.lineTo(sd * s * .5, -s * .62); c.stroke();
+    c.fillStyle = post;
+    c.beginPath(); c.arc(sd * s * .5, -s * .64, s * .06, 0, Math.PI * 2); c.fill();
+  });
+
+  /* The gate, hinged on the left post.
+
+     An open gate was first drawn by rotating the panel about its hinge,
+     which in a flat elevation like this one reads as a ladder falling
+     over rather than as a gate standing open. Swung toward the viewer
+     it foreshortens instead: the same gate, narrow, still upright,
+     still on its hinge. */
+  const w = (open ? .30 : .96) * s;
+  const h = s * .46;
+  c.save();
+  c.translate(-s * .5, -s * .10);
+  c.strokeStyle = rail;
+  c.lineWidth = s * .065;
+  c.beginPath(); c.moveTo(0, 0); c.lineTo(w, 0); c.stroke();
+  c.beginPath(); c.moveTo(0, -h); c.lineTo(w, -h); c.stroke();
+  /* the diagonal brace every wooden gate has */
+  c.lineWidth = s * .05;
+  c.beginPath(); c.moveTo(0, 0); c.lineTo(w, -h); c.stroke();
+  c.lineWidth = s * .055;
+  const bars = open ? 2 : 4;
+  for (let i = 0; i <= bars; i++) {
+    const px = (w / bars) * i;
+    c.beginPath(); c.moveTo(px, .02); c.lineTo(px, -h - .02); c.stroke();
+  }
+  c.restore();
+  c.restore();
+}
+
 function drawFence(c, x, y, s) {
   c.save(); c.translate(x, y);
   c.strokeStyle = PAL.dark ? '#6A5B48' : '#EDE0C6';
