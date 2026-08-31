@@ -28,7 +28,23 @@ const G = {
 /* Shared by layoutBoard and the self-heal check in renderGame — if the
    two ever disagreed the board would re-layout every frame and throw the
    sprite cache away with it. */
-const BOARD_PAD = 14;
+/* The tray's inner margin.
+
+   Measured, the board is width-bound on every portrait phone and never
+   height-bound — 47dp available across against 75dp down on a Pixel 7
+   Pro — so the lane above it is not competing with it for room, and
+   shrinking that scene would buy the board nothing at all. The only
+   dimension left is this one.
+
+   It is also the width of the tray's own frame, which drawTray() drew
+   at a hardcoded 11 while this said 14 — so the frame had three pixels
+   of slack it never used. Taking the padding down to the frame's own
+   width is a free dp of tile on a big phone and one on a 320px one,
+   where a 35dp tile was the thing most likely to take the wrong swipe.
+   The two are one number now: set this below the frame width and the
+   tray gets clipped by the canvas, which is exactly what happened the
+   first time this was tried at 8. */
+const BOARD_PAD = 11;
 function boardCellFor(wrap, B) {
   if (!wrap || !B || wrap.clientWidth <= 0) return 0;
   return Math.max(22, Math.floor(Math.min(
@@ -1345,7 +1361,7 @@ function renderGame(dt) {
   c.translate(-G.cw / 2, -G.ch / 2);
 
   /* the tray the board sits in */
-  drawTray(c, G.ox, G.oy, G.boardW, G.boardH, 11);
+  drawTray(c, G.ox, G.oy, G.boardW, G.boardH, BOARD_PAD);
 
   /* cells */
   eachCell(B, (cell, r, c2) => {

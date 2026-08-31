@@ -2402,3 +2402,72 @@ the previous run refuses a bind too, and the suite then navigated to a
 port with nothing behind it and blamed the page. It asks now, by
 fetching the manifest, and retries briefly before giving up with a
 sentence that names the actual problem.
+
+## Where the scale sat
+
+The type scale was right and its position was wrong. Six sizes, all from
+one ladder — that part had already been fixed, and it held. But measured
+on a phone rather than looked at on a desktop: **thirty-one of the
+forty-three strings on the home screen were under 12px, and twenty-seven
+of those were 11px.** So 11 was not the caption size. It was the size of
+most of the game, with 9.5px underneath it for the wordmark's subtitle.
+
+iOS asks for 11pt as a floor and Material for about 12sp as a body size.
+The old scale used the floor as its middle. Everything is one step up
+now — 11 / 12.5 / 14 / 16 / 18 / 23 / 28 — and the count under 12px went
+from thirty-one to four, which are the four that should be there.
+
+And in `rem`. The stylesheet had 535 lengths in px and not one rem, so a
+player who had turned their phone's text size up got the same 11px as
+everybody else — the setting did nothing at all. Type is relative now;
+spacing and radii stay in px deliberately, so turning the text up grows
+the words inside the boxes instead of pushing the layout apart. Measured
+at 1.0x, 1.15x and 1.3x on both a 412px and a 320px screen: text grows
+from 18px to 23.4px, and nothing overflows or is cut off.
+
+## The thumb is bigger than the button
+
+Measured against the 48dp both platforms ask for: the settings gear was
+34x34, and the three purse chips were 32 tall. The tab bar and the
+buttons were already fine.
+
+Growing them to 48 would have made a top bar of four fat lozenges, so
+the drawn size stays and the target grows underneath — a transparent box
+centred on the control. Verified with `elementFromPoint` rather than
+assumed: a tap seven pixels above or below a purse chip now lands on the
+chip, and the gear catches from 0 to 6dp past its own edge, which is the
+48dp box less the boundary pixel.
+
+Only vertically for the chips. Three of them sit side by side and a
+wider target would take its neighbour's taps.
+
+## The tray and the padding were the same number, written twice
+
+The board is width-bound on every portrait phone and never height-bound
+— 47dp of tile available across against 75dp down on a Pixel 7 Pro. So
+the lane above the board is not competing with it for room, and the
+obvious idea, shrinking that scene to grow the board, buys exactly
+nothing. The only dimension left was the tray's inner margin.
+
+`BOARD_PAD` said 14 and `drawTray()` drew its frame at a hardcoded 11,
+so three pixels of the padding were doing nothing. Taking BOARD_PAD to
+8 to claim them clipped the frame by three pixels on every side —
+rounded corners, bolts and all — which is what a screenshot showed and
+no test did. They are one number now: BOARD_PAD is 11, drawTray is
+passed it, and setting it below the frame width can no longer be done
+by accident.
+
+Tiles went from 47dp to 48 on a Pixel 7 Pro, and from 35dp to 36 on a
+320px screen, where a 35dp tile was the thing most likely to take the
+wrong swipe.
+
+## The colour that failed on three surfaces
+
+`--text-faint` in the day theme was reported here as one contrast
+failure. It was three: 4.14:1 on the page ground, and 4.00, 3.53 and
+3.46 on the three card surfaces it also sits on. The night theme passed
+everything, lowest at 4.95:1.
+
+It is `#6D5C49` now, which clears 4.5:1 on every surface in the theme —
+5.40 on the ground, 4.51 at the worst. Same hue, four steps darker.
+Fifteen of sixteen token pairs passed before; sixteen of sixteen do now.
