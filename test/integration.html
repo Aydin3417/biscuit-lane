@@ -908,6 +908,26 @@ async function run() {
     if (mPeak > peaks.win) bad.push('the music (' + mPeak.toFixed(3) +
       ') is louder than winning (' + peaks.win.toFixed(3) + ')');
 
+    /* An absolute band, which is the one thing every check above misses.
+
+       Everything else here is relative: the chain louder than the match,
+       the music quieter than the win, no sound silent, none clipped. Turn
+       the whole mix down twenty decibels and all of those still pass —
+       and that is not hypothetical, it is what a DynamicsCompressor
+       chained as a limiter did to this game. It cost .018 peak against
+       .006 on quiet material and was found by hand, three experiments
+       deep, because nothing could hear it.
+
+       Measured, the loudest sound peaks at .34 and the music sits at
+       .018 RMS. The bands are wide enough that ordinary sound design
+       moves inside them and narrow enough that a stage which has
+       silently stopped passing signal cannot. */
+    const loudest = Math.max.apply(null, Object.values(peaks));
+    if (loudest < .18) bad.push('the whole mix has collapsed (loudest sound peaks ' + loudest.toFixed(3) + ')');
+    if (loudest > .85) bad.push('no headroom left (loudest sound peaks ' + loudest.toFixed(3) + ')');
+    if (mRms < .006) bad.push('the music has thinned out (rms ' + mRms.toFixed(4) + ')');
+    if (mRms > .06) bad.push('the music is too loud to sit under anything (rms ' + mRms.toFixed(4) + ')');
+
     assert(!bad.length, bad.slice(0, 4).join('; '));
     return cases.length + ' sounds, peaks ' +
       Math.min.apply(null, Object.values(peaks)).toFixed(3) + '-' +
