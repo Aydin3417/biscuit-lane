@@ -2369,3 +2369,52 @@ been taught the same lesson by crates once already: the board-invariant
 check counted the cell under a hill as empty, and the solver scored only
 *closed* hills, so a greedy player got no credit for the first two hits
 on a three-layer one and therefore never made them.
+
+### Three sources of variance, one lever
+
+Calibrated and dropped into the run, molehill levels missed their
+targets by 22% on average — and worse than the average, they were
+*unpredictable*. Levels identical in board size, tile count, hill count
+and move budget measured anywhere from 25% to 91% cleared.
+
+Each round of that came from the same mistake in a different place: the
+mechanic had more than one thing varying, so the move budget could not
+steer it.
+
+**The count.** Two to four hills. A hill is a large fraction of a level,
+and three against four moved the clear rate further than the entire move
+budget did. Fixed at three.
+
+**The edges.** A hill is closed from beside it, so its difficulty is
+decided by how many sides it has: three against a wall, two in a corner,
+four in the open. Hills are placed in the interior only — the same
+lesson the corner cells taught the mud and crate goals.
+
+**The depth.** Three in ten hills were built three layers deep, and a
+three-layer hill that heals is not a harder version of a two-layer one,
+it is a different mechanic. All hills are two.
+
+Even then it sat at 17%, and the reason was the mechanic itself rather
+than the generator: at a four-move cycle, three self-healing hills need
+two hits each inside their own window, three times over, and at the
+budget the model chose that came to eighteen moves. That is not
+difficulty, it is a coin, and where the three hills happened to land
+decided it. The cycle is five moves now.
+
+```
+                  before      after
+average miss      22%         5%      (sampling noise alone is 9%)
+worst level       43%         17%
+range measured    25-91%      78-94%
+```
+
+The cost is that molehills are rarer: the curve's floor rose to 75%, so
+the generator only assigns them to levels that want a high clear rate,
+and they appear on about one level in twelve past 76 rather than one in
+four. A mechanic that lands within the noise on every level it takes is
+worth more than one that appears twice as often and builds walls.
+
+`test/calibrate.js --only=mole` was written for this: re-measuring one
+kind is ten minutes against an hour for all seven, and it merges into the
+curve that is already there rather than replacing it. Four rounds of
+measure-change-measure would not have happened at an hour each.

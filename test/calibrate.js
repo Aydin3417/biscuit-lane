@@ -30,7 +30,13 @@ const SCALES = [.55, .68, .80, .92, 1.0, 1.12, 1.28, 1.50];
    model for a whole goal type */
 const SAMPLES = 5;
 
-const KINDS = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE, GK.MOLE];
+const ALL_KINDS = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE, GK.MOLE];
+/* Re-measuring one kind is ten minutes; re-measuring all seven is an
+   hour, and a change to how one goal is built has no business
+   invalidating the other six. --only merges into the curve that is
+   already there. */
+const ONLY = (process.argv.find(a => a.indexOf('--only=') === 0) || '').split('=')[1];
+const KINDS = ONLY ? ALL_KINDS.filter(k => k === ONLY) : ALL_KINDS;
 
 /* find generated levels of each kind to measure */
 function levelsOfKind(kind, want) {
@@ -54,7 +60,18 @@ console.log('measuring how each goal answers its move budget');
 console.log(GAMES + ' games a point, ' + SAMPLES + ' levels a kind, ' +
   SCALES.length + ' budgets — ' + (GAMES * SAMPLES * SCALES.length * KINDS.length) + ' games\n');
 
+/* With --only, the rows for every other kind are read back out of the
+   curve that is already there and carried forward untouched. A partial
+   file would silently delete six measured response curves. */
 const table = {};
+if (ONLY) {
+  try {
+    const prev = fs.readFileSync(path.join(__dirname, '..', 'src', 'js', '12-curve.js'), 'utf8');
+    const m = prev.match(/const CLEAR_AT = (\{[\s\S]*?\n\});/);
+    if (m) Object.assign(table, JSON.parse(m[1]));
+    delete table[ONLY];
+  } catch (e) { console.log('mevcut eğri okunamadı: ' + e.message); }
+}
 KINDS.forEach(kind => {
   const levels = levelsOfKind(kind, SAMPLES);
   if (!levels.length) { console.log(kind + ': no generated levels found'); return; }

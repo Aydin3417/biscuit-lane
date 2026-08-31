@@ -709,7 +709,7 @@ const GEN = {
   collect: { base: 10500, moves: 30 },
   rescue:  { base: 10000, moves: 32 },
   score:   { base: 13400, moves: 30 },
-  mole:    { base: 9800,  moves: 32 }
+  mole:    { base: 9800,  moves: 36 }
 };
 
 /* Tiles a move is worth, measured by playing: a solver on a five-colour
@@ -907,11 +907,26 @@ function levelDef(n, ref) {
        nought to three percent cleared, because every hill heals every
        four moves and a player cannot be in six places at once. Three is
        where the mechanic is a race rather than a defeat. */
-    const wantHills = 2 + Math.min(2, Math.floor(tier * .5) + (r() < .4 ? 1 : 0));
+    /* Three, always.
+
+       The count was two to four, and a hill is a large fraction of a
+       level: three against four moved the clear rate further than the
+       whole move budget did, so the budget could not steer. One number
+       for the mechanic and one lever for the difficulty. */
+    const wantHills = 3;
     let guard = 0;
     while (hills.size < wantHills && guard++ < 200) {
+      /* Interior only.
+
+         A hill is closed from beside it, so how hard it is depends
+         entirely on how many sides it has. One against the right-hand
+         wall has three neighbours and one in a corner has two, which
+         made otherwise identical levels measure 34% and 88% — the same
+         lesson the corner cells taught the mud and crate goals. Keeping
+         every hill off the edges takes the variance out at the source
+         instead of pricing it afterwards. */
       const y = 1 + Math.floor(r() * (h - 2));
-      const x = Math.floor(r() * w);
+      const x = 1 + Math.floor(r() * (w - 2));
       let clash = false;
       hills.forEach(k => {
         const [hy, hx] = k.split(':').map(Number);
@@ -930,7 +945,16 @@ function levelDef(n, ref) {
         row += blob.has(y + ':' + x) ? 'v' : '.';
         continue;
       }
-      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += r() < .3 ? 'O' : 'o'; continue; }
+      /* Every hill the same depth.
+
+         Three in ten were being built three layers deep, and a
+         three-layer hill that heals is a different mechanic from a
+         two-layer one: levels on almost the same budget measured 34% and
+         100%. That was the third source of variance to come out of this
+         goal, after the count and the edges, and the rule each time was
+         the same — the mechanic is one thing and the move budget is the
+         only lever, or the budget cannot steer. */
+      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += 'o'; continue; }
       if (kind === GK.MUD && shaped.has(y + ':' + x)) { row += r() < GEN.mud.deep ? 'M' : 'm'; continue; }
       if (kind === GK.CRATE && shaped.has(y + ':' + x) && y > 0 && y < h - 1) {
         /* a goal counts crates, not hits, so a second layer is the only
@@ -1067,7 +1091,8 @@ function dailyLevel(reached, dayNo) {
   const r = mulberry(day * 2654435761 >>> 0);
   /* tier follows progress, so a new player is not handed a level 60 board */
   const tier = clamp(Math.floor((reached || 1) / 14), 0, 4);
-  const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE];
+  const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE]
+    .concat((reached || 1) >= MOLE_FROM ? [GK.MOLE] : []);
   const kind = kinds[Math.floor(r() * kinds.length)];
   const h = 9, w = 8;
   const key = kind === GK.BRAMBLE ? 'bramble' : kind;
@@ -1124,11 +1149,26 @@ function dailyLevel(reached, dayNo) {
        nought to three percent cleared, because every hill heals every
        four moves and a player cannot be in six places at once. Three is
        where the mechanic is a race rather than a defeat. */
-    const wantHills = 2 + Math.min(2, Math.floor(tier * .5) + (r() < .4 ? 1 : 0));
+    /* Three, always.
+
+       The count was two to four, and a hill is a large fraction of a
+       level: three against four moved the clear rate further than the
+       whole move budget did, so the budget could not steer. One number
+       for the mechanic and one lever for the difficulty. */
+    const wantHills = 3;
     let guard = 0;
     while (hills.size < wantHills && guard++ < 200) {
+      /* Interior only.
+
+         A hill is closed from beside it, so how hard it is depends
+         entirely on how many sides it has. One against the right-hand
+         wall has three neighbours and one in a corner has two, which
+         made otherwise identical levels measure 34% and 88% — the same
+         lesson the corner cells taught the mud and crate goals. Keeping
+         every hill off the edges takes the variance out at the source
+         instead of pricing it afterwards. */
       const y = 1 + Math.floor(r() * (h - 2));
-      const x = Math.floor(r() * w);
+      const x = 1 + Math.floor(r() * (w - 2));
       let clash = false;
       hills.forEach(k => {
         const [hy, hx] = k.split(':').map(Number);
@@ -1144,7 +1184,16 @@ function dailyLevel(reached, dayNo) {
     for (let x = 0; x < w; x++) {
       const v = r();
       if (kind === GK.BRAMBLE) { row += blob.has(y + ':' + x) ? 'v' : '.'; continue; }
-      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += r() < .3 ? 'O' : 'o'; continue; }
+      /* Every hill the same depth.
+
+         Three in ten were being built three layers deep, and a
+         three-layer hill that heals is a different mechanic from a
+         two-layer one: levels on almost the same budget measured 34% and
+         100%. That was the third source of variance to come out of this
+         goal, after the count and the edges, and the rule each time was
+         the same — the mechanic is one thing and the move budget is the
+         only lever, or the budget cannot steer. */
+      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += 'o'; continue; }
       if (kind === GK.MUD && shaped.has(y + ':' + x)) { row += r() < GEN.mud.deep ? 'M' : 'm'; continue; }
       if (kind === GK.CRATE && shaped.has(y + ':' + x) && y > 0 && y < h - 1) {
         row += r() < GEN.crate.deep ? 'C' : 'c';

@@ -2724,7 +2724,7 @@ const GEN = {
   collect: { base: 10500, moves: 30 },
   rescue:  { base: 10000, moves: 32 },
   score:   { base: 13400, moves: 30 },
-  mole:    { base: 9800,  moves: 32 }
+  mole:    { base: 9800,  moves: 36 }
 };
 
 /* Tiles a move is worth, measured by playing: a solver on a five-colour
@@ -2922,11 +2922,26 @@ function levelDef(n, ref) {
        nought to three percent cleared, because every hill heals every
        four moves and a player cannot be in six places at once. Three is
        where the mechanic is a race rather than a defeat. */
-    const wantHills = 2 + Math.min(2, Math.floor(tier * .5) + (r() < .4 ? 1 : 0));
+    /* Three, always.
+
+       The count was two to four, and a hill is a large fraction of a
+       level: three against four moved the clear rate further than the
+       whole move budget did, so the budget could not steer. One number
+       for the mechanic and one lever for the difficulty. */
+    const wantHills = 3;
     let guard = 0;
     while (hills.size < wantHills && guard++ < 200) {
+      /* Interior only.
+
+         A hill is closed from beside it, so how hard it is depends
+         entirely on how many sides it has. One against the right-hand
+         wall has three neighbours and one in a corner has two, which
+         made otherwise identical levels measure 34% and 88% — the same
+         lesson the corner cells taught the mud and crate goals. Keeping
+         every hill off the edges takes the variance out at the source
+         instead of pricing it afterwards. */
       const y = 1 + Math.floor(r() * (h - 2));
-      const x = Math.floor(r() * w);
+      const x = 1 + Math.floor(r() * (w - 2));
       let clash = false;
       hills.forEach(k => {
         const [hy, hx] = k.split(':').map(Number);
@@ -2945,7 +2960,16 @@ function levelDef(n, ref) {
         row += blob.has(y + ':' + x) ? 'v' : '.';
         continue;
       }
-      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += r() < .3 ? 'O' : 'o'; continue; }
+      /* Every hill the same depth.
+
+         Three in ten were being built three layers deep, and a
+         three-layer hill that heals is a different mechanic from a
+         two-layer one: levels on almost the same budget measured 34% and
+         100%. That was the third source of variance to come out of this
+         goal, after the count and the edges, and the rule each time was
+         the same — the mechanic is one thing and the move budget is the
+         only lever, or the budget cannot steer. */
+      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += 'o'; continue; }
       if (kind === GK.MUD && shaped.has(y + ':' + x)) { row += r() < GEN.mud.deep ? 'M' : 'm'; continue; }
       if (kind === GK.CRATE && shaped.has(y + ':' + x) && y > 0 && y < h - 1) {
         /* a goal counts crates, not hits, so a second layer is the only
@@ -3082,7 +3106,8 @@ function dailyLevel(reached, dayNo) {
   const r = mulberry(day * 2654435761 >>> 0);
   /* tier follows progress, so a new player is not handed a level 60 board */
   const tier = clamp(Math.floor((reached || 1) / 14), 0, 4);
-  const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE];
+  const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE]
+    .concat((reached || 1) >= MOLE_FROM ? [GK.MOLE] : []);
   const kind = kinds[Math.floor(r() * kinds.length)];
   const h = 9, w = 8;
   const key = kind === GK.BRAMBLE ? 'bramble' : kind;
@@ -3139,11 +3164,26 @@ function dailyLevel(reached, dayNo) {
        nought to three percent cleared, because every hill heals every
        four moves and a player cannot be in six places at once. Three is
        where the mechanic is a race rather than a defeat. */
-    const wantHills = 2 + Math.min(2, Math.floor(tier * .5) + (r() < .4 ? 1 : 0));
+    /* Three, always.
+
+       The count was two to four, and a hill is a large fraction of a
+       level: three against four moved the clear rate further than the
+       whole move budget did, so the budget could not steer. One number
+       for the mechanic and one lever for the difficulty. */
+    const wantHills = 3;
     let guard = 0;
     while (hills.size < wantHills && guard++ < 200) {
+      /* Interior only.
+
+         A hill is closed from beside it, so how hard it is depends
+         entirely on how many sides it has. One against the right-hand
+         wall has three neighbours and one in a corner has two, which
+         made otherwise identical levels measure 34% and 88% — the same
+         lesson the corner cells taught the mud and crate goals. Keeping
+         every hill off the edges takes the variance out at the source
+         instead of pricing it afterwards. */
       const y = 1 + Math.floor(r() * (h - 2));
-      const x = Math.floor(r() * w);
+      const x = 1 + Math.floor(r() * (w - 2));
       let clash = false;
       hills.forEach(k => {
         const [hy, hx] = k.split(':').map(Number);
@@ -3159,7 +3199,16 @@ function dailyLevel(reached, dayNo) {
     for (let x = 0; x < w; x++) {
       const v = r();
       if (kind === GK.BRAMBLE) { row += blob.has(y + ':' + x) ? 'v' : '.'; continue; }
-      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += r() < .3 ? 'O' : 'o'; continue; }
+      /* Every hill the same depth.
+
+         Three in ten were being built three layers deep, and a
+         three-layer hill that heals is a different mechanic from a
+         two-layer one: levels on almost the same budget measured 34% and
+         100%. That was the third source of variance to come out of this
+         goal, after the count and the edges, and the rule each time was
+         the same — the mechanic is one thing and the move budget is the
+         only lever, or the budget cannot steer. */
+      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += 'o'; continue; }
       if (kind === GK.MUD && shaped.has(y + ':' + x)) { row += r() < GEN.mud.deep ? 'M' : 'm'; continue; }
       if (kind === GK.CRATE && shaped.has(y + ':' + x) && y > 0 && y < h - 1) {
         row += r() < GEN.crate.deep ? 'C' : 'c';
@@ -3370,7 +3419,7 @@ function isGate(n) {
 /* Generated by test/calibrate.js — do not edit by hand.
 
    How each kind of goal answers its move budget, measured with the
-   greedy solver over 20 games a point. MOVE_SCALES are multiples of
+   greedy solver over 26 games a point. MOVE_SCALES are multiples of
    the generator's own move count; CLEAR_AT[kind][i] is the share of games
    the solver won at that budget.
 
@@ -3379,64 +3428,74 @@ function isGate(n) {
 const MOVE_SCALES = [0.55,0.68,0.8,0.92,1,1.12,1.28,1.5];
 const CLEAR_AT = {
   "collect": [
-    0.05,
-    0.2,
-    0.42,
-    0.72,
-    0.76,
-    0.9,
-    0.96,
-    1
+    0.085,
+    0.208,
+    0.508,
+    0.685,
+    0.731,
+    0.908,
+    0.962,
+    0.985
   ],
   "mud": [
-    0.32,
-    0.52,
-    0.63,
-    0.74,
-    0.75,
-    0.87,
-    0.89,
-    0.99
+    0.985,
+    0.992,
+    0.992,
+    0.992,
+    1,
+    1,
+    1,
+    1
   ],
   "crate": [
-    0.38,
-    0.45,
-    0.7,
-    0.79,
-    0.81,
-    0.84,
-    0.92,
-    0.95
+    0.469,
+    0.715,
+    0.731,
+    0.854,
+    0.862,
+    0.869,
+    0.938,
+    0.962
   ],
   "rescue": [
-    0.33,
-    0.36,
-    0.57,
-    0.57,
-    0.64,
-    0.64,
-    0.7,
-    0.78
+    0.346,
+    0.5,
+    0.608,
+    0.631,
+    0.631,
+    0.723,
+    0.746,
+    0.885
   ],
   "score": [
-    0.03,
-    0.06,
-    0.2,
-    0.47,
-    0.65,
-    0.81,
-    0.94,
-    0.99
+    0.023,
+    0.1,
+    0.238,
+    0.538,
+    0.554,
+    0.815,
+    0.908,
+    0.969
   ],
   "bramble": [
-    0.25,
-    0.34,
-    0.44,
-    0.49,
-    0.49,
-    0.56,
-    0.67,
-    0.72
+    0.415,
+    0.415,
+    0.508,
+    0.615,
+    0.623,
+    0.623,
+    0.723,
+    0.777
+  ],
+  "mole": [
+    0.754,
+    0.808,
+    0.815,
+    0.823,
+    0.931,
+    0.931,
+    0.931,
+    0.954
   ]
 };
 
@@ -9543,7 +9602,19 @@ function spreadBramble(B) {
    It is closed the way a crate is broken — by clearing a tile next to it
    — because a mechanic that needs a new verb is a mechanic that needs a
    tutorial nobody reads. */
-const MOLE_EVERY = 4, MOLE_MAX = 3;
+/* Five moves, not four.
+
+   At four the mechanic was on a knife edge: three self-healing hills
+   need two hits each inside their own window, three times over, and at
+   the budget the model chose that came to eighteen moves. Levels
+   identical in size, tile count, hill count and budget then measured
+   anywhere from 25% to 91% cleared, decided by nothing but where the
+   three hills happened to land.
+
+   That is not difficulty, it is a coin. One more move in the cycle is
+   what turns the same idea into something a player can plan around and
+   a budget can steer. */
+const MOLE_EVERY = 5, MOLE_MAX = 3;
 
 /* One layer a move, however big the match.
 

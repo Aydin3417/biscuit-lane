@@ -376,7 +376,19 @@ function spreadBramble(B) {
    It is closed the way a crate is broken — by clearing a tile next to it
    — because a mechanic that needs a new verb is a mechanic that needs a
    tutorial nobody reads. */
-const MOLE_EVERY = 4, MOLE_MAX = 3;
+/* Five moves, not four.
+
+   At four the mechanic was on a knife edge: three self-healing hills
+   need two hits each inside their own window, three times over, and at
+   the budget the model chose that came to eighteen moves. Levels
+   identical in size, tile count, hill count and budget then measured
+   anywhere from 25% to 91% cleared, decided by nothing but where the
+   three hills happened to land.
+
+   That is not difficulty, it is a coin. One more move in the cycle is
+   what turns the same idea into something a player can plan around and
+   a budget can steer. */
+const MOLE_EVERY = 5, MOLE_MAX = 3;
 
 /* One layer a move, however big the match.
 
