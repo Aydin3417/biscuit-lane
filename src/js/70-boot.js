@@ -322,7 +322,7 @@ window.BL = {
   setLang,
   openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, confirmQuit,
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
-  simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY, petRig,
+  simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY, petRig, syncGoals, drawLevelScene,
   castOf, castBreed, castSlot, castName, castRebuild, slotGem, slotBreed,
   popScale, popAlpha, showWin, showLose, bestHint, hintScore, drawLogo,
   /* render entry points, so a frame can be forced without rAF */

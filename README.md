@@ -1941,3 +1941,38 @@ The failure that found the first bug was a test that has been in the
 suite for a long time: *a dialog takes the keyboard with it*. It opens
 the settings during a level and asserts the focus moved. It said the
 focus had gone to a canvas.
+
+## The walk home
+
+A third of the play screen is a band of grass with a hedge, a house, a
+lane and nine paw prints. It was composed rather than laid out, which
+was the point of drawing it — but it was a picture. Nothing in it ever
+changed, on a screen where the player spends every minute of the game.
+
+Meanwhile the game's whole idea is walking an animal home, and the only
+place progress was stated was a row of counters at the top.
+
+The prints are the walk now. They run from the tray by your hands up the
+lane toward the house, and they are laid as the goals come in: the ones
+behind the walk are pressed into the path at full weight, the ones ahead
+are barely there, and the one being made is a little heavier than the
+rest. Fourteen of them rather than nine, because nine steps is a coarse
+thing to measure a whole level with.
+
+Nothing new is drawn and nothing animates. It is the picture that was
+already there, told in order.
+
+The cost is a repaint of the lane canvas — a full ground gradient, a
+hedge, a bent path and about two hundred bits of grit and grass — and
+that is far too expensive to do on a cascade tick. So `syncGoals`
+quantises the walk to its fourteen steps and repaints only when the step
+changes: at worst fourteen repaints in a level, most of them while the
+player is watching tiles fall anyway. Measured after the change, the
+frame budget is *better* than before it, which says the repaints land
+outside the frames that were being measured.
+
+Also on this screen, and for the same reason — a screen exists to let
+you do something and should put that first — the Family screen used to
+sit the adopt card underneath nineteen trophy cards. Bringing another
+animal home is what that screen is for. It comes second now, after the
+family it would join, and the shelf comes last.

@@ -1172,7 +1172,24 @@ function drawLampPost(c, x, y, s, warmth, t) {
    like a seed tray somebody carried out. Going from the map into a
    level reads as walking up to it rather than as changing screens.
 
-   Painted once per layout, not per frame — none of it moves. */
+   Painted once per layout, and again when the walk takes a step — see
+   the paw prints below. Nothing in it animates. */
+
+/* How far the walk has got: the share of the level's goals that are in.
+
+   Averaged across goals rather than summed, so a level asking for two
+   things is half done when one of them is. A score goal is read off the
+   live score, which the goal object does not carry between syncs. */
+function sceneProgress() {
+  if (typeof G === 'undefined' || !G || !G.goals || !G.goals.length) return 0;
+  let sum = 0;
+  for (const g of G.goals) {
+    const have = (typeof GK !== 'undefined' && g.kind === GK.SCORE) ? G.score : g.have;
+    sum += g.need > 0 ? clamp(have / g.need, 0, 1) : 1;
+  }
+  return sum / G.goals.length;
+}
+
 function drawLevelScene() {
   const cv = $('#scene'), wrap = $('#boardWrap');
   if (!cv || !wrap) return;
@@ -1260,13 +1277,34 @@ function drawLevelScene() {
       ellipse(c, x, y, s, s * .7); c.fill();
     }
     c.globalAlpha = 1;
-    /* paw prints walking down it, smaller the further away they are */
-    c.globalAlpha = .34;
+    /* The walk home.
+
+       A third of the play screen is this band of grass, and it was a
+       picture: a hedge, a house, a lane, and nine paw prints that meant
+       nothing. Meanwhile the game's whole idea is walking an animal
+       home, and the only place that progress was stated was a row of
+       counters at the top of the screen.
+
+       So the prints are the walk. They run from the tray by your hands
+       up the lane toward the house, and they are laid as the goals come
+       in: the ones behind the walk are pressed into the path, the ones
+       ahead are barely there, and the one being made is a little
+       heavier than the rest. Nothing new is drawn and nothing animates
+       — it is the picture that was already here, told in order.
+
+       Fourteen rather than nine, because nine steps is a coarse thing
+       to measure a whole level with. */
+    const walked = sceneProgress();
+    const PRINTS = 14;
     c.fillStyle = dark ? '#6E7A66' : '#9C8354';
-    for (let k = 0; k < 9; k++) {
-      const u = (k + .5) / 9;
+    for (let k = 0; k < PRINTS; k++) {
+      const u = (k + .5) / PRINTS;
+      /* u runs from the hedge down to the tray and the walk runs the
+         other way, so a print exists once the walk has come up past it */
+      const made = clamp((walked - (1 - u)) * PRINTS + .5, 0, 1);
+      c.globalAlpha = .07 + made * .31;
       const y = y0 + span * (u * u * .5 + u * .5);
-      const sc = .32 + u * .9;
+      const sc = (.32 + u * .9) * (made > .12 && made < .88 ? 1.16 : 1);
       const x = cxAt(u) + (k % 2 ? 1 : -1) * wAt(u) * .3;
       c.save(); c.translate(x, y); c.scale(sc, sc);
       ellipse(c, 0, 2.5, 3.4, 4.4); c.fill();

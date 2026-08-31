@@ -175,6 +175,10 @@ function startLevel(n, opts) {
   G.rescued = 0; G.usedExtra = false; G.creepTick = 0; G.lastPraise = 0;
   G.starTargets = starTargets(G.def);
   G.starsEarned = 0;
+  /* -1 rather than 0, so the first sync of a level always paints the
+     lane once — a level that starts with a goal already partly met
+     would otherwise show an unwalked path */
+  G.walkStep = -1;
   G.goals = G.def.goals.map(g => ({ kind: g[0], arg: g[1], need: g[2], have: 0 }));
   G.goals.forEach(g => {
     if (g.kind === GK.BRAMBLE) g.have = clamp(g.need - brambleCount(G.B), 0, g.need);
@@ -322,6 +326,14 @@ function syncGoals(bumpIdx) {
     })());
     if (bumpIdx === i) { g.el.classList.remove('tick'); void g.el.offsetWidth; g.el.classList.add('tick'); }
   });
+  /* The lane behind the board shows the walk as a line of paw prints,
+     and a print is laid when the goals move. Repainting that scene is a
+     full canvas of gradients and about two hundred shapes, so it is not
+     something to do on every cascade tick — only when the walk has
+     actually taken a step. Fourteen prints, so fourteen repaints in a
+     whole level at worst. */
+  const step = Math.round(sceneProgress() * 14);
+  if (step !== G.walkStep) { G.walkStep = step; drawLevelScene(); }
 }
 function syncHud() {
   $('#movesN').textContent = G.moves;

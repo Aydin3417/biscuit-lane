@@ -749,6 +749,14 @@ function equipThing(id, kind, quiet) {
 /* ---------------- family ---------------- */
 const ADOPT_COST = [0, 350, 700, 1200, 1800, 2600];
 const ADOPT_LEVEL = [0, 5, 12, 20, 28, 36];
+/* Order matters here more than it looks.
+
+   The shelf used to sit between the pets and the adopt card, which put
+   the one thing this screen exists to let you do — bring another animal
+   home — underneath nineteen trophy cards. On a phone that is most of a
+   minute of scrolling past things you have already done to reach the
+   thing you have not. The family comes first now, then who you could
+   add to it, then what you have won. */
 function renderFamily() {
   const pad = $('#familyPad');
   const ownedBreeds = SAVE.pets.map(p => p.breed);
@@ -776,7 +784,6 @@ function renderFamily() {
       </button>`;
   }).join('')}
 
-    ${shelfHtml()}
     ${canAdopt ? `
     <div class="card pad16" style="display:flex;flex-direction:column;gap:11px">
       <div class="sectitle"><h3>${T('fam_adopt')}</h3></div>
@@ -794,6 +801,8 @@ function renderFamily() {
         : `<span class="pill bad">${IC.lock}${T('fam_locked', { n: need })}</span>`}
       </div>
     </div>` : ''}
+
+    ${shelfHtml()}
   `;
   paintArtCanvases(pad);
   $$('[data-pet]', pad).forEach(b => b.addEventListener('click', () => openPetSheet(b.dataset.pet)));
