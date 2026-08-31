@@ -53,7 +53,7 @@ const X = vm.runInContext(
   '({ makeBoard, findMatches, specialFor, settle, hasMove, allMoves, canSwap,' +
   '   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,' +
   '   commonType, shuffleTypes, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,' +
-'   targetClear, isGate, budgetFor, budgetRange })', ctx);
+'   targetClear, isGate, budgetFor, budgetRange, LEVELS })', ctx);
 const {
   makeBoard, findMatches, specialFor, settle, hasMove, allMoves, canSwap,
   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,

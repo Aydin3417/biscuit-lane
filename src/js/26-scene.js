@@ -604,6 +604,7 @@ function petRig(p) {
 }
 function rigStep(r, dt, o) {
   o = o || {};
+  r.dt = dt;
   r.t += dt;
   const mood = o.mood || 'content';
   const asleep = mood === 'sleeping';
@@ -703,9 +704,14 @@ function drawPetLive(c, p, x, y, s, rig, o) {
   /* mood ornaments */
   if (asleep) drawZs(c, s * .42, -s * .42, s * .3, r.sleepT);
   else if (mood === 'hungry') drawThought(c, s * .5, -s * .5, s * .26, 'bowl');
-  else if (mood === 'dirty') drawGrime(c, s, r.t);
+  else if (mood === 'dirty') drawGrime(c, s, r.t, spec);
   else if (mood === 'bored') drawThought(c, s * .5, -s * .5, s * .26, 'ball');
-  else if (mood === 'happy' && Math.sin(r.t * .8) > .96) FXHeartsAt(x, y - s * .3);
+  else if (mood === 'happy') {
+    /* an edge, not a level: see the note in 50-room.js — the same line
+       written as a threshold fires on every frame it is true for */
+    r.heartT = (r.heartT === undefined ? 2 : r.heartT) - (r.dt || 1 / 60);
+    if (r.heartT <= 0) { r.heartT = rnd(2.4, 4.6); FXHeartsAt(x, y - s * .3); }
+  }
 
   c.restore();
   return { x, y, s };
@@ -744,6 +750,9 @@ function drawThought(c, x, y, s, what) {
     c.fill();
     c.fillStyle = PAL.accent;
     ellipse(c, 0, -s * .08, s * .42, s * .1); c.fill();
+  } else if (what === 'heart') {
+    /* wanting company, which is not the same as wanting a toy */
+    drawPip(c, 'heart', 0, s * .04, s * .38, PAL.rose);
   } else {
     c.fillStyle = '#C8D95A'; ellipse(c, 0, s * .06, s * .34, s * .34); c.fill();
     c.strokeStyle = '#F6F1E4'; c.lineWidth = s * .07;
@@ -752,17 +761,28 @@ function drawThought(c, x, y, s, what) {
   c.restore();
   c.restore();
 }
-function drawGrime(c, s, t) {
+/* A dirty animal has to look dirty on its own coat.
+
+   Brown at a third opacity is a smudge on a cream retriever and is
+   nothing at all on a black cat, which is exactly what shipped: sable
+   coats went unwashed because the game had no way of saying so. The
+   smudge takes the opposite side of the coat now, and the fly flies
+   close enough to belong to the animal rather than to the wall. */
+function drawGrime(c, s, t, spec) {
+  const dk = spec ? darkCoat(spec) : false;
   c.save();
-  c.fillStyle = rgba('#6B4A2C', .35);
+  c.fillStyle = dk ? rgba('#C9A46B', .5) : rgba('#6B4A2C', .38);
   [[-.22, .55], [.18, .68], [.3, .42], [-.3, .74]].forEach((p, i) => {
-    const w = s * (.05 + (i % 3) * .015);
+    const w = s * (.055 + (i % 3) * .018);
     ellipse(c, p[0] * s, p[1] * s, w, w * .7, i); c.fill();
   });
-  /* a fly, doing laps */
-  c.fillStyle = rgba(PAL.text, .5);
-  const a = t * 2.2;
-  ellipse(c, Math.cos(a) * s * .6, -s * .5 + Math.sin(a * 1.7) * s * .12, s * .022, s * .016); c.fill();
+  /* a fly, doing laps close to the head */
+  const a = t * 2.4;
+  const fx = Math.cos(a) * s * .42, fy = -s * .34 + Math.sin(a * 1.7) * s * .09;
+  c.fillStyle = rgba(PAL.text, .22);
+  ellipse(c, fx, fy, s * .05, s * .04); c.fill();          /* its own little shadow of motion */
+  c.fillStyle = rgba(PAL.text, .78);
+  ellipse(c, fx, fy, s * .028, s * .021); c.fill();
   c.restore();
 }
 

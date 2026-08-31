@@ -4,10 +4,12 @@
 const ROOM = {
   ctx: null, w: 0, h: 0, running: false, raf: null, lastT: 0,
   t: 0, state: 'idle', stateT: 0,
-  blink: 0, blinkT: 2,
   px: .5, targetX: .5, walk: 0, facing: 1,
   bits: [], bubbleT: 0, snoreT: 0,
-  idleT: 6, idleKind: null, idleLeft: 0, noticed: 0
+  idleT: 6, idleKind: null, idleLeft: 0, noticed: 0,
+  /* where the finger is over the room, in the pet's own -1..1 frame,
+     and how long it stays interesting after the finger lifts */
+  look: null, lookT: 0, bound: false, heartT: 3
 };
 
 function roomLayout() {
@@ -18,10 +20,38 @@ function roomLayout() {
   ROOM.w = w; ROOM.h = h;
   ROOM.ctx = fitCanvas(cv, w, h);
 }
+/* The pet follows your finger.
+
+   This is the cheapest thing in the whole game per unit of alive. A
+   drawn animal that tracks the pointer stops being a picture of an
+   animal; the rig already had a gaze channel for it and nothing had
+   ever fed it. Coordinates come in as a fraction of the canvas and
+   leave in the -1..1 the eyes are drawn in, so the pet can look at a
+   corner without its pupils leaving its head. */
+function bindRoomLook() {
+  if (ROOM.bound) return;
+  const cv = $('#room');
+  if (!cv) return;
+  ROOM.bound = true;
+  const at = ev => {
+    const rect = cv.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const fx = (ev.clientX - rect.left) / rect.width;
+    const fy = (ev.clientY - rect.top) / rect.height;
+    /* the pet stands mid-floor; look is measured from there */
+    ROOM.look = [clamp((fx - ROOM.px) * 2.4, -1, 1), clamp((fy - .62) * 2.2, -1, 1)];
+    ROOM.lookT = 1.1;
+  };
+  cv.addEventListener('pointermove', at, { passive: true });
+  cv.addEventListener('pointerdown', at, { passive: true });
+  cv.addEventListener('pointerleave', () => { ROOM.lookT = .25; }, { passive: true });
+}
+
 function roomStart() {
   /* looking up when you walk in costs nothing and reads as alive */
   const pet = activePet();
   if (pet && !pet.asleep) ROOM.noticed = .7;
+  bindRoomLook();
   if (ROOM.running) return;
   roomLayout();
   ROOM.running = true;
@@ -87,6 +117,27 @@ function renderRoom(dt) {
 
   /* the pet */
   if (pet) {
+    /* One mood, read once, used by everything below. It used to be read
+       inside the idle branch only, which is why the pet's face never
+       knew how it felt: the mood decided which idle behaviour to pick
+       and then went out of scope. */
+    const mood = moodOf(pet);
+
+    /* The rig carries the slow, involuntary things — breath, a blink
+       that actually closes, a tail that swings on its own weight, eyes
+       that go where they are looking. It has existed in the scene layer
+       since the room was written and was never once stepped: drawRoom
+       draws a live pet only when handed one, and the room draws its own,
+       so petRig, rigStep and every mood ornament sat unreachable. The
+       room kept its own single-frame blink and two sine waves instead.
+       The state machine below is the room's and stays the room's; what
+       the animal does without deciding to comes from here. */
+    if (ROOM.lookT > 0) ROOM.lookT -= dt;
+    const rig = rigStep(petRig(pet), dt, {
+      mood,
+      look: (ROOM.lookT > 0 && ROOM.look) ? ROOM.look : null
+    });
+
     /* wander */
     /* something to do between wanders: which options depend on the
        animal and on how it is feeling */
@@ -125,12 +176,11 @@ function renderRoom(dt) {
        put the feet on the floor and work the origin back up */
     const gy = floorY + (H - floorY) * .58 - scale * .92;
 
-    ROOM.blinkT -= dt;
-    if (ROOM.blinkT < 0) { ROOM.blink = 1; ROOM.blinkT = rnd(2.4, 6); }
-    if (ROOM.blink > 0) ROOM.blink = Math.max(0, ROOM.blink - dt * 6.5);
-
     let bob = Math.sin(ROOM.t * 2) * .012;
-    let tilt = 0, mouth = 'smile', blink = ROOM.blink > .3 ? 1 : 0;
+    /* the eyes are drawn from a 0..1 lid, not a flag: a blink that
+       snaps between open and shut is the difference between a drawing
+       and a face */
+    let tilt = 0, mouth = 'smile', blink = rig.blink;
     const moving = ROOM.state === 'idle' && Math.abs(ROOM.targetX - ROOM.px) > .006 && !pet.asleep;
     if (moving) bob = Math.abs(Math.sin(ROOM.t * 9)) * .04;
 
@@ -141,7 +191,10 @@ function renderRoom(dt) {
     } else if (ROOM.state === 'eat') {
       mouth = Math.sin(ROOM.t * 16) > 0 ? 'open' : 'smile';
       bob = Math.sin(ROOM.t * 16) * .03; tilt = .12;
-      if (Math.random() < .18) roomBit(bowlX + rnd(-8, 8), bowlY - 6, 'crumb', '#B5763F');
+      /* per second, not per frame: a probability rolled once a frame is
+         a different animal on a 120Hz phone than on a 60Hz one, and
+         these were written against sixty. Same rate on any display. */
+      if (Math.random() < 10.8 * dt) roomBit(bowlX + rnd(-8, 8), bowlY - 6, 'crumb', '#B5763F');
     } else if (ROOM.state === 'play') {
       bob = -Math.abs(Math.sin(ROOM.t * 11)) * .1;
       mouth = 'open';
@@ -153,7 +206,7 @@ function renderRoom(dt) {
       if (ROOM.bubbleT <= 0) { ROOM.bubbleT = .09; roomBit(gx + rnd(-scale * .4, scale * .4), gy - rnd(0, scale * .6), 'bubble', '#BFE4F5'); }
     } else if (ROOM.state === 'pet') {
       mouth = 'smile'; blink = 1; tilt = Math.sin(ROOM.t * 3) * .1;
-      if (Math.random() < .12) roomBit(gx + rnd(-18, 18), gy - scale * .7, 'heart', PAL.rose);
+      if (Math.random() < 7.2 * dt) roomBit(gx + rnd(-18, 18), gy - scale * .7, 'heart', PAL.rose);
     } else if (ROOM.state === 'happy') {
       bob = -Math.abs(Math.sin(ROOM.t * 10)) * .12; mouth = 'open';
     } else if (ROOM.idleKind === 'groom') {
@@ -206,15 +259,64 @@ function renderRoom(dt) {
         head: base.head
       };
     }
+    /* Where the eyes go, in order of who has the strongest claim:
+       something the room is deliberately doing, then your finger, then
+       the rig's own wandering. Walking still pulls the gaze along the
+       direction of travel, because an animal looks where it is going. */
+    let eyeDir;
+    if (ROOM.idleKind === 'stare' || ROOM.noticed > 0) eyeDir = [0, -.15];
+    else if (pet.asleep) eyeDir = [0, .4];
+    else if (ROOM.lookT > 0 && ROOM.look) eyeDir = [rig.gaze[0] * ROOM.facing, rig.gaze[1]];
+    else if (moving) eyeDir = [clamp((ROOM.targetX - ROOM.px) * 6, -1, 1) * ROOM.facing, 0];
+    else eyeDir = [rig.gaze[0] * ROOM.facing, rig.gaze[1]];
+
     drawBody(c, spec, scale, {
       blink, mouth, headTilt: tilt * ROOM.facing,
-      breath: Math.sin(ROOM.t * 2.4),
-      tail: Math.sin(ROOM.t * (moving || ROOM.state === 'play' ? 9 : 2.2)),
-      eyeDir: (ROOM.idleKind === 'stare' || ROOM.noticed > 0)
-        ? [0, -.15]                                   /* straight at you */
-        : [clamp((ROOM.targetX - ROOM.px) * 6, -1, 1) * ROOM.facing, pet.asleep ? .4 : 0]
+      /* a moving animal breathes with its steps, a still one with the
+         rig; asleep the rig already deepens it */
+      breath: moving ? Math.sin(ROOM.t * 4.5) : rig.breath,
+      tail: (moving || ROOM.state === 'play')
+        ? Math.sin(ROOM.t * 9)
+        : rig.tail,
+      eyeDir
     });
     c.restore();
+
+    /* How it feels, without reading anything.
+
+       The mood line under the care buttons was the only place the pet's
+       state was ever stated, which made the animal itself decorative:
+       starving and content looked identical. These are the scene
+       layer's own ornaments, drawn at last. */
+    if (!pet.asleep) {
+      const ox = gx + scale * .52 * ROOM.facing, oy = gy - scale * .12;
+      if (mood === 'hungry') drawThought(c, ox, oy, scale * .26, 'bowl');
+      else if (mood === 'bored') drawThought(c, ox, oy, scale * .26, 'ball');
+      else if (mood === 'lonely') drawThought(c, ox, oy, scale * .26, 'heart');
+      else if (mood === 'dirty') { c.save(); c.translate(gx, gy); drawGrime(c, scale, ROOM.t, spec); c.restore(); }
+      else if (mood === 'happy') {
+        /* A timer, not a threshold on a sine.
+
+           `Math.sin(t * .8) > .985` reads like "every so often" and is
+           not: the sine stays above that line for about four tenths of
+           a second, which at sixty frames is twenty-six hearts at once,
+           every eight seconds. It rendered as a red smear over the
+           pet's head. The scene layer's own copy of this line has the
+           same fault. A contented animal gives off one heart at a time.
+
+           An ambient heart is also not the burst you get for stroking
+           the animal: it stays near the pet and goes, rather than
+           climbing the wall and reading as wallpaper. */
+        ROOM.heartT -= dt;
+        if (ROOM.heartT <= 0) {
+          ROOM.heartT = rnd(2.4, 4.6);
+          ROOM.bits.push({
+            x: gx + rnd(-10, 10), y: gy - scale * .35, vx: rnd(-6, 6), vy: rnd(-20, -11),
+            life: 0, max: rnd(.8, 1.1), kind: 'heart', col: PAL.rose, rot: rnd(-.3, .3)
+          });
+        }
+      }
+    }
 
     /* the bouncing toy */
     if (ROOM.state === 'play') {

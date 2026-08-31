@@ -295,8 +295,13 @@ function eyePath(c, rx, ry, almond) {
 function drawEye(c, x, y, r, spec, o, side) {
   const look = lookOf(spec);
   const blink = o.blink || 0;
-  const dx = (o.eyeDir ? o.eyeDir[0] : 0) * r * .22;
-  const dy = (o.eyeDir ? o.eyeDir[1] : 0) * r * .22;
+  /* The iris is .84 of the eye and the eye is clipped, so travel past
+     the rim is not a mistake — it is how a real eye reads when it looks
+     hard at something. At .22 the pupil barely left centre and the pet
+     appeared to stare through you whatever it was looking at; the gaze
+     only became worth wiring to a finger once it could be seen. */
+  const dx = (o.eyeDir ? o.eyeDir[0] : 0) * r * .30;
+  const dy = (o.eyeDir ? o.eyeDir[1] : 0) * r * .30;
   const dk = darkCoat(spec);
   const rx = r, ry = r * 1.06 * (1 - blink * .92);
 

@@ -1,14 +1,19 @@
 /* Runs every test that does not need a browser, in order of how fast it
-   fails. The DOM layer lives in test/integration.html — open that in the
-   preview (it drives the built game inside an iframe).
+   fails. The DOM layer lives in test/integration.html and is driven by
+   tools/browser.js, which needs a running server and a real Chrome — so
+   it is not in this list, and the last line says how to run it.
 
      node test/run-all.js
+     node tools/serve.js  &&  node tools/browser.js     the DOM layer
 */
 const { execFileSync } = require('child_process');
 const path = require('path');
 
 const steps = [
   ['module integrity', 'check.js', []],
+  /* cheapest first: a missing translation is found by reading two
+     tables, and it is the fault most likely to reach a player */
+  ['every string, in both languages', 'strings.js', []],
   ['engine soak + level design audit', 'sim.js', []],
   ['the ice rule', 'ice.js', []],
   ['the care loop', 'care.js', []],
@@ -17,6 +22,9 @@ const steps = [
      came out the shape it was drawn as. Fewer games than the sweeps
      below because it reports per level, not per band. */
   ['the shape of the run', 'curve.js', ['61', '100', '10']],
+  /* the authored lane is designed now too, and is measured over its
+     whole length rather than sampled */
+  ['the shape of the lane', 'curve.js', ['1', '60', '10']],
   ['the pet move, breed by breed', 'charge.js', ['1', '60', '2']],
 ];
 
@@ -97,5 +105,5 @@ for (const [label, first, last, perks, lo, hi] of CURVES) {
 }
 
 process.stdout.write('\n' + (failed ? failed + ' suite(s) failed\n' : 'all suites passed\n'));
-process.stdout.write('browser layer: open test/integration.html (39 checks)\n');
+process.stdout.write('browser layer: node tools/serve.js, then node tools/browser.js (38 checks)\n');
 process.exitCode = failed ? 1 : 0;

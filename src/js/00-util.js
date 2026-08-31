@@ -247,8 +247,41 @@ function toast(msg, ic) {
   if (kids.length > 3) kids[0].remove();
 }
 
-/* ---------- modal ---------- */
+/* ---------- modal ----------
+
+   One sheet at a time.
+
+   Sheets used to be sequenced by guessing at timers. Clearing a level
+   that grew the pet and won a badge ran:
+
+     showWin()                          the win sheet, open until tapped
+     setTimeout(stageUpModal,  900)
+     setTimeout(badgeModal,   2000)
+
+   Those delays are measured from the win, not from the player, and the
+   win sheet stays up until it is dismissed — so all three arrived on
+   top of each other and all three were legible through one another.
+   Only one call site in the whole game checked sheetIsOpen() first.
+
+   A sheet opened while another is up now waits for it. The element is
+   built and attached immediately, so a caller can wire up its buttons
+   and paint its canvases exactly as before — an unattached sheet would
+   have handed the stage-up animation a canvas with no layout. It simply
+   is not shown, is not focusable, and does not take a tap, until the
+   sheet in front of it closes.
+
+   A veil with no `.on` is already transparent, so being queued costs
+   nothing to draw; what it needs is to stop swallowing clicks. */
 let modalStack = [];
+const modalQueue = [];
+
+/* the next sheet in line takes the screen, if nothing else holds it */
+function modalPromoteNext() {
+  if (sheetIsOpen()) return;
+  const next = modalQueue.shift();
+  if (next) next();
+}
+
 function modal(html, opts) {
   opts = opts || {};
   const veil = document.createElement('div');
@@ -260,17 +293,51 @@ function modal(html, opts) {
   sheet.tabIndex = -1;
   sheet.innerHTML = html;
   veil.appendChild(sheet);
+  /* Marked as waiting *before* it joins the document. sheetIsOpen()
+     asks the DOM, so a veil appended first and asked about afterwards
+     finds itself, decides a sheet is already up, and queues behind
+     itself — every dialog in the game then waited for one that was
+     never going to appear. */
+  veil.dataset.queued = '1';
+  veil.style.pointerEvents = 'none';
   $('#modals').appendChild(veil);
-  const returnFocus = document.activeElement;
-  /* The keyboard follows the dialog, so it stops reaching whatever was
-     behind it. Not inside the rAF below: that never fires in a hidden
-     tab, and focus is not decoration. */
-  const first = sheet.querySelector('button, input, select, textarea, a[href]');
-  try { (first || sheet).focus({ preventScroll: true }); } catch (e) { }
-  requestAnimationFrame(() => veil.classList.add('on'));
+  let returnFocus = null;
+  let shown = false, closed = false;
+
+  /* Taking the screen: the focus moves here, and the fade starts. The
+     keyboard follows the dialog, so it stops reaching whatever was
+     behind it. Focus is set outside the rAF because that never fires in
+     a hidden tab, and focus is not decoration. */
+  const show = () => {
+    if (closed) return;
+    /* A test harness — and the game's own screen changes — can take a
+       veil out of the document without going through close(). Skip it
+       and let the next one have the screen, rather than focusing into a
+       sheet nobody can see. */
+    if (!veil.isConnected) { closed = true; modalPromoteNext(); return; }
+    shown = true;
+    delete veil.dataset.queued;
+    veil.style.pointerEvents = '';
+    returnFocus = document.activeElement;
+    const first = sheet.querySelector('button, input, select, textarea, a[href]');
+    try { (first || sheet).focus({ preventScroll: true }); } catch (e) { }
+    requestAnimationFrame(() => veil.classList.add('on'));
+  };
+
   const api = {
     el: sheet, veil,
     close() {
+      if (closed) return;
+      closed = true;
+      if (!shown) {
+        /* it never took the screen: drop it out of the line quietly */
+        const i = modalQueue.indexOf(show);
+        if (i >= 0) modalQueue.splice(i, 1);
+        veil.remove();
+        modalStack = modalStack.filter(m => m !== api);
+        if (opts.onClose) opts.onClose();
+        return;
+      }
       veil.classList.remove('on');
       /* it lingers for the fade; it must not still be operable, and
          anything asking whether a sheet is up must see it as gone */
@@ -279,7 +346,7 @@ function modal(html, opts) {
       /* and nothing in it can be pressed again on the way out — several
          of these buttons spend a heart or a treat when pressed */
       sheet.querySelectorAll('button').forEach(b => { b.disabled = true; });
-      setTimeout(() => veil.remove(), 300);
+      setTimeout(() => { veil.remove(); modalPromoteNext(); }, 300);
       modalStack = modalStack.filter(m => m !== api);
       if (returnFocus && returnFocus.isConnected && returnFocus.focus) {
         try { returnFocus.focus({ preventScroll: true }); } catch (e) { }
@@ -294,6 +361,8 @@ function modal(html, opts) {
     });
   }
   modalStack.push(api);
+  if (sheetIsOpen()) modalQueue.push(show);
+  else show();
   return api;
 }
 /* Is a sheet up? Asked of the document rather than of modalStack, which
@@ -301,7 +370,9 @@ function modal(html, opts) {
    way out does not count. */
 function sheetIsOpen() {
   const list = document.querySelectorAll('#modals .veil');
-  for (let i = 0; i < list.length; i++) if (!list[i].dataset.closing) return true;
+  for (let i = 0; i < list.length; i++) {
+    if (!list[i].dataset.closing && !list[i].dataset.queued) return true;
+  }
   return false;
 }
 

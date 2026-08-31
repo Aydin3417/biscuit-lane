@@ -25,7 +25,14 @@ const GAMES = +process.argv[4] || 16;
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
-const design = { Math, clamp: (v, a, b) => Math.max(a, Math.min(b, v)) };
+/* The design module is read in its own little context rather than
+   through the game, so the intent can be quoted without the generator
+   in the room. It does need one thing from the table: a level that
+   teaches a mechanic for the first time is given a cushion, and which
+   levels those are is a fact about LEVELS. Without it this file would
+   quote a target seven points below the one the lane was tuned to, and
+   the two tools would disagree about the same number. */
+const design = { Math, clamp: (v, a, b) => Math.max(a, Math.min(b, v)), LEVELS: X.LEVELS };
 const util = fs.readFileSync(path.join(__dirname, '..', 'src', 'js', '00-util.js'), 'utf8');
 vm.createContext(design);
 vm.runInContext(util.match(/function mulberry[\s\S]*?\n}/)[0], design);
@@ -45,7 +52,11 @@ for (let n = FIRST; n <= LAST; n++) {
    is a miss and what is a coin */
 const noise = Math.sqrt(.25 / GAMES);
 
-console.log('the shape of the run, levels ' + FIRST + '-' + LAST +
+/* the same report reads the authored lane and the generated run — they
+   are one curve now, and calling both "the run" was a leftover from
+   when only half the game had a shape */
+console.log((LAST < 61 ? 'the shape of the lane' : FIRST > 60 ? 'the shape of the run' : 'the shape of the game') +
+  ', levels ' + FIRST + '-' + LAST +
   ', ' + GAMES + ' games each  (+/-' + Math.round(noise * 100) + '% is the sampling noise)\n');
 console.log('lvl   want  got   moves        ');
 rows.forEach(r => {

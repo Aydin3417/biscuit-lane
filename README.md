@@ -1658,3 +1658,286 @@ and BRUTAL against a flat band, and for the generated run those labels
 are now meaningless. A relief level *should* read as trivial — that is
 what it is for. The band check stays for the handcrafted lane, where it
 is still the right question.
+
+## The animal that was never alive
+
+The scene layer has a function called `drawPetLive`. It applies a rig —
+breath that deepens when the animal sleeps, a blink that closes over
+about a sixth of a second and occasionally doubles, a tail that swings
+like a pendulum and swings faster when the pet is happy, an ear that
+flicks, heavy lids when it is tired, and a gaze that wanders on its own
+or follows a pointer if one is nearby. Below that it draws the mood: a
+bowl in a thought bubble when the animal is hungry, a ball when it is
+bored, smudges and a fly when it is dirty, Zs when it sleeps.
+
+None of it had ever run.
+
+`drawPetLive` is called from `drawRoom`, once, guarded by `if (o.pet)`.
+`drawRoom` has exactly one caller — the room — and the room passes it a
+theme, a furniture list and a floor ratio, and no pet. It draws its own
+animal afterwards, with a single-frame blink flag, two plain sine waves
+for breath and tail, and eyes pointed along the direction of travel.
+
+So `petRig`, `rigStep`, `drawZs`, `drawThought`, `drawGrime` and every
+mood ornament in the game were unreachable, and had been since the room
+was written. The tell was in the string table: `mood_hungry`,
+`mood_bored`, `mood_dirty`, `mood_tired`, `mood_lonely` and `mood_happy`
+were the only six keys nothing in the source asked for.
+
+That turned out to be a false positive — `moodLine` builds the key as
+`T('mood_' + moodOf(p))`, so those six are shown constantly and appear
+nowhere. The check was wrong and has been taught about key families. But
+looking for the answer found the real one, which was worse: the mood was
+in the text under the buttons and nowhere else. A starving animal and a
+delighted one were the same picture.
+
+The room keeps its own state machine. It is the better one — grooming,
+stretching, shaking, staring at you, walking to somewhere it decided to
+go, a beat of attention when you come back into the room. What it did
+not have is everything an animal does without deciding to, and that is
+what the rig is for. So the rig is stepped in the room now and feeds
+breath, blink, tail and gaze, the room still overrides all four when it
+is deliberately doing something, and the ornaments are drawn.
+
+Three things had to be fixed before it read right.
+
+**The gaze was too small to see.** `drawEye` moved the iris by `.22` of
+the eye radius. The iris is `.84` of the eye and the eye is clipped, so
+there was room for far more travel — and travel past the rim is not an
+error, it is what an eye looks like when it looks hard at something. At
+`.22` the pet appeared to stare through you whatever it was looking at.
+At `.30` you can see where it is looking, which is the whole point of
+wiring a gaze to a finger.
+
+**Dirty was invisible on a dark coat.** The smudges were drawn in brown
+at a third opacity. That is a smudge on a cream retriever and nothing at
+all on a black cat, so sable coats went unwashed because the game had no
+way of saying they were dirty. The smudge takes the opposite side of the
+coat now, and the fly flies close enough to the head to belong to the
+animal instead of to the wall.
+
+**The hearts came twenty-six at a time.** The happy ornament fired on
+`Math.sin(t * .8) > .985`, which reads like "every so often" and is not:
+the sine stays above that line for about four tenths of a second, which
+at sixty frames is twenty-six hearts in a burst, every eight seconds. It
+rendered as a red smear above the pet's head. It is a timer now, in both
+copies of the line — the scene layer had the same fault written as
+`> .96`.
+
+`tools/moods.js` renders the room once per mood so this can be looked at
+rather than argued about, and it holds the animal still for the camera:
+two of the first three frames landed mid-groom with the eyes shut, which
+says nothing about the mood it was supposed to be showing.
+
+## Designing the lane instead of inheriting it
+
+The endless run got a designed shape. The sixty handcrafted levels in
+front of it did not, and they are the ones almost everybody plays.
+Measured, this is what the authored lane was:
+
+```
+L1-10  84%   L11-20 71%   L21-30 65%
+L31-40 66%   L41-50 65%   L51-60 73%
+```
+
+A bathtub. Easy at both ends, a flat sixty-five percent grind for thirty
+levels through the middle, seven levels under forty-five percent
+scattered through it and ten that could not be lost. The hardest stretch
+of the whole game was levels 21 to 50, and then it got *easier* just as
+the designed run took over at seventy-eight. Whoever quit this game quit
+somewhere in that plateau, and the plateau was not a decision anybody
+made — each level had been given whatever budget felt right at the time.
+
+### One curve, three rules
+
+The lane and the run are one descent now, and the rules turned out to be
+the same rules written twice:
+
+```
+the gate is every tenth level             n % 10 === 0
+the beat is where you are in the block    RHYTHM[(n - 1) % 10]
+the ease descends and never lands
+```
+
+The run's own reading — nine levels past the handoff, then every ten —
+picks exactly the same levels, because the lane is sixty long. Level 60
+is a gate and level 61 is the relief that follows one, so the handoff
+lands on a beat rather than across one.
+
+The gates were also being drawn in one place and not the other: the map
+computes `isGate` itself, the level card reads `def.gate`, and an
+authored level carried no such flag. The same level was a gate on the
+map and an ordinary level on its own card. It is stamped on the way out
+of `levelDef` now.
+
+### Measuring became cheap enough to do
+
+One solver game takes about half a second. A sweep that asks a real
+question — sixty levels, several candidate budgets, enough games each
+for the answer to mean anything — is twenty thousand games and over two
+hours on one core. That cost is the honest reason these levels were
+tuned by feel for so long.
+
+The machine has twelve cores and no tool in this project had ever used
+more than one. `test/_pool.js` hands the games out to all of them.
+Everything below is a consequence of measuring being minutes instead of
+an afternoon.
+
+### The curve has to fit the material
+
+The first attempt drew a line from ninety-five percent at level one down
+to seventy-eight at the handoff and asked each level to meet it with a
+move budget. Some could not. Level 20 wanted eighty percent and stopped
+at seventy-five with fifty-three moves against an authored thirty.
+Handing a level seventy percent more moves does not make it easier; it
+makes it longer, and a long level that is still lost is the worst of
+both.
+
+So `test/envelope.js` measures what the lane *can* do before deciding
+what it should: every level at four budgets either side of its authored
+one, which is the widest band that leaves it recognisably the level
+somebody wrote. Twenty-one of sixty topped out below eighty-five percent
+at any budget in that band.
+
+Fitting a single formula inside that envelope produced a lane running
+from eighty-four percent to sixty-six — an eighteen-point descent over
+sixty levels, which is a plateau with a slope drawn on it. The formula
+was not the answer.
+
+### What actually makes a level a wall
+
+Six levels could not be cleared even seventy percent of the time with
+thirty-five percent more moves. All six were the same shape:
+
+```
+level 20  rescue 2 + score 9500                    ceiling 54%
+level 35  crate 12 + rescue 2                      ceiling 67%
+level 49  rescue 3 + score 11000                   ceiling 63%
+level 52  bramble 24                               ceiling 63%
+level 53  crate 12 + collect 28                    ceiling 63%
+level 59  rescue 2 + 2 collects                    ceiling 67%
+```
+
+Rescue as a kind averages a seventy-six percent ceiling on its own —
+baskets have to be walked the length of the board and that takes what it
+takes. Stack a second goal on top and it drops to the fifties. Dropping
+exactly one basket:
+
+```
+level 20   41% -> 70%
+level 35   59% -> 90%
+level 49   53% -> 65%   (three baskets to two)
+level 59   63% -> 83%
+```
+
+Shrinking the *other* goal instead barely moved any of them. Shrinking a
+bramble goal moved nothing at all: level 52's clear rate was identical
+with its goal halved, because what makes a bramble level hard is the
+regrowth, not the count. A bramble goal is not a difficulty lever and
+must not be used as one.
+
+Levels 20, 35 and 49 are one basket lighter. Level 59 was left alone —
+it sits at the run-up before a gate, where sixty-seven percent is what
+it is supposed to be. After those three edits only four levels in the
+lane still cap below seventy percent, and all four are rescues carrying
+a second goal, and all four sit at a gate or the run-up into one. The
+rule explains every hard level in the lane.
+
+### Fitting the rhythm to the levels
+
+Every block of ten keeps its shape, but the beats are handed out by what
+each level can carry rather than by where it sits. The tenth level is
+the gate and the first is the relief that follows one — those two are
+pinned, because the map and the level card say so. The eight in between
+are sorted by measured headroom and given the eight remaining beats in
+rank order: the most room gets the biggest gift, the least gets the
+run-up.
+
+So a bramble patch that cannot be a gift stops being asked to be one,
+and a collect level with a hundred-percent ceiling takes the gift
+instead. The player still feels a block that gives, builds and then
+asks.
+
+What comes out is a number per level, written into the table as `want`.
+Design intent as data rather than as a formula, which is how it can be
+read, argued with, and overridden for one level without moving anybody
+else. `targetClear` reads it for the lane and falls back to the curve
+for a level nobody has measured yet.
+
+### Stars, measured
+
+Move budgets came from each level's own response curve and then a
+correction round: a budget interpolated between two measured rungs is a
+guess, and on a level where one more move buys a whole extra cascade it
+is not a good one. Levels missing by more than eight points were
+corrected against their own local slope and played again.
+
+Star thresholds were authored numbers nobody had checked. They are the
+seventieth percentile of the scores of *winning* runs at the chosen
+budget now, so three stars is earned by roughly the best third of the
+games that were won at all, and the other two thresholds fall out of it
+at .8 and .55 as they always did.
+
+### Where it landed
+
+```
+average miss      4%     (sampling noise alone is 6%)
+the lane          97% at level 1, 63% at level 60
+gates             70% cleared
+relief after one  89%
+the rhythm        19 points wide
+```
+
+The average level now sits closer to its intent than the measurement can
+resolve. Fifty-six of sixty levels changed budget, fifty-eight changed
+star thresholds, and every one of them has a stated target for the first
+time.
+
+## Three sheets at once
+
+Clearing a level that grew the pet and won a badge ran this:
+
+```
+showWin()                      the win sheet, open until it is tapped
+setTimeout(stageUpModal,  900)
+setTimeout(badgeModal,   2000)
+```
+
+The delays are measured from the win, not from the player. The win sheet
+stays up until somebody dismisses it, so nine hundred milliseconds later
+the stage-up sheet arrived on top of it, and eleven hundred after that
+the badge sheet arrived on top of both. All three were legible through
+each other, because a veil is a translucent scrim and stacking two of
+them just dims the first sheet slightly.
+
+The game already had `sheetIsOpen()`. Exactly one call site in the whole
+codebase used it.
+
+Sheets queue now. A sheet opened while another is up is built and
+attached immediately — so a caller can wire up its buttons and paint its
+canvases exactly as before, and the stage-up animation still gets a
+canvas with layout — but it is transparent, takes no taps, and holds no
+focus until the sheet in front of it closes. Then it fades in on its own.
+The timers above are left alone: they now decide nothing except the
+order things joined the line.
+
+Two things went wrong on the way in, and both are the kind that only
+show up when the change is run rather than reasoned about.
+
+**Every dialog queued behind itself.** The new veil was appended to the
+document and *then* asked whether a sheet was already open.
+`sheetIsOpen()` reads the DOM, so it found the veil that had just been
+added, concluded something was in front, and put the sheet in a line
+behind a sheet that was never going to appear. The flag is set before it
+joins the document now.
+
+**A veil can leave the document without being closed.** The test harness
+clears sheets by removing the elements, and screen changes can too. A
+queued sheet promoted after that would have taken focus into something
+nobody could see. It checks that it is still connected, and passes the
+screen to the next one if it is not.
+
+The failure that found the first bug was a test that has been in the
+suite for a long time: *a dialog takes the keyboard with it*. It opens
+the settings during a level and asserts the focus moved. It said the
+focus had gone to a canvas.

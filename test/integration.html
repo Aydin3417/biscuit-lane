@@ -1,5 +1,11 @@
 <!doctype html>
 <meta charset="utf-8">
+<!-- The game declares its own icon, so it never asks for one; this
+     page did not, and Chrome went looking for /favicon.ico twice per
+     run. Two 404s is nothing, but they were the only two real lines
+     in the console once the vibrate noise was filtered out, and a
+     harness whose own output has to be ignored is worth less. -->
+<link rel="icon" href="data:,">
 <title>Biscuit Lane — integration tests</title>
 <style>
   body { font: 14px/1.5 ui-monospace, Menlo, Consolas, monospace; margin: 0; background: #131A26; color: #F6EDE0; }

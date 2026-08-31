@@ -1177,11 +1177,17 @@ function showLose() {
     })
     .filter(x => x.have < x.g.need);
   const close = short.length > 0 && short.every(x => x.have / x.g.need >= .8);
-  const missing = short.map(x => goalLine(x.g)).join(', ');
+  /* The subtitle used to read the shortfall back as a sentence:
+     "You needed Walk 2 home, Score 9500." Goal lines are written as
+     instructions — "Walk 2 home", "Collect 44 Sable" — and an
+     instruction does not survive being used as a noun halfway through
+     somebody else's sentence, in either language. It was also saying
+     exactly what the list underneath says, only without the progress
+     bars, which are the part worth reading. So it is a label now. */
   const m = modal(`
     <span style="color:var(--text-faint);width:52px;height:52px;align-self:center">${IC.starOut}</span>
     <h2>${T('lose_t')}</h2>
-    <p>${close ? `<b style="color:var(--accent-strong)">${T('lose_close')}</b> ` : ''}${T('lose_s', { what: missing })}</p>
+    <p>${close ? `<b style="color:var(--accent-strong)">${T('lose_close')}</b> ` : ''}<span style="color:var(--text-dim)">${T('lose_s')}</span></p>
     <div class="goalList">
       ${short.map(({ g, have }) => `<div class="goalItem">${goalIconHtml(g.kind, g.arg)}
         <span class="t"><b>${fmt(have)} / ${fmt(g.need)}</b>

@@ -1307,8 +1307,41 @@ function toast(msg, ic) {
   if (kids.length > 3) kids[0].remove();
 }
 
-/* ---------- modal ---------- */
+/* ---------- modal ----------
+
+   One sheet at a time.
+
+   Sheets used to be sequenced by guessing at timers. Clearing a level
+   that grew the pet and won a badge ran:
+
+     showWin()                          the win sheet, open until tapped
+     setTimeout(stageUpModal,  900)
+     setTimeout(badgeModal,   2000)
+
+   Those delays are measured from the win, not from the player, and the
+   win sheet stays up until it is dismissed — so all three arrived on
+   top of each other and all three were legible through one another.
+   Only one call site in the whole game checked sheetIsOpen() first.
+
+   A sheet opened while another is up now waits for it. The element is
+   built and attached immediately, so a caller can wire up its buttons
+   and paint its canvases exactly as before — an unattached sheet would
+   have handed the stage-up animation a canvas with no layout. It simply
+   is not shown, is not focusable, and does not take a tap, until the
+   sheet in front of it closes.
+
+   A veil with no `.on` is already transparent, so being queued costs
+   nothing to draw; what it needs is to stop swallowing clicks. */
 let modalStack = [];
+const modalQueue = [];
+
+/* the next sheet in line takes the screen, if nothing else holds it */
+function modalPromoteNext() {
+  if (sheetIsOpen()) return;
+  const next = modalQueue.shift();
+  if (next) next();
+}
+
 function modal(html, opts) {
   opts = opts || {};
   const veil = document.createElement('div');
@@ -1320,17 +1353,51 @@ function modal(html, opts) {
   sheet.tabIndex = -1;
   sheet.innerHTML = html;
   veil.appendChild(sheet);
+  /* Marked as waiting *before* it joins the document. sheetIsOpen()
+     asks the DOM, so a veil appended first and asked about afterwards
+     finds itself, decides a sheet is already up, and queues behind
+     itself — every dialog in the game then waited for one that was
+     never going to appear. */
+  veil.dataset.queued = '1';
+  veil.style.pointerEvents = 'none';
   $('#modals').appendChild(veil);
-  const returnFocus = document.activeElement;
-  /* The keyboard follows the dialog, so it stops reaching whatever was
-     behind it. Not inside the rAF below: that never fires in a hidden
-     tab, and focus is not decoration. */
-  const first = sheet.querySelector('button, input, select, textarea, a[href]');
-  try { (first || sheet).focus({ preventScroll: true }); } catch (e) { }
-  requestAnimationFrame(() => veil.classList.add('on'));
+  let returnFocus = null;
+  let shown = false, closed = false;
+
+  /* Taking the screen: the focus moves here, and the fade starts. The
+     keyboard follows the dialog, so it stops reaching whatever was
+     behind it. Focus is set outside the rAF because that never fires in
+     a hidden tab, and focus is not decoration. */
+  const show = () => {
+    if (closed) return;
+    /* A test harness — and the game's own screen changes — can take a
+       veil out of the document without going through close(). Skip it
+       and let the next one have the screen, rather than focusing into a
+       sheet nobody can see. */
+    if (!veil.isConnected) { closed = true; modalPromoteNext(); return; }
+    shown = true;
+    delete veil.dataset.queued;
+    veil.style.pointerEvents = '';
+    returnFocus = document.activeElement;
+    const first = sheet.querySelector('button, input, select, textarea, a[href]');
+    try { (first || sheet).focus({ preventScroll: true }); } catch (e) { }
+    requestAnimationFrame(() => veil.classList.add('on'));
+  };
+
   const api = {
     el: sheet, veil,
     close() {
+      if (closed) return;
+      closed = true;
+      if (!shown) {
+        /* it never took the screen: drop it out of the line quietly */
+        const i = modalQueue.indexOf(show);
+        if (i >= 0) modalQueue.splice(i, 1);
+        veil.remove();
+        modalStack = modalStack.filter(m => m !== api);
+        if (opts.onClose) opts.onClose();
+        return;
+      }
       veil.classList.remove('on');
       /* it lingers for the fade; it must not still be operable, and
          anything asking whether a sheet is up must see it as gone */
@@ -1339,7 +1406,7 @@ function modal(html, opts) {
       /* and nothing in it can be pressed again on the way out — several
          of these buttons spend a heart or a treat when pressed */
       sheet.querySelectorAll('button').forEach(b => { b.disabled = true; });
-      setTimeout(() => veil.remove(), 300);
+      setTimeout(() => { veil.remove(); modalPromoteNext(); }, 300);
       modalStack = modalStack.filter(m => m !== api);
       if (returnFocus && returnFocus.isConnected && returnFocus.focus) {
         try { returnFocus.focus({ preventScroll: true }); } catch (e) { }
@@ -1354,6 +1421,8 @@ function modal(html, opts) {
     });
   }
   modalStack.push(api);
+  if (sheetIsOpen()) modalQueue.push(show);
+  else show();
   return api;
 }
 /* Is a sheet up? Asked of the document rather than of modalStack, which
@@ -1361,7 +1430,9 @@ function modal(html, opts) {
    way out does not count. */
 function sheetIsOpen() {
   const list = document.querySelectorAll('#modals .veil');
-  for (let i = 0; i < list.length; i++) if (!list[i].dataset.closing) return true;
+  for (let i = 0; i < list.length; i++) {
+    if (!list[i].dataset.closing && !list[i].dataset.queued) return true;
+  }
   return false;
 }
 
@@ -1518,7 +1589,7 @@ const STRINGS = {
     win_t: 'Level cleared',
     win_petline: '{name} is very pleased with you.',
     lose_t: 'Out of moves',
-    lose_s: 'You needed {what}.',
+    lose_s: 'Still needed',
     lose_close: 'So close.',
     lose_petline: '{name} does not blame you.',
     retry: 'Try again', to_map: 'Back to the lane', keep_going: 'Carry on',
@@ -1747,7 +1818,7 @@ const STRINGS = {
     win_t: 'Bölüm geçildi',
     win_petline: '{name} senden çok memnun.',
     lose_t: 'Hamle bitti',
-    lose_s: 'Eksik kalan: {what}.',
+    lose_s: 'Eksik kalan',
     lose_close: 'Az kaldı.',
     lose_petline: '{name} sana kızmıyor.',
     retry: 'Yeniden dene', to_map: 'Sokağa dön', keep_going: 'Devam',
@@ -2321,6 +2392,28 @@ const BRAMBLE_EVERY = 2;
    full-width crate rows all stop a basket falling, and levels that mixed
    them with a rescue goal measured at 0-20% clear. Mud is the safe
    obstacle there — it sits under the tile and never blocks the drop. */
+/* One measured rule, learned the expensive way and worth stating before
+   the table rather than after it: a rescue level cannot carry a second
+   goal at full size.
+
+   Measured at a budget of 1.18x, the six levels in this lane that could
+   not be cleared even seventy percent of the time with thirty-five
+   percent more moves were all rescues with something stacked on top, or
+   crates with a rescue stacked on top. Dropping exactly one basket:
+
+     level 20  rescue 2 + score      41% -> 70%
+     level 35  crate 12 + rescue 2   59% -> 90%
+     level 49  rescue 3 + score      53% -> 65%   (3 -> 2)
+     level 59  rescue 2 + 2 collects 63% -> 83%
+
+   Shrinking the *other* goal instead barely moved any of them, and
+   shrinking a bramble goal moved nothing at all — what makes a bramble
+   level hard is the regrowth, not the count, so its goal is not a
+   difficulty lever and must not be used as one.
+
+   Levels 20, 35 and 49 are one basket lighter for that reason. Level 59
+   was left alone: it sits at the run-up before a gate, where sixty-seven
+   percent is what it is supposed to be. */
 const LEVELS = [
   /* The opening is not a difficulty band, it is an introduction. A
      level measured at 75-83% is an ordinary level of this lane and a
@@ -2328,186 +2421,186 @@ const LEVELS = [
      boosters, no perks and no stage moves, and has just been asked to
      name an animal. The first three carry a real cushion; the curve
      descends from level 4, where it already did. */
-  { n: 1, w: 7, h: 7, types: 5, moves: 22, goals: [[GK.COLLECT, 0, 34]], base: 10500, tut: 'swap' },
-  { n: 2, w: 7, h: 7, types: 5, moves: 24, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 10400 },
-  { n: 3, w: 7, h: 8, types: 5, moves: 24, goals: [[GK.SCORE, 0, 14500]], base: 22500, tut: 'special' },
+  { n: 1, w: 7, h: 7, types: 5, moves: 21, goals: [[GK.COLLECT, 0, 34]], base: 11500, want: 0.97, tut: 'swap' },
+  { n: 2, w: 7, h: 7, types: 5, moves: 21, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 11500, want: 0.95 },
+  { n: 3, w: 7, h: 8, types: 5, moves: 24, goals: [[GK.SCORE, 0, 14500]], base: 23500, want: 0.97, tut: 'special' },
   {
-    n: 4, w: 7, h: 8, types: 5, moves: 18, goals: [[GK.MUD, 0, 76]], base: 11000,
+    n: 4, w: 7, h: 8, types: 5, moves: 18, goals: [[GK.MUD, 0, 76]], base: 12200, want: 0.93,
     map: ['.......', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', '.......']
   },
-  { n: 5, w: 8, h: 8, types: 5, moves: 24, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 17000 },
+  { n: 5, w: 8, h: 8, types: 5, moves: 23, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 17300, want: 0.9 },
   {
-    n: 6, w: 8, h: 8, types: 5, moves: 16, goals: [[GK.CRATE, 0, 28]], base: 8000,
+    n: 6, w: 8, h: 8, types: 5, moves: 18, goals: [[GK.CRATE, 0, 28]], base: 9200, want: 0.9,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
-  { n: 7, w: 8, h: 8, types: 5, moves: 24, goals: [[GK.RESCUE, 0, 2]], base: 12500, tut: 'rescue' },
+  { n: 7, w: 8, h: 8, types: 5, moves: 26, goals: [[GK.RESCUE, 0, 2]], base: 9800, want: 0.93, tut: 'rescue' },
   {
-    n: 8, w: 8, h: 8, types: 5, moves: 26, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 16800,
+    n: 8, w: 8, h: 8, types: 5, moves: 26, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 20000, want: 0.88,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 9, w: 8, h: 8, types: 5, moves: 24, goals: [[GK.SCORE, 0, 19000]], base: 21000,
+    n: 9, w: 8, h: 8, types: 5, moves: 28, goals: [[GK.SCORE, 0, 19000]], base: 25200, want: 0.85,
     map: ['##....##', '#......#', '........', '........', '........', '........', '#......#', '##....##']
   },
-  { n: 10, w: 8, h: 9, types: 5, moves: 26, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26000 },
+  { n: 10, w: 8, h: 9, types: 5, moves: 29, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26700, want: 0.82 },
   {
-    n: 11, w: 8, h: 9, types: 6, moves: 24, goals: [[GK.CRATE, 0, 28]], base: 9200,
+    n: 11, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.CRATE, 0, 28]], base: 10300, want: 0.85,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', '........', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
-  { n: 12, w: 8, h: 9, types: 5, moves: 28, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 15500 },
+  { n: 12, w: 8, h: 9, types: 5, moves: 31, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 16300, want: 0.9 },
   {
-    n: 13, w: 8, h: 8, types: 6, moves: 26, goals: [[GK.MUD, 0, 24]], base: 8000,
+    n: 13, w: 8, h: 8, types: 6, moves: 30, goals: [[GK.MUD, 0, 24]], base: 8900, want: 0.91,
     map: ['MMMM....', 'MMMM....', '........', '........', '........', '........', '....MMMM', '....MMMM']
   },
   {
-    n: 14, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.BRAMBLE, 0, 18]], base: 14000, tut: 'bramble',
+    n: 14, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.BRAMBLE, 0, 18]], base: 12400, want: 0.91, tut: 'bramble',
     map: ['........', '........', '.vvvvvv.', '.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........']
   },
   {
-    n: 15, w: 8, h: 9, types: 5, moves: 26, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 21000,
+    n: 15, w: 8, h: 9, types: 5, moves: 25, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 19800, want: 0.91,
     map: ['..c..c..', '.cc..cc.', '........', '.c....c.', '........', '.c....c.', '........', '.cc..cc.', '..c..c..']
   },
   {
-    n: 16, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 12000,
+    n: 16, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 11000, want: 0.63,
     map: ['........', '...mm...', '..mmmm..', '.mmmmmm.', 'mmmmmmmm', '.mmmmmm.', '..mmmm..', '...mm...', '........']
   },
   {
-    n: 17, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12700,
+    n: 17, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 14600, want: 0.85,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 18, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.CRATE, 0, 16]], base: 11800,
+    n: 18, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 16]], base: 14000, want: 0.81,
     map: ['C......C', '........', '..cccc..', '..c..c..', '..c..c..', '..cccc..', '........', 'C......C', '........']
   },
-  { n: 19, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 14500 },
-  { n: 20, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 9500]], base: 13500 },
+  { n: 19, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15200, want: 0.84 },
+  { n: 20, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.RESCUE, 0, 1], [GK.SCORE, 0, 9500]], base: 10900, want: 0.72 },
   {
-    n: 21, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 24]], base: 9500,
+    n: 21, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 24]], base: 12400, want: 0.91,
     map: ['........', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', '........']
   },
   {
-    n: 22, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 12500,
+    n: 22, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 12800, want: 0.89,
     map: ['..CCCC..', '........', '.c....c.', '..c..c..', '..c..c..', '........', '.c....c.', '........', '........']
   },
   {
-    n: 23, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 12300,
+    n: 23, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 14700, want: 0.78,
     map: ['........', '.m....m.', '..m..m..', '...mm...', '........', '...mm...', '..m..m..', '.m....m.', '........']
   },
   {
-    n: 24, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.BRAMBLE, 0, 28]], base: 14500,
+    n: 24, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.BRAMBLE, 0, 28]], base: 17200, want: 0.75,
     map: ['........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........']
   },
   {
-    n: 25, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 11000,
+    n: 25, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 12700, want: 0.88,
     map: ['mmmmmmmm', 'm.c..c.m', 'm......m', 'm..cc..m', 'm..cc..m', 'm......m', 'm.c..c.m', 'mmmmmmmm', '........']
   },
-  { n: 26, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 12800 },
+  { n: 26, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 14600, want: 0.69 },
   {
-    n: 27, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.CRATE, 0, 22]], base: 10200,
+    n: 27, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.CRATE, 0, 22]], base: 13000, want: 0.83,
     map: ['CC....CC', 'C......C', '..cccc..', '..c..c..', '..c..c..', '..cccc..', 'C......C', 'CC....CC', '........']
   },
   {
-    n: 28, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 14000,
+    n: 28, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 17700, want: 0.85,
     map: ['MMMMMMMM', 'MMMMMMMM', '........', '........', '........', '........', '........', '........', '........']
   },
-  { n: 29, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 13000 },
+  { n: 29, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 15100, want: 0.72 },
   {
-    n: 30, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 14800,
+    n: 30, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 12800, want: 0.72,
     map: ['........', '........', '.vvvvvv.', '.v....v.', '.v....v.', '.v....v.', '.vvvvvv.', '........', '........']
   },
   {
-    n: 31, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 9600,
+    n: 31, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 10200, want: 0.85,
     map: ['mccccccm', 'm......m', 'm.mmmm.m', 'm......m', '........', 'm......m', 'm.mmmm.m', 'm......m', 'mccccccm']
   },
   {
-    n: 32, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 13000,
+    n: 32, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 14800, want: 0.75,
     map: ['........', '.c....c.', '........', '..c..c..', '........', '..c..c..', '........', '.c....c.', '........']
   },
-  { n: 33, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.COLLECT, 0, 42], [GK.COLLECT, 3, 36], [GK.COLLECT, 5, 30]], base: 14500 },
+  { n: 33, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.COLLECT, 0, 42], [GK.COLLECT, 3, 36], [GK.COLLECT, 5, 30]], base: 16900, want: 0.84 },
   {
-    n: 34, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.MUD, 0, 60]], base: 13500,
+    n: 34, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.MUD, 0, 60]], base: 13900, want: 0.81,
     map: ['MMMMMMMM', 'M......M', 'M.mmmm.M', 'M.m..m.M', 'M.m..m.M', 'M.mmmm.M', 'M......M', 'MMMMMMMM', '........']
   },
   {
-    n: 35, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 2]], base: 13500,
+    n: 35, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 12500, want: 0.8,
     map: ['........', '.cc..cc.', '........', '..c..c..', '........', '..c..c..', '........', '.cc..cc.', '........']
   },
-  { n: 36, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.SCORE, 0, 16000]], base: 19000 },
+  { n: 36, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.SCORE, 0, 16000]], base: 22400, want: 0.86 },
   {
-    n: 37, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 12000,
+    n: 37, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 13700, want: 0.69,
     map: ['mmmmmmmm', '........', '..mmmm..', '........', '........', '........', '..mmmm..', '........', 'mmmmmmmm']
   },
   {
-    n: 38, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 10500,
+    n: 38, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 11000, want: 0.85,
     map: ['C.C..C.C', '........', 'iCiiiiCi', '........', '..CCCC..', '........', 'iCiiiiCi', '........', 'C.C..C.C']
   },
   {
-    n: 39, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 14500,
+    n: 39, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 14100, want: 0.66,
     map: ['MMMMMMMM', 'Mc.cc.cM', 'M......M', 'M......M', 'M......M', 'M......M', 'M......M', 'Mc.cc.cM', 'MMMMMMMM']
   },
-  { n: 40, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 15500 },
+  { n: 40, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 17400, want: 0.63 },
 
   /* ---- the lane keeps going: 41 to 60 ---- */
-  { n: 41, w: 8, h: 9, types: 6, moves: 25, goals: [[GK.COLLECT, 0, 34], [GK.COLLECT, 3, 28]], base: 12400 },
+  { n: 41, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.COLLECT, 0, 34], [GK.COLLECT, 3, 28]], base: 13600, want: 0.91 },
   {
-    n: 42, w: 8, h: 9, types: 6, moves: 25, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 13200,
+    n: 42, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11900, want: 0.78,
     map: ['........', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 43, w: 8, h: 9, types: 6, moves: 20, goals: [[GK.CRATE, 0, 28]], base: 8000,
+    n: 43, w: 8, h: 9, types: 6, moves: 23, goals: [[GK.CRATE, 0, 28]], base: 8400, want: 0.79,
     map: ['c......c', '.cccccc.', '.c....c.', '.c.cc.c.', '.c.cc.c.', '.c....c.', '.cccccc.', 'c......c', '........']
   },
   {
-    n: 44, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 12000,
+    n: 44, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 11000, want: 0.69,
     map: ['........', '........', '..mmmm..', '.mmmmmm.', '.mmmmmm.', '..mmmm..', '........', '........', '........']
   },
   {
-    n: 45, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.SCORE, 0, 11200]], base: 13000,
+    n: 45, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.SCORE, 0, 11200]], base: 14300, want: 0.85,
     map: ['##....##', '#......#', '........', '...##...', '...##...', '........', '#......#', '##....##', '........']
   },
   {
-    n: 46, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.BRAMBLE, 0, 14]], base: 8600,
+    n: 46, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.BRAMBLE, 0, 14]], base: 9500, want: 0.84,
     map: ['........', '..vvvv..', '..v..v..', '..v..v..', '..v..v..', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 47, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 13000,
+    n: 47, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 13600, want: 0.81,
     map: ['........', '..iiii..', '........', '.i....i.', '.i....i.', '........', '..iiii..', '........', '........']
   },
   {
-    n: 48, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 12200,
+    n: 48, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 12200, want: 0.78,
     map: ['cc....cc', '........', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '........', 'cc....cc', '........']
   },
-  { n: 49, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.RESCUE, 0, 3], [GK.SCORE, 0, 11000]], base: 13000 },
+  { n: 49, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 11000]], base: 14500, want: 0.72 },
   {
-    n: 50, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.MUD, 0, 40], [GK.CRATE, 0, 8], [GK.COLLECT, 0, 26]], base: 13000,
+    n: 50, w: 8, h: 9, types: 6, moves: 24, goals: [[GK.MUD, 0, 40], [GK.CRATE, 0, 8], [GK.COLLECT, 0, 26]], base: 12500, want: 0.69,
     map: ['MMMMMMMM', 'M.cccc.M', 'M......M', 'M......M', 'M......M', 'M......M', 'M.cccc.M', 'MMMMMMMM', '........']
   },
-  { n: 51, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 14000 },
+  { n: 51, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 13100, want: 0.91 },
   {
-    n: 52, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.BRAMBLE, 0, 24]], base: 16000,
+    n: 52, w: 8, h: 9, types: 6, moves: 47, goals: [[GK.BRAMBLE, 0, 24]], base: 19800, want: 0.69,
     map: ['.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........', '.vvvvvv.', '.vvvvvv.', '........']
   },
   {
-    n: 53, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 14500,
+    n: 53, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 17300, want: 0.75,
     map: ['iCiiiiCi', '........', '..CCCC..', '........', '........', '........', '..CCCC..', '........', 'iCiiiiCi']
   },
-  { n: 54, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.RESCUE, 0, 3]], base: 16500 },
-  { n: 55, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.SCORE, 0, 16400]], base: 19800 },
+  { n: 54, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.RESCUE, 0, 3]], base: 14100, want: 0.69 },
+  { n: 55, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.SCORE, 0, 16400]], base: 24500, want: 0.84 },
   {
-    n: 56, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.MUD, 0, 38]], base: 10900,
+    n: 56, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.MUD, 0, 38]], base: 10900, want: 0.83,
     map: ['mmmmmmmm', 'mmmmmmmm', 'mmmmmmmm', '........', '........', '........', 'mmmmmmmm', 'mmmmmmmm', '........']
   },
   {
-    n: 57, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 16500,
+    n: 57, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 20300, want: 0.69,
     map: ['mmmmmmmm', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', 'mmmmmmmm', '........']
   },
   {
-    n: 58, w: 8, h: 9, types: 6, moves: 24, goals: [[GK.CRATE, 0, 30]], base: 8500,
+    n: 58, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.CRATE, 0, 30]], base: 7600, want: 0.8,
     map: ['CCCCCCCC', 'C......C', 'C.cccc.C', 'C.c..c.C', 'C.c..c.C', 'C.cccc.C', 'C......C', 'CCCCCCCC', '........']
   },
-  { n: 59, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 15500 },
+  { n: 59, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 15000, want: 0.63 },
   {
-    n: 60, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 17000,
+    n: 60, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 15600, want: 0.63,
     map: ['mmmmmmmm', '.cc..cc.', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '.cc..cc.', 'mmmmmmmm', '........']
   }
 ];
@@ -2661,7 +2754,17 @@ const SHAPES = ['bands', 'columns', 'diamond', 'ring', 'corners', 'checker', 'we
    *relative to that fixed point*. */
 function levelDef(n, ref) {
   if (n === DAILY_LEVEL) return dailyLevel(SAVE ? SAVE.reached : 1);
-  if (n <= LEVELS.length) return normaliseGoals(LEVELS[n - 1]);
+  /* An authored level carries no gate flag of its own — the block
+     rhythm is not the table's business — so it is stamped on the way
+     out. Without this the lane's gates were marked on the map, which
+     computes isGate itself, and not on the level card, which reads
+     def.gate: the same level was a gate in one place and not in the
+     other. */
+  if (n <= LEVELS.length) {
+    const def = normaliseGoals(LEVELS[n - 1]);
+    def.gate = isGate(n);
+    return def;
+  }
   const r = mulberry(n * 7919);
   const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE];
 
@@ -2881,7 +2984,30 @@ function dailyLevel(reached, dayNo) {
   const kind = kinds[Math.floor(r() * kinds.length)];
   const h = 9, w = 8;
   const key = kind === GK.BRAMBLE ? 'bramble' : kind;
-  const moves = (GEN[key] && GEN[key].moves ? GEN[key].moves : 28) + 2;
+
+  /* The daily walk is a habit, not a challenge.
+
+     It used to take the generator's default budget plus two, which meant
+     its difficulty was whatever kind the day happened to roll: a
+     collect level and a bramble patch given the same treatment are not
+     the same level, and the measured spread between the easiest kind
+     and the hardest is over sixty points. This is the one level that
+     carries a streak — the only one where losing costs something that
+     cannot be replayed — so it was also the worst place in the game for
+     difficulty to be an accident.
+
+     It is aimed now, at one number, every day, whatever it rolls.
+
+     Some kinds cannot be brought up to the promise with moves alone: a
+     rescue tops out near eighty percent however long it is given, and a
+     bramble patch grows back. Where the ceiling is short, the goal
+     comes down to meet it rather than the level pretending. */
+  const reach = budgetRange(key);
+  const aim = DAILY_CLEAR - MODEL_BIAS;
+  const short = Math.max(0, aim - reach[1]);
+  const goalEase = clamp(1 - short * 1.8, .55, 1);
+  const mult = budgetFor(key, clamp(aim, reach[0], reach[1]));
+  const moves = Math.max(12, Math.round((GEN[key] && GEN[key].moves ? GEN[key].moves : 28) * mult));
   const types = tier <= 1 ? 5 : 6;
 
   const blob = new Set();
@@ -2926,10 +3052,15 @@ function dailyLevel(reached, dayNo) {
     goals.push([GK.COLLECT, b, pair[1]]);
     base = GEN.collect.base + tier * 500;
   }
-  else if (kind === GK.MUD) { goals.push([GK.MUD, 0, share(stock.mud, .74 + tier * .05)]); base = GEN.mud.base; }
-  else if (kind === GK.CRATE) { goals.push([GK.CRATE, 0, share(stock.crate, .68 + tier * .045)]); base = GEN.crate.base; }
-  else if (kind === GK.RESCUE) { goals.push([GK.RESCUE, 0, 2]); base = GEN.rescue.base; }
-  else { goals.push([GK.BRAMBLE, 0, GEN.bramble.goal(tier)]); base = GEN.bramble.base; }
+  else if (kind === GK.MUD) { goals.push([GK.MUD, 0, share(stock.mud, (.74 + tier * .05) * goalEase)]); base = GEN.mud.base; }
+  else if (kind === GK.CRATE) { goals.push([GK.CRATE, 0, share(stock.crate, (.68 + tier * .045) * goalEase)]); base = GEN.crate.base; }
+  else if (kind === GK.RESCUE) { goals.push([GK.RESCUE, 0, Math.max(1, Math.round(2 * goalEase))]); base = GEN.rescue.base; }
+  else { goals.push([GK.BRAMBLE, 0, Math.round(GEN.bramble.goal(tier) * goalEase)]); base = GEN.bramble.base; }
+
+  /* stars follow the budget, as they do on a generated level: a longer
+     level scores more, and a threshold that ignored that would hand out
+     three stars for turning up */
+  base = Math.round(base * (.35 + .65 * mult));
 
   return normaliseGoals({
     n: DAILY_LEVEL, daily: true, day, w, h, types, moves, goals, base, map
@@ -2945,21 +3076,31 @@ function starTargets(def) {
 
 /* ===== 11-design.js ===== */
 /* ============================================================
-   THE SHAPE OF THE ENDLESS RUN
+   THE SHAPE OF THE GAME
    ============================================================
 
-   The sixty handcrafted levels were authored one at a time and then
-   measured. Everything after them was generated by rolling parameters
-   from fixed constants, which meant no level had any intended
-   difficulty at all. The run held inside its band because the constants
-   were tuned in aggregate — but inside that band it was noise. Two
-   hundred levels of the same thing, at random.
+   This file used to describe only the endless run, because only the run
+   was designed. The sixty handcrafted levels in front of it were
+   authored one at a time and given whatever move budget felt right, and
+   then measured once. Measured again, that lane was a bathtub:
 
-   A run wants a shape. Not a straight climb, which is exhausting, and
-   not a flat line, which is boring: a rhythm. Relief after a hard one so
-   the player is allowed to feel good, a build across the middle, and a
-   gate at the end of each block that has to be earned. The gate is the
-   level people remember; the relief is what makes them try it again.
+     L1-10  84%   L11-20 71%   L21-30 65%
+     L31-40 66%   L41-50 65%   L51-60 73%
+
+   Easy at both ends and a flat 65% grind for thirty levels through the
+   middle — with seven levels under 45% scattered through it and ten that
+   could not be lost. The hardest stretch of the whole game was levels
+   21 to 50, and then it got *easier* just as the designed run took over
+   at 78%. A player who quit this game quit somewhere in that plateau,
+   and the plateau was not a decision anybody made.
+
+   So the lane is designed now, on the same terms as the run, and the two
+   are one curve rather than two systems. Three rules cover the whole
+   game, and they turned out to be the same rules written twice:
+
+     the gate is every tenth level          n % 10 === 0
+     the beat is where you are in the block RHYTHM[(n - 1) % 10]
+     the ease descends and never lands
 
    All figures here are the clear rate of the greedy solver in
    test/ai.js, which plays about as well as an attentive human who is not
@@ -2968,11 +3109,7 @@ function starTargets(def) {
 
    They describe a player walking a *bare* pet, because that is the floor
    and the basis everything else was measured on. A cared-for one brings
-   four more moves and twelve percent more score to the same board, and
-   measured, that put the run ninety-one percent cleared — above the
-   ceiling the whole project holds itself to. The numbers below are set
-   so the run sits inside the band for the player who actually turns up:
-   the one who feeds the animal.
+   four more moves and twelve percent more score to the same board.
    ============================================================ */
 
 /* Ten levels to a block. The gate is the last of them; the level after a
@@ -2991,15 +3128,49 @@ const RHYTHM = [
   -.15    /* 10 — the gate */
 ];
 
+/* Where the authored lane ends and the generator takes over. The lane is
+   levels 1-60, so level 60 is a gate and level 61 is the relief after
+   it: the handoff falls on a beat rather than across one. */
+const RUN_START = 61;
+
 /* The floor the run settles toward, and how fast it gets there. Ninety
    levels in it is most of the way down; it never reaches the floor, so
    there is always somewhere left to go. */
-const RUN_START = 61;
 const EASE_FROM = .78, EASE_TO = .61, EASE_OVER = 210;
 
-/* Never certain, never impossible. A generated level outside these is a
-   bug in the model, not a design decision. */
+/* Where the game opens, and how it bends down to meet EASE_FROM at the
+   handoff. A bend of 1 would be a straight line and would spend the
+   whole of the first twenty levels being nearly as hard as level fifty;
+   1.4 puts the give where a new player needs it and flattens out by the
+   time they don't. */
+const LANE_FROM = .93, LANE_BEND = 1.6;
+
+/* Never certain, never impossible. The lane is allowed to be gentler at
+   both ends than the run: nobody should fail level one, and nobody
+   should meet a 45% wall before they have met every mechanic. */
 const CLEAR_FLOOR = .45, CLEAR_CEIL = .88;
+const LANE_FLOOR = .58, LANE_CEIL = .97;
+
+/* A level that teaches a mechanic for the first time is not a test of
+   it. The lift is big enough to be felt and small enough that the level
+   still has to be played. */
+const TUT_LIFT = .06;
+
+/* The rhythm is felt at full strength by the time the run starts, and
+   softened before that. A -.15 gate at level ten lands on somebody who
+   has swapped maybe two hundred tiles; the same gate at level sixty
+   lands on somebody who knows what a rocket is. */
+function beatScale(n) {
+  return n >= RUN_START ? 1 : .35 + .65 * ((n - 1) / (RUN_START - 1));
+}
+
+/* The descent, across the whole game. Continuous at the handoff by
+   construction: the lane term vanishes exactly at RUN_START. */
+function easeAt(n) {
+  if (n >= RUN_START) return EASE_TO + (EASE_FROM - EASE_TO) * Math.exp(-(n - RUN_START) / EASE_OVER);
+  const k = (n - 1) / (RUN_START - 1);
+  return EASE_FROM + (LANE_FROM - EASE_FROM) * Math.pow(1 - k, LANE_BEND);
+}
 
 /* The generator lands about nine points easier than it aims for.
 
@@ -3009,25 +3180,51 @@ const CLEAR_FLOOR = .45, CLEAR_CEIL = .88;
    model: the response curves know what a move budget does on an average
    map of a kind, and the map in front of the player is not the average
    one. Corrected in one place by aiming low, which is honest about
-   there being an error rather than hiding it in the constants. */
+   there being an error rather than hiding it in the constants.
+
+   The lane needs no such correction. Its levels are not modelled, they
+   are measured one at a time and solved for directly, so there is
+   nothing between the intent and the number. */
 const MODEL_BIAS = .09;
 
-/* What share of games this level is meant to be won. */
+/* The daily walk sits outside the curve on purpose. It is the same
+   promise every day — the one level that carries a streak, so the one
+   place where a hard roll costs something a replay cannot give back.
+   Generous, and the same kind of generous whatever it rolls. */
+const DAILY_CLEAR = .85;
+
+/* What share of games this level is meant to be won.
+
+   For the generated run this is the curve above, computed. For the
+   authored lane it is read off the level, because the lane's rhythm is
+   fitted to what each of its sixty levels can actually carry rather
+   than assigned by position — see test/fit-lane.js. A lane level with
+   no `want` has never been fitted, and falls back to the curve so that
+   a newly written level still has an intent before anybody measures it. */
 function targetClear(n) {
-  if (n < RUN_START) return null;          /* the authored lane is not generated */
-  const k = n - RUN_START;
-  const ease = EASE_TO + (EASE_FROM - EASE_TO) * Math.exp(-k / EASE_OVER);
-  const beat = RHYTHM[k % BLOCK];
-  /* a little variation so the rhythm is felt rather than counted */
-  const jitter = (mulberry(n * 60013)() - .5) * .04;
-  return clamp(ease + beat + jitter, CLEAR_FLOOR, CLEAR_CEIL);
+  const lane = n < RUN_START;
+  if (lane && typeof LEVELS !== 'undefined' && LEVELS[n - 1] && LEVELS[n - 1].want !== undefined) {
+    return LEVELS[n - 1].want;
+  }
+  const ease = easeAt(n);
+  const beat = RHYTHM[(n - 1) % BLOCK] * beatScale(n);
+  /* a little variation so the rhythm is felt rather than counted; the
+     lane is authored level by level and wants no dice in it */
+  const jitter = lane ? 0 : (mulberry(n * 60013)() - .5) * .04;
+  let want = ease + beat + jitter;
+  if (lane && typeof LEVELS !== 'undefined' && LEVELS[n - 1] && LEVELS[n - 1].tut) want += TUT_LIFT;
+  return clamp(want, lane ? LANE_FLOOR : CLEAR_FLOOR, lane ? LANE_CEIL : CLEAR_CEIL);
 }
 
 /* Whether this level is the one at the end of a block. The map screen
    marks it, and the level card says so: a wall you did not know was
-   coming is just an unfair level. */
+   coming is just an unfair level.
+
+   Every tenth. The run's own reading of this — nine levels past the
+   handoff, then every ten — is the same set of levels, because the lane
+   is sixty long and sixty is a multiple of ten. */
 function isGate(n) {
-  return n >= RUN_START && ((n - RUN_START) % BLOCK) === BLOCK - 1;
+  return n >= BLOCK && n % BLOCK === 0;
 }
 
 /* ===== 12-curve.js ===== */
@@ -4801,8 +4998,13 @@ function eyePath(c, rx, ry, almond) {
 function drawEye(c, x, y, r, spec, o, side) {
   const look = lookOf(spec);
   const blink = o.blink || 0;
-  const dx = (o.eyeDir ? o.eyeDir[0] : 0) * r * .22;
-  const dy = (o.eyeDir ? o.eyeDir[1] : 0) * r * .22;
+  /* The iris is .84 of the eye and the eye is clipped, so travel past
+     the rim is not a mistake — it is how a real eye reads when it looks
+     hard at something. At .22 the pupil barely left centre and the pet
+     appeared to stare through you whatever it was looking at; the gaze
+     only became worth wiring to a finger once it could be seen. */
+  const dx = (o.eyeDir ? o.eyeDir[0] : 0) * r * .30;
+  const dy = (o.eyeDir ? o.eyeDir[1] : 0) * r * .30;
   const dk = darkCoat(spec);
   const rx = r, ry = r * 1.06 * (1 - blink * .92);
 
@@ -6963,6 +7165,7 @@ function petRig(p) {
 }
 function rigStep(r, dt, o) {
   o = o || {};
+  r.dt = dt;
   r.t += dt;
   const mood = o.mood || 'content';
   const asleep = mood === 'sleeping';
@@ -7062,9 +7265,14 @@ function drawPetLive(c, p, x, y, s, rig, o) {
   /* mood ornaments */
   if (asleep) drawZs(c, s * .42, -s * .42, s * .3, r.sleepT);
   else if (mood === 'hungry') drawThought(c, s * .5, -s * .5, s * .26, 'bowl');
-  else if (mood === 'dirty') drawGrime(c, s, r.t);
+  else if (mood === 'dirty') drawGrime(c, s, r.t, spec);
   else if (mood === 'bored') drawThought(c, s * .5, -s * .5, s * .26, 'ball');
-  else if (mood === 'happy' && Math.sin(r.t * .8) > .96) FXHeartsAt(x, y - s * .3);
+  else if (mood === 'happy') {
+    /* an edge, not a level: see the note in 50-room.js — the same line
+       written as a threshold fires on every frame it is true for */
+    r.heartT = (r.heartT === undefined ? 2 : r.heartT) - (r.dt || 1 / 60);
+    if (r.heartT <= 0) { r.heartT = rnd(2.4, 4.6); FXHeartsAt(x, y - s * .3); }
+  }
 
   c.restore();
   return { x, y, s };
@@ -7103,6 +7311,9 @@ function drawThought(c, x, y, s, what) {
     c.fill();
     c.fillStyle = PAL.accent;
     ellipse(c, 0, -s * .08, s * .42, s * .1); c.fill();
+  } else if (what === 'heart') {
+    /* wanting company, which is not the same as wanting a toy */
+    drawPip(c, 'heart', 0, s * .04, s * .38, PAL.rose);
   } else {
     c.fillStyle = '#C8D95A'; ellipse(c, 0, s * .06, s * .34, s * .34); c.fill();
     c.strokeStyle = '#F6F1E4'; c.lineWidth = s * .07;
@@ -7111,17 +7322,28 @@ function drawThought(c, x, y, s, what) {
   c.restore();
   c.restore();
 }
-function drawGrime(c, s, t) {
+/* A dirty animal has to look dirty on its own coat.
+
+   Brown at a third opacity is a smudge on a cream retriever and is
+   nothing at all on a black cat, which is exactly what shipped: sable
+   coats went unwashed because the game had no way of saying so. The
+   smudge takes the opposite side of the coat now, and the fly flies
+   close enough to belong to the animal rather than to the wall. */
+function drawGrime(c, s, t, spec) {
+  const dk = spec ? darkCoat(spec) : false;
   c.save();
-  c.fillStyle = rgba('#6B4A2C', .35);
+  c.fillStyle = dk ? rgba('#C9A46B', .5) : rgba('#6B4A2C', .38);
   [[-.22, .55], [.18, .68], [.3, .42], [-.3, .74]].forEach((p, i) => {
-    const w = s * (.05 + (i % 3) * .015);
+    const w = s * (.055 + (i % 3) * .018);
     ellipse(c, p[0] * s, p[1] * s, w, w * .7, i); c.fill();
   });
-  /* a fly, doing laps */
-  c.fillStyle = rgba(PAL.text, .5);
-  const a = t * 2.2;
-  ellipse(c, Math.cos(a) * s * .6, -s * .5 + Math.sin(a * 1.7) * s * .12, s * .022, s * .016); c.fill();
+  /* a fly, doing laps close to the head */
+  const a = t * 2.4;
+  const fx = Math.cos(a) * s * .42, fy = -s * .34 + Math.sin(a * 1.7) * s * .09;
+  c.fillStyle = rgba(PAL.text, .22);
+  ellipse(c, fx, fy, s * .05, s * .04); c.fill();          /* its own little shadow of motion */
+  c.fillStyle = rgba(PAL.text, .78);
+  ellipse(c, fx, fy, s * .028, s * .021); c.fill();
   c.restore();
 }
 
@@ -10959,10 +11181,12 @@ function bindBoard() {
 const ROOM = {
   ctx: null, w: 0, h: 0, running: false, raf: null, lastT: 0,
   t: 0, state: 'idle', stateT: 0,
-  blink: 0, blinkT: 2,
   px: .5, targetX: .5, walk: 0, facing: 1,
   bits: [], bubbleT: 0, snoreT: 0,
-  idleT: 6, idleKind: null, idleLeft: 0, noticed: 0
+  idleT: 6, idleKind: null, idleLeft: 0, noticed: 0,
+  /* where the finger is over the room, in the pet's own -1..1 frame,
+     and how long it stays interesting after the finger lifts */
+  look: null, lookT: 0, bound: false, heartT: 3
 };
 
 function roomLayout() {
@@ -10973,10 +11197,38 @@ function roomLayout() {
   ROOM.w = w; ROOM.h = h;
   ROOM.ctx = fitCanvas(cv, w, h);
 }
+/* The pet follows your finger.
+
+   This is the cheapest thing in the whole game per unit of alive. A
+   drawn animal that tracks the pointer stops being a picture of an
+   animal; the rig already had a gaze channel for it and nothing had
+   ever fed it. Coordinates come in as a fraction of the canvas and
+   leave in the -1..1 the eyes are drawn in, so the pet can look at a
+   corner without its pupils leaving its head. */
+function bindRoomLook() {
+  if (ROOM.bound) return;
+  const cv = $('#room');
+  if (!cv) return;
+  ROOM.bound = true;
+  const at = ev => {
+    const rect = cv.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const fx = (ev.clientX - rect.left) / rect.width;
+    const fy = (ev.clientY - rect.top) / rect.height;
+    /* the pet stands mid-floor; look is measured from there */
+    ROOM.look = [clamp((fx - ROOM.px) * 2.4, -1, 1), clamp((fy - .62) * 2.2, -1, 1)];
+    ROOM.lookT = 1.1;
+  };
+  cv.addEventListener('pointermove', at, { passive: true });
+  cv.addEventListener('pointerdown', at, { passive: true });
+  cv.addEventListener('pointerleave', () => { ROOM.lookT = .25; }, { passive: true });
+}
+
 function roomStart() {
   /* looking up when you walk in costs nothing and reads as alive */
   const pet = activePet();
   if (pet && !pet.asleep) ROOM.noticed = .7;
+  bindRoomLook();
   if (ROOM.running) return;
   roomLayout();
   ROOM.running = true;
@@ -11042,6 +11294,27 @@ function renderRoom(dt) {
 
   /* the pet */
   if (pet) {
+    /* One mood, read once, used by everything below. It used to be read
+       inside the idle branch only, which is why the pet's face never
+       knew how it felt: the mood decided which idle behaviour to pick
+       and then went out of scope. */
+    const mood = moodOf(pet);
+
+    /* The rig carries the slow, involuntary things — breath, a blink
+       that actually closes, a tail that swings on its own weight, eyes
+       that go where they are looking. It has existed in the scene layer
+       since the room was written and was never once stepped: drawRoom
+       draws a live pet only when handed one, and the room draws its own,
+       so petRig, rigStep and every mood ornament sat unreachable. The
+       room kept its own single-frame blink and two sine waves instead.
+       The state machine below is the room's and stays the room's; what
+       the animal does without deciding to comes from here. */
+    if (ROOM.lookT > 0) ROOM.lookT -= dt;
+    const rig = rigStep(petRig(pet), dt, {
+      mood,
+      look: (ROOM.lookT > 0 && ROOM.look) ? ROOM.look : null
+    });
+
     /* wander */
     /* something to do between wanders: which options depend on the
        animal and on how it is feeling */
@@ -11080,12 +11353,11 @@ function renderRoom(dt) {
        put the feet on the floor and work the origin back up */
     const gy = floorY + (H - floorY) * .58 - scale * .92;
 
-    ROOM.blinkT -= dt;
-    if (ROOM.blinkT < 0) { ROOM.blink = 1; ROOM.blinkT = rnd(2.4, 6); }
-    if (ROOM.blink > 0) ROOM.blink = Math.max(0, ROOM.blink - dt * 6.5);
-
     let bob = Math.sin(ROOM.t * 2) * .012;
-    let tilt = 0, mouth = 'smile', blink = ROOM.blink > .3 ? 1 : 0;
+    /* the eyes are drawn from a 0..1 lid, not a flag: a blink that
+       snaps between open and shut is the difference between a drawing
+       and a face */
+    let tilt = 0, mouth = 'smile', blink = rig.blink;
     const moving = ROOM.state === 'idle' && Math.abs(ROOM.targetX - ROOM.px) > .006 && !pet.asleep;
     if (moving) bob = Math.abs(Math.sin(ROOM.t * 9)) * .04;
 
@@ -11096,7 +11368,10 @@ function renderRoom(dt) {
     } else if (ROOM.state === 'eat') {
       mouth = Math.sin(ROOM.t * 16) > 0 ? 'open' : 'smile';
       bob = Math.sin(ROOM.t * 16) * .03; tilt = .12;
-      if (Math.random() < .18) roomBit(bowlX + rnd(-8, 8), bowlY - 6, 'crumb', '#B5763F');
+      /* per second, not per frame: a probability rolled once a frame is
+         a different animal on a 120Hz phone than on a 60Hz one, and
+         these were written against sixty. Same rate on any display. */
+      if (Math.random() < 10.8 * dt) roomBit(bowlX + rnd(-8, 8), bowlY - 6, 'crumb', '#B5763F');
     } else if (ROOM.state === 'play') {
       bob = -Math.abs(Math.sin(ROOM.t * 11)) * .1;
       mouth = 'open';
@@ -11108,7 +11383,7 @@ function renderRoom(dt) {
       if (ROOM.bubbleT <= 0) { ROOM.bubbleT = .09; roomBit(gx + rnd(-scale * .4, scale * .4), gy - rnd(0, scale * .6), 'bubble', '#BFE4F5'); }
     } else if (ROOM.state === 'pet') {
       mouth = 'smile'; blink = 1; tilt = Math.sin(ROOM.t * 3) * .1;
-      if (Math.random() < .12) roomBit(gx + rnd(-18, 18), gy - scale * .7, 'heart', PAL.rose);
+      if (Math.random() < 7.2 * dt) roomBit(gx + rnd(-18, 18), gy - scale * .7, 'heart', PAL.rose);
     } else if (ROOM.state === 'happy') {
       bob = -Math.abs(Math.sin(ROOM.t * 10)) * .12; mouth = 'open';
     } else if (ROOM.idleKind === 'groom') {
@@ -11161,15 +11436,64 @@ function renderRoom(dt) {
         head: base.head
       };
     }
+    /* Where the eyes go, in order of who has the strongest claim:
+       something the room is deliberately doing, then your finger, then
+       the rig's own wandering. Walking still pulls the gaze along the
+       direction of travel, because an animal looks where it is going. */
+    let eyeDir;
+    if (ROOM.idleKind === 'stare' || ROOM.noticed > 0) eyeDir = [0, -.15];
+    else if (pet.asleep) eyeDir = [0, .4];
+    else if (ROOM.lookT > 0 && ROOM.look) eyeDir = [rig.gaze[0] * ROOM.facing, rig.gaze[1]];
+    else if (moving) eyeDir = [clamp((ROOM.targetX - ROOM.px) * 6, -1, 1) * ROOM.facing, 0];
+    else eyeDir = [rig.gaze[0] * ROOM.facing, rig.gaze[1]];
+
     drawBody(c, spec, scale, {
       blink, mouth, headTilt: tilt * ROOM.facing,
-      breath: Math.sin(ROOM.t * 2.4),
-      tail: Math.sin(ROOM.t * (moving || ROOM.state === 'play' ? 9 : 2.2)),
-      eyeDir: (ROOM.idleKind === 'stare' || ROOM.noticed > 0)
-        ? [0, -.15]                                   /* straight at you */
-        : [clamp((ROOM.targetX - ROOM.px) * 6, -1, 1) * ROOM.facing, pet.asleep ? .4 : 0]
+      /* a moving animal breathes with its steps, a still one with the
+         rig; asleep the rig already deepens it */
+      breath: moving ? Math.sin(ROOM.t * 4.5) : rig.breath,
+      tail: (moving || ROOM.state === 'play')
+        ? Math.sin(ROOM.t * 9)
+        : rig.tail,
+      eyeDir
     });
     c.restore();
+
+    /* How it feels, without reading anything.
+
+       The mood line under the care buttons was the only place the pet's
+       state was ever stated, which made the animal itself decorative:
+       starving and content looked identical. These are the scene
+       layer's own ornaments, drawn at last. */
+    if (!pet.asleep) {
+      const ox = gx + scale * .52 * ROOM.facing, oy = gy - scale * .12;
+      if (mood === 'hungry') drawThought(c, ox, oy, scale * .26, 'bowl');
+      else if (mood === 'bored') drawThought(c, ox, oy, scale * .26, 'ball');
+      else if (mood === 'lonely') drawThought(c, ox, oy, scale * .26, 'heart');
+      else if (mood === 'dirty') { c.save(); c.translate(gx, gy); drawGrime(c, scale, ROOM.t, spec); c.restore(); }
+      else if (mood === 'happy') {
+        /* A timer, not a threshold on a sine.
+
+           `Math.sin(t * .8) > .985` reads like "every so often" and is
+           not: the sine stays above that line for about four tenths of
+           a second, which at sixty frames is twenty-six hearts at once,
+           every eight seconds. It rendered as a red smear over the
+           pet's head. The scene layer's own copy of this line has the
+           same fault. A contented animal gives off one heart at a time.
+
+           An ambient heart is also not the burst you get for stroking
+           the animal: it stays near the pet and goes, rather than
+           climbing the wall and reading as wallpaper. */
+        ROOM.heartT -= dt;
+        if (ROOM.heartT <= 0) {
+          ROOM.heartT = rnd(2.4, 4.6);
+          ROOM.bits.push({
+            x: gx + rnd(-10, 10), y: gy - scale * .35, vx: rnd(-6, 6), vy: rnd(-20, -11),
+            life: 0, max: rnd(.8, 1.1), kind: 'heart', col: PAL.rose, rot: rnd(-.3, .3)
+          });
+        }
+      }
+    }
 
     /* the bouncing toy */
     if (ROOM.state === 'play') {
@@ -12747,11 +13071,17 @@ function showLose() {
     })
     .filter(x => x.have < x.g.need);
   const close = short.length > 0 && short.every(x => x.have / x.g.need >= .8);
-  const missing = short.map(x => goalLine(x.g)).join(', ');
+  /* The subtitle used to read the shortfall back as a sentence:
+     "You needed Walk 2 home, Score 9500." Goal lines are written as
+     instructions — "Walk 2 home", "Collect 44 Sable" — and an
+     instruction does not survive being used as a noun halfway through
+     somebody else's sentence, in either language. It was also saying
+     exactly what the list underneath says, only without the progress
+     bars, which are the part worth reading. So it is a label now. */
   const m = modal(`
     <span style="color:var(--text-faint);width:52px;height:52px;align-self:center">${IC.starOut}</span>
     <h2>${T('lose_t')}</h2>
-    <p>${close ? `<b style="color:var(--accent-strong)">${T('lose_close')}</b> ` : ''}${T('lose_s', { what: missing })}</p>
+    <p>${close ? `<b style="color:var(--accent-strong)">${T('lose_close')}</b> ` : ''}<span style="color:var(--text-dim)">${T('lose_s')}</span></p>
     <div class="goalList">
       ${short.map(({ g, have }) => `<div class="goalItem">${goalIconHtml(g.kind, g.arg)}
         <span class="t"><b>${fmt(have)} / ${fmt(g.need)}</b>
@@ -13644,7 +13974,7 @@ window.BL = {
   setLang,
   openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, confirmQuit,
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
-  simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY,
+  simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY, petRig,
   castOf, castBreed, castSlot, castName, castRebuild, slotGem, slotBreed,
   popScale, popAlpha, showWin, showLose, bestHint, hintScore, drawLogo,
   /* render entry points, so a frame can be forced without rAF */
