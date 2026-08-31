@@ -1114,12 +1114,18 @@ async function firePetAbility() {
 }
 /* Which tile the pet is charged by and aims at on this board. The
    breed while the board deals it; the tile beside it when it does not,
-   so no ability is ever pointed at a colour that is not in play. */
-function favType() {
+   so no ability is ever pointed at a colour that is not in play.
+
+   `types` is optional because the level card has to answer this before
+   there is a board to ask. Answering it separately is exactly how the
+   card came to promise one animal and the board charge on another, so
+   there is one of these now and the card calls it. */
+function favType(types) {
   const pet = activePet();
   /* the slot the pet is standing in, not its breed index: with the cast
      putting your own first, those are no longer the same number */
-  return favTypeFor(pet ? castSlot(pet.breed) : 0, G.B ? G.B.types : 0);
+  return favTypeFor(pet ? castSlot(pet.breed) : 0,
+    types === undefined ? (G.B ? G.B.types : 0) : types);
 }
 /* "Sniffs out tiles and turns them into what you actually need."
 

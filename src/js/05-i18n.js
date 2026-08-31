@@ -8,6 +8,8 @@ const STRINGS = {
     gate_s: 'Harder than the nine before it. Take your time.',
     rot_t: 'Turn your phone back',
     rot_s: 'Biscuit Lane is played the tall way up.',
+    /* the installed app only; a browser tab has its own back */
+    leave_again: 'Press back again to leave',
     tab_home: 'Home', tab_play: 'Play', tab_shop: 'Shop', tab_family: 'Family',
 
     /* onboarding */
@@ -245,6 +247,7 @@ const STRINGS = {
     gate_s: 'Öncesindeki dokuzdan zor. Acele etme.',
     rot_t: 'Telefonu geri çevir',
     rot_s: 'Biscuit Lane dikey oynanıyor.',
+    leave_again: 'Çıkmak için tekrar bas',
     tab_home: 'Ev', tab_play: 'Oyna', tab_shop: 'Dükkan', tab_family: 'Aile',
 
     onb_hi: 'Kapının önüne bir sepet bırakmışlar',

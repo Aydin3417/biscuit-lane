@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The cold-launch screen. It was Capacitor's mark on white, at eleven
+     fixed sizes; this is the game's own ground with the game's own
+     logo, drawn from the adaptive icon foreground so there is one
+     source for the mark and it cannot drift. Vector and colour, so
+     there is nothing to regenerate per density. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/splashBackground" />
+    <item>
+        <bitmap
+            android:src="@mipmap/ic_launcher_foreground"
+            android:gravity="center" />
+    </item>
+</layer-list>

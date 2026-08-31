@@ -2331,3 +2331,74 @@ was checked.
 
 No behaviour changed. All 39 browser checks pass, the hunt finds
 nothing, and the clear rates are where they were.
+
+## What the phone found that the suites could not
+
+The Android shell built and installed on the first try, which was the
+part that seemed likely to go wrong. Everything below was found by
+opening the thing and playing it on a device, and none of it was
+reachable from a browser or a test:
+
+**The launcher icon was Capacitor's.** A generated project ships with
+the framework's own mark, at five densities plus an adaptive
+foreground and a splash screen at eleven sizes. That is what a player
+would have had on their home screen, and what they would have watched
+on every cold launch. `tools/icon.js` writes them now, from the same
+`drawLogo()` that paints the top bar — one source for the mark, so it
+cannot drift. The splash is a layer-list over the lane's own ground
+rather than eleven PNGs, and Android 12's own splash API is given the
+same two values in `values-v31`, because that release draws the launch
+screen itself and ignores the window background.
+
+**The back button closed the game.** An activity that does nothing with
+back finishes, so the most-pressed control on the device did the most
+destructive thing in the app, from anywhere, mid-level, without asking.
+It now does what the on-screen back does — closes the top sheet, or asks
+before leaving a level, or returns to the home screen — and only leaves
+from home, on a second press, with a toast in between. The window for
+that second press is 2000ms, which is shorter than the toast, on
+purpose: an offer should not outlast the sentence that made it.
+
+**Haptics were declared, written, rate-limited and doing nothing.**
+`navigator.vibrate()` is a no-op in a WebView without the VIBRATE
+permission, which a generated manifest does not include. Nothing else is
+asked for; a match-3 game has no business wanting a camera or a location.
+
+**The level card showed the wrong animal.** This one predates the shell
+and had been in the game since the first commit — the phone only made it
+obvious, because the card said "Charged by Sable" over a picture of a
+beagle. `favType()` in 40-game.js converts the pet's *breed* into the
+board *slot* it occupies, and its comment says why: "with the cast
+putting your own first, those are no longer the same number". The level
+card did the conversion itself, and did it wrong in both directions —
+reading the breed index as a slot, then naming that slot with
+`breedName` instead of `castName`. Two errors that cancelled into a
+plausible-looking row. There is one `favType()` now and the card calls
+it.
+
+The board itself was fine: real swipes, real matches, the charge meter
+filling on Sable, the free-rocket perk sitting on the board where the
+level card promised it.
+
+## A test that depended on a font server
+
+Running the suites next to a booted emulator turned up something that
+had nothing to do with Android. `tools/browser.js` waited for the page's
+`load` event, which includes the Google Fonts stylesheet and the two
+woff2 files behind it. On a slow line that measured 25.5 seconds against
+Playwright's 30-second default, so the suite failed with a navigation
+timeout and no indication that the cause was a typeface rather than the
+game.
+
+It waits for `domcontentloaded` now. The real gate was always the line
+after it — `RESULTS.done`, with its own generous timeout — and waiting
+for `load` first only added a second, tighter deadline governed by
+somebody else's CDN. The fonts still load. They are no longer something
+the suite can fail on.
+
+The same run found that `tools/serve.js` treated any refused bind as
+"somebody else is already serving this". A socket left in TIME_WAIT by
+the previous run refuses a bind too, and the suite then navigated to a
+port with nothing behind it and blamed the page. It asks now, by
+fetching the manifest, and retries briefly before giving up with a
+sentence that names the actual problem.

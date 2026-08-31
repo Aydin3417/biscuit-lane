@@ -37,7 +37,19 @@ const URL = process.env.URL || PW.at('/test/integration.html');
     if (!benign.test(t)) noise.push('konsol: ' + t);
   });
 
-  await page.goto(URL, { waitUntil: 'load' });
+  /* domcontentloaded, not load.
+
+     `load` waits for the Google Fonts stylesheet and the two woff2 files
+     behind it. On a slow line that is most of half a minute — measured
+     at 25.5s against a 30s default — so the suite failed with a
+     navigation timeout and nothing at all to say the cause was the
+     typeface rather than the game. The real gate is the line below:
+     RESULTS.done, with its own generous timeout. Waiting for `load`
+     first added a second, tighter deadline governed by a third party.
+
+     The fonts still load; nothing stops them. They are simply no longer
+     something the suite can fail on. */
+  await page.goto(URL, { waitUntil: 'domcontentloaded' });
   try {
     await page.waitForFunction(() => window.RESULTS && window.RESULTS.done, null, { timeout: 180000 });
   } catch (e) {

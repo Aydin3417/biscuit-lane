@@ -1031,8 +1031,8 @@ function openLevelIntro(n) {
         : (LANG === 'tr' ? 'Bakımı desteği açar' : 'Care unlocks perks')}</span>
     </div>
     <div class="goalItem">
-      <canvas data-tile="${favTypeFor(pet.breed, def.types)}" width="34" height="34"></canvas>
-      <span class="t"><b>${T('lvl_charges')}</b>${breedName(favTypeFor(pet.breed, def.types))}</span>
+      <canvas data-tile="${favType(def.types)}" width="34" height="34"></canvas>
+      <span class="t"><b>${T('lvl_charges')}</b>${castName(favType(def.types))}</span>
     </div>` : ''}
     <div class="eyebrow">${T('lvl_boosters')}</div>
     <button class="goalItem" id="pickMoves" style="width:100%">

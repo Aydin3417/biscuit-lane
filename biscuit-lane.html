@@ -1543,6 +1543,8 @@ const STRINGS = {
     gate_s: 'Harder than the nine before it. Take your time.',
     rot_t: 'Turn your phone back',
     rot_s: 'Biscuit Lane is played the tall way up.',
+    /* the installed app only; a browser tab has its own back */
+    leave_again: 'Press back again to leave',
     tab_home: 'Home', tab_play: 'Play', tab_shop: 'Shop', tab_family: 'Family',
 
     /* onboarding */
@@ -1780,6 +1782,7 @@ const STRINGS = {
     gate_s: 'Öncesindeki dokuzdan zor. Acele etme.',
     rot_t: 'Telefonu geri çevir',
     rot_s: 'Biscuit Lane dikey oynanıyor.',
+    leave_again: 'Çıkmak için tekrar bas',
     tab_home: 'Ev', tab_play: 'Oyna', tab_shop: 'Dükkan', tab_family: 'Aile',
 
     onb_hi: 'Kapının önüne bir sepet bırakmışlar',
@@ -10582,12 +10585,18 @@ async function firePetAbility() {
 }
 /* Which tile the pet is charged by and aims at on this board. The
    breed while the board deals it; the tile beside it when it does not,
-   so no ability is ever pointed at a colour that is not in play. */
-function favType() {
+   so no ability is ever pointed at a colour that is not in play.
+
+   `types` is optional because the level card has to answer this before
+   there is a board to ask. Answering it separately is exactly how the
+   card came to promise one animal and the board charge on another, so
+   there is one of these now and the card calls it. */
+function favType(types) {
   const pet = activePet();
   /* the slot the pet is standing in, not its breed index: with the cast
      putting your own first, those are no longer the same number */
-  return favTypeFor(pet ? castSlot(pet.breed) : 0, G.B ? G.B.types : 0);
+  return favTypeFor(pet ? castSlot(pet.breed) : 0,
+    types === undefined ? (G.B ? G.B.types : 0) : types);
 }
 /* "Sniffs out tiles and turns them into what you actually need."
 
@@ -13172,8 +13181,8 @@ function openLevelIntro(n) {
         : (LANG === 'tr' ? 'Bakımı desteği açar' : 'Care unlocks perks')}</span>
     </div>
     <div class="goalItem">
-      <canvas data-tile="${favTypeFor(pet.breed, def.types)}" width="34" height="34"></canvas>
-      <span class="t"><b>${T('lvl_charges')}</b>${breedName(favTypeFor(pet.breed, def.types))}</span>
+      <canvas data-tile="${favType(def.types)}" width="34" height="34"></canvas>
+      <span class="t"><b>${T('lvl_charges')}</b>${castName(favType(def.types))}</span>
     </div>` : ''}
     <div class="eyebrow">${T('lvl_boosters')}</div>
     <button class="goalItem" id="pickMoves" style="width:100%">
@@ -14261,5 +14270,86 @@ window.BL = {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 else boot();
+
+/* ===== 75-native.js ===== */
+/* ============================================================
+   75 — the native shell, when there is one
+   ============================================================
+
+   The game is a web page first and stays one. Everything here is
+   guarded on the Capacitor bridge being present, so in a browser this
+   file registers nothing and costs nothing.
+
+   The plugins are reached through window.Capacitor.Plugins rather than
+   imported. That is not a shortcut around a bundler — it is how the
+   bridge exposes them, and it means the shipped HTML still has no
+   import statement and no dependency in it. The npm package exists for
+   the native half, which registers the Java side at build time. */
+
+const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform &&
+                  window.Capacitor.isNativePlatform());
+
+/* ---------------- the hardware back button ----------------
+
+   Android sends back to the activity, and an activity that does nothing
+   with it finishes — so without this the button closes the whole game
+   from anywhere, mid-level, with no warning. That is not a small
+   omission; it is the single most-pressed control on the device doing
+   the most destructive thing in the app.
+
+   What it should do is what the on-screen back does, which the game
+   already knows how to decide:
+
+     a sheet is open        close the top one
+     a level is being played  ask, the same as the quit button
+     anywhere but home      go home
+     home                   leave, but say so first
+
+   The last one is a double press. Exiting a game because a thumb
+   brushed the bar is worse than one extra tap, and the toast is already
+   in the game. */
+let leaveArmed = 0;
+/* Shorter than the toast, deliberately. A toast lives 1.9s and takes
+   .32s to fade, so a 2.5s window outlives the only thing telling the
+   player it is open — and a second press into that gap closes the game
+   with nothing on screen having asked for it. The offer should never
+   outlast the sentence that made it. */
+const LEAVE_WINDOW = 2000;
+
+function nativeBack() {
+  /* a sheet first, whatever else is true: it is the thing in front */
+  if (sheetIsOpen()) {
+    const top = modalStack[modalStack.length - 1];
+    if (top) { SFX.tap(); top.close(); return; }
+  }
+  if (SCREEN === 'game') { SFX.tap(); confirmQuit(); return; }
+  if (SCREEN !== 'home') { SFX.tap(); setScreen('home'); return; }
+
+  if (now() - leaveArmed < LEAVE_WINDOW) {
+    const App = window.Capacitor.Plugins.App;
+    if (App && App.exitApp) App.exitApp();
+    return;
+  }
+  leaveArmed = now();
+  toast(T('leave_again'), 'back');
+}
+
+if (NATIVE) {
+  const P = window.Capacitor.Plugins || {};
+  if (P.App && P.App.addListener) {
+    P.App.addListener('backButton', nativeBack);
+  }
+  /* The web build keeps its service worker — it is what makes the game
+     work on the underground. A native shell has no use for one: the
+     files never travel, and a cache-first rule would pin an old build
+     across an app update. tools/pack.js leaves it out of the payload,
+     and this clears any that a player's WebView picked up from visiting
+     the web version on the same device. */
+  if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+    navigator.serviceWorker.getRegistrations()
+      .then(rs => rs.forEach(r => r.unregister()))
+      .catch(() => { });
+  }
+}
 })();
 </script>

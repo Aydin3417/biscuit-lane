@@ -5,8 +5,7 @@
   "backgroundColor": "#F6EADAFF",
   "android": {
     "backgroundColor": "#F6EADAFF",
-    "allowMixedContent": false,
-    "webContentsDebuggingEnabled": false
+    "allowMixedContent": false
   },
   "ios": {
     "backgroundColor": "#F6EADAFF",
