@@ -692,6 +692,12 @@ function drawMapNode(c, n) {
   }
   c.restore();
 }
+/* Whether the lane is the screen being looked at. It used to read
+   SCREEN, which lives in 60-ui.js — the map asking the interface where
+   the player is. It is told instead. */
+let mapShown = false;
+EV.on('screen', name => { mapShown = name === 'map'; });
+
 function bindMap() {
   const cv = $('#mapCanvas');
   const wrap = $('#mapWrap');
@@ -699,7 +705,7 @@ function bindMap() {
   wrap.addEventListener('scroll', () => {
     if (queued) return;
     queued = true;
-    requestAnimationFrame(() => { queued = false; if (SCREEN === 'map') drawMap(); });
+    requestAnimationFrame(() => { queued = false; if (mapShown) drawMap(); });
   }, { passive: true });
   cv.addEventListener('click', ev => {
     const rect = cv.getBoundingClientRect();
@@ -710,7 +716,7 @@ function bindMap() {
         audioResume();
         if (n.n > SAVE.reached) { SFX.bad(); toast(T('map_locked', { n: SAVE.reached }), 'lock'); return; }
         SFX.select();
-        openLevelIntro(n.n);
+        EV.emit('lane', n.n);
         return;
       }
     }

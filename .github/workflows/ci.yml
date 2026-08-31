@@ -35,6 +35,9 @@ jobs:
       - name: Integrity — names, calls, tables, string parity
         run: npm run test:check
 
+      - name: Layering — no module names one that names it back
+        run: npm run test:deps
+
       - name: Installable — manifest, worker, icons
         run: npm run test:mobile
 

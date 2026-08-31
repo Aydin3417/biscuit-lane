@@ -1135,6 +1135,40 @@ function wait(ms) {
   });
 }
 
+/* ---------- announcements ----------
+
+   A lower layer sometimes has to say that something happened. The one
+   thing it should not do is decide who cares.
+
+   Four places wrote that call by hand, and all four wrote it the same
+   way: `if (typeof clearSprites === 'function') clearSprites()`. That
+   guard is what a call looks like when the thing being called might not
+   be there — and in the node harness, which loads the save layer without
+   the art, it genuinely was not. So the guard was load-bearing, and it
+   was also the tell. A module that has to check whether its own
+   dependency exists does not have a dependency. It has a listener, and
+   it was calling it by hand.
+
+   Named EV rather than a bare on/emit because the bundle is one scope:
+   `emit` is already the particle emitter in 27-physics.js, and `on` is a
+   local in shapeMask. A namespace object is what SFX, FX and HAP are for.
+
+   There is no off(). Nothing here is ever torn down, and an unsubscribe
+   nobody calls is a function that rots without anybody noticing. */
+const EV = {
+  at: new Map(),
+  on(ev, fn) {
+    if (!EV.at.has(ev)) EV.at.set(ev, []);
+    EV.at.get(ev).push(fn);
+  },
+  emit(ev, arg) {
+    const list = EV.at.get(ev);
+    if (!list) return;
+    /* indexed, not for-of: this runs inside cascades */
+    for (let i = 0; i < list.length; i++) list[i](arg);
+  }
+};
+
 /* ---------- colour helpers ---------- */
 function hex2rgb(h) {
   h = h.trim().replace('#', '');
@@ -2386,8 +2420,16 @@ function traitHow(id) { const t = TRAITS[id]; return t ? (LANG === 'tr' ? t.trHo
    silhouettes are still on the board and still unique — a Pug is a pink
    clover on every board there has ever been, it is just that whether
    there is a Pug on your board at all depends on who you have taken in. */
+/* The household lives in the save, which loads after this file, so the
+   save installs the real answer on its way past. What is left here is
+   the identity permutation: what a player with no pets yet sees, and
+   what the headless harness measures against. The old line asked
+   `typeof castBreed === 'function'` — a module checking whether its own
+   dependency exists, which is a listener being called by hand. */
+let castFor = null;
+function useCast(fn) { castFor = fn; }
 function slotBreed(slot) {
-  return (typeof castBreed === 'function') ? castBreed(slot)
+  return castFor ? castFor(slot)
     : Math.max(0, Math.round(+slot || 0)) % BREEDS.length;
 }
 function slotGem(slot) {
@@ -2798,7 +2840,11 @@ const SHAPES = ['bands', 'columns', 'diamond', 'ring', 'corners', 'checker', 'we
    depend on no measurement, and the curve then says what a budget does
    *relative to that fixed point*. */
 function levelDef(n, ref) {
-  if (n === DAILY_LEVEL) return dailyLevel(SAVE ? SAVE.reached : 1);
+  /* The daily used to be reached through here, which is how the level
+     table came to read SAVE.reached. It is its own generator with its
+     own seed — call dailyLevel() for it. Said out loud because the
+     alternative is LEVELS[-2] and a TypeError three frames away. */
+  if (n === DAILY_LEVEL) throw new Error('levelDef: the daily is dailyLevel(reached), not a level number');
   /* An authored level carries no gate flag of its own — the block
      rhythm is not the table's business — so it is stamped on the way
      out. Without this the lane's gates were marked on the map, which
@@ -3567,9 +3613,9 @@ let heartTimer = null;
 function heartClockStart() {
   if (heartTimer) return;
   heartTimer = setInterval(() => {
-    if (SAVE.hearts >= HEART_MAX) { heartClockStop(); syncPurse(); return; }
+    if (SAVE.hearts >= HEART_MAX) { heartClockStop(); EV.emit('purse'); return; }
     heartTick();
-    syncPurse();
+    EV.emit('purse');
   }, 1000);
 }
 function heartClockStop() {
@@ -3694,11 +3740,15 @@ function castSlot(breed) {
   return i < 0 ? 0 : i;
 }
 function castName(slot) { return breedName(castBreed(slot)); }
+/* the board asks 10-data which breed rides a slot; this is the answer */
+useCast(castBreed);
 /* a pet arriving or leaving, or a coat bought, changes the board */
 function castChanged() {
   const was = CAST_SIG;
   castRebuild();
-  if (was !== CAST_SIG && typeof clearSprites === 'function') clearSprites();
+  /* the art keeps a sprite per breed, so a household that changed is a
+     cache that is wrong. The save does not know that, and should not. */
+  if (was !== CAST_SIG) EV.emit('cast');
   return was !== CAST_SIG;
 }
 
@@ -5654,9 +5704,11 @@ function clearSprites() {
   spriteCache.clear();
   blockerCache.clear();
   mudOverCache.clear();
-  if (typeof clearBeds === 'function') clearBeds();
-  if (typeof clearBrushes === 'function') clearBrushes();
+  /* the room and the physics keep their own caches off the same
+     palette; they say so themselves rather than being named here */
+  EV.emit('repaint');
 }
+EV.on('cast', clearSprites);
 
 function paintTile(c, type, sp, px, marks, blink) {
   /* the look belongs to whoever is standing in the slot, not to the slot */
@@ -7467,6 +7519,7 @@ function cellSprite(px, odd) {
   return cv;
 }
 function clearBeds() { bedCache.clear(); }
+EV.on('repaint', clearBeds);
 
 function drawCellBed(c, cx, cy, s, cell, odd) {
   if (cell && cell.hole) return;
@@ -8536,6 +8589,7 @@ function crumbBrush(col, col2) {
   return cv;
 }
 function clearBrushes() { _blobs.clear(); _streaks.clear(); _tufts.clear(); _crumbs.clear(); }
+EV.on('repaint', clearBrushes);
 
 /* ---------------- particle drawing ---------------- */
 function drawParticles(c, filterAdd) {
@@ -9566,7 +9620,10 @@ function startLevel(n, opts) {
   G.spending = false;      /* nothing is mid-ability on a fresh board */
   G.n = n;
   G.epoch++;                          /* anything still running belongs to the old board */
-  G.def = levelDef(n);
+  /* the daily is a second generator with its own seed and its own
+     sizing, not a level number, so the caller picks rather than the
+     level table reaching into the save to find out how far you got */
+  G.def = n === DAILY_LEVEL ? dailyLevel(SAVE.reached) : levelDef(n);
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
   const pet = activePet();
@@ -10688,7 +10745,10 @@ async function finishWin() {
   }
   await wait(360);
   if (stale(_ep)) return;
-  showWin();
+  /* the board says the level was won. What that looks like is not
+     the board's business, and used to be: this called straight into
+     the results sheet in 60-ui.js. */
+  EV.emit('won');
 }
 async function finishLose() {
   const _ep = levelEpoch();
@@ -10699,7 +10759,7 @@ async function finishLose() {
   if (pet) { G.petMood = 'sad'; G.petMoodT = 3; }
   await wait(600);
   if (stale(_ep)) return;
-  showLose();
+  EV.emit('lost');
 }
 
 /* ---------------- render ---------------- */
@@ -12040,6 +12100,12 @@ function drawMapNode(c, n) {
   }
   c.restore();
 }
+/* Whether the lane is the screen being looked at. It used to read
+   SCREEN, which lives in 60-ui.js — the map asking the interface where
+   the player is. It is told instead. */
+let mapShown = false;
+EV.on('screen', name => { mapShown = name === 'map'; });
+
 function bindMap() {
   const cv = $('#mapCanvas');
   const wrap = $('#mapWrap');
@@ -12047,7 +12113,7 @@ function bindMap() {
   wrap.addEventListener('scroll', () => {
     if (queued) return;
     queued = true;
-    requestAnimationFrame(() => { queued = false; if (SCREEN === 'map') drawMap(); });
+    requestAnimationFrame(() => { queued = false; if (mapShown) drawMap(); });
   }, { passive: true });
   cv.addEventListener('click', ev => {
     const rect = cv.getBoundingClientRect();
@@ -12058,7 +12124,7 @@ function bindMap() {
         audioResume();
         if (n.n > SAVE.reached) { SFX.bad(); toast(T('map_locked', { n: SAVE.reached }), 'lock'); return; }
         SFX.select();
-        openLevelIntro(n.n);
+        EV.emit('lane', n.n);
         return;
       }
     }
@@ -12117,6 +12183,7 @@ function setScreen(name) {
      it is a fall, so the ear knows which way you went */
   if (SCREEN) SFX.swish(name === 'game');
   SCREEN = name;
+  EV.emit('screen', name);
   $$('.screen').forEach(s => s.classList.toggle('on', s.id === 'scr-' + name));
   const inGame = name === 'game';
   $('#topbar').style.display = inGame ? 'none' : '';
@@ -12144,6 +12211,19 @@ function syncPurse() {
   $('#chipCoins').innerHTML = IC.coin + '<span class="num">' + fmt(SAVE.coins) + '</span>';
   $('#chipTreats').innerHTML = IC.treat + '<span class="num">' + fmt(SAVE.treats) + '</span>';
 }
+
+/* What the interface answers to.
+
+   These four used to be calls made from underneath: the board called
+   showWin(), the save called syncPurse(), the lane called
+   openLevelIntro(). Every one of them was a lower layer deciding what
+   the screen should do. They are subscriptions now, and the direction
+   of the arrow is the whole point — nothing below this file names
+   anything in it. */
+EV.on('purse', syncPurse);
+EV.on('won', showWin);
+EV.on('lost', showLose);
+EV.on('lane', openLevelIntro);
 
 /* ---------------- home ---------------- */
 function heroGift() {
@@ -12205,7 +12285,7 @@ function renderHome() {
     ${giftReady() ? heroGift() : ''}
     ${(() => {
       const d = dailyState();
-      const def = levelDef(DAILY_LEVEL);
+      const def = dailyLevel(SAVE.reached);
       return `
       <button class="card todayTile dailyCard" id="dailyCard">
         <span class="di">${IC.paw}</span>
@@ -13405,7 +13485,7 @@ function howToPlay() {
 function startDailyWalk() {
   audioResume();
   SFX.tap();
-  const def = levelDef(DAILY_LEVEL);
+  const def = dailyLevel(SAVE.reached);
   const pet = activePet();
   const perks = perksFor(pet);
   const m = modal(`

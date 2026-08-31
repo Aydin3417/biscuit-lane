@@ -42,6 +42,7 @@ function setScreen(name) {
      it is a fall, so the ear knows which way you went */
   if (SCREEN) SFX.swish(name === 'game');
   SCREEN = name;
+  EV.emit('screen', name);
   $$('.screen').forEach(s => s.classList.toggle('on', s.id === 'scr-' + name));
   const inGame = name === 'game';
   $('#topbar').style.display = inGame ? 'none' : '';
@@ -69,6 +70,19 @@ function syncPurse() {
   $('#chipCoins').innerHTML = IC.coin + '<span class="num">' + fmt(SAVE.coins) + '</span>';
   $('#chipTreats').innerHTML = IC.treat + '<span class="num">' + fmt(SAVE.treats) + '</span>';
 }
+
+/* What the interface answers to.
+
+   These four used to be calls made from underneath: the board called
+   showWin(), the save called syncPurse(), the lane called
+   openLevelIntro(). Every one of them was a lower layer deciding what
+   the screen should do. They are subscriptions now, and the direction
+   of the arrow is the whole point — nothing below this file names
+   anything in it. */
+EV.on('purse', syncPurse);
+EV.on('won', showWin);
+EV.on('lost', showLose);
+EV.on('lane', openLevelIntro);
 
 /* ---------------- home ---------------- */
 function heroGift() {
@@ -130,7 +144,7 @@ function renderHome() {
     ${giftReady() ? heroGift() : ''}
     ${(() => {
       const d = dailyState();
-      const def = levelDef(DAILY_LEVEL);
+      const def = dailyLevel(SAVE.reached);
       return `
       <button class="card todayTile dailyCard" id="dailyCard">
         <span class="di">${IC.paw}</span>
@@ -1330,7 +1344,7 @@ function howToPlay() {
 function startDailyWalk() {
   audioResume();
   SFX.tap();
-  const def = levelDef(DAILY_LEVEL);
+  const def = dailyLevel(SAVE.reached);
   const pet = activePet();
   const perks = perksFor(pet);
   const m = modal(`

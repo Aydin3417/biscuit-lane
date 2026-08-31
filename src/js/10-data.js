@@ -379,8 +379,16 @@ function traitHow(id) { const t = TRAITS[id]; return t ? (LANG === 'tr' ? t.trHo
    silhouettes are still on the board and still unique — a Pug is a pink
    clover on every board there has ever been, it is just that whether
    there is a Pug on your board at all depends on who you have taken in. */
+/* The household lives in the save, which loads after this file, so the
+   save installs the real answer on its way past. What is left here is
+   the identity permutation: what a player with no pets yet sees, and
+   what the headless harness measures against. The old line asked
+   `typeof castBreed === 'function'` — a module checking whether its own
+   dependency exists, which is a listener being called by hand. */
+let castFor = null;
+function useCast(fn) { castFor = fn; }
 function slotBreed(slot) {
-  return (typeof castBreed === 'function') ? castBreed(slot)
+  return castFor ? castFor(slot)
     : Math.max(0, Math.round(+slot || 0)) % BREEDS.length;
 }
 function slotGem(slot) {
@@ -791,7 +799,11 @@ const SHAPES = ['bands', 'columns', 'diamond', 'ring', 'corners', 'checker', 'we
    depend on no measurement, and the curve then says what a budget does
    *relative to that fixed point*. */
 function levelDef(n, ref) {
-  if (n === DAILY_LEVEL) return dailyLevel(SAVE ? SAVE.reached : 1);
+  /* The daily used to be reached through here, which is how the level
+     table came to read SAVE.reached. It is its own generator with its
+     own seed — call dailyLevel() for it. Said out loud because the
+     alternative is LEVELS[-2] and a TypeError three frames away. */
+  if (n === DAILY_LEVEL) throw new Error('levelDef: the daily is dailyLevel(reached), not a level number');
   /* An authored level carries no gate flag of its own — the block
      rhythm is not the table's business — so it is stamped on the way
      out. Without this the lane's gates were marked on the map, which

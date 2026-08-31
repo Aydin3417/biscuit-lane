@@ -2243,3 +2243,91 @@ the whole game in `assets/public/index.html`. **iOS is not done.** The
 platform has to be added from a Mac, because CocoaPods does not run
 anywhere else, and nobody has built or run it. Until somebody does, the
 iOS half of this is a plan, not a fact.
+
+## The call that checks whether its callee exists
+
+Six places in the source were written like this:
+
+```js
+if (was !== CAST_SIG && typeof clearSprites === 'function') clearSprites();
+```
+
+The guard is not defensive programming. It is a module checking whether
+its own dependency exists — and in the node harness, which loads the
+save layer without the art, it genuinely does not. So the guard was
+load-bearing, and it was also the tell: a call that has to ask whether
+the thing it calls is present is not a call. It is a listener, invoked
+by hand, by the one module that should not know who is listening.
+
+`node test/deps.js` says what the shape actually was. It reads every
+top-level name, works out which module owns it, and reports who reaches
+into whom. Two things came out of running it that reading the files had
+not:
+
+**The engine was already clean.** The first version reported that
+`30-engine.js` reaches into the game's state object. It does not.
+`findMatches` writes `const G = groups[g]`, and the game happens to call
+its own state `G` — a local shadowing a global, read as a dependency. A
+refactor was very nearly sent at the one module with nothing wrong with
+it. The tool tracks local declarations now, and says so about its own
+blind spot: the six names it skips are listed by `--shadows`.
+
+That list is there to be read rather than trusted, and reading it found
+a bug in the tool. `if (SCREEN === 'map') {` was being parsed as a
+parameter list, which marked `SCREEN` as local to `70-boot.js` and hid a
+real reference from the boot into the interface. A check that comes back
+clean because it stopped looking is worse than no check at all.
+
+**Everything else was thinner than it looked.** Fifteen modules, 565
+top-level names in one shared scope, and only seven pairs that named
+each other. Not an architecture problem — seven specific lines.
+
+Five of them were the guarded call above, and they are announcements
+now. `EV` is a dozen lines in `00-util.js`: `EV.on(name, fn)` and
+`EV.emit(name, arg)`. Named that rather than a bare `on`/`emit` because
+the bundle is one scope and `emit` was already the particle emitter in
+`27-physics.js` — which is the same collision the whole exercise is
+about.
+
+| was | is |
+|---|---|
+| the save called `clearSprites()` | the save emits `cast` |
+| the art called `clearBeds()`, `clearBrushes()` | the art emits `repaint` |
+| the board called `showWin()`, `showLose()` | the board emits `won`, `lost` |
+| the save called `syncPurse()` | the save emits `purse` |
+| the lane called `openLevelIntro()` | the lane emits `lane` |
+| the lane read `SCREEN` | the lane is told, and keeps its own flag |
+
+The sixth was `slotBreed`, which asked `typeof castBreed === 'function'`
+to find out which breed rides a board slot. The household lives in the
+save; the save installs the answer on its way past, and `10-data.js`
+keeps the identity permutation that a player with no pets sees and the
+harness measures against.
+
+The seventh was the level table reaching into the save to find out how
+far the player had got, so it could size the daily walk. The daily is a
+second generator with its own seed — `test/sim.js` says so in its own
+comment — so the caller picks it now, and the table has no opinion about
+who is playing.
+
+Nothing below `60-ui.js` names anything in it. That is the part worth
+having: the board can be played, won and lost with no interface
+attached, which is what the headless suites have always pretended was
+true.
+
+**One cycle is left, and it is not a mistake.** The generator in
+`10-data.js` reads the difficulty curve, and `targetClear()` in
+`11-design.js` reads `LEVELS` to find what a lane level was authored to
+be worth. Both directions are correct. The file split is what is wrong:
+`LEVELS` is content and belongs in front of both, with the `GK` enum its
+rows are written in. That is a move rather than a rewrite, and it is the
+next thing to do here.
+
+It is written down in `KNOWN` at the bottom of `test/deps.js`, which is
+the check: the graph went from seven cycles to one, and a new one cannot
+appear without somebody editing that line and saying why. It runs in CI.
+Introducing `engine -> game` by hand fails it, which is how the check
+was checked.
+
+No behaviour changed. All 39 browser checks pass, the hunt finds
+nothing, and the clear rates are where they were.

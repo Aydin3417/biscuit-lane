@@ -152,7 +152,10 @@ function startLevel(n, opts) {
   G.spending = false;      /* nothing is mid-ability on a fresh board */
   G.n = n;
   G.epoch++;                          /* anything still running belongs to the old board */
-  G.def = levelDef(n);
+  /* the daily is a second generator with its own seed and its own
+     sizing, not a level number, so the caller picks rather than the
+     level table reaching into the save to find out how far you got */
+  G.def = n === DAILY_LEVEL ? dailyLevel(SAVE.reached) : levelDef(n);
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
   const pet = activePet();
@@ -1274,7 +1277,10 @@ async function finishWin() {
   }
   await wait(360);
   if (stale(_ep)) return;
-  showWin();
+  /* the board says the level was won. What that looks like is not
+     the board's business, and used to be: this called straight into
+     the results sheet in 60-ui.js. */
+  EV.emit('won');
 }
 async function finishLose() {
   const _ep = levelEpoch();
@@ -1285,7 +1291,7 @@ async function finishLose() {
   if (pet) { G.petMood = 'sad'; G.petMoodT = 3; }
   await wait(600);
   if (stale(_ep)) return;
-  showLose();
+  EV.emit('lost');
 }
 
 /* ---------------- render ---------------- */

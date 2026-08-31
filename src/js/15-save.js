@@ -193,9 +193,9 @@ let heartTimer = null;
 function heartClockStart() {
   if (heartTimer) return;
   heartTimer = setInterval(() => {
-    if (SAVE.hearts >= HEART_MAX) { heartClockStop(); syncPurse(); return; }
+    if (SAVE.hearts >= HEART_MAX) { heartClockStop(); EV.emit('purse'); return; }
     heartTick();
-    syncPurse();
+    EV.emit('purse');
   }, 1000);
 }
 function heartClockStop() {
@@ -320,11 +320,15 @@ function castSlot(breed) {
   return i < 0 ? 0 : i;
 }
 function castName(slot) { return breedName(castBreed(slot)); }
+/* the board asks 10-data which breed rides a slot; this is the answer */
+useCast(castBreed);
 /* a pet arriving or leaving, or a coat bought, changes the board */
 function castChanged() {
   const was = CAST_SIG;
   castRebuild();
-  if (was !== CAST_SIG && typeof clearSprites === 'function') clearSprites();
+  /* the art keeps a sprite per breed, so a household that changed is a
+     cache that is wrong. The save does not know that, and should not. */
+  if (was !== CAST_SIG) EV.emit('cast');
   return was !== CAST_SIG;
 }
 

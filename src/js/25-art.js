@@ -895,9 +895,11 @@ function clearSprites() {
   spriteCache.clear();
   blockerCache.clear();
   mudOverCache.clear();
-  if (typeof clearBeds === 'function') clearBeds();
-  if (typeof clearBrushes === 'function') clearBrushes();
+  /* the room and the physics keep their own caches off the same
+     palette; they say so themselves rather than being named here */
+  EV.emit('repaint');
 }
+EV.on('cast', clearSprites);
 
 function paintTile(c, type, sp, px, marks, blink) {
   /* the look belongs to whoever is standing in the slot, not to the slot */
