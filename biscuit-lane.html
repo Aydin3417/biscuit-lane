@@ -14022,7 +14022,13 @@ function boot() {
   } else {
     SCREEN = '';
     setScreen('home');
-    if (giftReady()) setTimeout(openDailyGift, 700);
+    /* Only onto the home screen. The gift opens itself seven hundred
+       milliseconds after boot, and a player who taps into a level
+       faster than that used to meet it mid-board — and, with sheets
+       queueing, meet the result of the level they just played behind
+       it. Nothing is lost by not opening: the gift card stays on the
+       home screen and the reward is not claimed until it is. */
+    if (giftReady()) setTimeout(() => { if (SCREEN === 'home') openDailyGift(); }, 700);
   }
 }
 
