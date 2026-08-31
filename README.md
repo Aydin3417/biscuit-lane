@@ -2571,3 +2571,59 @@ one still earns 24,360 coins in thirty days.
 
 None of this is a monetization problem yet. It is the reason there is
 nothing to monetize.
+
+## Four things the phone found, and one the phone had nothing to do with
+
+Walking the game with a mid-game save rather than a fresh one. Every one
+of these predates the work around it.
+
+**Every pet in the family list was drawn as the same animal.** A
+Retriever and a Marmalade, byte for byte identical — same `toDataURL`,
+same pixel count, same average colour — with the right breed sitting in
+each canvas's own data attributes.
+
+The row's canvas carries `data-body`, `data-hat` and `data-collar`,
+because a row states both the pet's breed and what it is wearing.
+`paintArtCanvases` has a branch for each of those three, so each row was
+painted three times: once as itself, then twice more as the *active*
+pet, which is what the hat and collar previews are for. The last write
+won. The stack traces made it plain — three calls into `fitCanvas` on
+the same element from three different lines. The hat and collar branches
+take `:not([data-body])` now: a canvas that already says which body to
+draw is not a preview of somebody else's.
+
+**The wordmark ran under the purse.** 53px of overlap at 375px with the
+hearts chip showing its refill clock, and 11px even with hearts full.
+`.brandmark` could shrink — it had `min-width:0` — but the name inside
+was `nowrap` with nothing to clip it, so it just drew over the chips.
+Measured after: −8px, which is a gap.
+
+**Icons inside a `.pill` were drawn at zero.** An `IC.*` string is a bare
+`<svg>` with a viewBox and no width or height, so it is whatever size
+CSS gives it. `.chip svg`, `.tab svg`, `.btn svg` and `.statPills .pill
+svg` all say; the plain `.pill` never did. Three places drew an empty
+lozenge where a symbol belonged: the paw marking an inactive pet, the
+padlock on a locked breed, and the tick on a perk chip.
+
+**And the active row lost its bond number** to a two-line "On the board"
+pill. Both languages fit now.
+
+### The half hour of measurements that were not measuring this build
+
+The service worker serves cache-first and `VERSION` never changes, so
+the page kept answering with an old build across repeated reloads. It
+was only visible because a `console.log` added to the source never
+appeared: the served file had it, the running page did not. Every
+observation made before that point was of a build that was several
+commits stale.
+
+Worth writing down twice, because the same worker is why an install
+takes two launches to update, and here it took none at all.
+
+### Two things that looked like bugs and were not
+
+The shop's category tabs appeared to be missing — a screenshot taken
+before the row had painted. And the home screen appeared to be drawing
+on top of the map — a real tab click showed only `scr-map` with the
+`.on` class, so it was the console poking that had done it. Both were
+checked before being reported rather than after.

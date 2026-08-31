@@ -499,14 +499,25 @@ function paintArtCanvases(root) {
     const c = fitCanvas(cv, px, px);
     drawFurniturePreview(c, cv.dataset.room, px);
   });
-  $$('canvas[data-hat]', root).forEach(cv => {
+  /* A hat or collar canvas is a *preview*: the active pet wearing the
+     thing, so you can see it before you buy it. A canvas that already
+     says which body to draw is not one of those — and the family list's
+     rows carry all three attributes, because a row states the pet's
+     breed and also what it is wearing.
+
+     Without :not([data-body]) those rows match here too, and each one
+     is painted three times: once as itself, then twice more as the
+     active pet. The last write won, so every pet in the family list was
+     drawn as whichever pet was on the board. Two canvases, byte for
+     byte identical, with the right breed in their own data attributes. */
+  $$('canvas[data-hat]:not([data-body])', root).forEach(cv => {
     const px = askSize(cv, 54);
     const c = fitCanvas(cv, px, px);
     c.translate(px / 2, px * .62);
     const pet = activePet();
     drawFace(c, Object.assign(specOfPet(pet), { hat: cv.dataset.hat, collar: 'none' }), px * .34, { mouth: 'smile' });
   });
-  $$('canvas[data-collar]', root).forEach(cv => {
+  $$('canvas[data-collar]:not([data-body])', root).forEach(cv => {
     const px = askSize(cv, 54);
     const c = fitCanvas(cv, px, px);
     c.translate(px / 2, px * .18);
