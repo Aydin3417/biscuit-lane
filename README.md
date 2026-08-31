@@ -2221,3 +2221,81 @@ in `DIRECTION.md`.
 The test does not fail on it. Failing every run for a known gap nobody
 is fixing this minute trains people to ignore the test. It fails on
 regression against the baseline, and reports the gap as a note.
+
+## The economy was dead on day twenty-five
+
+Every other system in this game had been measured. This one never had,
+and it is the one that decides whether there is any reason to open the
+game in the second month.
+
+`test/economy.js` walks an ordinary player through ninety days: plays
+until the hearts run out, wins about as often as each level is designed
+to be won, keeps the animal fed, buys what a person would buy. What it
+found on the first run:
+
+```
+day 5    every animal adopted — the whole marquee arc, gone in a week
+day 25   everything in the shop is bought
+         1,406 coins a day arriving against a recurring demand of 25
+         28,000 coins piled up with nothing they could be turned into
+```
+
+A reward that cannot be spent is not a reward. A shop nobody needs is a
+screen nobody opens.
+
+### The faucet was widening on its own
+
+The payout was `30 + 22 a star + one coin per 1,400 points of score`, and
+that last term is the interesting one. Star targets climb as the lane
+goes — level 1 asks for 11,500 and the generated run keeps rising — so a
+term in the score is a faucet that *widens the longer somebody plays*.
+
+The first version of the model missed this, because it used a fixed
+score. It reads the real star targets out of the level table now, and it
+reads the payout formula out of `showWin` rather than carrying its own
+copy — which it did carry, briefly, with the result that the report
+cheerfully described an economy that had already been changed.
+
+### What changed
+
+```
+payout      30 + 22/star + score/1400        14 + 9/star + min(25, score/4000)
+adoption    350 700 1200 1800 2600           250 650 1600 3200 6000
+```
+
+The score term is smaller and capped, so a level deep in the run cannot
+pay more than a level is worth. The adoption curve is cheap at the front
+and steep at the back: the second animal arrives almost immediately,
+because that is the moment somebody learns the game gives things back,
+and the fifth is a month of playing.
+
+Re-measured:
+
+```
+                        before      after
+economy dies            day 25      still alive at day 90
+boosters, as a share
+of what is spent        9%          18%
+short of food money     never       never
+```
+
+Boosters are the point of that second row. They are the only sink in
+this game that cannot run out — they cost coins and they are consumed —
+and the mechanism was already fully built. What stopped it working was
+that coins were so plentiful that buying one was not a decision. Nothing
+was added; the faucet was closed until the thing that already existed
+started to matter.
+
+### It is a guardrail now, not a report
+
+The finding is only worth something if it cannot come back quietly, so
+`test/economy.js` fails: nobody may ever be unable to feed the animal,
+and there has to be something worth saving for past day sixty.
+
+Verified by breaking it in both directions. Putting the old payout back
+fails with *nothing left to buy from day 34*. The first version of the
+too-tight check did **not** fail on a payout of five coins a win —
+because the daily gift alone cleared the coins-per-day bar it was
+measuring. Money per day says nothing. What says something is whether a
+player who turned up every day for three months actually got anywhere,
+so it asks that instead, and now reports *no second animal in 90 days*.

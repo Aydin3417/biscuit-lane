@@ -747,7 +747,15 @@ function equipThing(id, kind, quiet) {
 }
 
 /* ---------------- family ---------------- */
-const ADOPT_COST = [0, 350, 700, 1200, 1800, 2600];
+/* Cheap at the front, steep at the back.
+
+   The old curve was near enough linear, and against the old faucet it
+   meant every animal was home inside a week — the whole marquee arc of
+   the game, spent in five days. This one hands the second animal over
+   almost immediately, because that is the moment somebody learns the
+   game gives things back, and then stretches: the fifth is a month of
+   playing and the sixth is a long way past that. */
+const ADOPT_COST = [0, 250, 650, 1600, 3200, 6000];
 const ADOPT_LEVEL = [0, 5, 12, 20, 28, 36];
 /* Order matters here more than it looks.
 
@@ -1113,7 +1121,29 @@ function showWin() {
   if (newBest) SAVE.scores[n] = G.score;
   SAVE.reached = Math.max(SAVE.reached, n + 1);
   SAVE.stats.cleared++;
-  const coins = Math.round((30 + stars * 22 + Math.floor(G.score / 1400)) * traitCoinScale(activePet()));
+  /* What a level pays.
+
+     Measured over a simulated month in test/economy.js, the old formula
+     — 30 + 22 a star + a point of score per 1400 — paid about six
+     hundred coins a day against a recurring demand of twenty-five. Every
+     animal was adopted by day five and the entire shop was bought out by
+     day twenty-five, after which coins kept arriving and there was
+     nothing left they could be turned into. A reward that cannot be
+     spent is not a reward.
+
+     The score term was the worse half. Star targets climb as the lane
+     goes, so a term in the score is a faucet that widens the longer
+     somebody plays — the opposite of what an economy wants, and
+     invisible without playing a month out on paper. It is smaller now
+     and it is capped, so a level deep in the run cannot pay more than a
+     level is worth.
+
+     Re-measured with these numbers: the shop still has something worth
+     saving for on day ninety, boosters become about a fifth of what a
+     player spends instead of a rounding error, and nobody is ever short
+     of the price of a bowl of food. */
+  const coins = Math.round((14 + stars * 9 + Math.min(25, Math.floor(G.score / 4000)))
+    * traitCoinScale(activePet()));
   let treats = 0;
   if (stars === 3 && prev < 3) treats += 1;
   if (first && n % 5 === 0) treats += 2;
