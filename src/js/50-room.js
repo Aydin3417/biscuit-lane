@@ -272,6 +272,9 @@ function renderRoom(dt) {
 
     drawBody(c, spec, scale, {
       blink, mouth, headTilt: tilt * ROOM.facing,
+      /* the ears already know how it feels; so does everything else on
+         this screen, and they were the last part still deadpan */
+      mood,
       /* a moving animal breathes with its steps, a still one with the
          rig; asleep the rig already deepens it */
       breath: moving ? Math.sin(ROOM.t * 4.5) : rig.breath,

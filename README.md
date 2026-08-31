@@ -2722,3 +2722,43 @@ still resolves rather than turning to noise, and the six animals are
 still told apart by silhouette and colour before anything else. A frame
 in a real browser went from 2.2ms to about 2.8ms at 803 particles,
 against a 16.7ms budget.
+
+## What the ears are doing
+
+An animal's ears are the loudest thing on its face, and these were
+welded on: the same angle whether the pet was delighted, starving or
+asleep. The room already knew — `moodOf()` picks the idle behaviour and
+the thought bubble from it — so the ears were the last part of that
+screen still deadpan.
+
+`EAR_POSE` gives each of the eight moods a turn about the ear's base, a
+droop that shortens it, and a small slide off the skull for the alert
+ones. Perked and forward for happy, out and dropping through lonely and
+bored, folded flat for tired and asleep. It rotates about where the ear
+leaves the skull rather than about the face, or a tired ear slides off
+the head instead of folding down. Floppy breeds get it too — a Beagle's
+ears lift when it is pleased.
+
+## Four more things, none of them shapes
+
+With the geometry right, what was left was material.
+
+**The inside of an ear is a cone** — dark where it meets the skull,
+catching light toward the tip. It was flat colour, which made a large
+ear into a large sticker.
+
+**A nose is a wet wedge.** Flat fill and one hard white dot became a
+vertical gradient with a soft highlight that falls off.
+
+**The smile was `s * .034` at .7 opacity**, against a face whose other
+lines are half that — a dark squiggle. It is `.024` at about .5 now.
+
+**And the head was lit from nowhere.** One linear gradient top to
+bottom is a disc with a lighter half. A key light from the upper left
+and an occlusion under the jaw give it a front and a back; the markings
+sit under both, because pigment is under light rather than over it.
+
+A frame at 803 particles went 2.2ms → 2.8 → 4.3 across the three art
+passes, against a 16.7ms budget. Worth watching but not yet worth
+spending anything on: the board's tiles are cached sprites, so this is
+paid on a cache fill rather than per frame.

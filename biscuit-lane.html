@@ -4962,14 +4962,44 @@ function drawPip(c, kind, x, y, r, col) {
 }
 
 /* ---------------- ears ---------------- */
-function drawEars(c, spec, s, back) {
+/* What the ears are doing.
+
+   An animal's ears are the loudest thing on its face and these were
+   welded on: the same angle whether the pet was delighted or asleep.
+   The room already knows the mood — it picks idle behaviour and thought
+   bubbles from it — so it costs nothing to say it here too.
+
+   `rot` turns the ear about its base, positive being outward and down.
+   `droop` shortens it, which is what a tired ear does. `out` slides it
+   off the skull a little for the alert poses. */
+const EAR_POSE = {
+  happy:    { rot: -.13, out: .020, droop: -.04 },
+  content:  { rot: 0, out: 0, droop: 0 },
+  hungry:   { rot: -.08, out: .026, droop: 0 },
+  lonely:   { rot: .17, out: -.010, droop: .10 },
+  dirty:    { rot: .11, out: 0, droop: .07 },
+  bored:    { rot: .21, out: .008, droop: .14 },
+  tired:    { rot: .32, out: .018, droop: .22 },
+  sleeping: { rot: .36, out: .022, droop: .26 }
+};
+
+function drawEars(c, spec, s, back, o) {
   const b = spec.breed, fur = spec.fur, fur2 = spec.fur2, inner = spec.inner || '#E8A0A8';
   const k = b.ear;
   if (back && (k === 'droop' || k === 'flop' || k === 'button')) return;   // drawn in front
   if (!back && !(k === 'droop' || k === 'flop' || k === 'button')) return;
 
+  const pose = EAR_POSE[(o && o.mood) || 'content'] || EAR_POSE.content;
   const ear = (sx) => {
     c.save(); c.scale(sx, 1);
+    /* turn about where the ear leaves the skull, not about the face,
+       or a tired ear slides off the head instead of folding down */
+    if (pose.rot || pose.droop || pose.out) {
+      c.translate(.22 * s + pose.out * s, -.26 * s);
+      c.rotate(pose.rot);
+      c.scale(1, 1 - pose.droop);
+      c.translate(-.22 * s, .26 * s);
+    }
     if (k === 'triangle') {
       /* Set wide on the skull and leaning out, about a third of the
          head tall. The old pair were small tabs perched on the crown. */
@@ -4979,7 +5009,13 @@ function drawEars(c, spec, s, back) {
       c.quadraticCurveTo(.23 * s, -.82 * s, .49 * s, -.32 * s);
       c.quadraticCurveTo(.33 * s, -.14 * s, .08 * s, -.28 * s);
       c.fill();
-      c.fillStyle = inner;
+      /* the inside of an ear is a cone: dark where it meets the skull,
+         catching light toward the tip. Flat colour made it a sticker. */
+      const ig1 = c.createLinearGradient(.20 * s, -.24 * s, .34 * s, -.62 * s);
+      ig1.addColorStop(0, shade(inner, -.30));
+      ig1.addColorStop(.55, inner);
+      ig1.addColorStop(1, shade(inner, .22));
+      c.fillStyle = ig1;
       c.beginPath();
       c.moveTo(.16 * s, -.30 * s);
       c.quadraticCurveTo(.26 * s, -.66 * s, .41 * s, -.33 * s);
@@ -5007,7 +5043,11 @@ function drawEars(c, spec, s, back) {
       c.quadraticCurveTo(.20 * s, -.74 * s, .46 * s, -.35 * s);
       c.quadraticCurveTo(.32 * s, -.15 * s, .09 * s, -.27 * s);
       c.fill();
-      c.fillStyle = inner;
+      const ig2 = c.createLinearGradient(.20 * s, -.24 * s, .32 * s, -.58 * s);
+      ig2.addColorStop(0, shade(inner, -.30));
+      ig2.addColorStop(.55, inner);
+      ig2.addColorStop(1, shade(inner, .22));
+      c.fillStyle = ig2;
       c.beginPath();
       c.moveTo(.17 * s, -.29 * s);
       c.quadraticCurveTo(.24 * s, -.60 * s, .39 * s, -.35 * s);
@@ -5380,20 +5420,32 @@ function drawNoseMouth(c, spec, s, o) {
     c.restore();
   }
   /* nose */
-  c.fillStyle = cat ? (spec.nose || '#E08A96')
+  const noseBase = cat ? (spec.nose || '#E08A96')
     : darkCoat(spec) ? mix('#33292A', '#B6A79E', .6) : '#33292A';
+  /* a nose is a small wet wedge, not a flat swatch */
+  const ng = c.createLinearGradient(0, ny - nw, 0, ny + nw);
+  ng.addColorStop(0, shade(noseBase, .26));
+  ng.addColorStop(.6, noseBase);
+  ng.addColorStop(1, shade(noseBase, -.24));
+  c.fillStyle = ng;
   c.beginPath();
   c.moveTo(-nw, ny - nw * .5);
   c.quadraticCurveTo(0, ny - nw * .85, nw, ny - nw * .5);
   c.quadraticCurveTo(nw * .75, ny + nw * .75, 0, ny + nw * .95);
   c.quadraticCurveTo(-nw * .75, ny + nw * .75, -nw, ny - nw * .5);
   c.fill();
-  c.fillStyle = rgba('#FFFFFF', .3);
-  ellipse(c, -nw * .3, ny - nw * .28, nw * .3, nw * .2, -.3); c.fill();
+  const nhx = -nw * .28, nhy = ny - nw * .30;
+  const nh = c.createRadialGradient(nhx, nhy, nw * .04, nhx, nhy, nw * .38);
+  nh.addColorStop(0, rgba('#FFFFFF', .62));
+  nh.addColorStop(1, rgba('#FFFFFF', 0));
+  c.fillStyle = nh;
+  ellipse(c, nhx, nhy, nw * .38, nw * .26, -.3); c.fill();
 
   /* mouth */
-  c.strokeStyle = rgba(featureInk(spec), darkCoat(spec) ? .55 : .7);
-  c.lineWidth = s * .034; c.lineCap = 'round';
+  /* the smile was s*.034 at .7 — a thick dark squiggle against a face
+     whose other lines are half that. */
+  c.strokeStyle = rgba(featureInk(spec), darkCoat(spec) ? .42 : .52);
+  c.lineWidth = s * .024; c.lineCap = 'round';
   const my = ny + nw * .95;
   if (o.mouth === 'open') {
     c.fillStyle = '#8C3B4A';
@@ -5556,7 +5608,7 @@ function drawFace(c, spec, s, o) {
   o = o || {};
   c.save();
   if (o.squash) c.scale(1 + o.squash, 1 - o.squash);
-  drawEars(c, spec, s, true);
+  drawEars(c, spec, s, true, o);
   /* head */
   const gr = c.createLinearGradient(0, -.45 * s, 0, .45 * s);
   gr.addColorStop(0, shade(spec.fur, .13));
@@ -5565,6 +5617,25 @@ function drawFace(c, spec, s, o) {
   c.fillStyle = gr;
   headPath(c, spec, s); c.fill();
   drawMarkings(c, spec, s);
+  /* Form. The head was filled with one linear gradient running top to
+     bottom, which is a flat disc with a lighter half — a balloon. A key
+     light from the upper left and an occlusion under the jaw give it a
+     front and a back, and the markings sit under both because pigment
+     is under light, not over it. */
+  c.save();
+  headPath(c, spec, s); c.clip();
+  const key = c.createRadialGradient(-.16 * s, -.24 * s, s * .04, -.10 * s, -.14 * s, s * .74);
+  key.addColorStop(0, rgba('#FFFFFF', .30));
+  key.addColorStop(.5, rgba('#FFFFFF', .10));
+  key.addColorStop(1, rgba('#FFFFFF', 0));
+  c.fillStyle = key;
+  headPath(c, spec, s); c.fill();
+  const jaw = c.createLinearGradient(0, .06 * s, 0, .46 * s);
+  jaw.addColorStop(0, rgba('#2A1E12', 0));
+  jaw.addColorStop(1, rgba('#2A1E12', .20));
+  c.fillStyle = jaw;
+  headPath(c, spec, s); c.fill();
+  c.restore();
   /* rim light */
   c.save();
   headPath(c, spec, s); c.clip();
@@ -5588,7 +5659,7 @@ function drawFace(c, spec, s, o) {
   drawEye(c, -look.x * s, look.y * s, look.r * s, spec, o, -1);
   drawEye(c, look.x * s, look.y * s, look.r * s, spec, o, 1);
   drawNoseMouth(c, spec, s, o);
-  drawEars(c, spec, s, false);
+  drawEars(c, spec, s, false, o);
   if (spec.hat) drawHat(c, spec.hat, spec, s);
   c.restore();
 }
@@ -11908,6 +11979,9 @@ function renderRoom(dt) {
 
     drawBody(c, spec, scale, {
       blink, mouth, headTilt: tilt * ROOM.facing,
+      /* the ears already know how it feels; so does everything else on
+         this screen, and they were the last part still deadpan */
+      mood,
       /* a moving animal breathes with its steps, a still one with the
          rig; asleep the rig already deepens it */
       breath: moving ? Math.sin(ROOM.t * 4.5) : rig.breath,
