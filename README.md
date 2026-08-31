@@ -2762,3 +2762,44 @@ A frame at 803 particles went 2.2ms → 2.8 → 4.3 across the three art
 passes, against a 16.7ms budget. Worth watching but not yet worth
 spending anything on: the board's tiles are cached sprites, so this is
 paid on a cache fill rather than per frame.
+
+## Cute is a measurement, not a taste
+
+Asked to make these as cute as they can be, the honest answer is that
+cuteness has a specification. Baby schema: a large cranium, eyes that
+are big and sit at or below the middle of the face, and a nose and mouth
+clustered small and low. It is why kittens work and why every character
+anyone has ever put on a T-shirt is built the same way.
+
+Measured against it, these were adult animals. **The eyes were .09 to
+.12 of the head and sat above the midline.** They are .154 to .184 now
+and sit below it, `x` opened up so they do not meet in the middle, and
+the muzzle dropped from .11 to .27 so there is a forehead above and a
+chin below rather than features filling the whole face. The head is
+.89 of the body where it was .82.
+
+Three things had to give way with them:
+
+- **The slit pupil went.** An anatomically right cat pupil is a thin
+  vertical slit, which reads as an alert predator. Every cat that has
+  ever sold a plush toy has a big soft pupil filling the eye. It is
+  still taller than wide, so it is still a cat's eye, but it is wide
+  enough to read as pupil rather than as a knife.
+- **A brown-eyed dog went to voids.** With the pupil at half the eye, a
+  near-black iris merges into it — the Pug lost its eyes entirely. Any
+  iris under 30% luminance is now lifted until there is a ring to see.
+- **The two face masks moved down.** The Siamese points and the Pug's
+  mask are muzzle markings and stayed where the muzzle used to be, so
+  they sat over the eyes instead.
+
+And the tabby, which is the answer to why the Marmalade read as the
+broadest face of the six when it is meant to be the daintiest: its cheek
+bars ran straight across the widest line of the head. Read as width,
+because that is what a horizontal line across a shape does. They sit
+higher and shorter now, and the forehead M rides up into the space the
+eyes opened.
+
+The board tiles got easier to tell apart rather than harder — at 48dp
+the eyes are the dominant feature, so cute proportions and small-size
+legibility turned out to want the same thing. A frame at 803 particles
+came back to about 3ms against 16.7.
