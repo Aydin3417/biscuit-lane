@@ -2088,3 +2088,35 @@ of pales — the eye reads the texture, not the line. One gate at that
 weight is three pale strokes on green and reads as nothing at all. In
 wood, one size up, with the ground shadow every other prop on this lane
 has, it reads as a gate from across the screen.
+
+## A cat called "<3"
+
+A pet's name reaches the document in nineteen places: four interpolated
+straight into `innerHTML`, and fifteen through `T()`, which substitutes
+into a template string. None of them escape anything.
+
+All three places that make a pet already run `cleanName` over what the
+player typed, so nothing dirty reaches the game today. But `makePet`
+itself kept whatever it was handed, and `healPet` — which reads a save
+back off the disk — trimmed and truncated without stripping anything. A
+save from an older build, or one somebody edited by hand, walked
+straight through.
+
+And `<3` is two characters and a completely ordinary thing to call an
+animal. Unescaped it opens a tag that swallows whatever follows it,
+which is how somebody breaks their own family screen by being fond of
+their cat.
+
+Both now go through `cleanName`, which is one line each and cannot be
+forgotten the way nineteen escapes can. What it does, measured:
+
+```
+'   '          → 'Marmalade'   (the breed name, not three spaces)
+''             → 'Marmalade'
+'A' x 80       → 'AAAAAAAAAAAAAA'
+'<b>bold</b>'  → 'bbold/b'
+'Zeynep'       → 'Zeynep'
+```
+
+A name is a short label, and the one place it is made is the place to
+make it safe.

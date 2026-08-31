@@ -105,5 +105,5 @@ for (const [label, first, last, perks, lo, hi] of CURVES) {
 }
 
 process.stdout.write('\n' + (failed ? failed + ' suite(s) failed\n' : 'all suites passed\n'));
-process.stdout.write('browser layer: node tools/serve.js, then node tools/browser.js (38 checks)\n');
+process.stdout.write('browser layer: node tools/serve.js, then node tools/browser.js (39 checks)\n');
 process.exitCode = failed ? 1 : 0;

@@ -1384,6 +1384,40 @@ async function run() {
     return 'room and board, geometry all finite';
   });
 
+  await test('a name cannot bring markup with it', () => {
+    /* A pet's name reaches the document in nineteen places — four
+       interpolated straight into innerHTML and fifteen through T(),
+       which substitutes into a template string. None of them escape,
+       and none of them should have to: a name is a short label, and the
+       one place it is made is the place to make it safe.
+
+       "<3" is two characters and a completely ordinary thing to call an
+       animal. Unescaped it opens a tag that swallows whatever follows
+       it, which is how a player breaks their own family screen by being
+       fond of their cat. */
+    const bad = [];
+    const cases = [
+      ['<3', /[<>]/],
+      ['<b>bold</b>', /[<>]/],
+      ['a"b', /["]/],
+      ['x&y', /[&]/]
+    ];
+    cases.forEach(([raw, forbidden]) => {
+      const p = BL.makePet(0, 0, 0, raw);
+      if (forbidden.test(p.name)) bad.push('makePet kept ' + JSON.stringify(p.name) + ' from ' + JSON.stringify(raw));
+      const healed = BL.healPet({ breed: 0, name: raw });
+      if (healed && forbidden.test(healed.name)) {
+        bad.push('a loaded save kept ' + JSON.stringify(healed.name));
+      }
+    });
+    /* and the shapes that are not dangerous, only useless */
+    if (BL.makePet(0, 0, 0, '   ').name.trim() === '') bad.push('a pet can be called nothing but spaces');
+    if (BL.makePet(0, 0, 0, 'A'.repeat(80)).name.length > 14) bad.push('a name is not capped');
+    if (BL.makePet(0, 0, 0, 'Zeynep').name !== 'Zeynep') bad.push('an ordinary name was mangled');
+    assert(!bad.length, bad.join('; '));
+    return 'markup stripped, blanks named, 14 characters';
+  });
+
   BL.fast = false;
   try { W.localStorage.clear(); } catch (e) { }
   const s = document.getElementById('summary');

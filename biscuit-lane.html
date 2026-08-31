@@ -3450,7 +3450,9 @@ function healPet(p) {
   out.bondXp = Math.max(0, +out.bondXp || 0);
   /* a recovered entry with no readable name is named after its breed
      rather than left blank */
-  out.name = String(out.name || '').trim().slice(0, 14) || breedName(out.breed);
+  /* and a save from an older build, or one somebody edited by hand,
+     gets the same treatment on the way in */
+  out.name = cleanName(out.name) || breedName(out.breed);
   out.asleep = !!out.asleep;
   out.care = Object.assign({ feed: 0, play: 0, wash: 0, sleep: 0 }, out.care || {});
   Object.keys(out.care).forEach(k => { out.care[k] = Math.max(0, Math.round(+out.care[k] || 0)); });
@@ -3599,7 +3601,16 @@ function makePet(breedIdx, coatIdx, eyeIdx, name) {
     breed: breedIdx,
     coat: coatIdx || 0,
     eye: eyeIdx === undefined ? EYE_COLORS.findIndex(e => e.hex === b.eyes) : eyeIdx,
-    name: name || b[LANG] || b.en,
+    /* Cleaned here as well as at every call site.
+
+       All three places that make a pet already run cleanName over what
+       the player typed, so nothing reaches this line dirty today. But
+       the name goes into innerHTML in nineteen places — four directly
+       and fifteen through T(), which substitutes into a template string
+       — and a pet called "<3" is a perfectly ordinary thing to want.
+       One line here is cheaper than nineteen escapes that have to be
+       remembered every time somebody adds a twentieth. */
+    name: cleanName(name) || b[LANG] || b.en,
     born: now(),
     food: 78, joy: 82, clean: 88, energy: 74,
     bond: 0, bondXp: 0,
