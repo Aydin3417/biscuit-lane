@@ -77,17 +77,19 @@ function drawEars(c, spec, s, back) {
   const ear = (sx) => {
     c.save(); c.scale(sx, 1);
     if (k === 'triangle') {
+      /* Set wide on the skull and leaning out, about a third of the
+         head tall. The old pair were small tabs perched on the crown. */
       c.fillStyle = fur;
       c.beginPath();
-      c.moveTo(.16 * s, -.30 * s);
-      c.quadraticCurveTo(.30 * s, -.72 * s, .46 * s, -.34 * s);
-      c.quadraticCurveTo(.34 * s, -.20 * s, .16 * s, -.30 * s);
+      c.moveTo(.08 * s, -.28 * s);
+      c.quadraticCurveTo(.23 * s, -.82 * s, .49 * s, -.32 * s);
+      c.quadraticCurveTo(.33 * s, -.14 * s, .08 * s, -.28 * s);
       c.fill();
       c.fillStyle = inner;
       c.beginPath();
-      c.moveTo(.23 * s, -.32 * s);
-      c.quadraticCurveTo(.31 * s, -.58 * s, .39 * s, -.34 * s);
-      c.quadraticCurveTo(.31 * s, -.26 * s, .23 * s, -.32 * s);
+      c.moveTo(.16 * s, -.30 * s);
+      c.quadraticCurveTo(.26 * s, -.66 * s, .41 * s, -.33 * s);
+      c.quadraticCurveTo(.29 * s, -.21 * s, .16 * s, -.30 * s);
       c.fill();
     } else if (k === 'tall') {
       c.fillStyle = spec.point || fur2;
@@ -103,10 +105,20 @@ function drawEars(c, spec, s, back) {
       c.quadraticCurveTo(.31 * s, -.24 * s, .21 * s, -.31 * s);
       c.fill();
     } else if (k === 'round') {
+      /* Round-eared, still a cat: a broad triangle with a soft tip.
+         Two circles on a circle is a bear, which is what this was. */
       c.fillStyle = fur;
-      ellipse(c, .34 * s, -.34 * s, .16 * s, .17 * s, -.28); c.fill();
+      c.beginPath();
+      c.moveTo(.09 * s, -.27 * s);
+      c.quadraticCurveTo(.20 * s, -.74 * s, .46 * s, -.35 * s);
+      c.quadraticCurveTo(.32 * s, -.15 * s, .09 * s, -.27 * s);
+      c.fill();
       c.fillStyle = inner;
-      ellipse(c, .35 * s, -.33 * s, .085 * s, .095 * s, -.28); c.fill();
+      c.beginPath();
+      c.moveTo(.17 * s, -.29 * s);
+      c.quadraticCurveTo(.24 * s, -.60 * s, .39 * s, -.35 * s);
+      c.quadraticCurveTo(.29 * s, -.21 * s, .17 * s, -.29 * s);
+      c.fill();
     } else if (k === 'droop') {
       c.fillStyle = fur2;
       c.beginPath();
@@ -172,11 +184,16 @@ function headPath(c, spec, s) {
     c.bezierCurveTo(.39 * s, .20 * s, .24 * s, .44 * s, 0, .44 * s);
     c.bezierCurveTo(-.24 * s, .44 * s, -.39 * s, .20 * s, -.40 * s, -.04 * s);
   } else {
-    c.moveTo(-.41 * s, -.08 * s);
-    c.bezierCurveTo(-.41 * s, -.34 * s, -.24 * s, -.42 * s, 0, -.42 * s);
-    c.bezierCurveTo(.24 * s, -.42 * s, .41 * s, -.34 * s, .41 * s, -.08 * s);
-    c.bezierCurveTo(.41 * s, .18 * s, .25 * s, .40 * s, 0, .40 * s);
-    c.bezierCurveTo(-.25 * s, .40 * s, -.41 * s, .18 * s, -.41 * s, -.08 * s);
+    /* A cat's head is a wedge, not a ball: the skull is moderate, the
+       cheeks are the widest part, and it tapers to a small chin. Drawn
+       as a circle with ears on top — which is what this was — it reads
+       as a bear, and the Sable read as one most of all. */
+    c.moveTo(-.43 * s, .02 * s);
+    c.bezierCurveTo(-.44 * s, -.26 * s, -.24 * s, -.42 * s, 0, -.42 * s);
+    c.bezierCurveTo(.24 * s, -.42 * s, .44 * s, -.26 * s, .43 * s, .02 * s);
+    c.bezierCurveTo(.42 * s, .22 * s, .26 * s, .36 * s, .11 * s, .42 * s);
+    c.bezierCurveTo(.04 * s, .45 * s, -.04 * s, .45 * s, -.11 * s, .42 * s);
+    c.bezierCurveTo(-.26 * s, .36 * s, -.42 * s, .22 * s, -.43 * s, .02 * s);
   }
   c.closePath();
 }
@@ -274,11 +291,14 @@ function featureInk(spec) { return darkCoat(spec) ? '#E4D8C8' : '#2A2118'; }
    same animal. The eye is the first thing anyone reads, so each breed
    gets its own: size, slant, lid, and whether it has brows at all. */
 const FACE_LOOK = {
-  marmalade: { r: .094, x: .172, y: -.05, tilt: -.13, almond: true, lid: .55, brow: 0 },
+  /* the cats carried the dogs' eye placement: high on the skull and
+     close together, which reads top-heavy on a wedge head. Down and
+     out a little, so the muzzle has room under them. */
+  marmalade: { r: .094, x: .186, y: -.015, tilt: -.13, almond: true, lid: .55, brow: 0 },
   beagle: { r: .100, x: .178, y: -.045, tilt: .10, almond: false, lid: .35, brow: .8 },
-  void: { r: .118, x: .180, y: -.05, tilt: 0, almond: false, lid: .18, brow: 0 },
+  void: { r: .118, x: .192, y: -.018, tilt: 0, almond: false, lid: .18, brow: 0 },
   retriever: { r: .090, x: .172, y: -.055, tilt: .07, almond: false, lid: .62, brow: 0 },
-  siamese: { r: .097, x: .178, y: -.048, tilt: -.24, almond: true, lid: .48, brow: 0 },
+  siamese: { r: .097, x: .190, y: -.014, tilt: -.24, almond: true, lid: .48, brow: 0 },
   pug: { r: .122, x: .196, y: -.068, tilt: 0, almond: false, lid: .12, brow: .7 }
 };
 function lookOf(spec) { return FACE_LOOK[spec.breed.id] || FACE_LOOK.marmalade; }
@@ -388,6 +408,26 @@ function drawNoseMouth(c, spec, s, o) {
     c.fillStyle = rgba(spec.belly, f === 'flat' ? .35 : .8);
     ellipse(c, 0, ny + .04 * s, nw * 2.5, nw * 1.9); c.fill();
   }
+  /* A cat has two whisker pads with the nose sitting in the notch
+     between them. Cats were the one face that got no muzzle at all —
+     the test above excludes them — so the nose floated on a flat plane
+     and the whiskers came out of nowhere. That, more than anything
+     else, is what stopped them reading as cats.
+
+     Lightened fur rather than the belly colour, because a dark coat's
+     belly is dark too and the pads have to catch light on Sable. */
+  if (cat) {
+    const pw = nw * 1.5, ph = nw * 1.12, py = ny + nw * .72;
+    c.save();
+    c.fillStyle = rgba('#000000', .07);
+    ellipse(c, 0, py + nw * .30, pw * 1.9, ph * 1.15); c.fill();
+    /* a dark coat needs a gentler lift or the pads become a pale mask */
+    c.fillStyle = rgba(mix(spec.fur, '#FFFFFF', darkCoat(spec) ? .16 : .30),
+      darkCoat(spec) ? .55 : .85);
+    ellipse(c, -pw * .60, py, pw, ph); c.fill();
+    ellipse(c, pw * .60, py, pw, ph); c.fill();
+    c.restore();
+  }
   /* nose */
   c.fillStyle = cat ? (spec.nose || '#E08A96')
     : darkCoat(spec) ? mix('#33292A', '#B6A79E', .6) : '#33292A';
@@ -442,8 +482,8 @@ function drawNoseMouth(c, spec, s, o) {
     [-1, 1].forEach(sx => {
       c.save(); c.scale(sx, 1);
       c.beginPath();
-      c.moveTo(.11 * s, ny + .02 * s); c.quadraticCurveTo(.30 * s, ny - .04 * s, .43 * s, ny - .09 * s);
-      c.moveTo(.11 * s, ny + .06 * s); c.quadraticCurveTo(.31 * s, ny + .06 * s, .45 * s, ny + .05 * s);
+      c.moveTo(.14 * s, ny + .05 * s); c.quadraticCurveTo(.32 * s, ny - .02 * s, .46 * s, ny - .08 * s);
+      c.moveTo(.14 * s, ny + .09 * s); c.quadraticCurveTo(.33 * s, ny + .08 * s, .47 * s, ny + .07 * s);
       c.stroke();
       c.restore();
     });
@@ -715,11 +755,18 @@ function drawBody(c, spec, s, o) {
   ellipse(c, -.30 * s, .74 * s, .17 * s, .19 * s, .18); c.fill();
 
   /* ---- body mass ---- */
+  /* A seated animal is narrow at the shoulder and widest at the haunch.
+     This was a symmetric bell — the same curve up and down, widest
+     halfway — which is why the room pet read as a mound with a head on
+     it. The shoulders come in and the widest point drops; a cat carries
+     it a little narrower than a dog. */
+  const shoulder = cat ? .235 : .255;
+  const flank = cat ? .455 : .475;
   const bodyPath = () => {
     c.beginPath();
-    c.moveTo(-.27 * s, .30 * s + lift);
-    c.bezierCurveTo(-.46 * s, .48 * s, -.47 * s, .90 * s, 0, .90 * s);
-    c.bezierCurveTo(.47 * s, .90 * s, .46 * s, .48 * s, .27 * s, .30 * s + lift);
+    c.moveTo(-shoulder * s, .30 * s + lift);
+    c.bezierCurveTo(-.42 * s, .52 * s, -flank * s, .90 * s, 0, .90 * s);
+    c.bezierCurveTo(flank * s, .90 * s, .42 * s, .52 * s, shoulder * s, .30 * s + lift);
     c.closePath();
   };
   const bodyGr = c.createLinearGradient(-.2 * s, .28 * s, .28 * s, .95 * s);

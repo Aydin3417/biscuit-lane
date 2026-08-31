@@ -2627,3 +2627,55 @@ before the row had painted. And the home screen appeared to be drawing
 on top of the map — a real tab click showed only `scr-map` with the
 `.on` class, so it was the console poking that had done it. Both were
 checked before being reported rather than after.
+
+## The cats were bears
+
+Rendered at 180px — the size the room draws them, rather than the 56px
+a list shows — the dogs held up and the cats did not. The diagnosis was
+anatomy, not technique, which matters because it decides what to do
+about it:
+
+- **The head was a ball.** A cat's head is a wedge: moderate skull,
+  cheeks the widest part, tapering to a small chin. Drawn as a circle
+  with ears on top, it reads as a bear — and the Sable, being round,
+  dark and small-eared, read as one completely.
+- **The ears were tabs.** Small, set close, perched on the crown. A
+  cat's ear is about a third of the head tall, set wide, leaning out.
+- **There was no muzzle at all.** `drawNoseMouth` skips the muzzle patch
+  for cats — `if (f !== 'cat' || ...)` — so the nose sat on a flat plane
+  and the whiskers came out of nowhere. A cat has two whisker pads with
+  the nose in the notch between them, and their absence is more of why
+  these did not read as cats than anything else on the list.
+- **The eyes were the dogs'.** High on the skull and close together,
+  which is top-heavy on a wedge and leaves no room for a muzzle under
+  them.
+- **The body was a symmetric bell.** Same curve up as down, widest
+  halfway. A seated animal is narrow at the shoulder and widest at the
+  haunch.
+
+All five are fixed in `25-art.js`. The pads are lightened fur rather
+than the belly colour, because a dark coat's belly is dark too and they
+have to catch light on the Sable; a dark coat also gets a gentler lift
+so they do not become a pale mask. Cats sit a little narrower than dogs.
+
+### Why not generated art
+
+The obvious answer to "these look bad" is to generate better ones. The
+number that settles it:
+
+```
+6 breeds × 18 coats × 6 eye colours × 3 stages
+  × 6 hats × 6 collars × 7 moods × 2 themes
+  = 163,296 unique images, for one pose
+```
+
+before breathing, blinking or tail motion. This is not a sprite sheet,
+it is a parametric system, and the game gets all of it for 175KB in one
+file with no assets and no pipeline. Baking it to raster means
+generating an impossible number of images, or layering sprites that must
+align across six breeds — more work than the code that exists — or
+dropping the customisation, which is the game's actual hook: the animals
+on the board are the ones you keep.
+
+Generated images are useful here as a reference to aim at. They are not
+useful as the thing that ships.
