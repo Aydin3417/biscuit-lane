@@ -611,7 +611,7 @@ function shopFood() {
         ${(SAVE.food[f.id] || 0) ? `<span class="stock" title="${T('shop_have', { n: SAVE.food[f.id] })}">&times;${SAVE.food[f.id]}</span>` : ''}</div>
       <div class="nm">${goodName(f)}</div>
       <div class="ds">${goodDesc(f)}</div>
-      <button class="btn sm buy price" data-buy="${f.id}" data-kind="food">${T('shop_buy')} ${priceTag(f.cost, f.treat)}</button>
+      <button class="btn sm price" data-buy="${f.id}" data-kind="food">${T('shop_buy')} ${priceTag(f.cost, f.treat)}</button>
     </div>`).join('')}</div>`;
 }
 function shopToys() {
@@ -623,7 +623,7 @@ function shopToys() {
       <div class="nm">${goodName(t)}</div>
       <div class="ds">${goodDesc(t)} +${t.joy} ${T('st_joy').toLowerCase()}</div>
       ${owned ? `<span class="pill ok" style="align-self:flex-start">${IC.check}${T('shop_owned')}</span>`
-        : `<button class="btn sm buy price" data-buy="${t.id}" data-kind="toy">${T('shop_buy')} ${priceTag(t.cost)}</button>`}
+        : `<button class="btn sm price" data-buy="${t.id}" data-kind="toy">${T('shop_buy')} ${priceTag(t.cost)}</button>`}
     </div>`;
   }).join('')}</div>`;
 }
@@ -635,7 +635,7 @@ function shopBoost() {
         ${(SAVE.boosters[b.id] || 0) ? `<span class="stock" title="${T('shop_have', { n: SAVE.boosters[b.id] })}">&times;${SAVE.boosters[b.id]}</span>` : ''}</div>
       <div class="nm">${goodName(b)}</div>
       <div class="ds">${goodDesc(b)}</div>
-      <button class="btn sm buy price" data-buy="${b.id}" data-kind="boost">${T('shop_buy')} ${priceTag(b.cost)}</button>
+      <button class="btn sm price" data-buy="${b.id}" data-kind="boost">${T('shop_buy')} ${priceTag(b.cost)}</button>
     </div>`).join('')}</div>`;
 }
 function shopStyle() {
@@ -650,7 +650,7 @@ function shopStyle() {
       <div class="nm" style="font-size:var(--t-micro);text-align:center">${goodName(h)}</div>
       ${owned
         ? `<button class="btn sm ${worn ? 'ghost' : ''}" data-equip="${h.id}" data-kind="hat">${worn ? T('shop_worn') : T('shop_wear')}</button>`
-        : `<button class="btn sm price" data-buy="${h.id}" data-kind="hat">${priceTag(h.cost)}</button>`}
+        : `<button class="btn sm price" data-buy="${h.id}" data-kind="hat">${T('shop_buy')} ${priceTag(h.cost)}</button>`}
     </div>`;
   }).join('')}</div>
   <div class="sectitle"><h3>${LANG === 'tr' ? 'Tasmalar' : 'Collars'}</h3></div>
@@ -662,7 +662,7 @@ function shopStyle() {
       <div class="nm" style="font-size:var(--t-micro);text-align:center">${goodName(h)}</div>
       ${owned
         ? `<button class="btn sm ${worn ? 'ghost' : ''}" data-equip="${h.id}" data-kind="collar">${worn ? T('shop_worn') : T('shop_wear')}</button>`
-        : `<button class="btn sm price" data-buy="${h.id}" data-kind="collar">${priceTag(h.cost)}</button>`}
+        : `<button class="btn sm price" data-buy="${h.id}" data-kind="collar">${T('shop_buy')} ${priceTag(h.cost)}</button>`}
     </div>`;
   }).join('')}</div>`;
 }
@@ -678,7 +678,7 @@ function shopRoom() {
       <div class="ds">${goodDesc(f)}</div>
       ${owned
         ? `<button class="btn sm ${placed ? 'ghost' : ''}" data-equip="${f.id}" data-kind="furniture">${placed ? T('shop_placed') : T('shop_place')}</button>`
-        : `<button class="btn sm price" data-buy="${f.id}" data-kind="furniture">${priceTag(f.cost)}</button>`}
+        : `<button class="btn sm price" data-buy="${f.id}" data-kind="furniture">${T('shop_buy')} ${priceTag(f.cost)}</button>`}
     </div>`;
   }).join('')}</div>
   <div class="sectitle"><h3>${LANG === 'tr' ? 'Duvar' : 'Walls'}</h3></div>
@@ -690,7 +690,7 @@ function shopRoom() {
       <div class="nm">${goodName(t)}</div>
       ${owned
         ? `<button class="btn sm ${on ? 'ghost' : ''}" data-equip="${t.id}" data-kind="theme">${on ? T('shop_placed') : T('shop_place')}</button>`
-        : `<button class="btn sm price" data-buy="${t.id}" data-kind="theme">${priceTag(t.cost)}</button>`}
+        : `<button class="btn sm price" data-buy="${t.id}" data-kind="theme">${T('shop_buy')} ${priceTag(t.cost)}</button>`}
     </div>`;
   }).join('')}</div>`;
 }
