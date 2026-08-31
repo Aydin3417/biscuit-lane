@@ -9,15 +9,16 @@
 
      node tools/browser.js
 */
-const PW_PATH = process.env.PLAYWRIGHT ||
-  'C:/Users/Casper/Desktop/Proje/Cotidie-Ads-Opus/node_modules/playwright';
-const CHROME = process.env.CHROME ||
-  'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const { chromium } = require(PW_PATH);
-const URL = process.env.URL || 'http://localhost:5173/test/integration.html';
+const PW = require('./_pw.js');
+const URL = process.env.URL || PW.at('/test/integration.html');
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: CHROME });
+  /* The suite puts its own server up. It used to require one already
+     running in another terminal, on a port this repository does not
+     serve, which is most of why it stopped being run. If something is
+     already listening there, that is used instead and this is a no-op. */
+  const server = await PW.serve();
+  const browser = await PW.launch();
   const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
   const noise = [];
   page.on('pageerror', e => noise.push('sayfa hatası: ' + e.message));
@@ -43,6 +44,7 @@ const URL = process.env.URL || 'http://localhost:5173/test/integration.html';
     const so_far = await page.evaluate(() => window.RESULTS ? window.RESULTS.tests.length : -1);
     console.log('takıldı: ' + so_far + ' testten sonra bitmedi');
     await browser.close();
+    server.stop();
     process.exit(1);
   }
 
@@ -51,6 +53,7 @@ const URL = process.env.URL || 'http://localhost:5173/test/integration.html';
     bad: RESULTS.tests.filter(t => !t.ok).map(t => t.name + (t.detail ? ' — ' + t.detail : ''))
   }));
   await browser.close();
+  server.stop();
 
   R.bad.forEach(b => console.log('  ✗ ' + b));
   /* A page error during a passing suite is still a fault: something

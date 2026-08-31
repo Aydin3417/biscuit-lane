@@ -6,20 +6,18 @@
 */
 const path = require('path');
 const fs = require('fs');
-const PW_PATH = process.env.PLAYWRIGHT ||
-  'C:/Users/Casper/Desktop/Proje/Cotidie-Ads-Opus/node_modules/playwright';
-const CHROME = process.env.CHROME ||
-  'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const { chromium } = require(PW_PATH);
+const PW = require('./_pw.js');
 
 /* Maskable icons are cropped to a circle on some launchers and to a
    squircle on others, so the mark has to sit inside the middle 80%. */
 const SIZES = [[512, 'any'], [192, 'any'], [512, 'maskable'], [180, 'apple']];
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: CHROME });
+  /* puts its own server up, like tools/browser.js */
+  const server = await PW.serve();
+  const browser = await PW.launch();
   const page = await browser.newPage({ viewport: { width: 600, height: 600 } });
-  await page.goto('http://localhost:5173/biscuit-lane.html', { waitUntil: 'load' });
+  await page.goto(PW.at('/biscuit-lane.html'), { waitUntil: 'load' });
   await page.waitForFunction(() => window.BL && window.BL.save);
   const out = {};
   for (const [px, kind] of SIZES) {
@@ -42,6 +40,7 @@ const SIZES = [[512, 'any'], [192, 'any'], [512, 'maskable'], [180, 'apple']];
     }, [px, kind]);
   }
   await browser.close();
+  server.stop();
   const dir = path.join(__dirname, '..', 'icons');
   fs.mkdirSync(dir, { recursive: true });
   const names = { any512: 'icon-512.png', any192: 'icon-192.png',

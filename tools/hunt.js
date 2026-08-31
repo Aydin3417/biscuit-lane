@@ -7,17 +7,16 @@
 
      node tools/hunt.js
 */
-const PW_PATH = process.env.PLAYWRIGHT ||
-  'C:/Users/Casper/Desktop/Proje/Cotidie-Ads-Opus/node_modules/playwright';
-const CHROME = process.env.CHROME ||
-  'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const { chromium, devices } = require(PW_PATH);
+const PW = require('./_pw.js');
+const devices = PW.devices;
 
 const found = [];
 const note = (where, what) => { const line = where + ': ' + what; if (found.indexOf(line) < 0) found.push(line); };
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: CHROME });
+  /* puts its own server up, like tools/browser.js */
+  const server = await PW.serve();
+  const browser = await PW.launch();
   const ctx = await browser.newContext({ ...devices['Pixel 7'], hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   let step = 'boot';
@@ -31,7 +30,7 @@ const note = (where, what) => { const line = where + ': ' + what; if (found.inde
   });
   page.on('response', r => { if (r.status() >= 400 && !/manifest|icons\//.test(r.url())) note(step, r.status() + ' ' + r.url().split('/').pop()); });
 
-  await page.goto('http://localhost:5173/biscuit-lane.html', { waitUntil: 'load' });
+  await page.goto(PW.at('/biscuit-lane.html'), { waitUntil: 'load' });
   await page.waitForFunction(() => window.BL && window.BL.save, null, { timeout: 20000 });
 
   /* an invariant sweep run after every step */
@@ -138,6 +137,7 @@ const note = (where, what) => { const line = where + ': ' + what; if (found.inde
   await go('english + light', () => { BL.setLang('en'); BL.save.settings.theme = 'light'; BL.applyTheme(); }, 700);
 
   await browser.close();
+  server.stop();
   console.log(found.length ? 'FOUND ' + found.length + ':' : 'nothing found');
   found.forEach(f => console.log('  ' + f));
   process.exitCode = found.length ? 1 : 0;

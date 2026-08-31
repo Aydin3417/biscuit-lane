@@ -1,0 +1,19 @@
+{
+  "appId": "com.biscuitlane.game",
+  "appName": "Biscuit Lane",
+  "webDir": "www",
+  "backgroundColor": "#F6EADAFF",
+  "android": {
+    "backgroundColor": "#F6EADAFF",
+    "allowMixedContent": false,
+    "webContentsDebuggingEnabled": false
+  },
+  "ios": {
+    "backgroundColor": "#F6EADAFF",
+    "contentInset": "never",
+    "limitsNavigationsToAppBoundDomains": true
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

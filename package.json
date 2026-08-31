@@ -1,0 +1,48 @@
+{
+  "name": "biscuit-lane",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A match-3 puzzle where the cats and dogs on the board are the pets you adopt, feed and raise in the room upstairs.",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=18"
+  },
+  "comment": "The game itself has no dependencies and never will — every animal, biscuit and sound effect is drawn or synthesised at runtime. Playwright is here for the dev tools and the browser test layer only, and nothing it does reaches the shipped file.",
+  "scripts": {
+    "build": "node build.js",
+    "serve": "node tools/serve.js",
+    "pack": "node build.js && node tools/pack.js",
+    "sync": "npm run pack && npx cap sync",
+    "android": "npm run sync && npx cap open android",
+    "android:apk": "npm run sync && node tools/gradle.js assembleDebug",
+    "ios": "npm run sync && npx cap open ios",
+    "test": "npm run test:check && npm run test:node && npm run test:browser",
+    "test:node": "node test/run-all.js",
+    "test:check": "node test/check.js",
+    "test:sim": "node test/sim.js",
+    "test:browser": "node tools/browser.js",
+    "test:ai": "node test/ai.js",
+    "test:tune": "node test/tune.js 1 60",
+    "test:chains": "node test/chains.js 400",
+    "test:ice": "node test/ice.js",
+    "test:care": "node test/care.js",
+    "test:mobile": "node test/mobile.js",
+    "test:curve": "node test/curve.js",
+    "test:strings": "node test/strings.js",
+    "hunt": "node tools/hunt.js",
+    "shots": "node tools/shots.js",
+    "audit": "node tools/audit.js",
+    "frame": "node tools/frame.js",
+    "icons": "node tools/icon.js",
+    "postinstall": "node build.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.62.1"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/core": "^8.5.0",
+    "@capacitor/ios": "^8.5.0"
+  }
+}
