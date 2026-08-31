@@ -228,6 +228,18 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   flex:0 0 auto;
 }
 .brandmark{ display:flex; align-items:center; gap:8px; margin-right:auto; min-width:0; }
+/* A canvas is sized in pixels by fitCanvas, and a window that has just
+   been resized has canvases still carrying their old width. The resize
+   handler is debounced by 140ms so that dragging a desktop window does
+   not re-lay out the whole game on every pixel — which means that for
+   about eight frames after a phone rotates, a canvas is wider than the
+   thing it sits in and hangs off the side of the screen.
+
+   Clamping it costs nothing and cannot fail. The canvas is briefly
+   drawn at a resolution slightly wider than it is displayed, which is
+   invisible, instead of overflowing, which is not. */
+canvas{ max-width:100%; }
+
 .brandmark canvas{ width:30px; height:30px; flex:0 0 auto; }
 .brandmark .bn{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); letter-spacing:-.02em; white-space:nowrap; line-height:1.1; }
 .brandmark .bn small{ display:block; font-family:"Karla",sans-serif; font-weight:500; font-size:var(--t-nano); letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); margin-top:1px; }

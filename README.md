@@ -2029,3 +2029,34 @@ whatever they were aimed at, so those thresholds moved to 18% and 99.5%.
 
 Measured over levels 18-24 at sixteen games each: average miss 6%, bias
 +2%, nothing off its mark.
+
+## Eight frames of overflow
+
+A canvas is sized in pixels by `fitCanvas`, and the resize handler is
+debounced by 140ms so that dragging a desktop window does not re-lay out
+the whole game on every pixel of the drag. Those two facts together mean
+that for about eight frames after a phone rotates — or a keyboard opens,
+or an app goes into split screen — every canvas on screen is still
+carrying its old width and hangs off the side.
+
+The suite caught it as a flake: *nothing spills or is cut off, on a small
+phone* failed about one run in three, and only ever named `CANVAS`. A
+test that fails intermittently is usually accused of being a bad test.
+This one was reporting a real race and reporting it honestly; it just
+happened to be racing against something the player only sees for an
+eighth of a second.
+
+The fix is one line of CSS and cannot fail:
+
+```css
+canvas{ max-width:100% }
+```
+
+The canvas is then briefly drawn at a resolution slightly wider than it
+is displayed, which is invisible, instead of overflowing, which is not.
+Four consecutive runs clean afterwards.
+
+Leaving the debounce alone was deliberate. Removing it would fix the
+symptom by making every drag of a desktop window rebuild the map, the
+sprite cache and the palette — a real cost, every frame, to avoid a
+cosmetic fault that lasts an eighth of a second.
