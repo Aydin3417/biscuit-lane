@@ -17,36 +17,21 @@ self.addEventListener('install', e => {
     .then(() => self.skipWaiting()));
 });
 
-/* The typefaces come from Google, and a service worker does not control
-   the page that installed it — so on the visit that installs this, the
-   fonts are never asked for through here and never land in the cache.
-   A player who installs the game and then loses signal would get the
-   fallback stack on their first real launch. So the stylesheet is
-   fetched here and the woff2 files it names are pulled in behind it. */
-function warmFonts(cache) {
-  const css = 'https://fonts.googleapis.com/css2?family=Grandstander:wght@400;600;700;800' +
-    '&family=Karla:ital,wght@0,400;0,500;0,700;1,400&display=swap';
-  return fetch(css, { mode: 'cors' })
-    .then(res => {
-      if (!res || !res.ok) return null;
-      const copy = res.clone();
-      return cache.put(css, copy).then(() => res.text());
-    })
-    .then(text => {
-      if (!text) return null;
-      const urls = (text.match(/https:\/\/fonts\.gstatic\.com\/[^)]+/g) || [])
-        .map(u => u.replace(/['"]$/, ''));
-      return Promise.all([...new Set(urls)].map(u =>
-        fetch(u, { mode: 'cors' }).then(r => (r && r.ok) ? cache.put(u, r) : null).catch(() => null)));
-    })
-    .catch(() => null);
-}
+/* The typefaces used to be fetched from Google here, because a service
+   worker does not control the page that installed it and a player who
+   installed the game and then lost signal would meet the fallback stack
+   on their first real launch.
+
+   They are embedded in the page now — subset to the characters this game
+   can display, about a hundred kilobytes for seven faces — so there is
+   nothing to warm and nothing that leaves the device. See tools/fonts.js.
+   Removing this also means the worker no longer has to be allowed to
+   talk to a third-party origin at all. */
 
 self.addEventListener('activate', e => {
   e.waitUntil(caches.keys()
     .then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k))))
     .then(() => caches.open(VERSION))
-    .then(c => warmFonts(c))
     .then(() => self.clients.claim()));
 });
 
@@ -54,8 +39,8 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  const isFont = url.host === 'fonts.googleapis.com' || url.host === 'fonts.gstatic.com';
-  if (url.origin !== self.location.origin && !isFont) return;
+  /* same origin only, now that nothing is fetched from anywhere else */
+  if (url.origin !== self.location.origin) return;
 
   e.respondWith(caches.match(req).then(hit => {
     /* Cache first, then repair in the background. The game is a single
