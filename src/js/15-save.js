@@ -3,7 +3,14 @@
    ============================================================ */
 const SAVE_KEY = 'biscuit-lane-v1';
 const HEART_MAX = 5;
-const HEART_REFILL = 12 * MIN;
+/* Twelve minutes meant a full set came back in an hour, which is short
+   enough that nobody ever met the wall: you lost a heart, wandered to
+   the room for a minute, and it was already on its way back. A gate
+   nobody meets is a gate that costs the player nothing and is worth
+   nothing — and everything downstream of it, the refill and the store
+   behind that, was being sold against a wait that never happened.
+   Twenty-five puts a full set at just over two hours. */
+const HEART_REFILL = ECON.heartRefillMin * MIN;
 let SAVE = null;
 
 function freshSave() {
@@ -34,6 +41,8 @@ function freshSave() {
     settings: { sound: true, music: false, haptics: true, lang: 'en', theme: 'auto', marks: false },
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
+    jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing
+    club: null,                    // the subscription, once there is one to have
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
   };
 }
@@ -118,6 +127,10 @@ function loadSave() {
     SAVE.stats = Object.assign(freshSave().stats, d.stats || {});
     SAVE.badges = Object.assign({}, d.badges || {});
     SAVE.daily = Object.assign({ day: 0, done: false, best: 0, streak: 0 }, d.daily || {});
+    SAVE.jar = Object.assign({ fill: 0, opened: 0 }, d.jar || {});
+    SAVE.jar.fill = clamp(Math.round(+SAVE.jar.fill || 0), 0, JAR.cap);
+    /* a club with no end date, or one that ended, is simply not a club */
+    SAVE.club = (d.club && isFinite(d.club.until) && d.club.until > now()) ? d.club : null;
 
     SAVE.pets = (Array.isArray(d.pets) ? d.pets : []).map(healPet).filter(Boolean);
     if (!SAVE.pets.some(p => p.id === SAVE.activePet)) {
@@ -193,9 +206,9 @@ let heartTimer = null;
 function heartClockStart() {
   if (heartTimer) return;
   heartTimer = setInterval(() => {
-    if (SAVE.hearts >= HEART_MAX) { heartClockStop(); syncPurse(); return; }
+    if (SAVE.hearts >= HEART_MAX) { heartClockStop(); EV.emit('purse'); return; }
     heartTick();
-    syncPurse();
+    EV.emit('purse');
   }, 1000);
 }
 function heartClockStop() {
@@ -209,6 +222,11 @@ function heartsIn() {
   return Math.max(0, HEART_REFILL - (now() - SAVE.heartAt));
 }
 function spendHeart() {
+  /* The club's one real promise. Not a bigger bucket or a faster
+     refill — the wait simply does not apply, which is the only version
+     of this that is worth a monthly price and the only one that cannot
+     quietly get worse later. */
+  if (clubActive()) return true;
   heartTick();
   if (SAVE.hearts <= 0) return false;
   heartClockStart();
@@ -320,11 +338,15 @@ function castSlot(breed) {
   return i < 0 ? 0 : i;
 }
 function castName(slot) { return breedName(castBreed(slot)); }
+/* the board asks 10-data which breed rides a slot; this is the answer */
+useCast(castBreed);
 /* a pet arriving or leaving, or a coat bought, changes the board */
 function castChanged() {
   const was = CAST_SIG;
   castRebuild();
-  if (was !== CAST_SIG && typeof clearSprites === 'function') clearSprites();
+  /* the art keeps a sprite per breed, so a household that changed is a
+     cache that is wrong. The save does not know that, and should not. */
+  if (was !== CAST_SIG) EV.emit('cast');
   return was !== CAST_SIG;
 }
 
@@ -594,6 +616,69 @@ function perkChips(perks) {
   return out;
 }
 
+/* ---------- the jar, the club ----------
+   State, so it lives with the rest of the state. The store that charges
+   for any of it is 17-billing, and it knows about these; they do not
+   know about it. */
+function jarState() {
+  if (!SAVE.jar) SAVE.jar = { fill: 0, opened: 0 };
+  return SAVE.jar;
+}
+/* called from the win card, once per cleared level */
+function jarAdd(n) {
+  const j = jarState();
+  if (j.fill >= JAR.cap) return false;
+  const before = j.fill;
+  j.fill = Math.min(JAR.cap, j.fill + (n || JAR.perLevel));
+  return j.fill > before;
+}
+function jarFull() { return jarState().fill >= JAR.cap; }
+
+/* ---------- granting ----------
+
+   Kept apart from BILLING.buy so there is one function that adds treats
+   to a save and it is called from one place, after a receipt. */
+function grantPurchase(kind, id) {
+  if (kind === 'pack') {
+    const p = TREAT_PACKS.find(x => x.id === id);
+    if (!p) return 0;
+    SAVE.treats += p.treats;
+    persist(true);
+    return p.treats;
+  }
+  if (kind === 'jar') {
+    const j = jarState();
+    const got = j.fill;
+    SAVE.treats += got;
+    j.fill = 0;
+    j.opened = (j.opened || 0) + 1;
+    persist(true);
+    return got;
+  }
+  if (kind === 'club') {
+    SAVE.club = { since: now(), until: now() + 30 * DAY, lastPaid: 0 };
+    persist(true);
+    return 1;
+  }
+  return 0;
+}
+
+/* Whether the club is live right now. The date is the store's business
+   once this is real; until then this is what the rest of the game asks. */
+function clubActive() {
+  return !!(SAVE.club && SAVE.club.until > now());
+}
+/* the club's daily treats, handed over on the first look of each day */
+function clubTick() {
+  if (!clubActive()) return 0;
+  const today = dayStamp(now());
+  if (SAVE.club.lastPaid === today) return 0;
+  SAVE.club.lastPaid = today;
+  SAVE.treats += PET_CLUB.dailyTreats;
+  persist(true);
+  return PET_CLUB.dailyTreats;
+}
+
 /* ---------- the daily walk ---------- */
 function dailyState() {
   const today = dayNumber();
@@ -611,10 +696,15 @@ function dailyDone(score) {
   if (!d.done) {
     d.done = true;
     d.streak = (d.streak || 0) + 1;
-    SAVE.coins += 120;
-    SAVE.treats += 2;
+    /* The walk paid 120 coins and 2 treats a day, forever, for four
+       minutes of play. Over a month that alone is 3,600 coins and 60
+       treats — most of a treat balance that nothing was asking for.
+       It is still the best-paid four minutes in the game; it is no
+       longer a salary. */
+    SAVE.coins += ECON.dailyWalkCoins;
+    SAVE.treats += ECON.dailyWalkTreats;
     persist(true);
-    return { coins: 120, treats: 2, first: true };
+    return { coins: ECON.dailyWalkCoins, treats: ECON.dailyWalkTreats, first: true };
   }
   persist(true);
   return { first: false };
@@ -629,12 +719,12 @@ function giftReady() { return dayStamp(now()) !== dayStamp(SAVE.lastGift || 0); 
    nothing anywhere mentioned. The interface reads this table now, so
    what is promised and what is paid cannot drift apart. */
 function giftFor(day) {
-  const r = { coins: 40 + day * 18, treats: day % 3 === 0 ? 2 : 0, food: null, booster: null };
+  const r = { coins: 40 + day * 18, treats: ECON.giftTreats[day] || 0, food: null, booster: null };
   if (day === 2 || day === 5) r.food = 'tuna';
   if (day === 4) r.food = 'stew';
   if (day === 3) r.booster = 'hammer';
   if (day === 6) r.booster = 'shuffle';
-  if (day === 7) { r.treats = 5; r.booster = 'moves'; }
+  if (day === 7) r.booster = 'moves';
   return r;
 }
 /* which rung the basket on the step is standing on, without taking it */

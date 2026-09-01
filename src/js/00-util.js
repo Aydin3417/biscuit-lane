@@ -63,6 +63,40 @@ function wait(ms) {
   });
 }
 
+/* ---------- announcements ----------
+
+   A lower layer sometimes has to say that something happened. The one
+   thing it should not do is decide who cares.
+
+   Four places wrote that call by hand, and all four wrote it the same
+   way: `if (typeof clearSprites === 'function') clearSprites()`. That
+   guard is what a call looks like when the thing being called might not
+   be there — and in the node harness, which loads the save layer without
+   the art, it genuinely was not. So the guard was load-bearing, and it
+   was also the tell. A module that has to check whether its own
+   dependency exists does not have a dependency. It has a listener, and
+   it was calling it by hand.
+
+   Named EV rather than a bare on/emit because the bundle is one scope:
+   `emit` is already the particle emitter in 27-physics.js, and `on` is a
+   local in shapeMask. A namespace object is what SFX, FX and HAP are for.
+
+   There is no off(). Nothing here is ever torn down, and an unsubscribe
+   nobody calls is a function that rots without anybody noticing. */
+const EV = {
+  at: new Map(),
+  on(ev, fn) {
+    if (!EV.at.has(ev)) EV.at.set(ev, []);
+    EV.at.get(ev).push(fn);
+  },
+  emit(ev, arg) {
+    const list = EV.at.get(ev);
+    if (!list) return;
+    /* indexed, not for-of: this runs inside cascades */
+    for (let i = 0; i < list.length; i++) list[i](arg);
+  }
+};
+
 /* ---------- colour helpers ---------- */
 function hex2rgb(h) {
   h = h.trim().replace('#', '');

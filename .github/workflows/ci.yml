@@ -1,0 +1,60 @@
+# Every suite the README names, on every push.
+#
+# The browser layer is the reason this file exists. Its thirty-nine
+# checks are the only ones that run against a real document, and they
+# had drifted into being unrunnable — so they were not being run. A
+# suite nobody is made to run is a suite that quietly stops being true.
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # The built file is committed, and postinstall rebuilds it. If the
+      # two disagree, src/ and the artifact have drifted apart and the
+      # single-file build is no longer what the source says it is.
+      - name: The committed build matches src/
+        run: git diff --exit-code -- index.html biscuit-lane.html
+
+      - name: Integrity — names, calls, tables, string parity
+        run: npm run test:check
+
+      - name: Layering — no module names one that names it back
+        run: npm run test:deps
+
+      - name: Installable — manifest, worker, icons
+        run: npm run test:mobile
+
+      - name: Engine soak, difficulty curves, level-design audit
+        run: npm run test:node
+
+      - uses: actions/cache@v4
+        id: pw-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser layer — 39 checks against a real document
+        run: npm run test:browser
+
+      - name: Wide net — every screen, every sheet, real moves
+        run: npm run hunt

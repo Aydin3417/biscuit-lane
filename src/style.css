@@ -13,7 +13,7 @@
   --line-soft:     #EADCC9;
   --text:          #2C2118;
   --text-dim:      #6B5949;
-  --text-faint:    #826D57;
+  --text-faint:    #6D5C49;
   --accent:        #D98A18;
   /* the accent as text: the fill colour carries 2.7:1 on cream and
      3.6:1 on its own soft tint, so text uses a darker one */
@@ -28,18 +28,31 @@
   --sky:           #3C86C4;
   /* One radius scale, so nothing is 16px next to 18px next to 20px for
      no reason anybody could name. */
-  /* Six type sizes, because there were eighteen — thirteen of them
+  /* Seven type sizes, because there were eighteen — thirteen of them
      inside a six-pixel range, which is not a scale, it is a series of
-     separate decisions that happened to be near each other. Nothing
-     moved more than a pixel and a half; the point is that a caption is
-     now the same size as every other caption. */
-  --t-nano:        9.5px;
-  --t-micro:       11px;
-  --t-small:       13px;
-  --t-body:        15px;
-  --t-title:       17px;
-  --t-h2:          22px;
-  --t-hero:        27px;
+     separate decisions that happened to be near each other. The scale
+     held; where it sat did not.
+
+     Measured on a phone, thirty-one of the forty-three strings on the
+     home screen were under 12px and twenty-seven of them were 11px — so
+     11 was not the caption size, it was the size of most of the game.
+     iOS asks for 11pt as a floor and Material for about 12sp as a body
+     size, and the old nano at 9.5px was under both. Everything is one
+     step up.
+
+     And in rem, not px. The old scale ignored the phone's own text-size
+     setting completely: 535 lengths in px and not one rem, so a player
+     who had turned their system font up got the same 11px as everybody
+     else. Type is relative now; spacing and radii stay in px on
+     purpose, so turning the text up grows the words inside the boxes
+     rather than pushing the layout apart. */
+  --t-nano:        0.6875rem;   /* 11.0px at the default root */
+  --t-micro:       0.78125rem;  /* 12.5px */
+  --t-small:       0.875rem;    /* 14.0px */
+  --t-body:        1rem;        /* 16.0px */
+  --t-title:       1.125rem;    /* 18.0px */
+  --t-h2:          1.4375rem;   /* 23.0px */
+  --t-hero:        1.75rem;     /* 28.0px */
 
   --r-xs:          9px;
   --r-sm:          13px;
@@ -128,7 +141,7 @@
 }
 :root[data-theme="light"]{
   --bg:#F6EADA; --bg-deep:#E9D8C3; --surface:#FFFAF2; --surface-2:#F3E6D6; --surface-3:#E7D6C1;
-  --line:#DCC7AC; --line-soft:#EADCC9; --text:#2C2118; --text-dim:#6B5949; --text-faint:#826D57;
+  --line:#DCC7AC; --line-soft:#EADCC9; --text:#2C2118; --text-dim:#6B5949; --text-faint:#6D5C49;
   --accent:#D98A18; --accent-strong:#7E4C0A; --accent-soft:#F7D79B; --accent-ink:#3A2503;
   --rose:#A82C44; --rose-soft:#F6CCD3;
   --sage:#276853; --sage-soft:#C4E4D4; --plum:#6E5A8C; --sky:#2C6A9E;
@@ -210,8 +223,18 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 canvas{ max-width:100%; }
 
 .brandmark canvas{ width:30px; height:30px; flex:0 0 auto; }
-.brandmark .bn{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); letter-spacing:-.02em; white-space:nowrap; line-height:1.1; }
-.brandmark .bn small{ display:block; font-family:"Karla",sans-serif; font-weight:500; font-size:var(--t-nano); letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); margin-top:1px; }
+/* The wordmark gives way to the purse, rather than sliding under it.
+
+   `.brandmark` could already shrink — it carries min-width:0 — but the
+   name inside it was nowrap with nothing to clip it, so it simply drew
+   over the chips: 53px of overlap on a 375px screen with the hearts
+   chip showing its refill clock, and 11px even with hearts full. The
+   purse and the settings button are fixed; the name is the part that
+   can afford to lose a letter. */
+.brandmark .bn{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); letter-spacing:-.02em; white-space:nowrap; line-height:1.1;
+  min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.brandmark .bn small{ display:block; font-family:"Karla",sans-serif; font-weight:500; font-size:var(--t-nano); letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); margin-top:1px;
+  overflow:hidden; text-overflow:ellipsis; }
 .purse{ display:flex; align-items:center; gap:6px; }
 .chip{
   display:inline-flex; align-items:center; gap:5px;
@@ -219,6 +242,14 @@ canvas{ max-width:100%; }
   background:var(--surface-2); border:1px solid var(--line-soft);
   font-weight:700; font-size:var(--t-small); font-variant-numeric:tabular-nums;
   box-shadow:var(--shadow-1); white-space:nowrap;
+  position:relative;
+}
+/* hearts and treats open a sheet; the tap reaches 48 without the chip
+   growing to meet it. Vertical only — three of these sit side by side
+   and a wider target would take its neighbour's taps. */
+.chip::after{
+  content:""; position:absolute; left:0; right:0; top:50%;
+  transform:translateY(-50%); height:48px;
 }
 .chip svg{ width:17px; height:17px; display:block; flex:0 0 auto; }
 .chip.hearts{ color:var(--rose); }
@@ -227,10 +258,24 @@ canvas{ max-width:100%; }
 .chip .sub{ font-size:var(--t-nano); color:var(--text-faint); font-weight:600; margin-left:1px; }
 .chip.bump{ animation:chipbump .5s cubic-bezier(.2,1.5,.4,1); }
 @keyframes chipbump{ 40%{ transform:scale(1.16) } }
+/* The thumb is bigger than the button.
+
+   Measured on a phone: the settings gear was 34x34 and the purse chips
+   32 tall, against the 48dp both platforms ask for. Growing them to 48
+   would have made a top bar of four fat lozenges, so the drawn size
+   stays and the *target* grows underneath — a transparent box centred
+   on the control, reaching out to 48 in both directions. Nothing moves
+   and nothing looks different; the thing simply catches the tap that
+   used to land beside it. */
 .iconbtn{
   width:34px; height:34px; border-radius:12px; display:grid; place-items:center;
   background:var(--surface-2); border:1px solid var(--line-soft); box-shadow:var(--shadow-1);
   transition:transform .12s ease, background .15s ease; flex:0 0 auto;
+  position:relative;
+}
+.iconbtn::after{
+  content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:48px; height:48px;
 }
 .iconbtn:active{ transform:scale(.92); }
 .iconbtn svg{ width:18px; height:18px; }
@@ -343,6 +388,14 @@ canvas{ max-width:100%; }
 .bar > i{ display:block; height:100%; border-radius:999px; transition:width .45s cubic-bezier(.22,1,.36,1); }
 
 .pill{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:var(--t-micro); font-weight:700; }
+/* An IC.* string is a bare <svg> with a viewBox and no width or height,
+   so it has whatever size CSS gives it and nothing else. Every other
+   place that holds one says so — .chip svg, .tab svg, .btn svg, and
+   .statPills .pill svg — but the plain .pill never did, so the three
+   that carry an icon rendered it at zero: the paw marking an inactive
+   pet, the padlock on a breed not yet unlocked, and the tick on a perk
+   chip. Each one drew an empty lozenge where a symbol belonged. */
+.pill svg{ width:13px; height:13px; flex:0 0 auto; }
 .pill.ok{ background:var(--sage-soft); color:var(--sage); }
 .pill.warn{ background:var(--accent-soft); color:var(--accent-strong); }
 .pill.bad{ background:var(--rose-soft); color:var(--rose); }
@@ -562,11 +615,15 @@ canvas{ max-width:100%; }
 .good .tag{ position:absolute; right:8px; top:8px; }
 
 /* ---------- family / pets ---------- */
-.petrow{ display:flex; align-items:center; gap:11px; padding:11px; }
+.petrow{ display:flex; align-items:center; gap:8px; padding:11px 10px; }
 .petrow canvas{ width:56px; height:56px; flex:0 0 auto; }
 .petrow .info{ flex:1 1 auto; min-width:0; }
 .petrow .info .nm{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); }
 .petrow .info .br{ font-size:var(--t-micro); color:var(--text-faint); font-weight:600; }
+/* the row's own pill stays on one line: wrapped to two it took enough
+   width from the name column to cut "bond 7" off the one pet that is
+   actually on the board */
+.petrow > .pill{ white-space:nowrap; flex:0 0 auto; padding-left:7px; padding-right:7px; }
 .petrow.active{ border-color:var(--accent-strong); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 40%, transparent), var(--shadow-1); }
 
 /* ---------- modal ---------- */

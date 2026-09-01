@@ -193,15 +193,17 @@ function boot() {
   $('#btnQuit').innerHTML = IC.back;
   $('#btnQuit').addEventListener('click', () => { SFX.tap(); confirmQuit(); });
   $('#chipHearts').addEventListener('click', () => { if (SAVE.hearts < HEART_MAX) noHeartsSheet(); });
-  $('#chipTreats').addEventListener('click', () => {
-    const m = modal(`<span style="color:var(--plum);width:48px;height:48px;align-self:center">${IC.treat}</span>
-      <h2>${T('shop_treats_t')}</h2><p>${T('shop_treats_s')}</p>
-      <button class="btn primary wide" id="trOk">${T('ok')}</button>`);
-    $('#trOk', m.el).addEventListener('click', m.close);
-  });
+  /* the chip explained what treats were and then stopped, which was the
+     right card back when there was nothing to do about it */
+  $('#chipTreats').addEventListener('click', () => { SFX.tap(); treatStore(); });
 
   catchUpPets();
   heartTick();
+  clubTick();
+  /* what these cost where the player actually is; the store's answer
+     replaces the fallback labels whenever it arrives, and nothing waits
+     on it */
+  BILLING.refresh();
   syncPurse();
   /* a save carried over from an older build may already have earned
      things, so sweep once on load rather than waiting for the next win */
@@ -326,7 +328,7 @@ window.BL = {
   checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
-  openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, confirmQuit,
+  openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, treatStore, confirmQuit,
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
   simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY, petRig, syncGoals, drawLevelScene,
   castOf, castBreed, castSlot, castName, castRebuild, slotGem, slotBreed,

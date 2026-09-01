@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The lane's own ground. Matches background_color in the web
+         manifest and the theme-color meta tag, so the launch, the
+         status bar and the page are one colour rather than three. -->
+    <color name="splashBackground">#F6EADA</color>
+    <color name="colorPrimary">#F6EADA</color>
+    <color name="colorPrimaryDark">#E9D8C3</color>
+    <color name="colorAccent">#D98A18</color>
+</resources>

@@ -28,7 +28,23 @@ const G = {
 /* Shared by layoutBoard and the self-heal check in renderGame — if the
    two ever disagreed the board would re-layout every frame and throw the
    sprite cache away with it. */
-const BOARD_PAD = 14;
+/* The tray's inner margin.
+
+   Measured, the board is width-bound on every portrait phone and never
+   height-bound — 47dp available across against 75dp down on a Pixel 7
+   Pro — so the lane above it is not competing with it for room, and
+   shrinking that scene would buy the board nothing at all. The only
+   dimension left is this one.
+
+   It is also the width of the tray's own frame, which drawTray() drew
+   at a hardcoded 11 while this said 14 — so the frame had three pixels
+   of slack it never used. Taking the padding down to the frame's own
+   width is a free dp of tile on a big phone and one on a 320px one,
+   where a 35dp tile was the thing most likely to take the wrong swipe.
+   The two are one number now: set this below the frame width and the
+   tray gets clipped by the canvas, which is exactly what happened the
+   first time this was tried at 8. */
+const BOARD_PAD = 11;
 function boardCellFor(wrap, B) {
   if (!wrap || !B || wrap.clientWidth <= 0) return 0;
   return Math.max(22, Math.floor(Math.min(
@@ -152,7 +168,10 @@ function startLevel(n, opts) {
   G.spending = false;      /* nothing is mid-ability on a fresh board */
   G.n = n;
   G.epoch++;                          /* anything still running belongs to the old board */
-  G.def = levelDef(n);
+  /* the daily is a second generator with its own seed and its own
+     sizing, not a level number, so the caller picks rather than the
+     level table reaching into the save to find out how far you got */
+  G.def = n === DAILY_LEVEL ? dailyLevel(SAVE.reached) : levelDef(n);
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
   const pet = activePet();
@@ -327,12 +346,25 @@ function syncGoals(bumpIdx) {
     })());
     if (bumpIdx === i) { g.el.classList.remove('tick'); void g.el.offsetWidth; g.el.classList.add('tick'); }
   });
-  /* The lane behind the board shows the walk as a line of paw prints,
-     and a print is laid when the goals move. Repainting that scene is a
-     full canvas of gradients and about two hundred shapes, so it is not
-     something to do on every cascade tick — only when the walk has
-     actually taken a step. Fourteen prints, so fourteen repaints in a
-     whole level at worst. */
+}
+
+/* The lane behind the board shows the walk as a line of paw prints, and
+   a print is laid when the goals move.
+
+   This used to sit at the end of syncGoals, which is a HUD update and
+   runs on every tick of a cascade. Repainting the lane is a full canvas
+   of gradients and about two hundred shapes, so during a particle storm
+   several of those landed inside measured frames and pushed one to 57ms
+   — a third of a second of stutter, on the one screen where stutter is
+   felt. The branch alone passed that check four runs out of four; the
+   merge failed it, which is how a cost that belongs to neither side on
+   its own gets found.
+
+   It belongs once a move, after the board has settled, which is where it
+   is called from now. Fourteen prints, so fourteen repaints in a whole
+   level at worst. */
+function paintWalk() {
+  if (!G.B || G.over) return;
   const step = Math.round(sceneProgress() * 14);
   if (step !== G.walkStep) { G.walkStep = step; drawLevelScene(); }
 }
@@ -1056,6 +1088,7 @@ async function tryMove(a, b) {
   if (stale(_ep)) return;
   await creepBrambles();
   await workMoles();
+  paintWalk();
   if (stale(_ep)) return;
   G.busy = false;
   checkEnd();
@@ -1154,12 +1187,18 @@ async function firePetAbility() {
 }
 /* Which tile the pet is charged by and aims at on this board. The
    breed while the board deals it; the tile beside it when it does not,
-   so no ability is ever pointed at a colour that is not in play. */
-function favType() {
+   so no ability is ever pointed at a colour that is not in play.
+
+   `types` is optional because the level card has to answer this before
+   there is a board to ask. Answering it separately is exactly how the
+   card came to promise one animal and the board charge on another, so
+   there is one of these now and the card calls it. */
+function favType(types) {
   const pet = activePet();
   /* the slot the pet is standing in, not its breed index: with the cast
      putting your own first, those are no longer the same number */
-  return favTypeFor(pet ? castSlot(pet.breed) : 0, G.B ? G.B.types : 0);
+  return favTypeFor(pet ? castSlot(pet.breed) : 0,
+    types === undefined ? (G.B ? G.B.types : 0) : types);
 }
 /* "Sniffs out tiles and turns them into what you actually need."
 
@@ -1317,7 +1356,10 @@ async function finishWin() {
   }
   await wait(360);
   if (stale(_ep)) return;
-  showWin();
+  /* the board says the level was won. What that looks like is not
+     the board's business, and used to be: this called straight into
+     the results sheet in 60-ui.js. */
+  EV.emit('won');
 }
 async function finishLose() {
   const _ep = levelEpoch();
@@ -1328,7 +1370,7 @@ async function finishLose() {
   if (pet) { G.petMood = 'sad'; G.petMoodT = 3; }
   await wait(600);
   if (stale(_ep)) return;
-  showLose();
+  EV.emit('lost');
 }
 
 /* ---------------- render ---------------- */
@@ -1376,7 +1418,7 @@ function renderGame(dt) {
   c.translate(-G.cw / 2, -G.ch / 2);
 
   /* the tray the board sits in */
-  drawTray(c, G.ox, G.oy, G.boardW, G.boardH, 11);
+  drawTray(c, G.ox, G.oy, G.boardW, G.boardH, BOARD_PAD);
 
   /* cells */
   eachCell(B, (cell, r, c2) => {
@@ -1413,14 +1455,21 @@ function renderGame(dt) {
     const bob = (t.tw || t.dying) ? 0 : idleBob(t, tsec);
     const lift = picked ? .10 : 0;
     const px = G.ox + (t.x + d[0]) * G.cell + G.cell / 2;
-    const py = G.oy + (t.y + d[1] + bob - lift) * G.cell + G.cell / 2;
+    let py = G.oy + (t.y + d[1] + bob - lift) * G.cell + G.cell / 2;
     let sc = t.scale * (1 + d[2] * .25) * (picked ? 1.07 : 1);
-    let sx = 1, sy = 1;
+    let sx = 1, sy = 1, rot = 0;
     let alpha = 1;
     if (t.dying > 0) {
       const k = clamp((t.dying - (t.dieDelay || 0)), 0, 1);
       sc = t.scale * popScale(k);
       alpha = popAlpha(k);
+      /* it jumps. popScale() alone swells the tile in place, which is a
+         balloon inflating; a hop off the floor with a tilt in it is a
+         small animal being pleased with itself. Sine over the first
+         two thirds, so it is back down before it fades out. */
+      const hop = Math.sin(Math.min(1, k / .66) * Math.PI);
+      py -= hop * G.cell * .22;
+      rot = Math.sin(k * 9.2) * .10 * (1 - k);
     }
     if (t.jiggle > 0) {
       /* squash on impact, then wobble out — volume stays put, so it
@@ -1437,6 +1486,7 @@ function renderGame(dt) {
     c.save();
     c.globalAlpha = alpha;
     c.translate(px, py);
+    if (rot) c.rotate(rot);
     c.scale(sc * sx, sc * sy);
     if (t.type === PUP) {
       /* a slot, not a breed: paintPup resolves through the cast now, so
@@ -1445,8 +1495,12 @@ function renderGame(dt) {
          walking a Pug */
       paintPup(c, G.cell * .94, activePet() ? castSlot(activePet().breed) : 0);
     } else {
+      /* A tile that has just been matched grins and jumps before it
+         goes. The board was a grid of identical polite smiles clearing
+         in silence; this is the half-second where the thing you did
+         lands, and it costs one more cached sprite per breed. */
       const sp = tileSprite(t.type, t.sp, G.cell * .90, SAVE.settings.marks,
-        t.blinkT > 0 && !t.dying);
+        t.blinkT > 0 && !t.dying, t.dying > 0);
       const w = sp._w;
       c.drawImage(sp, -w / 2, -w / 2, w, w);
       if (t.dying > 0) {

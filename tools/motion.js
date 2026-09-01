@@ -1,23 +1,17 @@
 /* Dev-only: play one move and photograph the next second of it, so the
    feel of a clear can be looked at frame by frame instead of imagined.
      node tools/motion.js [level]  */
-/* Playwright is not a dependency of this project — the game has none.
-   These dev tools borrow it from wherever it already is. Point
-   PLAYWRIGHT at an installation and CHROME at a browser binary, or edit
-   the fallbacks below. */
-const PW_PATH = process.env.PLAYWRIGHT ||
-  'C:/Users/Casper/Desktop/Proje/Cotidie-Ads-Opus/node_modules/playwright';
-const CHROME = process.env.CHROME ||
-  'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const path = require('path'), fs = require('fs');
-const { chromium } = require(PW_PATH);
+const PW = require('./_pw.js');
 const lvl = +(process.argv[2] || 12);
 const out = path.join(__dirname, '..', 'shots', 'motion');
 fs.mkdirSync(out, { recursive: true });
 (async () => {
-  const b = await chromium.launch({ executablePath: CHROME });
+  /* puts its own server up, like tools/browser.js */
+  const server = await PW.serve();
+  const b = await PW.launch();
   const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
-  await p.goto('http://localhost:5173/biscuit-lane.html', { waitUntil: 'load' });
+  await p.goto(PW.at('/biscuit-lane.html'), { waitUntil: 'load' });
   await p.waitForFunction(() => window.BL && window.BL.save);
   await p.evaluate(() => { BL.save.pets = [BL.makePet(2, 1, 0, 'Marlow')]; BL.save.activePet = BL.save.pets[0].id; BL.persist(true); });
   await p.reload({ waitUntil: 'load' });
@@ -44,4 +38,5 @@ fs.mkdirSync(out, { recursive: true });
   }
   console.log('frames in ' + out);
   await b.close();
+  server.stop();
 })();

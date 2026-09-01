@@ -68,26 +68,70 @@ function drawPip(c, kind, x, y, r, col) {
 }
 
 /* ---------------- ears ---------------- */
-function drawEars(c, spec, s, back) {
+/* What the ears are doing.
+
+   An animal's ears are the loudest thing on its face and these were
+   welded on: the same angle whether the pet was delighted or asleep.
+   The room already knows the mood — it picks idle behaviour and thought
+   bubbles from it — so it costs nothing to say it here too.
+
+   `rot` turns the ear about its base, positive being outward and down.
+   `droop` shortens it, which is what a tired ear does. `out` slides it
+   off the skull a little for the alert poses. */
+/* how wide the pupil opens, by mood */
+const PUPIL_DILATE = {
+  happy: 1.16, content: 1, hungry: 1.12, lonely: .94,
+  dirty: .95, bored: .86, tired: .80, sleeping: .78
+};
+
+const EAR_POSE = {
+  happy:    { rot: -.13, out: .020, droop: -.04 },
+  content:  { rot: 0, out: 0, droop: 0 },
+  hungry:   { rot: -.08, out: .026, droop: 0 },
+  lonely:   { rot: .17, out: -.010, droop: .10 },
+  dirty:    { rot: .11, out: 0, droop: .07 },
+  bored:    { rot: .21, out: .008, droop: .14 },
+  tired:    { rot: .32, out: .018, droop: .22 },
+  sleeping: { rot: .36, out: .022, droop: .26 }
+};
+
+function drawEars(c, spec, s, back, o) {
   const b = spec.breed, fur = spec.fur, fur2 = spec.fur2, inner = spec.inner || '#E8A0A8';
   const k = b.ear;
   if (back && (k === 'droop' || k === 'flop' || k === 'button')) return;   // drawn in front
   if (!back && !(k === 'droop' || k === 'flop' || k === 'button')) return;
 
+  const pose = EAR_POSE[(o && o.mood) || 'content'] || EAR_POSE.content;
   const ear = (sx) => {
     c.save(); c.scale(sx, 1);
+    /* turn about where the ear leaves the skull, not about the face,
+       or a tired ear slides off the head instead of folding down */
+    if (pose.rot || pose.droop || pose.out) {
+      c.translate(.22 * s + pose.out * s, -.26 * s);
+      c.rotate(pose.rot);
+      c.scale(1, 1 - pose.droop);
+      c.translate(-.22 * s, .26 * s);
+    }
     if (k === 'triangle') {
+      /* Set wide on the skull and leaning out, about a third of the
+         head tall. The old pair were small tabs perched on the crown. */
       c.fillStyle = fur;
       c.beginPath();
-      c.moveTo(.16 * s, -.30 * s);
-      c.quadraticCurveTo(.30 * s, -.72 * s, .46 * s, -.34 * s);
-      c.quadraticCurveTo(.34 * s, -.20 * s, .16 * s, -.30 * s);
+      c.moveTo(.08 * s, -.28 * s);
+      c.quadraticCurveTo(.23 * s, -.82 * s, .49 * s, -.32 * s);
+      c.quadraticCurveTo(.33 * s, -.14 * s, .08 * s, -.28 * s);
       c.fill();
-      c.fillStyle = inner;
+      /* the inside of an ear is a cone: dark where it meets the skull,
+         catching light toward the tip. Flat colour made it a sticker. */
+      const ig1 = c.createLinearGradient(.20 * s, -.24 * s, .34 * s, -.62 * s);
+      ig1.addColorStop(0, shade(inner, -.30));
+      ig1.addColorStop(.55, inner);
+      ig1.addColorStop(1, shade(inner, .22));
+      c.fillStyle = ig1;
       c.beginPath();
-      c.moveTo(.23 * s, -.32 * s);
-      c.quadraticCurveTo(.31 * s, -.58 * s, .39 * s, -.34 * s);
-      c.quadraticCurveTo(.31 * s, -.26 * s, .23 * s, -.32 * s);
+      c.moveTo(.16 * s, -.30 * s);
+      c.quadraticCurveTo(.26 * s, -.66 * s, .41 * s, -.33 * s);
+      c.quadraticCurveTo(.29 * s, -.21 * s, .16 * s, -.30 * s);
       c.fill();
     } else if (k === 'tall') {
       c.fillStyle = spec.point || fur2;
@@ -103,10 +147,24 @@ function drawEars(c, spec, s, back) {
       c.quadraticCurveTo(.31 * s, -.24 * s, .21 * s, -.31 * s);
       c.fill();
     } else if (k === 'round') {
+      /* Round-eared, still a cat: a broad triangle with a soft tip.
+         Two circles on a circle is a bear, which is what this was. */
       c.fillStyle = fur;
-      ellipse(c, .34 * s, -.34 * s, .16 * s, .17 * s, -.28); c.fill();
-      c.fillStyle = inner;
-      ellipse(c, .35 * s, -.33 * s, .085 * s, .095 * s, -.28); c.fill();
+      c.beginPath();
+      c.moveTo(.09 * s, -.27 * s);
+      c.quadraticCurveTo(.20 * s, -.74 * s, .46 * s, -.35 * s);
+      c.quadraticCurveTo(.32 * s, -.15 * s, .09 * s, -.27 * s);
+      c.fill();
+      const ig2 = c.createLinearGradient(.20 * s, -.24 * s, .32 * s, -.58 * s);
+      ig2.addColorStop(0, shade(inner, -.30));
+      ig2.addColorStop(.55, inner);
+      ig2.addColorStop(1, shade(inner, .22));
+      c.fillStyle = ig2;
+      c.beginPath();
+      c.moveTo(.17 * s, -.29 * s);
+      c.quadraticCurveTo(.24 * s, -.60 * s, .39 * s, -.35 * s);
+      c.quadraticCurveTo(.29 * s, -.21 * s, .17 * s, -.29 * s);
+      c.fill();
     } else if (k === 'droop') {
       c.fillStyle = fur2;
       c.beginPath();
@@ -172,12 +230,46 @@ function headPath(c, spec, s) {
     c.bezierCurveTo(.39 * s, .20 * s, .24 * s, .44 * s, 0, .44 * s);
     c.bezierCurveTo(-.24 * s, .44 * s, -.39 * s, .20 * s, -.40 * s, -.04 * s);
   } else {
-    c.moveTo(-.41 * s, -.08 * s);
-    c.bezierCurveTo(-.41 * s, -.34 * s, -.24 * s, -.42 * s, 0, -.42 * s);
-    c.bezierCurveTo(.24 * s, -.42 * s, .41 * s, -.34 * s, .41 * s, -.08 * s);
-    c.bezierCurveTo(.41 * s, .18 * s, .25 * s, .40 * s, 0, .40 * s);
-    c.bezierCurveTo(-.25 * s, .40 * s, -.41 * s, .18 * s, -.41 * s, -.08 * s);
+    /* A cat's head is a wedge, not a ball: the skull is moderate, the
+       cheeks are the widest part, and it tapers to a small chin. Drawn
+       as a circle with ears on top — which is what this was — it reads
+       as a bear, and the Sable read as one most of all. */
+    c.moveTo(-.43 * s, .02 * s);
+    c.bezierCurveTo(-.44 * s, -.26 * s, -.24 * s, -.42 * s, 0, -.42 * s);
+    c.bezierCurveTo(.24 * s, -.42 * s, .44 * s, -.26 * s, .43 * s, .02 * s);
+    c.bezierCurveTo(.42 * s, .22 * s, .26 * s, .36 * s, .11 * s, .42 * s);
+    c.bezierCurveTo(.04 * s, .45 * s, -.04 * s, .45 * s, -.11 * s, .42 * s);
+    c.bezierCurveTo(-.26 * s, .36 * s, -.42 * s, .22 * s, -.43 * s, .02 * s);
   }
+  c.closePath();
+}
+
+/* A tabby mark is thick where it leaves the spine and thin where it
+   ends, and it follows the curve of the skull. Stroked with a round cap
+   it is a bar with two dome ends, which is what these were: at .045 of
+   the head wide and .75 opaque they read as painted-on stripes rather
+   than fur.
+
+   This walks a quadratic spine and offsets it by a width that falls
+   from w0 to w1, so the mark tapers along its length. */
+function taperMark(c, x0, y0, cx, cy, x1, y1, w0, w1) {
+  const N = 14, L = [], R = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, u = 1 - t;
+    const px = u * u * x0 + 2 * u * t * cx + t * t * x1;
+    const py = u * u * y0 + 2 * u * t * cy + t * t * y1;
+    const tx = 2 * u * (cx - x0) + 2 * t * (x1 - cx);
+    const ty = 2 * u * (cy - y0) + 2 * t * (y1 - cy);
+    const len = Math.hypot(tx, ty) || 1;
+    const nx = -ty / len, ny = tx / len;
+    const w = (w0 + (w1 - w0) * t) * .5;
+    L.push([px + nx * w, py + ny * w]);
+    R.push([px - nx * w, py - ny * w]);
+  }
+  c.beginPath();
+  c.moveTo(L[0][0], L[0][1]);
+  for (let i = 1; i < L.length; i++) c.lineTo(L[i][0], L[i][1]);
+  for (let i = R.length - 1; i >= 0; i--) c.lineTo(R[i][0], R[i][1]);
   c.closePath();
 }
 
@@ -186,18 +278,23 @@ function drawMarkings(c, spec, s) {
   c.save();
   headPath(c, spec, s); c.clip();
   if (b.mark === 'tabby') {
-    c.strokeStyle = rgba(spec.fur2, .75); c.lineWidth = s * .045; c.lineCap = 'round';
-    c.beginPath();
-    c.moveTo(-.14 * s, -.40 * s); c.lineTo(-.07 * s, -.24 * s);
-    c.moveTo(0, -.44 * s); c.lineTo(0, -.26 * s);
-    c.moveTo(.14 * s, -.40 * s); c.lineTo(.07 * s, -.24 * s);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(-.42 * s, -.12 * s); c.lineTo(-.26 * s, -.10 * s);
-    c.moveTo(-.42 * s, .02 * s); c.lineTo(-.28 * s, .02 * s);
-    c.moveTo(.42 * s, -.12 * s); c.lineTo(.26 * s, -.10 * s);
-    c.moveTo(.42 * s, .02 * s); c.lineTo(.28 * s, .02 * s);
-    c.stroke();
+    c.fillStyle = rgba(spec.fur2, .58);
+    /* the forehead's M, fanning out from the brow rather than three
+       parallel scratches */
+    taperMark(c, -.05 * s, -.22 * s, -.13 * s, -.34 * s, -.17 * s, -.44 * s, s * .052, s * .012);
+    c.fill();
+    taperMark(c, 0, -.24 * s, 0, -.36 * s, 0, -.47 * s, s * .050, s * .011);
+    c.fill();
+    taperMark(c, .05 * s, -.22 * s, .13 * s, -.34 * s, .17 * s, -.44 * s, s * .052, s * .012);
+    c.fill();
+    /* cheek bars, curving back with the cheek */
+    c.fillStyle = rgba(spec.fur2, .46);
+    [-1, 1].forEach(sx => {
+      taperMark(c, sx * .25 * s, -.13 * s, sx * .36 * s, -.14 * s, sx * .44 * s, -.09 * s, s * .046, s * .014);
+      c.fill();
+      taperMark(c, sx * .27 * s, .01 * s, sx * .37 * s, .02 * s, sx * .44 * s, .06 * s, s * .042, s * .013);
+      c.fill();
+    });
   } else if (b.mark === 'patch') {
     c.fillStyle = rgba(spec.fur2, .9);
     ellipse(c, -.20 * s, -.16 * s, .19 * s, .16 * s, -.2); c.fill();
@@ -206,19 +303,21 @@ function drawMarkings(c, spec, s) {
     c.moveTo(0, -.46 * s); c.quadraticCurveTo(.07 * s, -.14 * s, 0, .14 * s);
     c.quadraticCurveTo(-.07 * s, -.14 * s, 0, -.46 * s); c.fill();
   } else if (b.mark === 'points') {
-    const gr = c.createRadialGradient(0, .18 * s, .05 * s, 0, .18 * s, .40 * s);
+    /* the points sit on the muzzle, which moved down with the features;
+       left where it was the mask covered the eyes instead of the nose */
+    const gr = c.createRadialGradient(0, .32 * s, .05 * s, 0, .32 * s, .34 * s);
     gr.addColorStop(0, rgba(spec.fur2, .92));
     gr.addColorStop(.62, rgba(spec.fur2, .42));
     gr.addColorStop(1, rgba(spec.fur2, 0));
     c.fillStyle = gr;
-    ellipse(c, 0, .12 * s, .40 * s, .36 * s); c.fill();
+    ellipse(c, 0, .30 * s, .34 * s, .28 * s); c.fill();
   } else if (b.mark === 'mask') {
-    const gr = c.createRadialGradient(0, .12 * s, .04 * s, 0, .12 * s, .40 * s);
+    const gr = c.createRadialGradient(0, .26 * s, .04 * s, 0, .26 * s, .36 * s);
     gr.addColorStop(0, rgba(spec.fur2, .95));
     gr.addColorStop(.55, rgba(spec.fur2, .78));
     gr.addColorStop(1, rgba(spec.fur2, 0));
     c.fillStyle = gr;
-    ellipse(c, 0, .10 * s, .34 * s, .32 * s); c.fill();
+    ellipse(c, 0, .24 * s, .32 * s, .28 * s); c.fill();
     c.strokeStyle = rgba(spec.fur2, .5); c.lineWidth = s * .035; c.lineCap = 'round';
     c.beginPath();
     c.moveTo(-.17 * s, -.24 * s); c.quadraticCurveTo(0, -.34 * s, .17 * s, -.24 * s);
@@ -274,12 +373,22 @@ function featureInk(spec) { return darkCoat(spec) ? '#E4D8C8' : '#2A2118'; }
    same animal. The eye is the first thing anyone reads, so each breed
    gets its own: size, slant, lid, and whether it has brows at all. */
 const FACE_LOOK = {
-  marmalade: { r: .094, x: .172, y: -.05, tilt: -.13, almond: true, lid: .55, brow: 0 },
-  beagle: { r: .100, x: .178, y: -.045, tilt: .10, almond: false, lid: .35, brow: .8 },
-  void: { r: .118, x: .180, y: -.05, tilt: 0, almond: false, lid: .18, brow: 0 },
-  retriever: { r: .090, x: .172, y: -.055, tilt: .07, almond: false, lid: .62, brow: 0 },
-  siamese: { r: .097, x: .178, y: -.048, tilt: -.24, almond: true, lid: .48, brow: 0 },
-  pug: { r: .122, x: .196, y: -.068, tilt: 0, almond: false, lid: .12, brow: .7 }
+  /* Baby schema, which is the whole of what makes a drawn animal read
+     as cute and is not a matter of taste: a large cranium, eyes that
+     are big and sit at or below the middle of the face, and a nose and
+     mouth clustered low and small. These eyes were .09 to .12 of the
+     head and sat above the midline — the proportions of an adult
+     animal, which is why the faces were merely tidy.
+
+     Doubling them is most of the difference. `x` has to open up with
+     `r` or they meet in the middle, and `y` goes positive: below
+     centre, with forehead above. */
+  marmalade: { r: .156, x: .190, y: .045, tilt: -.09, almond: true, lid: .34, brow: 0 },
+  beagle: { r: .158, x: .186, y: .030, tilt: .06, almond: false, lid: .20, brow: .8 },
+  void: { r: .164, x: .194, y: .040, tilt: 0, almond: false, lid: .10, brow: 0 },
+  retriever: { r: .154, x: .182, y: .022, tilt: .05, almond: false, lid: .34, brow: 0 },
+  siamese: { r: .154, x: .188, y: .046, tilt: -.16, almond: true, lid: .28, brow: 0 },
+  pug: { r: .170, x: .198, y: .012, tilt: 0, almond: false, lid: .06, brow: .7 }
 };
 function lookOf(spec) { return FACE_LOOK[spec.breed.id] || FACE_LOOK.marmalade; }
 
@@ -326,23 +435,55 @@ function drawEye(c, x, y, r, spec, o, side) {
   eyePath(c, rx, ry, look.almond); c.fill();
 
   /* iris — lifted on a dark coat so it parts from both fur and pupil */
+  /* A brown-eyed dog has an iris near black, and against a pupil that
+     is now half the eye it merges into one hole — the Pug went from
+     eyes to voids. Anything this dark gets lifted until there is an
+     iris to see. */
+  let iris = dk ? shade(spec.eyes, .34) : spec.eyes;
+  const irgb = hex2rgb(iris);
+  const ilum = (irgb[0] * .299 + irgb[1] * .587 + irgb[2] * .114) / 255;
+  if (ilum < .30) iris = shade(iris, .30 + (.30 - ilum) * 1.5);
   const ig = c.createRadialGradient(dx, dy - ry * .2, rx * .1, dx, dy, rx * .95);
-  const iris = dk ? shade(spec.eyes, .34) : spec.eyes;
-  ig.addColorStop(0, shade(iris, .3));
+  ig.addColorStop(0, shade(iris, .34));
   ig.addColorStop(.62, iris);
-  ig.addColorStop(1, shade(iris, -.3));
+  ig.addColorStop(1, shade(iris, -.34));
   c.fillStyle = ig;
+  ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
+  /* An eye is a wet ball under a lid, and two things say so: the lid
+     drops a shadow across the top of the iris, and light bounces back
+     off the bottom of it. Without them the iris is a flat disc, which
+     is what these were — a green circle with a black dot on it. */
+  const shadeTop = c.createLinearGradient(0, dy - ry * .9, 0, dy + ry * .15);
+  shadeTop.addColorStop(0, rgba('#100C16', .55));
+  shadeTop.addColorStop(1, rgba('#100C16', 0));
+  c.fillStyle = shadeTop;
+  ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
+  const bounce = c.createLinearGradient(0, dy + ry * .25, 0, dy + ry * .9);
+  bounce.addColorStop(0, rgba(shade(iris, .55), 0));
+  bounce.addColorStop(1, rgba(shade(iris, .55), .75));
+  c.fillStyle = bounce;
   ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
 
   /* pupil — a slit for cats, round for dogs */
+  /* A thin slit is an alert predator. Cute is a big soft pupil that
+     fills the eye — every cat anyone has ever put on a T-shirt has one.
+     The cat keeps a taller-than-wide shape so it is still a cat's eye,
+     but it is wide enough to read as pupil rather than as a knife. */
+  /* A pupil is not a fixed hole. It opens when an animal is pleased or
+     wants something and closes when it is bored or half asleep, and it
+     is the cheapest expression in the whole face — nothing else here
+     moves and the pet still looks like it is feeling something. */
+  const dil = PUPIL_DILATE[(o && o.mood) || 'content'] || 1;
   c.fillStyle = '#17141B';
-  if (spec.breed.species === 'cat') ellipse(c, dx, dy, rx * .26, ry * .68);
-  else ellipse(c, dx, dy, rx * .46, ry * .48);
+  if (spec.breed.species === 'cat') ellipse(c, dx, dy, rx * .50 * dil, ry * .70 * dil);
+  else ellipse(c, dx, dy, rx * .54 * dil, ry * .56 * dil);
   c.fill();
 
   /* the lid: what stops an eye looking like a bead */
   if (look.lid > .02) {
-    c.fillStyle = rgba(shade(spec.fur2, -.15), .55 * look.lid + .2);
+    /* a shadow, not a swatch of coat: at half-opaque fur colour this
+       read as a brown smear sitting on the eye */
+    c.fillStyle = rgba('#1A1420', .30 * look.lid + .12);
     c.beginPath();
     c.moveTo(-rx * 1.1, -ry * 1.1);
     c.lineTo(rx * 1.1, -ry * 1.1);
@@ -353,15 +494,22 @@ function drawEye(c, x, y, r, spec, o, side) {
   }
 
   /* highlights */
-  c.fillStyle = rgba('#FFFFFF', .92);
-  ellipse(c, -rx * .3 + dx, -ry * .34 + dy, rx * .27, ry * .25); c.fill();
-  c.fillStyle = rgba('#FFFFFF', .5);
-  ellipse(c, rx * .28 + dx, ry * .32 + dy, rx * .13, ry * .12); c.fill();
+  /* A hard white ellipse is a sticker. A reflection has a core and a
+     falloff, and a second, smaller one opposite it. */
+  const hx = -rx * .34 + dx, hy = -ry * .40 + dy, hr = rx * .34;
+  const hg = c.createRadialGradient(hx, hy, hr * .12, hx, hy, hr);
+  hg.addColorStop(0, rgba('#FFFFFF', .95));
+  hg.addColorStop(.55, rgba('#FFFFFF', .62));
+  hg.addColorStop(1, rgba('#FFFFFF', 0));
+  c.fillStyle = hg;
+  ellipse(c, hx, hy, hr, hr * .92); c.fill();
+  c.fillStyle = rgba('#FFFFFF', .40);
+  ellipse(c, rx * .30 + dx, ry * .34 + dy, rx * .10, ry * .09); c.fill();
   c.restore();
 
   /* the rim of the eye */
-  c.strokeStyle = dk ? rgba('#FFFFFF', .26) : rgba('#2A2118', .30);
-  c.lineWidth = r * .1;
+  c.strokeStyle = dk ? rgba('#FFFFFF', .20) : rgba('#2A2118', .22);
+  c.lineWidth = r * .038;
   eyePath(c, rx, ry, look.almond); c.stroke();
   c.restore();
 }
@@ -380,29 +528,63 @@ function drawBrows(c, spec, s) {
 
 function drawNoseMouth(c, spec, s, o) {
   const f = spec.breed.face, cat = spec.breed.species === 'cat';
-  const ny = f === 'dog' ? .17 * s : f === 'flat' ? .10 * s : .11 * s;
-  const nw = f === 'dog' ? .085 * s : f === 'flat' ? .11 * s : .075 * s;
+  /* under the eyes, not beside them: with the eyes doubled the muzzle
+     has to drop or the face has no forehead and no chin, just features */
+  const ny = f === 'dog' ? .30 * s : f === 'flat' ? .26 * s : .27 * s;
+  const nw = f === 'dog' ? .075 * s : f === 'flat' ? .095 * s : .064 * s;
 
   /* muzzle patch */
   if (f !== 'cat' || spec.breed.mark === 'points') {
     c.fillStyle = rgba(spec.belly, f === 'flat' ? .35 : .8);
     ellipse(c, 0, ny + .04 * s, nw * 2.5, nw * 1.9); c.fill();
   }
+  /* A cat has two whisker pads with the nose sitting in the notch
+     between them. Cats were the one face that got no muzzle at all —
+     the test above excludes them — so the nose floated on a flat plane
+     and the whiskers came out of nowhere. That, more than anything
+     else, is what stopped them reading as cats.
+
+     Lightened fur rather than the belly colour, because a dark coat's
+     belly is dark too and the pads have to catch light on Sable. */
+  if (cat) {
+    const pw = nw * 1.95, ph = nw * 1.45, py = ny + nw * .95;
+    c.save();
+    c.fillStyle = rgba('#000000', .07);
+    ellipse(c, 0, py + nw * .30, pw * 1.9, ph * 1.15); c.fill();
+    /* a dark coat needs a gentler lift or the pads become a pale mask */
+    c.fillStyle = rgba(mix(spec.fur, '#FFFFFF', darkCoat(spec) ? .16 : .30),
+      darkCoat(spec) ? .55 : .85);
+    ellipse(c, -pw * .60, py, pw, ph); c.fill();
+    ellipse(c, pw * .60, py, pw, ph); c.fill();
+    c.restore();
+  }
   /* nose */
-  c.fillStyle = cat ? (spec.nose || '#E08A96')
+  const noseBase = cat ? (spec.nose || '#E08A96')
     : darkCoat(spec) ? mix('#33292A', '#B6A79E', .6) : '#33292A';
+  /* a nose is a small wet wedge, not a flat swatch */
+  const ng = c.createLinearGradient(0, ny - nw, 0, ny + nw);
+  ng.addColorStop(0, shade(noseBase, .26));
+  ng.addColorStop(.6, noseBase);
+  ng.addColorStop(1, shade(noseBase, -.24));
+  c.fillStyle = ng;
   c.beginPath();
   c.moveTo(-nw, ny - nw * .5);
   c.quadraticCurveTo(0, ny - nw * .85, nw, ny - nw * .5);
   c.quadraticCurveTo(nw * .75, ny + nw * .75, 0, ny + nw * .95);
   c.quadraticCurveTo(-nw * .75, ny + nw * .75, -nw, ny - nw * .5);
   c.fill();
-  c.fillStyle = rgba('#FFFFFF', .3);
-  ellipse(c, -nw * .3, ny - nw * .28, nw * .3, nw * .2, -.3); c.fill();
+  const nhx = -nw * .28, nhy = ny - nw * .30;
+  const nh = c.createRadialGradient(nhx, nhy, nw * .04, nhx, nhy, nw * .38);
+  nh.addColorStop(0, rgba('#FFFFFF', .62));
+  nh.addColorStop(1, rgba('#FFFFFF', 0));
+  c.fillStyle = nh;
+  ellipse(c, nhx, nhy, nw * .38, nw * .26, -.3); c.fill();
 
   /* mouth */
-  c.strokeStyle = rgba(featureInk(spec), darkCoat(spec) ? .55 : .7);
-  c.lineWidth = s * .034; c.lineCap = 'round';
+  /* the smile was s*.034 at .7 — a thick dark squiggle against a face
+     whose other lines are half that. */
+  c.strokeStyle = rgba(featureInk(spec), darkCoat(spec) ? .42 : .52);
+  c.lineWidth = s * .024; c.lineCap = 'round';
   const my = ny + nw * .95;
   if (o.mouth === 'open') {
     c.fillStyle = '#8C3B4A';
@@ -437,23 +619,41 @@ function drawNoseMouth(c, spec, s, o) {
   }
   /* whiskers */
   if (cat) {
-    c.strokeStyle = rgba(PAL.dark ? '#FFFFFF' : '#3A2E22', .32);
-    c.lineWidth = s * .018;
+    /* A whisker is thick at the pad and comes to a point, and it droops.
+       Stroked at an even width these were three grey wires the length of
+       the head — the most machine-looking thing on the face. */
+    const wc = PAL.dark ? '#FFFFFF' : '#3A2E22';
     [-1, 1].forEach(sx => {
       c.save(); c.scale(sx, 1);
-      c.beginPath();
-      c.moveTo(.11 * s, ny + .02 * s); c.quadraticCurveTo(.30 * s, ny - .04 * s, .43 * s, ny - .09 * s);
-      c.moveTo(.11 * s, ny + .06 * s); c.quadraticCurveTo(.31 * s, ny + .06 * s, .45 * s, ny + .05 * s);
-      c.stroke();
+      c.fillStyle = rgba(wc, .30);
+      taperMark(c, .16 * s, ny + .02 * s, .31 * s, ny - .07 * s, .45 * s, ny - .12 * s, s * .020, s * .002);
+      c.fill();
+      c.fillStyle = rgba(wc, .26);
+      taperMark(c, .15 * s, ny + .07 * s, .31 * s, ny + .05 * s, .46 * s, ny + .04 * s, s * .019, s * .002);
+      c.fill();
+      c.fillStyle = rgba(wc, .20);
+      taperMark(c, .14 * s, ny + .10 * s, .29 * s, ny + .15 * s, .41 * s, ny + .19 * s, s * .016, s * .002);
+      c.fill();
       c.restore();
     });
   }
 }
 
-function drawBlush(c, spec, s) {
-  c.fillStyle = rgba('#E88494', PAL.dark ? .26 : .3);
-  ellipse(c, -.27 * s, .12 * s, .10 * s, .062 * s); c.fill();
-  ellipse(c, .27 * s, .12 * s, .10 * s, .062 * s); c.fill();
+/* Colour in the cheeks, by how it feels. A flat blush on a miserable
+   animal is the same mistake as a fixed ear: the face wearing an
+   expression it does not have. */
+const BLUSH_BY_MOOD = {
+  happy: 1.35, content: 1, hungry: .85, lonely: .55,
+  dirty: .55, bored: .5, tired: .4, sleeping: .7
+};
+function drawBlush(c, spec, s, o) {
+  const k = BLUSH_BY_MOOD[(o && o.mood) || 'content'];
+  const a = (PAL.dark ? .26 : .3) * (k === undefined ? 1 : k);
+  if (a < .02) return;
+  const w = .10 * s * (k > 1 ? 1.12 : 1);
+  c.fillStyle = rgba('#E88494', a);
+  ellipse(c, -.27 * s, .12 * s, w, .062 * s); c.fill();
+  ellipse(c, .27 * s, .12 * s, w, .062 * s); c.fill();
 }
 
 /* ---------------- hats ---------------- */
@@ -558,7 +758,7 @@ function drawFace(c, spec, s, o) {
   o = o || {};
   c.save();
   if (o.squash) c.scale(1 + o.squash, 1 - o.squash);
-  drawEars(c, spec, s, true);
+  drawEars(c, spec, s, true, o);
   /* head */
   const gr = c.createLinearGradient(0, -.45 * s, 0, .45 * s);
   gr.addColorStop(0, shade(spec.fur, .13));
@@ -567,6 +767,25 @@ function drawFace(c, spec, s, o) {
   c.fillStyle = gr;
   headPath(c, spec, s); c.fill();
   drawMarkings(c, spec, s);
+  /* Form. The head was filled with one linear gradient running top to
+     bottom, which is a flat disc with a lighter half — a balloon. A key
+     light from the upper left and an occlusion under the jaw give it a
+     front and a back, and the markings sit under both because pigment
+     is under light, not over it. */
+  c.save();
+  headPath(c, spec, s); c.clip();
+  const key = c.createRadialGradient(-.16 * s, -.24 * s, s * .04, -.10 * s, -.14 * s, s * .74);
+  key.addColorStop(0, rgba('#FFFFFF', .30));
+  key.addColorStop(.5, rgba('#FFFFFF', .10));
+  key.addColorStop(1, rgba('#FFFFFF', 0));
+  c.fillStyle = key;
+  headPath(c, spec, s); c.fill();
+  const jaw = c.createLinearGradient(0, .06 * s, 0, .46 * s);
+  jaw.addColorStop(0, rgba('#2A1E12', 0));
+  jaw.addColorStop(1, rgba('#2A1E12', .20));
+  c.fillStyle = jaw;
+  headPath(c, spec, s); c.fill();
+  c.restore();
   /* rim light */
   c.save();
   headPath(c, spec, s); c.clip();
@@ -574,13 +793,23 @@ function drawFace(c, spec, s, o) {
   headPath(c, spec, s * .995); c.stroke();
   c.restore();
 
-  drawBlush(c, spec, s);
+  /* fur along the jaw, so the head has an edge made of hair rather than
+     a bezier. The body already had this; the head was a smooth outline. */
+  c.save();
+  headPath(c, spec, s); c.clip();
+  furEdge(c, 0, .02 * s, .43 * s, .43 * s, Math.PI * .18, Math.PI * .82, 11, s * .030,
+    rgba(shade(spec.fur, -.12), .5));
+  furEdge(c, 0, .02 * s, .43 * s, .43 * s, Math.PI * 1.16, Math.PI * 1.84, 9, s * .026,
+    rgba(shade(spec.fur, .16), .45));
+  c.restore();
+
+  drawBlush(c, spec, s, o);
   const look = lookOf(spec);
   drawBrows(c, spec, s);
   drawEye(c, -look.x * s, look.y * s, look.r * s, spec, o, -1);
   drawEye(c, look.x * s, look.y * s, look.r * s, spec, o, 1);
   drawNoseMouth(c, spec, s, o);
-  drawEars(c, spec, s, false);
+  drawEars(c, spec, s, false, o);
   if (spec.hat) drawHat(c, spec.hat, spec, s);
   c.restore();
 }
@@ -715,11 +944,18 @@ function drawBody(c, spec, s, o) {
   ellipse(c, -.30 * s, .74 * s, .17 * s, .19 * s, .18); c.fill();
 
   /* ---- body mass ---- */
+  /* A seated animal is narrow at the shoulder and widest at the haunch.
+     This was a symmetric bell — the same curve up and down, widest
+     halfway — which is why the room pet read as a mound with a head on
+     it. The shoulders come in and the widest point drops; a cat carries
+     it a little narrower than a dog. */
+  const shoulder = cat ? .235 : .255;
+  const flank = cat ? .455 : .475;
   const bodyPath = () => {
     c.beginPath();
-    c.moveTo(-.27 * s, .30 * s + lift);
-    c.bezierCurveTo(-.46 * s, .48 * s, -.47 * s, .90 * s, 0, .90 * s);
-    c.bezierCurveTo(.47 * s, .90 * s, .46 * s, .48 * s, .27 * s, .30 * s + lift);
+    c.moveTo(-shoulder * s, .30 * s + lift);
+    c.bezierCurveTo(-.42 * s, .52 * s, -flank * s, .90 * s, 0, .90 * s);
+    c.bezierCurveTo(flank * s, .90 * s, .42 * s, .52 * s, shoulder * s, .30 * s + lift);
     c.closePath();
   };
   const bodyGr = c.createLinearGradient(-.2 * s, .28 * s, .28 * s, .95 * s);
@@ -836,9 +1072,9 @@ function drawBody(c, spec, s, o) {
 /* ---------------- tiles ---------------- */
 const SP = { NONE: 0, ROW: 1, COL: 2, BOMB: 3, RAIN: 4 };
 const spriteCache = new Map();
-function tileSprite(type, sp, px, marks, blink) {
+function tileSprite(type, sp, px, marks, blink, cheer) {
   const key = type + '|' + sp + '|' + Math.round(px) + '|' + (marks ? 1 : 0)
-    + '|' + (blink ? 'b' : '_') + '|' + (PAL.dark ? 'd' : 'l')
+    + '|' + (blink ? 'b' : '_') + '|' + (cheer ? 'c' : '_') + '|' + (PAL.dark ? 'd' : 'l')
     /* who is standing in the slot, and in what coat: adopting a pet or
        buying it a new coat has to reach the board */
     + '|' + (typeof CAST_SIG === 'string' ? CAST_SIG : '');
@@ -852,7 +1088,7 @@ function tileSprite(type, sp, px, marks, blink) {
   const c = cv.getContext('2d');
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   c.translate(W / 2, W / 2);
-  paintTile(c, type, sp, px, marks, blink);
+  paintTile(c, type, sp, px, marks, blink, cheer);
   cv._pad = pad; cv._w = W;
   spriteCache.set(key, cv);
   return cv;
@@ -896,11 +1132,13 @@ function clearSprites() {
   spriteCache.clear();
   blockerCache.clear();
   mudOverCache.clear();
-  if (typeof clearBeds === 'function') clearBeds();
-  if (typeof clearBrushes === 'function') clearBrushes();
+  /* the room and the physics keep their own caches off the same
+     palette; they say so themselves rather than being named here */
+  EV.emit('repaint');
 }
+EV.on('cast', clearSprites);
 
-function paintTile(c, type, sp, px, marks, blink) {
+function paintTile(c, type, sp, px, marks, blink, cheer) {
   /* the look belongs to whoever is standing in the slot, not to the slot */
   const breed = slotBreed(type);
   const b = BREEDS[breed];
@@ -992,7 +1230,9 @@ function paintTile(c, type, sp, px, marks, blink) {
   const shape = tileShape(breed);
   c.save();
   c.translate(0, s * (.015 + shape.faceY));
-  drawFace(c, spec, s * .715 * shape.faceScale, { mouth: 'smile', blink: blink ? 1 : 0 });
+  /* a matched tile is having the best moment of its short life */
+  drawFace(c, spec, s * .715 * shape.faceScale,
+    { mouth: cheer ? 'open' : 'smile', blink: blink ? 1 : 0, mood: cheer ? 'happy' : 'content' });
   c.restore();
 
   /* the casing goes on last, around the outside */

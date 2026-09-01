@@ -9,15 +9,16 @@
 
      node tools/browser.js
 */
-const PW_PATH = process.env.PLAYWRIGHT ||
-  'C:/Users/Casper/Desktop/Proje/Cotidie-Ads-Opus/node_modules/playwright';
-const CHROME = process.env.CHROME ||
-  'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const { chromium } = require(PW_PATH);
-const URL = process.env.URL || 'http://localhost:5173/test/integration.html';
+const PW = require('./_pw.js');
+const URL = process.env.URL || PW.at('/test/integration.html');
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: CHROME });
+  /* The suite puts its own server up. It used to require one already
+     running in another terminal, on a port this repository does not
+     serve, which is most of why it stopped being run. If something is
+     already listening there, that is used instead and this is a no-op. */
+  const server = await PW.serve();
+  const browser = await PW.launch();
   const page = await browser.newPage({ viewport: { width: 420, height: 900 } });
   const noise = [];
   page.on('pageerror', e => noise.push('sayfa hatası: ' + e.message));
@@ -36,13 +37,26 @@ const URL = process.env.URL || 'http://localhost:5173/test/integration.html';
     if (!benign.test(t)) noise.push('konsol: ' + t);
   });
 
-  await page.goto(URL, { waitUntil: 'load' });
+  /* domcontentloaded, not load.
+
+     `load` waits for the Google Fonts stylesheet and the two woff2 files
+     behind it. On a slow line that is most of half a minute — measured
+     at 25.5s against a 30s default — so the suite failed with a
+     navigation timeout and nothing at all to say the cause was the
+     typeface rather than the game. The real gate is the line below:
+     RESULTS.done, with its own generous timeout. Waiting for `load`
+     first added a second, tighter deadline governed by a third party.
+
+     The fonts still load; nothing stops them. They are simply no longer
+     something the suite can fail on. */
+  await page.goto(URL, { waitUntil: 'domcontentloaded' });
   try {
     await page.waitForFunction(() => window.RESULTS && window.RESULTS.done, null, { timeout: 180000 });
   } catch (e) {
     const so_far = await page.evaluate(() => window.RESULTS ? window.RESULTS.tests.length : -1);
     console.log('takıldı: ' + so_far + ' testten sonra bitmedi');
     await browser.close();
+    server.stop();
     process.exit(1);
   }
 
@@ -51,6 +65,7 @@ const URL = process.env.URL || 'http://localhost:5173/test/integration.html';
     bad: RESULTS.tests.filter(t => !t.ok).map(t => t.name + (t.detail ? ' — ' + t.detail : ''))
   }));
   await browser.close();
+  server.stop();
 
   R.bad.forEach(b => console.log('  ✗ ' + b));
   /* A page error during a passing suite is still a fault: something
