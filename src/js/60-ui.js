@@ -1628,12 +1628,23 @@ function setLang(code) {
   LANG = (code === 'tr') ? 'tr' : 'en';
   SAVE.settings.lang = LANG;
   persist(true);
-  /* the labels a screen reader reads live in the markup and follow
-     nothing on their own, so changing the language has to move them.
-     Done here rather than at the call site: this is the one place the
-     language changes, and a caller that forgets leaves the game half
-     translated for the people least able to notice. */
+  /* Everything the language touches, moved from here.
+
+     This used to relabel only the aria attributes, with a comment saying
+     it was done here rather than at the call site so that a caller could
+     not forget — which was half true, because the one caller then went
+     on to call relabelEverything() itself and the visible tab bar came
+     from that. Any other caller got a game in Turkish with an English
+     tab bar underneath it, which is exactly what happened the first time
+     a tool drove it.
+
+     A promise a function makes in its own comment should be a promise it
+     keeps. The DOM check is there because the language can be set before
+     the interface exists. */
   relabelControls();
+  if (typeof document !== 'undefined' && document.getElementById('tabbar')) {
+    relabelEverything();
+  }
   return LANG;
 }
 function openSettings() {
@@ -1694,9 +1705,8 @@ function openSettings() {
     persist(true); applyTheme(); SFX.tap();
   }));
   $$('#segLang button', m.el).forEach(b => b.addEventListener('click', () => {
-    setLang(b.dataset.lang);
+    setLang(b.dataset.lang);      /* which relabels everything itself now */
     m.close();
-    relabelEverything();
     SFX.tap();
     setTimeout(openSettings, 60);
   }));

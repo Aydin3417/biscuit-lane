@@ -3133,3 +3133,53 @@ worth more than one that appears twice as often and builds walls.
 kind is ten minutes against an hour for all seven, and it merges into the
 curve that is already there rather than replacing it. Four rounds of
 measure-change-measure would not have happened at an hour each.
+
+## Ship-ready
+
+A game that is finished and cannot be submitted is not finished. Three
+things were missing, and none of them were code.
+
+**A privacy policy.** Google Play requires a URL for every app, and the
+game had none. Writing it took reading the source rather than a template:
+there is no analytics, no advertising, no crash reporting, no third-party
+SDK and no server, the save lives in localStorage and nowhere else, and
+the only `fetch` in the whole game is a same-origin check on its own
+manifest. `privacy.html` says exactly that, in both languages, and it is
+short because there is nothing to hide behind length.
+
+**A listing.** `store/LISTING.md` carries the title, the 80-character
+short description and the full description in English and Turkish, the
+Data Safety answers, the expected content rating, and — separately — the
+five things only a person with an account and a bank card can do.
+
+**The pictures.** `tools/store.js` drives the real game at Play's
+1080×1920 and photographs five states in both languages, then draws the
+1024×500 feature graphic *in the page* using the game's own palette, its
+own tile silhouettes and its own animal drawing code — so the banner and
+the game cannot drift apart, because they are the same functions.
+
+Two goes at the screenshots, both instructive. The first caught the board
+mid-fill: half empty cells, half tiles in mid-air. Waiting for every cell
+to hold a tile fixed the model and not the picture, because the fall is
+an animation and the model finishes first. `BL.fast` — the flag the test
+suite already had for skipping tweens — is what actually settles it.
+
+### A promise a function made and did not keep
+
+Driving the game from the outside found a real bug. `setLang` carried
+this comment:
+
+> Done here rather than at the call site: this is the one place the
+> language changes, and a caller that forgets leaves the game half
+> translated.
+
+It relabelled the aria attributes and stopped. The visible tab bar came
+from `relabelEverything()`, which the one call site went on to call
+itself — so the promise held for exactly one caller and no other. Driven
+by a tool, the game came up in Turkish with **Home / Play / Shop /
+Family** along the bottom.
+
+It relabels everything now, guarded by a DOM check because the language
+can be set before the interface exists, and the call site no longer has
+to remember. A promise a function makes in its own comment should be one
+it keeps.
