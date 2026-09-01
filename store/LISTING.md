@@ -159,6 +159,21 @@ Games → Puzzle. Tags: match 3, casual, pets, offline.
 
 ---
 
+## This machine cannot build the APK yet
+
+Checked, not assumed — `node tools/gradle.js assembleDebug` says so in a
+third of a second now instead of failing after two and a half minutes
+with a dependency-resolution error that never mentions the real cause.
+
+| Missing | Fix |
+|---|---|
+| Java 8 is on PATH; Android Gradle needs 17+ | Install Temurin 17, or use Android Studio's: `set JAVA_HOME=<studio>\jbr` |
+| No Android SDK | Android Studio, or the command-line tools alone, then `ANDROID_HOME` |
+| Capacitor not installed | `npm install` |
+
+Nothing else waits on any of it. The web build, this listing and the
+store graphics are done.
+
 ## What only you can do
 
 These need an account, a payment or a private key, and are deliberately
