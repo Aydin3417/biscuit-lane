@@ -1698,8 +1698,30 @@ const STRINGS = {
     lose_close: 'So close.',
     lose_petline: '{name} does not blame you.',
     retry: 'Try again', to_map: 'Back to the lane', keep_going: 'Carry on',
-    lose_extra: 'Buy 5 more moves',
+    lose_extra: 'Buy {n} more moves',
     lose_extra_sub: '{n} treats',
+
+    /* the till */
+    store_t: 'Treats',
+    store_s: 'Treats buy the things time would otherwise: another go at a level you nearly had, and a full set of hearts when you do not want to wait.',
+    store_why_continue: 'Nine treats carries that level on.',
+    store_why_hearts: 'Twelve treats fills the hearts back up.',
+    store_jar_t: 'The treat jar',
+    store_jar_s: '{n} of {c} — a couple go in every level you clear',
+    store_jar_full: 'Full. {n} treats waiting.',
+    store_jar_open: 'Open it',
+    store_pack: '{n} treats',
+    store_club_t: 'Pet Club',
+    store_club_s: 'Hearts never run out, and {n} treats every day.',
+    store_club_on: 'You are in the club.',
+    store_about: 'about {p}',
+    store_per_month: '/mo',
+    store_restore: 'Restore a purchase',
+    store_shut_t: 'The shop is not open yet',
+    store_shut_s: 'There is nowhere to pay from this build — it has no store account behind it. Everything here can still be earned by playing, and the jar fills either way.',
+    win_replay: 'A level pays in full the first time through.',
+    store_thanks: '{n} treats in the tin',
+    store_failed: 'That did not go through. Nothing was charged.',
 
     /* shop */
     shop_food: 'Food', shop_toys: 'Toys', shop_boost: 'Boosters', shop_style: 'Style', shop_room: 'Room',
@@ -1928,8 +1950,30 @@ const STRINGS = {
     lose_close: 'Az kaldı.',
     lose_petline: '{name} sana kızmıyor.',
     retry: 'Yeniden dene', to_map: 'Sokağa dön', keep_going: 'Devam',
-    lose_extra: '5 hamle daha al',
+    lose_extra: '{n} hamle daha al',
     lose_extra_sub: '{n} ödül',
+
+    /* kasa */
+    store_t: 'Ödüller',
+    store_s: 'Ödüller, zamanın satın aldığı şeyleri satın alır: az kalmışken bir şans daha, ve beklemek istemediğinde dolu bir kalp seti.',
+    store_why_continue: 'Dokuz ödül o bölümü devam ettirir.',
+    store_why_hearts: 'On iki ödül kalpleri doldurur.',
+    store_jar_t: 'Ödül kavanozu',
+    store_jar_s: '{c} ödülün {n} tanesi — geçtiğin her bölümde birkaç tane düşer',
+    store_jar_full: 'Doldu. {n} ödül bekliyor.',
+    store_jar_open: 'Aç',
+    store_pack: '{n} ödül',
+    store_club_t: 'Kulüp',
+    store_club_s: 'Kalpler hiç bitmez, ve her gün {n} ödül.',
+    store_club_on: 'Kulüptesin.',
+    store_about: 'yaklaşık {p}',
+    store_per_month: '/ay',
+    store_restore: 'Aldığımı geri yükle',
+    store_shut_t: 'Dükkân henüz açık değil',
+    store_shut_s: 'Bu sürümde ödeme yapılacak bir yer yok — arkasında mağaza hesabı yok. Buradaki her şey oynayarak da kazanılabilir, ve kavanoz her hâlükârda doluyor.',
+    win_replay: 'Bölüm tam ödemesini ilk geçişte yapar.',
+    store_thanks: 'Kutuya {n} ödül girdi',
+    store_failed: 'İşlem geçmedi. Hiçbir ücret alınmadı.',
 
     shop_food: 'Yiyecek', shop_toys: 'Oyuncak', shop_boost: 'Destek', shop_style: 'Tarz', shop_room: 'Oda',
     shop_buy: 'Al', shop_owned: 'Sende', shop_wear: 'Tak', shop_worn: 'Takılı', 
@@ -2257,6 +2301,94 @@ const STAGES = [
   { id: 'adult', en: 'Grown', enDog: 'Grown', tr: 'Yetişkin', bond: 14,
     ph: 'all grown up', phDog: 'all grown up', phTr: 'koca bir yetişkin' }
 ];
+
+/* ---------- the economy, in one table ----------
+
+   Every payout and every price used to be a literal at the place it was
+   spent: the level reward inside showWin, the walk inside dailyDone, the
+   heart refill inside the sheet that sells it. test/economy.js could not
+   read any of them, so it kept its own copies and guarded them by
+   searching the source for the exact line — which caught drift by
+   failing, loudly, every time anyone touched a number.
+
+   The two columns have to be read together or neither means anything.
+   They are one table now, and the simulation reads the real values. */
+const ECON = {
+  /* what a cleared level pays. Halved from (30, 22, /1400): the old
+     curve paid about 113 coins for a three-starred level and the whole
+     catalogue is 10,023, so a month of ordinary play bought everything
+     the game sells twice over and kept 13,826 in change. */
+  winBase: 18, winPerStar: 12, winPerScore: 2600,
+  /* and what it pays the second time. A cleared level paid full price
+     forever, which made the best coin-per-minute in the game "replay
+     level 3", and made every price downstream a fiction. Beating your
+     own score still pays, because that is a reason to go back that
+     isn't farming. */
+  replayRate: .10, replayBestRate: .25,
+
+  dailyWalkCoins: 80, dailyWalkTreats: 1,
+  /* treats on the gift ladder: day 4 and day 7 only, 1 and 3. Was day
+     3, 6 and 7 for 2, 2 and 5 — nine a week, on top of fourteen from
+     the walk. */
+  giftTreats: { 4: 1, 7: 3 },
+  /* the two bounded ones. These are paid once per level, so they are
+     capped by how much game there is rather than by how long you play,
+     and they are the reward for playing well rather than for showing
+     up. Kept, but the every-fifth bonus comes down from 2. */
+  threeStarTreats: 1, everyFifthTreats: 1,
+
+  heartRefillMin: 25,
+  /* the sinks. Nine treats to carry on is Candy Crush's number for the
+     same offer, and at roughly five treats a day of free income it is a
+     real decision rather than a formality — the old price was 2, which
+     is not a decision, and 3 for a full set of hearts meant the wait
+     never had to be waited. */
+  continueTreats: 9, continueMoves: 5,
+  heartRefillTreats: 12,
+  /* and the gate on the offer. An extra five moves at 20% of the goal
+     is not an offer, it is a sale of a lost level — the player finds
+     that out after paying, once, and then never trusts the button
+     again. Below this the card does not carry it at all. */
+  continueAt: .70
+};
+
+/* ---------- what is for sale ----------
+
+   Prices are the sizes the genre has settled on, and they are not the
+   point of the design: the point is that a player who never opens this
+   file can still finish everything in it, slower. The jar below is the
+   one I would keep if I could keep only one.
+
+   `usd` is a fallback label only. A live store reports the real price in
+   the player's own currency, and that is what gets shown — a hardcoded
+   dollar figure is wrong in most of the world, and wrong by a lot in
+   Turkey, where it also ages badly month to month. */
+const TREAT_PACKS = [
+  { id: 'pocket', sku: 'treats_pocket_40', treats: 40, usd: '$1.99', en: 'Pocketful', tr: 'Bir avuç' },
+  { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı', best: true },
+  { id: 'tin', sku: 'treats_tin_250', treats: 250, usd: '$9.99', en: 'Biscuit tin', tr: 'Bisküvi kutusu' }
+];
+
+/* The subscription. Unlimited hearts is the part worth paying for —
+   it removes the wait rather than shortening it — and the daily treats
+   mean it also covers the two sinks without a second purchase. */
+const PET_CLUB = {
+  sku: 'pet_club_monthly', usd: '$4.99', dailyTreats: 15,
+  en: 'Pet Club', tr: 'Kulüp'
+};
+
+/* ---------- the treat jar ----------
+
+   A jar on the shelf that fills while you play and is opened once, for
+   money. It is the friendliest thing in this file by a distance: it
+   cannot be bought before it has been earned, the number in it is the
+   player's own play rather than a price, and nothing is taken away from
+   anyone who never opens it — the jar simply stops filling when full.
+
+   It is also the only offer here that gets better the longer you have
+   been playing, which is the opposite of how a difficulty paywall
+   works, and it is why this is the one I would keep. */
+const JAR = { perLevel: 2, cap: 150, sku: 'treat_jar', usd: '$2.99' };
 
 /* ---------- goods ---------- */
 const FOODS = [
@@ -3483,7 +3615,14 @@ function budgetFor(kind, wantClear) {
    ============================================================ */
 const SAVE_KEY = 'biscuit-lane-v1';
 const HEART_MAX = 5;
-const HEART_REFILL = 12 * MIN;
+/* Twelve minutes meant a full set came back in an hour, which is short
+   enough that nobody ever met the wall: you lost a heart, wandered to
+   the room for a minute, and it was already on its way back. A gate
+   nobody meets is a gate that costs the player nothing and is worth
+   nothing — and everything downstream of it, the refill and the store
+   behind that, was being sold against a wait that never happened.
+   Twenty-five puts a full set at just over two hours. */
+const HEART_REFILL = ECON.heartRefillMin * MIN;
 let SAVE = null;
 
 function freshSave() {
@@ -3514,6 +3653,8 @@ function freshSave() {
     settings: { sound: true, music: false, haptics: true, lang: 'en', theme: 'auto', marks: false },
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
+    jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing
+    club: null,                    // the subscription, once there is one to have
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
   };
 }
@@ -3598,6 +3739,10 @@ function loadSave() {
     SAVE.stats = Object.assign(freshSave().stats, d.stats || {});
     SAVE.badges = Object.assign({}, d.badges || {});
     SAVE.daily = Object.assign({ day: 0, done: false, best: 0, streak: 0 }, d.daily || {});
+    SAVE.jar = Object.assign({ fill: 0, opened: 0 }, d.jar || {});
+    SAVE.jar.fill = clamp(Math.round(+SAVE.jar.fill || 0), 0, JAR.cap);
+    /* a club with no end date, or one that ended, is simply not a club */
+    SAVE.club = (d.club && isFinite(d.club.until) && d.club.until > now()) ? d.club : null;
 
     SAVE.pets = (Array.isArray(d.pets) ? d.pets : []).map(healPet).filter(Boolean);
     if (!SAVE.pets.some(p => p.id === SAVE.activePet)) {
@@ -3689,6 +3834,11 @@ function heartsIn() {
   return Math.max(0, HEART_REFILL - (now() - SAVE.heartAt));
 }
 function spendHeart() {
+  /* The club's one real promise. Not a bigger bucket or a faster
+     refill — the wait simply does not apply, which is the only version
+     of this that is worth a monthly price and the only one that cannot
+     quietly get worse later. */
+  if (clubActive()) return true;
   heartTick();
   if (SAVE.hearts <= 0) return false;
   heartClockStart();
@@ -4078,6 +4228,69 @@ function perkChips(perks) {
   return out;
 }
 
+/* ---------- the jar, the club ----------
+   State, so it lives with the rest of the state. The store that charges
+   for any of it is 17-billing, and it knows about these; they do not
+   know about it. */
+function jarState() {
+  if (!SAVE.jar) SAVE.jar = { fill: 0, opened: 0 };
+  return SAVE.jar;
+}
+/* called from the win card, once per cleared level */
+function jarAdd(n) {
+  const j = jarState();
+  if (j.fill >= JAR.cap) return false;
+  const before = j.fill;
+  j.fill = Math.min(JAR.cap, j.fill + (n || JAR.perLevel));
+  return j.fill > before;
+}
+function jarFull() { return jarState().fill >= JAR.cap; }
+
+/* ---------- granting ----------
+
+   Kept apart from BILLING.buy so there is one function that adds treats
+   to a save and it is called from one place, after a receipt. */
+function grantPurchase(kind, id) {
+  if (kind === 'pack') {
+    const p = TREAT_PACKS.find(x => x.id === id);
+    if (!p) return 0;
+    SAVE.treats += p.treats;
+    persist(true);
+    return p.treats;
+  }
+  if (kind === 'jar') {
+    const j = jarState();
+    const got = j.fill;
+    SAVE.treats += got;
+    j.fill = 0;
+    j.opened = (j.opened || 0) + 1;
+    persist(true);
+    return got;
+  }
+  if (kind === 'club') {
+    SAVE.club = { since: now(), until: now() + 30 * DAY, lastPaid: 0 };
+    persist(true);
+    return 1;
+  }
+  return 0;
+}
+
+/* Whether the club is live right now. The date is the store's business
+   once this is real; until then this is what the rest of the game asks. */
+function clubActive() {
+  return !!(SAVE.club && SAVE.club.until > now());
+}
+/* the club's daily treats, handed over on the first look of each day */
+function clubTick() {
+  if (!clubActive()) return 0;
+  const today = dayStamp(now());
+  if (SAVE.club.lastPaid === today) return 0;
+  SAVE.club.lastPaid = today;
+  SAVE.treats += PET_CLUB.dailyTreats;
+  persist(true);
+  return PET_CLUB.dailyTreats;
+}
+
 /* ---------- the daily walk ---------- */
 function dailyState() {
   const today = dayNumber();
@@ -4095,10 +4308,15 @@ function dailyDone(score) {
   if (!d.done) {
     d.done = true;
     d.streak = (d.streak || 0) + 1;
-    SAVE.coins += 120;
-    SAVE.treats += 2;
+    /* The walk paid 120 coins and 2 treats a day, forever, for four
+       minutes of play. Over a month that alone is 3,600 coins and 60
+       treats — most of a treat balance that nothing was asking for.
+       It is still the best-paid four minutes in the game; it is no
+       longer a salary. */
+    SAVE.coins += ECON.dailyWalkCoins;
+    SAVE.treats += ECON.dailyWalkTreats;
     persist(true);
-    return { coins: 120, treats: 2, first: true };
+    return { coins: ECON.dailyWalkCoins, treats: ECON.dailyWalkTreats, first: true };
   }
   persist(true);
   return { first: false };
@@ -4113,12 +4331,12 @@ function giftReady() { return dayStamp(now()) !== dayStamp(SAVE.lastGift || 0); 
    nothing anywhere mentioned. The interface reads this table now, so
    what is promised and what is paid cannot drift apart. */
 function giftFor(day) {
-  const r = { coins: 40 + day * 18, treats: day % 3 === 0 ? 2 : 0, food: null, booster: null };
+  const r = { coins: 40 + day * 18, treats: ECON.giftTreats[day] || 0, food: null, booster: null };
   if (day === 2 || day === 5) r.food = 'tuna';
   if (day === 4) r.food = 'stew';
   if (day === 3) r.booster = 'hammer';
   if (day === 6) r.booster = 'shuffle';
-  if (day === 7) { r.treats = 5; r.booster = 'moves'; }
+  if (day === 7) r.booster = 'moves';
   return r;
 }
 /* which rung the basket on the step is standing on, without taking it */
@@ -4144,6 +4362,110 @@ function claimGift() {
   persist(true);
   return { reward, day };
 }
+
+/* ===== 17-billing.js ===== */
+/* ============================================================
+   17 — the till
+   ============================================================
+
+   Everything above this file is a closed economy: coins and treats come
+   from playing and go into the shop, and the two columns balance because
+   test/economy.js makes them. This is the one seam where value enters
+   from outside, and it is deliberately the only one.
+
+   No advertising. Nothing here interrupts a level, nothing plays a
+   video, nothing is sold to a player who is not already asking for it.
+   Every surface in this file is opened by the player: the treat chip in
+   the header, or the two moments — out of moves near the end, out of
+   hearts — where the game has something the player wanted and could not
+   have. That is the whole of it.
+
+   Nothing here can take money yet, and it says so rather than pretending
+   otherwise. A store needs a merchant account, products declared in the
+   Play Console, and a receipt somebody trusts; none of those exist. What
+   exists is the shape of it, so that wiring a billing plugin is a change
+   to one function rather than to the game.
+*/
+
+/* ---------- the seam ----------
+
+   One object, four questions, and exactly one place that would have to
+   change to make this real. `ready` is what the interface asks before it
+   offers anything: false means the buttons are shown but explain
+   themselves instead of lying.
+
+   A Capacitor billing plugin — @capacitor-community/in-app-purchases, or
+   RevenueCat's, they present the same three calls — would be picked up
+   here by name. Until one is installed this stays honest. */
+const BILLING = {
+  plugin: null,
+  prices: {},              // sku -> localized price string, once a store answers
+
+  /* Whether money can actually change hands in this build. Checked at
+     call time rather than cached at load: the plugin arrives with the
+     native bridge, which is not up yet when this file is read. */
+  ready() {
+    if (this.plugin) return true;
+    const P = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || null;
+    if (!P) return false;
+    this.plugin = P.InAppPurchases || P.Purchases || P.CdvPurchase || null;
+    return !!this.plugin;
+  },
+
+  /* the price to put on a button: whatever the store said, or the
+     fallback label, which is marked as approximate wherever it shows */
+  price(sku, fallback) {
+    return this.prices[sku] || fallback;
+  },
+
+  /* Ask the store what these cost where the player is. Safe to call when
+     no store exists — it resolves having done nothing. */
+  async refresh() {
+    if (!this.ready()) return false;
+    try {
+      const skus = TREAT_PACKS.map(p => p.sku).concat([PET_CLUB.sku, JAR.sku]);
+      const r = await this.plugin.getProducts({ productIdentifiers: skus, productIds: skus });
+      const list = (r && (r.products || r.productList)) || [];
+      list.forEach(p => {
+        const id = p.productId || p.identifier || p.id;
+        const shown = p.priceString || p.localizedPrice || p.price;
+        if (id && shown) this.prices[id] = String(shown);
+      });
+      return true;
+    } catch (e) { return false; }
+  },
+
+  /* The purchase itself.
+
+     Resolves { ok: true } only when a store has said so. Everything else
+     — no plugin, a cancelled sheet, a network that went away — comes
+     back { ok: false, why } and the caller grants nothing. There is no
+     branch in here that credits an account without a receipt, in any
+     build, including this one: a stub that pays out is a stub somebody
+     ships by accident. */
+  async buy(sku) {
+    if (!this.ready()) return { ok: false, why: 'nostore' };
+    try {
+      const r = await this.plugin.purchase({ productIdentifier: sku, productId: sku });
+      if (!r || r.cancelled || r.responseCode === 1) return { ok: false, why: 'cancelled' };
+      /* A receipt is checked by whoever issued it. Locally that means
+         the plugin's own verification and nothing more, which is enough
+         for a single-player game with no leaderboard — the only person
+         a forged receipt cheats is the person holding the phone. It is
+         not enough the day this game keeps anything on a server, and
+         that is the day this call grows a second half. */
+      return { ok: true, receipt: r };
+    } catch (e) {
+      return { ok: false, why: 'failed' };
+    }
+  },
+
+  async restore() {
+    if (!this.ready()) return { ok: false, why: 'nostore' };
+    try { await this.plugin.restorePurchases(); return { ok: true }; }
+    catch (e) { return { ok: false, why: 'failed' }; }
+  }
+};
 
 /* ===== 20-audio.js ===== */
 /* ============================================================
@@ -13518,7 +13840,7 @@ function openLevelIntro(n) {
 
   /* every fifth level pays treats the first time, and used to do it
      without warning anyone it was going to */
-  const firstTreats = (n !== DAILY_LEVEL && n % 5 === 0 && !SAVE.stars[n]) ? 2 : 0;
+  const firstTreats = (n !== DAILY_LEVEL && n % 5 === 0 && !SAVE.stars[n]) ? ECON.everyFifthTreats : 0;
 
   const m = modal(`
     <div class="eyebrow">${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
@@ -13583,6 +13905,110 @@ function openLevelIntro(n) {
     maybeTutorial(def);
   });
 }
+/* The one place money is asked for.
+
+   Opened three ways and no others: the treat chip in the header, and the
+   two moments the player has just been told no — out of moves near the
+   end of a level, out of hearts. `why` is which of those it was, and it
+   puts a line at the top saying what the treats would have done, because
+   a store that opens without saying why it opened is an interruption.
+
+   Nothing in here can charge anything yet. When BILLING is not ready the
+   prices still show — they are what the thing will cost — and the button
+   says the shop is shut instead of pretending to take a card. */
+function treatStore(why) {
+  const live = BILLING.ready();
+  const j = jarState();
+  const reason = why === 'continue' ? T('store_why_continue')
+    : why === 'hearts' ? T('store_why_hearts') : '';
+  const tag = (sku, usd) => {
+    const p = BILLING.price(sku, null);
+    return p ? p : `<span style="opacity:.75">${T('store_about', { p: usd })}</span>`;
+  };
+  const row = (id, kind, title, sub, btn, on) => `
+    <div class="offer"${on ? ' style="opacity:.6"' : ''}>
+      <span class="ot"><b>${title}</b><small>${sub}</small></span>
+      ${on ? `<span class="btn sm" style="pointer-events:none">${IC.check}</span>`
+      : `<button class="btn sm" data-pay="${id}" data-kind="${kind}">${btn}</button>`}
+    </div>`;
+
+  const m = modal(`
+    <span style="color:var(--plum);width:48px;height:48px;align-self:center">${IC.treat}</span>
+    <h2>${T('store_t')}</h2>
+    ${reason ? `<p><b style="color:var(--accent-strong)">${reason}</b></p>` : ''}
+    <p style="color:var(--text-dim)">${T('store_s')}</p>
+
+    ${!j.fill ? '' : jarFull()
+      ? row('jar', 'jar', T('store_jar_t'), T('store_jar_full', { n: j.fill }),
+        `${T('store_jar_open')} · ${tag(JAR.sku, JAR.usd)}`)
+      /* A jar that is not full has no button on it.
+
+         It had one, at the full price, which meant a player could pay
+         $2.99 for the sixty-eight treats in it on a day the same $2.99
+         would have bought a hundred and fifty a fortnight later. That is
+         a worse deal than the smallest pack and it is only ever taken by
+         somebody who did not do the arithmetic — which is the precise
+         thing I said this file would not do. So it fills in public and
+         sells nothing until it is worth buying. */
+      : `<div class="offer" style="opacity:.7">
+          <span class="ot"><b>${T('store_jar_t')}</b>
+            <small>${T('store_jar_s', { n: j.fill, c: JAR.cap })}</small>
+            <span style="display:block;height:5px;border-radius:3px;background:var(--surface-3);overflow:hidden;margin-top:5px">
+              <span style="display:block;height:100%;width:${Math.round(j.fill / JAR.cap * 100)}%;background:var(--plum)"></span>
+            </span></span>
+        </div>`}
+
+    ${TREAT_PACKS.map(p => row(p.id, 'pack',
+      T('store_pack', { n: p.treats }) + (p.best ? ' ★' : ''),
+      p[LANG] || p.en, tag(p.sku, p.usd))).join('')}
+
+    ${row('club', 'club', T('store_club_t'),
+      clubActive() ? T('store_club_on') : T('store_club_s', { n: PET_CLUB.dailyTreats }),
+      tag(PET_CLUB.sku, PET_CLUB.usd) + T('store_per_month'), clubActive())}
+
+    ${live ? `<button class="btn ghost wide" id="stRestore"
+      style="font-size:var(--t-micro)">${T('store_restore')}</button>` : ''}
+    <button class="btn primary wide" id="stOk">${T('ok')}</button>
+  `);
+
+  /* Every button lands here, and the grant is on the far side of a
+     receipt. There is no path through this function that adds a treat
+     because a store was missing. */
+  $$('[data-pay]', m.el).forEach(b => b.addEventListener('click', async () => {
+    if (!live) { SFX.bad(); storeShut(); return; }
+    const kind = b.dataset.kind;
+    const id = b.dataset.pay;
+    const sku = kind === 'pack' ? TREAT_PACKS.find(x => x.id === id).sku
+      : kind === 'jar' ? JAR.sku : PET_CLUB.sku;
+    b.disabled = true;
+    const r = await BILLING.buy(sku);
+    b.disabled = false;
+    if (!r.ok) {
+      if (r.why === 'nostore') { storeShut(); return; }
+      if (r.why !== 'cancelled') { SFX.bad(); toast(T('store_failed'), 'treat'); }
+      return;
+    }
+    const got = grantPurchase(kind, id);
+    SFX.coin();
+    syncPurse();
+    m.close();
+    if (kind === 'club') toast(T('store_club_on'), 'treat');
+    else toast(T('store_thanks', { n: got }), 'treat');
+  }));
+  const rs = $('#stRestore', m.el);
+  if (rs) rs.addEventListener('click', async () => { await BILLING.restore(); syncPurse(); });
+  $('#stOk', m.el).addEventListener('click', m.close);
+}
+/* Said plainly, in its own card, rather than as a disabled button with
+   no explanation — which reads as a bug rather than as a fact. */
+function storeShut() {
+  const m = modal(`
+    <h2>${T('store_shut_t')}</h2>
+    <p>${T('store_shut_s')}</p>
+    <button class="btn primary wide" id="ssOk">${T('ok')}</button>`);
+  $('#ssOk', m.el).addEventListener('click', m.close);
+}
+
 function noHeartsSheet() {
   const line = () => T('lvl_no_hearts_sub', { m: HEART_REFILL / MIN, t: fmtTime(heartsIn()) });
   let tick = null;
@@ -13592,7 +14018,7 @@ function noHeartsSheet() {
     <p id="nhLine">${line()}</p>
     <div class="row">
       <button class="btn ghost" id="nhWait">${T('lvl_wait')}</button>
-      <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: 3 })}</button>
+      <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: ECON.heartRefillTreats })}</button>
     </div>
   `, { onClose: () => { if (tick) clearInterval(tick); onHeartArrived = () => { }; } });
 
@@ -13612,8 +14038,8 @@ function noHeartsSheet() {
   };
   $('#nhWait', m.el).addEventListener('click', m.close);
   $('#nhBuy', m.el).addEventListener('click', () => {
-    if (SAVE.treats < 3) { SFX.bad(); toast(LANG === 'tr' ? 'Ödül yetmiyor' : 'Not enough treats', 'treat'); return; }
-    SAVE.treats -= 3;
+    if (SAVE.treats < ECON.heartRefillTreats) { SFX.bad(); treatStore('hearts'); return; }
+    SAVE.treats -= ECON.heartRefillTreats;
     SAVE.hearts = HEART_MAX;
     SAVE.heartAt = now();
     persist(true);
@@ -13639,10 +14065,22 @@ function showWin() {
   if (newBest) SAVE.scores[n] = G.score;
   SAVE.reached = Math.max(SAVE.reached, n + 1);
   SAVE.stats.cleared++;
-  const coins = Math.round((30 + stars * 22 + Math.floor(G.score / 1400)) * traitCoinScale(activePet()));
+  /* A cleared level paid its full reward every time it was cleared, so
+     the fastest coins in the game were on whichever early level you
+     could three-star in ninety seconds — and a currency you can farm is
+     not a currency. First clear pays in full; going back pays a tenth,
+     or a quarter if you actually beat the number you left there. */
+  const base = Math.round((ECON.winBase + stars * ECON.winPerStar
+    + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
+  const rate = first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
+  const coins = Math.max(first ? 0 : 1, Math.round(base * rate));
   let treats = 0;
-  if (stars === 3 && prev < 3) treats += 1;
-  if (first && n % 5 === 0) treats += 2;
+  if (stars === 3 && prev < 3) treats += ECON.threeStarTreats;
+  if (first && n % 5 === 0) treats += ECON.everyFifthTreats;
+  /* and the jar takes its couple, on a replay as well: it is the one
+     thing in the economy that is paid for time rather than progress,
+     which is exactly why it is the offer I trust */
+  const jarFilled = jarAdd();
   SAVE.coins += coins;
   SAVE.treats += treats;
   const pet = activePet();
@@ -13665,6 +14103,12 @@ function showWin() {
       ${treats ? `<span class="reward" style="color:var(--plum)">${IC.treat}+${treats}</span>` : ''}
       <span class="reward" style="color:var(--sage)">${IC.paw}+${bondXp} ${T('win_bond')}</span>
     </div>
+    ${first ? '' : `<p style="color:var(--text-faint);font-size:var(--t-micro);margin-top:-4px">${T('win_replay')}</p>`}
+    ${jarFilled && jarFull() ? `<div class="offer">
+      <span class="ot"><b>${T('store_jar_t')}</b>
+        <small>${T('store_jar_full', { n: jarState().fill })}</small></span>
+      <button class="btn sm" id="wJar">${T('store_jar_open')}</button>
+    </div>` : ''}
     ${pet ? `<p>${T('win_petline', { name: pet.name })}</p>` : ''}
     <div class="row">
       <button class="btn ghost" id="wMap">${T('to_map')}</button>
@@ -13672,6 +14116,8 @@ function showWin() {
     </div>
   `, { dismissable: false });
   paintArtCanvases(m.el);
+  const wj = $('#wJar', m.el);
+  if (wj) wj.addEventListener('click', () => { SFX.tap(); treatStore(); });
   $$('.starsRow .s', m.el).forEach((s, i) => {
     if (i < stars) setTimeout(() => { s.classList.add('pop'); SFX.star(i); }, 220 + i * 260);
     else s.classList.add('pop');
@@ -13712,6 +14158,20 @@ function showLose() {
     })
     .filter(x => x.have < x.g.need);
   const close = short.length > 0 && short.every(x => x.have / x.g.need >= .8);
+  /* Whether the level is worth carrying on with, which is a different
+     question from whether the card should say "so close" — that one is
+     about every goal being nearly done, this one is about the board as a
+     whole. Five more moves finishes a board at eight tenths. It does not
+     finish one at two, and offering it there sells a player a level that
+     was already lost. They find that out after paying, once, and then
+     the button is dead for the rest of the game. So below the line the
+     card does not carry the offer at all. */
+  const done = G.goals.reduce((a, g) => {
+    const have = g.kind === GK.SCORE ? G.score
+      : g.kind === GK.BRAMBLE ? Math.max(0, g.need - brambleCount(G.B)) : g.have;
+    return a + Math.min(1, have / g.need);
+  }, 0) / Math.max(1, G.goals.length);
+  const worthCarryingOn = done >= ECON.continueAt;
   /* The subtitle used to read the shortfall back as a sentence:
      "You needed Walk 2 home, Score 9500." Goal lines are written as
      instructions — "Walk 2 home", "Collect 44 Sable" — and an
@@ -13736,11 +14196,11 @@ function showLose() {
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn primary" id="lRetry">${T('retry')}</button>
     </div>
-    ${G.usedExtra ? '' : `
+    ${G.usedExtra || !worthCarryingOn ? '' : `
     <div class="offer">
       <span class="ot">
-        <b>${T('lose_extra')}</b>
-        <small>${T('lose_extra_sub', { n: 2 })}</small>
+        <b>${T('lose_extra', { n: ECON.continueMoves })}</b>
+        <small>${T('lose_extra_sub', { n: ECON.continueTreats })}</small>
       </span>
       <button class="btn sm" id="lExtra">${T('shop_buy')}</button>
     </div>`}
@@ -13749,12 +14209,14 @@ function showLose() {
   paintArtCanvases(m.el);
   const ex = $('#lExtra', m.el);
   if (ex) ex.addEventListener('click', () => {
-    if (SAVE.treats < 2) { SFX.bad(); toast(LANG === 'tr' ? 'Ödül yetmiyor' : 'Not enough treats', 'treat'); return; }
-    SAVE.treats -= 2; persist(true); syncPurse();
+    /* short of treats is the one moment the player actually wants the
+       jar, so it opens there rather than being told no by a toast */
+    if (SAVE.treats < ECON.continueTreats) { SFX.bad(); treatStore('continue'); return; }
+    SAVE.treats -= ECON.continueTreats; persist(true); syncPurse();
     m.close();
     G.usedExtra = true;
     G.over = false; G.busy = false;
-    G.moves = 5;
+    G.moves = ECON.continueMoves;
     syncHud();
     SFX.coin();
   });
@@ -14486,15 +14948,17 @@ function boot() {
   $('#btnQuit').innerHTML = IC.back;
   $('#btnQuit').addEventListener('click', () => { SFX.tap(); confirmQuit(); });
   $('#chipHearts').addEventListener('click', () => { if (SAVE.hearts < HEART_MAX) noHeartsSheet(); });
-  $('#chipTreats').addEventListener('click', () => {
-    const m = modal(`<span style="color:var(--plum);width:48px;height:48px;align-self:center">${IC.treat}</span>
-      <h2>${T('shop_treats_t')}</h2><p>${T('shop_treats_s')}</p>
-      <button class="btn primary wide" id="trOk">${T('ok')}</button>`);
-    $('#trOk', m.el).addEventListener('click', m.close);
-  });
+  /* the chip explained what treats were and then stopped, which was the
+     right card back when there was nothing to do about it */
+  $('#chipTreats').addEventListener('click', () => { SFX.tap(); treatStore(); });
 
   catchUpPets();
   heartTick();
+  clubTick();
+  /* what these cost where the player actually is; the store's answer
+     replaces the fallback labels whenever it arrives, and nothing waits
+     on it */
+  BILLING.refresh();
   syncPurse();
   /* a save carried over from an older build may already have earned
      things, so sweep once on load rather than waiting for the next win */
@@ -14619,7 +15083,7 @@ window.BL = {
   checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
-  openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, confirmQuit,
+  openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, treatStore, confirmQuit,
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
   simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY, petRig, syncGoals, drawLevelScene,
   castOf, castBreed, castSlot, castName, castRebuild, slotGem, slotBreed,

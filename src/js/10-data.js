@@ -157,6 +157,94 @@ const STAGES = [
     ph: 'all grown up', phDog: 'all grown up', phTr: 'koca bir yetişkin' }
 ];
 
+/* ---------- the economy, in one table ----------
+
+   Every payout and every price used to be a literal at the place it was
+   spent: the level reward inside showWin, the walk inside dailyDone, the
+   heart refill inside the sheet that sells it. test/economy.js could not
+   read any of them, so it kept its own copies and guarded them by
+   searching the source for the exact line — which caught drift by
+   failing, loudly, every time anyone touched a number.
+
+   The two columns have to be read together or neither means anything.
+   They are one table now, and the simulation reads the real values. */
+const ECON = {
+  /* what a cleared level pays. Halved from (30, 22, /1400): the old
+     curve paid about 113 coins for a three-starred level and the whole
+     catalogue is 10,023, so a month of ordinary play bought everything
+     the game sells twice over and kept 13,826 in change. */
+  winBase: 18, winPerStar: 12, winPerScore: 2600,
+  /* and what it pays the second time. A cleared level paid full price
+     forever, which made the best coin-per-minute in the game "replay
+     level 3", and made every price downstream a fiction. Beating your
+     own score still pays, because that is a reason to go back that
+     isn't farming. */
+  replayRate: .10, replayBestRate: .25,
+
+  dailyWalkCoins: 80, dailyWalkTreats: 1,
+  /* treats on the gift ladder: day 4 and day 7 only, 1 and 3. Was day
+     3, 6 and 7 for 2, 2 and 5 — nine a week, on top of fourteen from
+     the walk. */
+  giftTreats: { 4: 1, 7: 3 },
+  /* the two bounded ones. These are paid once per level, so they are
+     capped by how much game there is rather than by how long you play,
+     and they are the reward for playing well rather than for showing
+     up. Kept, but the every-fifth bonus comes down from 2. */
+  threeStarTreats: 1, everyFifthTreats: 1,
+
+  heartRefillMin: 25,
+  /* the sinks. Nine treats to carry on is Candy Crush's number for the
+     same offer, and at roughly five treats a day of free income it is a
+     real decision rather than a formality — the old price was 2, which
+     is not a decision, and 3 for a full set of hearts meant the wait
+     never had to be waited. */
+  continueTreats: 9, continueMoves: 5,
+  heartRefillTreats: 12,
+  /* and the gate on the offer. An extra five moves at 20% of the goal
+     is not an offer, it is a sale of a lost level — the player finds
+     that out after paying, once, and then never trusts the button
+     again. Below this the card does not carry it at all. */
+  continueAt: .70
+};
+
+/* ---------- what is for sale ----------
+
+   Prices are the sizes the genre has settled on, and they are not the
+   point of the design: the point is that a player who never opens this
+   file can still finish everything in it, slower. The jar below is the
+   one I would keep if I could keep only one.
+
+   `usd` is a fallback label only. A live store reports the real price in
+   the player's own currency, and that is what gets shown — a hardcoded
+   dollar figure is wrong in most of the world, and wrong by a lot in
+   Turkey, where it also ages badly month to month. */
+const TREAT_PACKS = [
+  { id: 'pocket', sku: 'treats_pocket_40', treats: 40, usd: '$1.99', en: 'Pocketful', tr: 'Bir avuç' },
+  { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı', best: true },
+  { id: 'tin', sku: 'treats_tin_250', treats: 250, usd: '$9.99', en: 'Biscuit tin', tr: 'Bisküvi kutusu' }
+];
+
+/* The subscription. Unlimited hearts is the part worth paying for —
+   it removes the wait rather than shortening it — and the daily treats
+   mean it also covers the two sinks without a second purchase. */
+const PET_CLUB = {
+  sku: 'pet_club_monthly', usd: '$4.99', dailyTreats: 15,
+  en: 'Pet Club', tr: 'Kulüp'
+};
+
+/* ---------- the treat jar ----------
+
+   A jar on the shelf that fills while you play and is opened once, for
+   money. It is the friendliest thing in this file by a distance: it
+   cannot be bought before it has been earned, the number in it is the
+   player's own play rather than a price, and nothing is taken away from
+   anyone who never opens it — the jar simply stops filling when full.
+
+   It is also the only offer here that gets better the longer you have
+   been playing, which is the opposite of how a difficulty paywall
+   works, and it is why this is the one I would keep. */
+const JAR = { perLevel: 2, cap: 150, sku: 'treat_jar', usd: '$2.99' };
+
 /* ---------- goods ---------- */
 const FOODS = [
   { id: 'kibble', en: 'Kibble', tr: 'Mama', cost: 12, food: 26, joy: 2, art: 'kibble', enDesc: 'The everyday stuff.', trDesc: 'Günlük mama.' },

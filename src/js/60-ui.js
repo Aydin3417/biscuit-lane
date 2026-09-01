@@ -1017,7 +1017,7 @@ function openLevelIntro(n) {
 
   /* every fifth level pays treats the first time, and used to do it
      without warning anyone it was going to */
-  const firstTreats = (n !== DAILY_LEVEL && n % 5 === 0 && !SAVE.stars[n]) ? 2 : 0;
+  const firstTreats = (n !== DAILY_LEVEL && n % 5 === 0 && !SAVE.stars[n]) ? ECON.everyFifthTreats : 0;
 
   const m = modal(`
     <div class="eyebrow">${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
@@ -1082,6 +1082,110 @@ function openLevelIntro(n) {
     maybeTutorial(def);
   });
 }
+/* The one place money is asked for.
+
+   Opened three ways and no others: the treat chip in the header, and the
+   two moments the player has just been told no — out of moves near the
+   end of a level, out of hearts. `why` is which of those it was, and it
+   puts a line at the top saying what the treats would have done, because
+   a store that opens without saying why it opened is an interruption.
+
+   Nothing in here can charge anything yet. When BILLING is not ready the
+   prices still show — they are what the thing will cost — and the button
+   says the shop is shut instead of pretending to take a card. */
+function treatStore(why) {
+  const live = BILLING.ready();
+  const j = jarState();
+  const reason = why === 'continue' ? T('store_why_continue')
+    : why === 'hearts' ? T('store_why_hearts') : '';
+  const tag = (sku, usd) => {
+    const p = BILLING.price(sku, null);
+    return p ? p : `<span style="opacity:.75">${T('store_about', { p: usd })}</span>`;
+  };
+  const row = (id, kind, title, sub, btn, on) => `
+    <div class="offer"${on ? ' style="opacity:.6"' : ''}>
+      <span class="ot"><b>${title}</b><small>${sub}</small></span>
+      ${on ? `<span class="btn sm" style="pointer-events:none">${IC.check}</span>`
+      : `<button class="btn sm" data-pay="${id}" data-kind="${kind}">${btn}</button>`}
+    </div>`;
+
+  const m = modal(`
+    <span style="color:var(--plum);width:48px;height:48px;align-self:center">${IC.treat}</span>
+    <h2>${T('store_t')}</h2>
+    ${reason ? `<p><b style="color:var(--accent-strong)">${reason}</b></p>` : ''}
+    <p style="color:var(--text-dim)">${T('store_s')}</p>
+
+    ${!j.fill ? '' : jarFull()
+      ? row('jar', 'jar', T('store_jar_t'), T('store_jar_full', { n: j.fill }),
+        `${T('store_jar_open')} · ${tag(JAR.sku, JAR.usd)}`)
+      /* A jar that is not full has no button on it.
+
+         It had one, at the full price, which meant a player could pay
+         $2.99 for the sixty-eight treats in it on a day the same $2.99
+         would have bought a hundred and fifty a fortnight later. That is
+         a worse deal than the smallest pack and it is only ever taken by
+         somebody who did not do the arithmetic — which is the precise
+         thing I said this file would not do. So it fills in public and
+         sells nothing until it is worth buying. */
+      : `<div class="offer" style="opacity:.7">
+          <span class="ot"><b>${T('store_jar_t')}</b>
+            <small>${T('store_jar_s', { n: j.fill, c: JAR.cap })}</small>
+            <span style="display:block;height:5px;border-radius:3px;background:var(--surface-3);overflow:hidden;margin-top:5px">
+              <span style="display:block;height:100%;width:${Math.round(j.fill / JAR.cap * 100)}%;background:var(--plum)"></span>
+            </span></span>
+        </div>`}
+
+    ${TREAT_PACKS.map(p => row(p.id, 'pack',
+      T('store_pack', { n: p.treats }) + (p.best ? ' ★' : ''),
+      p[LANG] || p.en, tag(p.sku, p.usd))).join('')}
+
+    ${row('club', 'club', T('store_club_t'),
+      clubActive() ? T('store_club_on') : T('store_club_s', { n: PET_CLUB.dailyTreats }),
+      tag(PET_CLUB.sku, PET_CLUB.usd) + T('store_per_month'), clubActive())}
+
+    ${live ? `<button class="btn ghost wide" id="stRestore"
+      style="font-size:var(--t-micro)">${T('store_restore')}</button>` : ''}
+    <button class="btn primary wide" id="stOk">${T('ok')}</button>
+  `);
+
+  /* Every button lands here, and the grant is on the far side of a
+     receipt. There is no path through this function that adds a treat
+     because a store was missing. */
+  $$('[data-pay]', m.el).forEach(b => b.addEventListener('click', async () => {
+    if (!live) { SFX.bad(); storeShut(); return; }
+    const kind = b.dataset.kind;
+    const id = b.dataset.pay;
+    const sku = kind === 'pack' ? TREAT_PACKS.find(x => x.id === id).sku
+      : kind === 'jar' ? JAR.sku : PET_CLUB.sku;
+    b.disabled = true;
+    const r = await BILLING.buy(sku);
+    b.disabled = false;
+    if (!r.ok) {
+      if (r.why === 'nostore') { storeShut(); return; }
+      if (r.why !== 'cancelled') { SFX.bad(); toast(T('store_failed'), 'treat'); }
+      return;
+    }
+    const got = grantPurchase(kind, id);
+    SFX.coin();
+    syncPurse();
+    m.close();
+    if (kind === 'club') toast(T('store_club_on'), 'treat');
+    else toast(T('store_thanks', { n: got }), 'treat');
+  }));
+  const rs = $('#stRestore', m.el);
+  if (rs) rs.addEventListener('click', async () => { await BILLING.restore(); syncPurse(); });
+  $('#stOk', m.el).addEventListener('click', m.close);
+}
+/* Said plainly, in its own card, rather than as a disabled button with
+   no explanation — which reads as a bug rather than as a fact. */
+function storeShut() {
+  const m = modal(`
+    <h2>${T('store_shut_t')}</h2>
+    <p>${T('store_shut_s')}</p>
+    <button class="btn primary wide" id="ssOk">${T('ok')}</button>`);
+  $('#ssOk', m.el).addEventListener('click', m.close);
+}
+
 function noHeartsSheet() {
   const line = () => T('lvl_no_hearts_sub', { m: HEART_REFILL / MIN, t: fmtTime(heartsIn()) });
   let tick = null;
@@ -1091,7 +1195,7 @@ function noHeartsSheet() {
     <p id="nhLine">${line()}</p>
     <div class="row">
       <button class="btn ghost" id="nhWait">${T('lvl_wait')}</button>
-      <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: 3 })}</button>
+      <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: ECON.heartRefillTreats })}</button>
     </div>
   `, { onClose: () => { if (tick) clearInterval(tick); onHeartArrived = () => { }; } });
 
@@ -1111,8 +1215,8 @@ function noHeartsSheet() {
   };
   $('#nhWait', m.el).addEventListener('click', m.close);
   $('#nhBuy', m.el).addEventListener('click', () => {
-    if (SAVE.treats < 3) { SFX.bad(); toast(LANG === 'tr' ? 'Ödül yetmiyor' : 'Not enough treats', 'treat'); return; }
-    SAVE.treats -= 3;
+    if (SAVE.treats < ECON.heartRefillTreats) { SFX.bad(); treatStore('hearts'); return; }
+    SAVE.treats -= ECON.heartRefillTreats;
     SAVE.hearts = HEART_MAX;
     SAVE.heartAt = now();
     persist(true);
@@ -1138,10 +1242,22 @@ function showWin() {
   if (newBest) SAVE.scores[n] = G.score;
   SAVE.reached = Math.max(SAVE.reached, n + 1);
   SAVE.stats.cleared++;
-  const coins = Math.round((30 + stars * 22 + Math.floor(G.score / 1400)) * traitCoinScale(activePet()));
+  /* A cleared level paid its full reward every time it was cleared, so
+     the fastest coins in the game were on whichever early level you
+     could three-star in ninety seconds — and a currency you can farm is
+     not a currency. First clear pays in full; going back pays a tenth,
+     or a quarter if you actually beat the number you left there. */
+  const base = Math.round((ECON.winBase + stars * ECON.winPerStar
+    + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
+  const rate = first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
+  const coins = Math.max(first ? 0 : 1, Math.round(base * rate));
   let treats = 0;
-  if (stars === 3 && prev < 3) treats += 1;
-  if (first && n % 5 === 0) treats += 2;
+  if (stars === 3 && prev < 3) treats += ECON.threeStarTreats;
+  if (first && n % 5 === 0) treats += ECON.everyFifthTreats;
+  /* and the jar takes its couple, on a replay as well: it is the one
+     thing in the economy that is paid for time rather than progress,
+     which is exactly why it is the offer I trust */
+  const jarFilled = jarAdd();
   SAVE.coins += coins;
   SAVE.treats += treats;
   const pet = activePet();
@@ -1164,6 +1280,12 @@ function showWin() {
       ${treats ? `<span class="reward" style="color:var(--plum)">${IC.treat}+${treats}</span>` : ''}
       <span class="reward" style="color:var(--sage)">${IC.paw}+${bondXp} ${T('win_bond')}</span>
     </div>
+    ${first ? '' : `<p style="color:var(--text-faint);font-size:var(--t-micro);margin-top:-4px">${T('win_replay')}</p>`}
+    ${jarFilled && jarFull() ? `<div class="offer">
+      <span class="ot"><b>${T('store_jar_t')}</b>
+        <small>${T('store_jar_full', { n: jarState().fill })}</small></span>
+      <button class="btn sm" id="wJar">${T('store_jar_open')}</button>
+    </div>` : ''}
     ${pet ? `<p>${T('win_petline', { name: pet.name })}</p>` : ''}
     <div class="row">
       <button class="btn ghost" id="wMap">${T('to_map')}</button>
@@ -1171,6 +1293,8 @@ function showWin() {
     </div>
   `, { dismissable: false });
   paintArtCanvases(m.el);
+  const wj = $('#wJar', m.el);
+  if (wj) wj.addEventListener('click', () => { SFX.tap(); treatStore(); });
   $$('.starsRow .s', m.el).forEach((s, i) => {
     if (i < stars) setTimeout(() => { s.classList.add('pop'); SFX.star(i); }, 220 + i * 260);
     else s.classList.add('pop');
@@ -1211,6 +1335,20 @@ function showLose() {
     })
     .filter(x => x.have < x.g.need);
   const close = short.length > 0 && short.every(x => x.have / x.g.need >= .8);
+  /* Whether the level is worth carrying on with, which is a different
+     question from whether the card should say "so close" — that one is
+     about every goal being nearly done, this one is about the board as a
+     whole. Five more moves finishes a board at eight tenths. It does not
+     finish one at two, and offering it there sells a player a level that
+     was already lost. They find that out after paying, once, and then
+     the button is dead for the rest of the game. So below the line the
+     card does not carry the offer at all. */
+  const done = G.goals.reduce((a, g) => {
+    const have = g.kind === GK.SCORE ? G.score
+      : g.kind === GK.BRAMBLE ? Math.max(0, g.need - brambleCount(G.B)) : g.have;
+    return a + Math.min(1, have / g.need);
+  }, 0) / Math.max(1, G.goals.length);
+  const worthCarryingOn = done >= ECON.continueAt;
   /* The subtitle used to read the shortfall back as a sentence:
      "You needed Walk 2 home, Score 9500." Goal lines are written as
      instructions — "Walk 2 home", "Collect 44 Sable" — and an
@@ -1235,11 +1373,11 @@ function showLose() {
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn primary" id="lRetry">${T('retry')}</button>
     </div>
-    ${G.usedExtra ? '' : `
+    ${G.usedExtra || !worthCarryingOn ? '' : `
     <div class="offer">
       <span class="ot">
-        <b>${T('lose_extra')}</b>
-        <small>${T('lose_extra_sub', { n: 2 })}</small>
+        <b>${T('lose_extra', { n: ECON.continueMoves })}</b>
+        <small>${T('lose_extra_sub', { n: ECON.continueTreats })}</small>
       </span>
       <button class="btn sm" id="lExtra">${T('shop_buy')}</button>
     </div>`}
@@ -1248,12 +1386,14 @@ function showLose() {
   paintArtCanvases(m.el);
   const ex = $('#lExtra', m.el);
   if (ex) ex.addEventListener('click', () => {
-    if (SAVE.treats < 2) { SFX.bad(); toast(LANG === 'tr' ? 'Ödül yetmiyor' : 'Not enough treats', 'treat'); return; }
-    SAVE.treats -= 2; persist(true); syncPurse();
+    /* short of treats is the one moment the player actually wants the
+       jar, so it opens there rather than being told no by a toast */
+    if (SAVE.treats < ECON.continueTreats) { SFX.bad(); treatStore('continue'); return; }
+    SAVE.treats -= ECON.continueTreats; persist(true); syncPurse();
     m.close();
     G.usedExtra = true;
     G.over = false; G.busy = false;
-    G.moves = 5;
+    G.moves = ECON.continueMoves;
     syncHud();
     SFX.coin();
   });
