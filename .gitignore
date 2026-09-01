@@ -9,7 +9,15 @@ shots/
 # second use; they are kept on disk as a record, not as part of the project.
 tools/*.py
 
+# Playwright and the Capacitor CLI. The game itself still has no runtime
+# dependencies; these belong to the dev tools and the native shell, and
+# nothing they pull in reaches the shipped file.
 node_modules/
+
+# The native web payload, assembled by tools/pack.js from the built
+# index.html. Generated, never edited, regenerable in a second.
+www/
+
 .DS_Store
 Thumbs.db
 

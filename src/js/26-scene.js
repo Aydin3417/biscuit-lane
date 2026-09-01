@@ -850,6 +850,7 @@ function cellSprite(px, odd) {
   return cv;
 }
 function clearBeds() { bedCache.clear(); }
+EV.on('repaint', clearBeds);
 
 function drawCellBed(c, cx, cy, s, cell, odd) {
   if (cell && cell.hole) return;

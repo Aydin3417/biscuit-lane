@@ -5,24 +5,18 @@
 
      node tools/audit.js [outdir]
 */
-/* Playwright is not a dependency of this project — the game has none.
-   These dev tools borrow it from wherever it already is. Point
-   PLAYWRIGHT at an installation and CHROME at a browser binary, or edit
-   the fallbacks below. */
-const PW_PATH = process.env.PLAYWRIGHT ||
-  'C:/Users/Casper/Desktop/Proje/Cotidie-Ads-Opus/node_modules/playwright';
-const CHROME = process.env.CHROME ||
-  'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const path = require('path');
 const fs = require('fs');
-const { chromium } = require(PW_PATH);
+const PW = require('./_pw.js');
 
 const out = path.join(__dirname, '..', 'shots', process.argv[2] || 'audit');
 fs.mkdirSync(out, { recursive: true });
-const URL = 'http://localhost:5173/biscuit-lane.html';
+const URL = PW.at('/biscuit-lane.html');
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: CHROME });
+  /* puts its own server up, like tools/browser.js */
+  const server = await PW.serve();
+  const browser = await PW.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
   const shot = async (name, wait) => {
     if (wait) await page.waitForTimeout(wait);
@@ -115,5 +109,6 @@ const URL = 'http://localhost:5173/biscuit-lane.html';
   await shot('07-board-dark', 1200);
 
   await browser.close();
+  server.stop();
   console.log('shots in ' + out);
 })();

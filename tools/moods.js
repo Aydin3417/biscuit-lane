@@ -7,17 +7,13 @@
 
      node tools/moods.js
 */
-const PW_PATH = process.env.PLAYWRIGHT ||
-  'C:/Users/Casper/Desktop/Proje/Cotidie-Ads-Opus/node_modules/playwright';
-const CHROME = process.env.CHROME ||
-  'C:/Program Files/Google/Chrome/Application/chrome.exe';
 const path = require('path');
 const fs = require('fs');
-const { chromium } = require(PW_PATH);
+const PW = require('./_pw.js');
 
 const out = path.join(__dirname, '..', 'shots', 'moods');
 fs.mkdirSync(out, { recursive: true });
-const URL = 'http://localhost:5173/biscuit-lane.html';
+const URL = PW.at('/biscuit-lane.html');
 
 /* the stat sets that land on each branch of moodOf() */
 const MOODS = [
@@ -31,7 +27,9 @@ const MOODS = [
 ];
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: CHROME });
+  /* puts its own server up, like tools/browser.js */
+  const server = await PW.serve();
+  const browser = await PW.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
   page.on('pageerror', e => console.log('  ! sayfa hatası: ' + e.message));
   await page.goto(URL, { waitUntil: 'load' });
@@ -130,5 +128,6 @@ const MOODS = [
     console.log('  look-' + tag);
   }
   await browser.close();
+  server.stop();
   console.log('shots/moods/');
 })();

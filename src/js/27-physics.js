@@ -444,6 +444,7 @@ function crumbBrush(col, col2) {
   return cv;
 }
 function clearBrushes() { _blobs.clear(); _streaks.clear(); _tufts.clear(); _crumbs.clear(); }
+EV.on('repaint', clearBrushes);
 
 /* ---------------- particle drawing ---------------- */
 function drawParticles(c, filterAdd) {

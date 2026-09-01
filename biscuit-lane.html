@@ -44,7 +44,7 @@
   --line-soft:     #EADCC9;
   --text:          #2C2118;
   --text-dim:      #6B5949;
-  --text-faint:    #826D57;
+  --text-faint:    #6D5C49;
   --accent:        #D98A18;
   /* the accent as text: the fill colour carries 2.7:1 on cream and
      3.6:1 on its own soft tint, so text uses a darker one */
@@ -59,18 +59,31 @@
   --sky:           #3C86C4;
   /* One radius scale, so nothing is 16px next to 18px next to 20px for
      no reason anybody could name. */
-  /* Six type sizes, because there were eighteen — thirteen of them
+  /* Seven type sizes, because there were eighteen — thirteen of them
      inside a six-pixel range, which is not a scale, it is a series of
-     separate decisions that happened to be near each other. Nothing
-     moved more than a pixel and a half; the point is that a caption is
-     now the same size as every other caption. */
-  --t-nano:        9.5px;
-  --t-micro:       11px;
-  --t-small:       13px;
-  --t-body:        15px;
-  --t-title:       17px;
-  --t-h2:          22px;
-  --t-hero:        27px;
+     separate decisions that happened to be near each other. The scale
+     held; where it sat did not.
+
+     Measured on a phone, thirty-one of the forty-three strings on the
+     home screen were under 12px and twenty-seven of them were 11px — so
+     11 was not the caption size, it was the size of most of the game.
+     iOS asks for 11pt as a floor and Material for about 12sp as a body
+     size, and the old nano at 9.5px was under both. Everything is one
+     step up.
+
+     And in rem, not px. The old scale ignored the phone's own text-size
+     setting completely: 535 lengths in px and not one rem, so a player
+     who had turned their system font up got the same 11px as everybody
+     else. Type is relative now; spacing and radii stay in px on
+     purpose, so turning the text up grows the words inside the boxes
+     rather than pushing the layout apart. */
+  --t-nano:        0.6875rem;   /* 11.0px at the default root */
+  --t-micro:       0.78125rem;  /* 12.5px */
+  --t-small:       0.875rem;    /* 14.0px */
+  --t-body:        1rem;        /* 16.0px */
+  --t-title:       1.125rem;    /* 18.0px */
+  --t-h2:          1.4375rem;   /* 23.0px */
+  --t-hero:        1.75rem;     /* 28.0px */
 
   --r-xs:          9px;
   --r-sm:          13px;
@@ -159,7 +172,7 @@
 }
 :root[data-theme="light"]{
   --bg:#F6EADA; --bg-deep:#E9D8C3; --surface:#FFFAF2; --surface-2:#F3E6D6; --surface-3:#E7D6C1;
-  --line:#DCC7AC; --line-soft:#EADCC9; --text:#2C2118; --text-dim:#6B5949; --text-faint:#826D57;
+  --line:#DCC7AC; --line-soft:#EADCC9; --text:#2C2118; --text-dim:#6B5949; --text-faint:#6D5C49;
   --accent:#D98A18; --accent-strong:#7E4C0A; --accent-soft:#F7D79B; --accent-ink:#3A2503;
   --rose:#A82C44; --rose-soft:#F6CCD3;
   --sage:#276853; --sage-soft:#C4E4D4; --plum:#6E5A8C; --sky:#2C6A9E;
@@ -241,8 +254,18 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
 canvas{ max-width:100%; }
 
 .brandmark canvas{ width:30px; height:30px; flex:0 0 auto; }
-.brandmark .bn{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); letter-spacing:-.02em; white-space:nowrap; line-height:1.1; }
-.brandmark .bn small{ display:block; font-family:"Karla",sans-serif; font-weight:500; font-size:var(--t-nano); letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); margin-top:1px; }
+/* The wordmark gives way to the purse, rather than sliding under it.
+
+   `.brandmark` could already shrink — it carries min-width:0 — but the
+   name inside it was nowrap with nothing to clip it, so it simply drew
+   over the chips: 53px of overlap on a 375px screen with the hearts
+   chip showing its refill clock, and 11px even with hearts full. The
+   purse and the settings button are fixed; the name is the part that
+   can afford to lose a letter. */
+.brandmark .bn{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); letter-spacing:-.02em; white-space:nowrap; line-height:1.1;
+  min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.brandmark .bn small{ display:block; font-family:"Karla",sans-serif; font-weight:500; font-size:var(--t-nano); letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); margin-top:1px;
+  overflow:hidden; text-overflow:ellipsis; }
 .purse{ display:flex; align-items:center; gap:6px; }
 .chip{
   display:inline-flex; align-items:center; gap:5px;
@@ -250,6 +273,14 @@ canvas{ max-width:100%; }
   background:var(--surface-2); border:1px solid var(--line-soft);
   font-weight:700; font-size:var(--t-small); font-variant-numeric:tabular-nums;
   box-shadow:var(--shadow-1); white-space:nowrap;
+  position:relative;
+}
+/* hearts and treats open a sheet; the tap reaches 48 without the chip
+   growing to meet it. Vertical only — three of these sit side by side
+   and a wider target would take its neighbour's taps. */
+.chip::after{
+  content:""; position:absolute; left:0; right:0; top:50%;
+  transform:translateY(-50%); height:48px;
 }
 .chip svg{ width:17px; height:17px; display:block; flex:0 0 auto; }
 .chip.hearts{ color:var(--rose); }
@@ -258,10 +289,24 @@ canvas{ max-width:100%; }
 .chip .sub{ font-size:var(--t-nano); color:var(--text-faint); font-weight:600; margin-left:1px; }
 .chip.bump{ animation:chipbump .5s cubic-bezier(.2,1.5,.4,1); }
 @keyframes chipbump{ 40%{ transform:scale(1.16) } }
+/* The thumb is bigger than the button.
+
+   Measured on a phone: the settings gear was 34x34 and the purse chips
+   32 tall, against the 48dp both platforms ask for. Growing them to 48
+   would have made a top bar of four fat lozenges, so the drawn size
+   stays and the *target* grows underneath — a transparent box centred
+   on the control, reaching out to 48 in both directions. Nothing moves
+   and nothing looks different; the thing simply catches the tap that
+   used to land beside it. */
 .iconbtn{
   width:34px; height:34px; border-radius:12px; display:grid; place-items:center;
   background:var(--surface-2); border:1px solid var(--line-soft); box-shadow:var(--shadow-1);
   transition:transform .12s ease, background .15s ease; flex:0 0 auto;
+  position:relative;
+}
+.iconbtn::after{
+  content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:48px; height:48px;
 }
 .iconbtn:active{ transform:scale(.92); }
 .iconbtn svg{ width:18px; height:18px; }
@@ -374,6 +419,14 @@ canvas{ max-width:100%; }
 .bar > i{ display:block; height:100%; border-radius:999px; transition:width .45s cubic-bezier(.22,1,.36,1); }
 
 .pill{ display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:var(--t-micro); font-weight:700; }
+/* An IC.* string is a bare <svg> with a viewBox and no width or height,
+   so it has whatever size CSS gives it and nothing else. Every other
+   place that holds one says so — .chip svg, .tab svg, .btn svg, and
+   .statPills .pill svg — but the plain .pill never did, so the three
+   that carry an icon rendered it at zero: the paw marking an inactive
+   pet, the padlock on a breed not yet unlocked, and the tick on a perk
+   chip. Each one drew an empty lozenge where a symbol belonged. */
+.pill svg{ width:13px; height:13px; flex:0 0 auto; }
 .pill.ok{ background:var(--sage-soft); color:var(--sage); }
 .pill.warn{ background:var(--accent-soft); color:var(--accent-strong); }
 .pill.bad{ background:var(--rose-soft); color:var(--rose); }
@@ -593,11 +646,15 @@ canvas{ max-width:100%; }
 .good .tag{ position:absolute; right:8px; top:8px; }
 
 /* ---------- family / pets ---------- */
-.petrow{ display:flex; align-items:center; gap:11px; padding:11px; }
+.petrow{ display:flex; align-items:center; gap:8px; padding:11px 10px; }
 .petrow canvas{ width:56px; height:56px; flex:0 0 auto; }
 .petrow .info{ flex:1 1 auto; min-width:0; }
 .petrow .info .nm{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); }
 .petrow .info .br{ font-size:var(--t-micro); color:var(--text-faint); font-weight:600; }
+/* the row's own pill stays on one line: wrapped to two it took enough
+   width from the name column to cut "bond 7" off the one pet that is
+   actually on the board */
+.petrow > .pill{ white-space:nowrap; flex:0 0 auto; padding-left:7px; padding-right:7px; }
 .petrow.active{ border-color:var(--accent-strong); box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 40%, transparent), var(--shadow-1); }
 
 /* ---------- modal ---------- */
@@ -1135,6 +1192,40 @@ function wait(ms) {
   });
 }
 
+/* ---------- announcements ----------
+
+   A lower layer sometimes has to say that something happened. The one
+   thing it should not do is decide who cares.
+
+   Four places wrote that call by hand, and all four wrote it the same
+   way: `if (typeof clearSprites === 'function') clearSprites()`. That
+   guard is what a call looks like when the thing being called might not
+   be there — and in the node harness, which loads the save layer without
+   the art, it genuinely was not. So the guard was load-bearing, and it
+   was also the tell. A module that has to check whether its own
+   dependency exists does not have a dependency. It has a listener, and
+   it was calling it by hand.
+
+   Named EV rather than a bare on/emit because the bundle is one scope:
+   `emit` is already the particle emitter in 27-physics.js, and `on` is a
+   local in shapeMask. A namespace object is what SFX, FX and HAP are for.
+
+   There is no off(). Nothing here is ever torn down, and an unsubscribe
+   nobody calls is a function that rots without anybody noticing. */
+const EV = {
+  at: new Map(),
+  on(ev, fn) {
+    if (!EV.at.has(ev)) EV.at.set(ev, []);
+    EV.at.get(ev).push(fn);
+  },
+  emit(ev, arg) {
+    const list = EV.at.get(ev);
+    if (!list) return;
+    /* indexed, not for-of: this runs inside cascades */
+    for (let i = 0; i < list.length; i++) list[i](arg);
+  }
+};
+
 /* ---------- colour helpers ---------- */
 function hex2rgb(h) {
   h = h.trim().replace('#', '');
@@ -1509,6 +1600,8 @@ const STRINGS = {
     gate_s: 'Harder than the nine before it. Take your time.',
     rot_t: 'Turn your phone back',
     rot_s: 'Biscuit Lane is played the tall way up.',
+    /* the installed app only; a browser tab has its own back */
+    leave_again: 'Press back again to leave',
     tab_home: 'Home', tab_play: 'Play', tab_shop: 'Shop', tab_family: 'Family',
 
     /* onboarding */
@@ -1605,8 +1698,30 @@ const STRINGS = {
     lose_close: 'So close.',
     lose_petline: '{name} does not blame you.',
     retry: 'Try again', to_map: 'Back to the lane', keep_going: 'Carry on',
-    lose_extra: 'Buy 5 more moves',
+    lose_extra: 'Buy {n} more moves',
     lose_extra_sub: '{n} treats',
+
+    /* the till */
+    store_t: 'Treats',
+    store_s: 'Treats buy the things time would otherwise: another go at a level you nearly had, and a full set of hearts when you do not want to wait.',
+    store_why_continue: 'Nine treats carries that level on.',
+    store_why_hearts: 'Twelve treats fills the hearts back up.',
+    store_jar_t: 'The treat jar',
+    store_jar_s: '{n} of {c} — a couple go in every level you clear',
+    store_jar_full: 'Full. {n} treats waiting.',
+    store_jar_open: 'Open it',
+    store_pack: '{n} treats',
+    store_club_t: 'Pet Club',
+    store_club_s: 'Hearts never run out, and {n} treats every day.',
+    store_club_on: 'You are in the club.',
+    store_about: 'about {p}',
+    store_per_month: '/mo',
+    store_restore: 'Restore a purchase',
+    store_shut_t: 'The shop is not open yet',
+    store_shut_s: 'There is nowhere to pay from this build — it has no store account behind it. Everything here can still be earned by playing, and the jar fills either way.',
+    win_replay: 'A level pays in full the first time through.',
+    store_thanks: '{n} treats in the tin',
+    store_failed: 'That did not go through. Nothing was charged.',
 
     /* shop */
     shop_food: 'Food', shop_toys: 'Toys', shop_boost: 'Boosters', shop_style: 'Style', shop_room: 'Room',
@@ -1750,6 +1865,7 @@ const STRINGS = {
     gate_s: 'Öncesindeki dokuzdan zor. Acele etme.',
     rot_t: 'Telefonu geri çevir',
     rot_s: 'Biscuit Lane dikey oynanıyor.',
+    leave_again: 'Çıkmak için tekrar bas',
     tab_home: 'Ev', tab_play: 'Oyna', tab_shop: 'Dükkan', tab_family: 'Aile',
 
     onb_hi: 'Kapının önüne bir sepet bırakmışlar',
@@ -1838,8 +1954,30 @@ const STRINGS = {
     lose_close: 'Az kaldı.',
     lose_petline: '{name} sana kızmıyor.',
     retry: 'Yeniden dene', to_map: 'Sokağa dön', keep_going: 'Devam',
-    lose_extra: '5 hamle daha al',
+    lose_extra: '{n} hamle daha al',
     lose_extra_sub: '{n} ödül',
+
+    /* kasa */
+    store_t: 'Ödüller',
+    store_s: 'Ödüller, zamanın satın aldığı şeyleri satın alır: az kalmışken bir şans daha, ve beklemek istemediğinde dolu bir kalp seti.',
+    store_why_continue: 'Dokuz ödül o bölümü devam ettirir.',
+    store_why_hearts: 'On iki ödül kalpleri doldurur.',
+    store_jar_t: 'Ödül kavanozu',
+    store_jar_s: '{c} ödülün {n} tanesi — geçtiğin her bölümde birkaç tane düşer',
+    store_jar_full: 'Doldu. {n} ödül bekliyor.',
+    store_jar_open: 'Aç',
+    store_pack: '{n} ödül',
+    store_club_t: 'Kulüp',
+    store_club_s: 'Kalpler hiç bitmez, ve her gün {n} ödül.',
+    store_club_on: 'Kulüptesin.',
+    store_about: 'yaklaşık {p}',
+    store_per_month: '/ay',
+    store_restore: 'Aldığımı geri yükle',
+    store_shut_t: 'Dükkân henüz açık değil',
+    store_shut_s: 'Bu sürümde ödeme yapılacak bir yer yok — arkasında mağaza hesabı yok. Buradaki her şey oynayarak da kazanılabilir, ve kavanoz her hâlükârda doluyor.',
+    win_replay: 'Bölüm tam ödemesini ilk geçişte yapar.',
+    store_thanks: 'Kutuya {n} ödül girdi',
+    store_failed: 'İşlem geçmedi. Hiçbir ücret alınmadı.',
 
     shop_food: 'Yiyecek', shop_toys: 'Oyuncak', shop_boost: 'Destek', shop_style: 'Tarz', shop_room: 'Oda',
     shop_buy: 'Al', shop_owned: 'Sende', shop_wear: 'Tak', shop_worn: 'Takılı', 
@@ -2172,6 +2310,94 @@ const STAGES = [
     ph: 'all grown up', phDog: 'all grown up', phTr: 'koca bir yetişkin' }
 ];
 
+/* ---------- the economy, in one table ----------
+
+   Every payout and every price used to be a literal at the place it was
+   spent: the level reward inside showWin, the walk inside dailyDone, the
+   heart refill inside the sheet that sells it. test/economy.js could not
+   read any of them, so it kept its own copies and guarded them by
+   searching the source for the exact line — which caught drift by
+   failing, loudly, every time anyone touched a number.
+
+   The two columns have to be read together or neither means anything.
+   They are one table now, and the simulation reads the real values. */
+const ECON = {
+  /* what a cleared level pays. Halved from (30, 22, /1400): the old
+     curve paid about 113 coins for a three-starred level and the whole
+     catalogue is 10,023, so a month of ordinary play bought everything
+     the game sells twice over and kept 13,826 in change. */
+  winBase: 18, winPerStar: 12, winPerScore: 2600,
+  /* and what it pays the second time. A cleared level paid full price
+     forever, which made the best coin-per-minute in the game "replay
+     level 3", and made every price downstream a fiction. Beating your
+     own score still pays, because that is a reason to go back that
+     isn't farming. */
+  replayRate: .10, replayBestRate: .25,
+
+  dailyWalkCoins: 80, dailyWalkTreats: 1,
+  /* treats on the gift ladder: day 4 and day 7 only, 1 and 3. Was day
+     3, 6 and 7 for 2, 2 and 5 — nine a week, on top of fourteen from
+     the walk. */
+  giftTreats: { 4: 1, 7: 3 },
+  /* the two bounded ones. These are paid once per level, so they are
+     capped by how much game there is rather than by how long you play,
+     and they are the reward for playing well rather than for showing
+     up. Kept, but the every-fifth bonus comes down from 2. */
+  threeStarTreats: 1, everyFifthTreats: 1,
+
+  heartRefillMin: 25,
+  /* the sinks. Nine treats to carry on is Candy Crush's number for the
+     same offer, and at roughly five treats a day of free income it is a
+     real decision rather than a formality — the old price was 2, which
+     is not a decision, and 3 for a full set of hearts meant the wait
+     never had to be waited. */
+  continueTreats: 9, continueMoves: 5,
+  heartRefillTreats: 12,
+  /* and the gate on the offer. An extra five moves at 20% of the goal
+     is not an offer, it is a sale of a lost level — the player finds
+     that out after paying, once, and then never trusts the button
+     again. Below this the card does not carry it at all. */
+  continueAt: .70
+};
+
+/* ---------- what is for sale ----------
+
+   Prices are the sizes the genre has settled on, and they are not the
+   point of the design: the point is that a player who never opens this
+   file can still finish everything in it, slower. The jar below is the
+   one I would keep if I could keep only one.
+
+   `usd` is a fallback label only. A live store reports the real price in
+   the player's own currency, and that is what gets shown — a hardcoded
+   dollar figure is wrong in most of the world, and wrong by a lot in
+   Turkey, where it also ages badly month to month. */
+const TREAT_PACKS = [
+  { id: 'pocket', sku: 'treats_pocket_40', treats: 40, usd: '$1.99', en: 'Pocketful', tr: 'Bir avuç' },
+  { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı', best: true },
+  { id: 'tin', sku: 'treats_tin_250', treats: 250, usd: '$9.99', en: 'Biscuit tin', tr: 'Bisküvi kutusu' }
+];
+
+/* The subscription. Unlimited hearts is the part worth paying for —
+   it removes the wait rather than shortening it — and the daily treats
+   mean it also covers the two sinks without a second purchase. */
+const PET_CLUB = {
+  sku: 'pet_club_monthly', usd: '$4.99', dailyTreats: 15,
+  en: 'Pet Club', tr: 'Kulüp'
+};
+
+/* ---------- the treat jar ----------
+
+   A jar on the shelf that fills while you play and is opened once, for
+   money. It is the friendliest thing in this file by a distance: it
+   cannot be bought before it has been earned, the number in it is the
+   player's own play rather than a price, and nothing is taken away from
+   anyone who never opens it — the jar simply stops filling when full.
+
+   It is also the only offer here that gets better the longer you have
+   been playing, which is the opposite of how a difficulty paywall
+   works, and it is why this is the one I would keep. */
+const JAR = { perLevel: 2, cap: 150, sku: 'treat_jar', usd: '$2.99' };
+
 /* ---------- goods ---------- */
 const FOODS = [
   { id: 'kibble', en: 'Kibble', tr: 'Mama', cost: 12, food: 26, joy: 2, art: 'kibble', enDesc: 'The everyday stuff.', trDesc: 'Günlük mama.' },
@@ -2394,8 +2620,16 @@ function traitHow(id) { const t = TRAITS[id]; return t ? (LANG === 'tr' ? t.trHo
    silhouettes are still on the board and still unique — a Pug is a pink
    clover on every board there has ever been, it is just that whether
    there is a Pug on your board at all depends on who you have taken in. */
+/* The household lives in the save, which loads after this file, so the
+   save installs the real answer on its way past. What is left here is
+   the identity permutation: what a player with no pets yet sees, and
+   what the headless harness measures against. The old line asked
+   `typeof castBreed === 'function'` — a module checking whether its own
+   dependency exists, which is a listener being called by hand. */
+let castFor = null;
+function useCast(fn) { castFor = fn; }
 function slotBreed(slot) {
-  return (typeof castBreed === 'function') ? castBreed(slot)
+  return castFor ? castFor(slot)
     : Math.max(0, Math.round(+slot || 0)) % BREEDS.length;
 }
 function slotGem(slot) {
@@ -2810,7 +3044,11 @@ const SHAPES = ['bands', 'columns', 'diamond', 'ring', 'corners', 'checker', 'we
    depend on no measurement, and the curve then says what a budget does
    *relative to that fixed point*. */
 function levelDef(n, ref) {
-  if (n === DAILY_LEVEL) return dailyLevel(SAVE ? SAVE.reached : 1);
+  /* The daily used to be reached through here, which is how the level
+     table came to read SAVE.reached. It is its own generator with its
+     own seed — call dailyLevel() for it. Said out loud because the
+     alternative is LEVELS[-2] and a TypeError three frames away. */
+  if (n === DAILY_LEVEL) throw new Error('levelDef: the daily is dailyLevel(reached), not a level number');
   /* An authored level carries no gate flag of its own — the block
      rhythm is not the table's business — so it is stamped on the way
      out. Without this the lane's gates were marked on the map, which
@@ -3530,7 +3768,14 @@ function budgetFor(kind, wantClear) {
    ============================================================ */
 const SAVE_KEY = 'biscuit-lane-v1';
 const HEART_MAX = 5;
-const HEART_REFILL = 12 * MIN;
+/* Twelve minutes meant a full set came back in an hour, which is short
+   enough that nobody ever met the wall: you lost a heart, wandered to
+   the room for a minute, and it was already on its way back. A gate
+   nobody meets is a gate that costs the player nothing and is worth
+   nothing — and everything downstream of it, the refill and the store
+   behind that, was being sold against a wait that never happened.
+   Twenty-five puts a full set at just over two hours. */
+const HEART_REFILL = ECON.heartRefillMin * MIN;
 let SAVE = null;
 
 function freshSave() {
@@ -3561,6 +3806,8 @@ function freshSave() {
     settings: { sound: true, music: false, haptics: true, lang: 'en', theme: 'auto', marks: false },
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
+    jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing
+    club: null,                    // the subscription, once there is one to have
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
   };
 }
@@ -3645,6 +3892,10 @@ function loadSave() {
     SAVE.stats = Object.assign(freshSave().stats, d.stats || {});
     SAVE.badges = Object.assign({}, d.badges || {});
     SAVE.daily = Object.assign({ day: 0, done: false, best: 0, streak: 0 }, d.daily || {});
+    SAVE.jar = Object.assign({ fill: 0, opened: 0 }, d.jar || {});
+    SAVE.jar.fill = clamp(Math.round(+SAVE.jar.fill || 0), 0, JAR.cap);
+    /* a club with no end date, or one that ended, is simply not a club */
+    SAVE.club = (d.club && isFinite(d.club.until) && d.club.until > now()) ? d.club : null;
 
     SAVE.pets = (Array.isArray(d.pets) ? d.pets : []).map(healPet).filter(Boolean);
     if (!SAVE.pets.some(p => p.id === SAVE.activePet)) {
@@ -3720,9 +3971,9 @@ let heartTimer = null;
 function heartClockStart() {
   if (heartTimer) return;
   heartTimer = setInterval(() => {
-    if (SAVE.hearts >= HEART_MAX) { heartClockStop(); syncPurse(); return; }
+    if (SAVE.hearts >= HEART_MAX) { heartClockStop(); EV.emit('purse'); return; }
     heartTick();
-    syncPurse();
+    EV.emit('purse');
   }, 1000);
 }
 function heartClockStop() {
@@ -3736,6 +3987,11 @@ function heartsIn() {
   return Math.max(0, HEART_REFILL - (now() - SAVE.heartAt));
 }
 function spendHeart() {
+  /* The club's one real promise. Not a bigger bucket or a faster
+     refill — the wait simply does not apply, which is the only version
+     of this that is worth a monthly price and the only one that cannot
+     quietly get worse later. */
+  if (clubActive()) return true;
   heartTick();
   if (SAVE.hearts <= 0) return false;
   heartClockStart();
@@ -3847,11 +4103,15 @@ function castSlot(breed) {
   return i < 0 ? 0 : i;
 }
 function castName(slot) { return breedName(castBreed(slot)); }
+/* the board asks 10-data which breed rides a slot; this is the answer */
+useCast(castBreed);
 /* a pet arriving or leaving, or a coat bought, changes the board */
 function castChanged() {
   const was = CAST_SIG;
   castRebuild();
-  if (was !== CAST_SIG && typeof clearSprites === 'function') clearSprites();
+  /* the art keeps a sprite per breed, so a household that changed is a
+     cache that is wrong. The save does not know that, and should not. */
+  if (was !== CAST_SIG) EV.emit('cast');
   return was !== CAST_SIG;
 }
 
@@ -4121,6 +4381,69 @@ function perkChips(perks) {
   return out;
 }
 
+/* ---------- the jar, the club ----------
+   State, so it lives with the rest of the state. The store that charges
+   for any of it is 17-billing, and it knows about these; they do not
+   know about it. */
+function jarState() {
+  if (!SAVE.jar) SAVE.jar = { fill: 0, opened: 0 };
+  return SAVE.jar;
+}
+/* called from the win card, once per cleared level */
+function jarAdd(n) {
+  const j = jarState();
+  if (j.fill >= JAR.cap) return false;
+  const before = j.fill;
+  j.fill = Math.min(JAR.cap, j.fill + (n || JAR.perLevel));
+  return j.fill > before;
+}
+function jarFull() { return jarState().fill >= JAR.cap; }
+
+/* ---------- granting ----------
+
+   Kept apart from BILLING.buy so there is one function that adds treats
+   to a save and it is called from one place, after a receipt. */
+function grantPurchase(kind, id) {
+  if (kind === 'pack') {
+    const p = TREAT_PACKS.find(x => x.id === id);
+    if (!p) return 0;
+    SAVE.treats += p.treats;
+    persist(true);
+    return p.treats;
+  }
+  if (kind === 'jar') {
+    const j = jarState();
+    const got = j.fill;
+    SAVE.treats += got;
+    j.fill = 0;
+    j.opened = (j.opened || 0) + 1;
+    persist(true);
+    return got;
+  }
+  if (kind === 'club') {
+    SAVE.club = { since: now(), until: now() + 30 * DAY, lastPaid: 0 };
+    persist(true);
+    return 1;
+  }
+  return 0;
+}
+
+/* Whether the club is live right now. The date is the store's business
+   once this is real; until then this is what the rest of the game asks. */
+function clubActive() {
+  return !!(SAVE.club && SAVE.club.until > now());
+}
+/* the club's daily treats, handed over on the first look of each day */
+function clubTick() {
+  if (!clubActive()) return 0;
+  const today = dayStamp(now());
+  if (SAVE.club.lastPaid === today) return 0;
+  SAVE.club.lastPaid = today;
+  SAVE.treats += PET_CLUB.dailyTreats;
+  persist(true);
+  return PET_CLUB.dailyTreats;
+}
+
 /* ---------- the daily walk ---------- */
 function dailyState() {
   const today = dayNumber();
@@ -4138,10 +4461,15 @@ function dailyDone(score) {
   if (!d.done) {
     d.done = true;
     d.streak = (d.streak || 0) + 1;
-    SAVE.coins += 120;
-    SAVE.treats += 2;
+    /* The walk paid 120 coins and 2 treats a day, forever, for four
+       minutes of play. Over a month that alone is 3,600 coins and 60
+       treats — most of a treat balance that nothing was asking for.
+       It is still the best-paid four minutes in the game; it is no
+       longer a salary. */
+    SAVE.coins += ECON.dailyWalkCoins;
+    SAVE.treats += ECON.dailyWalkTreats;
     persist(true);
-    return { coins: 120, treats: 2, first: true };
+    return { coins: ECON.dailyWalkCoins, treats: ECON.dailyWalkTreats, first: true };
   }
   persist(true);
   return { first: false };
@@ -4156,12 +4484,12 @@ function giftReady() { return dayStamp(now()) !== dayStamp(SAVE.lastGift || 0); 
    nothing anywhere mentioned. The interface reads this table now, so
    what is promised and what is paid cannot drift apart. */
 function giftFor(day) {
-  const r = { coins: 40 + day * 18, treats: day % 3 === 0 ? 2 : 0, food: null, booster: null };
+  const r = { coins: 40 + day * 18, treats: ECON.giftTreats[day] || 0, food: null, booster: null };
   if (day === 2 || day === 5) r.food = 'tuna';
   if (day === 4) r.food = 'stew';
   if (day === 3) r.booster = 'hammer';
   if (day === 6) r.booster = 'shuffle';
-  if (day === 7) { r.treats = 5; r.booster = 'moves'; }
+  if (day === 7) r.booster = 'moves';
   return r;
 }
 /* which rung the basket on the step is standing on, without taking it */
@@ -4187,6 +4515,110 @@ function claimGift() {
   persist(true);
   return { reward, day };
 }
+
+/* ===== 17-billing.js ===== */
+/* ============================================================
+   17 — the till
+   ============================================================
+
+   Everything above this file is a closed economy: coins and treats come
+   from playing and go into the shop, and the two columns balance because
+   test/economy.js makes them. This is the one seam where value enters
+   from outside, and it is deliberately the only one.
+
+   No advertising. Nothing here interrupts a level, nothing plays a
+   video, nothing is sold to a player who is not already asking for it.
+   Every surface in this file is opened by the player: the treat chip in
+   the header, or the two moments — out of moves near the end, out of
+   hearts — where the game has something the player wanted and could not
+   have. That is the whole of it.
+
+   Nothing here can take money yet, and it says so rather than pretending
+   otherwise. A store needs a merchant account, products declared in the
+   Play Console, and a receipt somebody trusts; none of those exist. What
+   exists is the shape of it, so that wiring a billing plugin is a change
+   to one function rather than to the game.
+*/
+
+/* ---------- the seam ----------
+
+   One object, four questions, and exactly one place that would have to
+   change to make this real. `ready` is what the interface asks before it
+   offers anything: false means the buttons are shown but explain
+   themselves instead of lying.
+
+   A Capacitor billing plugin — @capacitor-community/in-app-purchases, or
+   RevenueCat's, they present the same three calls — would be picked up
+   here by name. Until one is installed this stays honest. */
+const BILLING = {
+  plugin: null,
+  prices: {},              // sku -> localized price string, once a store answers
+
+  /* Whether money can actually change hands in this build. Checked at
+     call time rather than cached at load: the plugin arrives with the
+     native bridge, which is not up yet when this file is read. */
+  ready() {
+    if (this.plugin) return true;
+    const P = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || null;
+    if (!P) return false;
+    this.plugin = P.InAppPurchases || P.Purchases || P.CdvPurchase || null;
+    return !!this.plugin;
+  },
+
+  /* the price to put on a button: whatever the store said, or the
+     fallback label, which is marked as approximate wherever it shows */
+  price(sku, fallback) {
+    return this.prices[sku] || fallback;
+  },
+
+  /* Ask the store what these cost where the player is. Safe to call when
+     no store exists — it resolves having done nothing. */
+  async refresh() {
+    if (!this.ready()) return false;
+    try {
+      const skus = TREAT_PACKS.map(p => p.sku).concat([PET_CLUB.sku, JAR.sku]);
+      const r = await this.plugin.getProducts({ productIdentifiers: skus, productIds: skus });
+      const list = (r && (r.products || r.productList)) || [];
+      list.forEach(p => {
+        const id = p.productId || p.identifier || p.id;
+        const shown = p.priceString || p.localizedPrice || p.price;
+        if (id && shown) this.prices[id] = String(shown);
+      });
+      return true;
+    } catch (e) { return false; }
+  },
+
+  /* The purchase itself.
+
+     Resolves { ok: true } only when a store has said so. Everything else
+     — no plugin, a cancelled sheet, a network that went away — comes
+     back { ok: false, why } and the caller grants nothing. There is no
+     branch in here that credits an account without a receipt, in any
+     build, including this one: a stub that pays out is a stub somebody
+     ships by accident. */
+  async buy(sku) {
+    if (!this.ready()) return { ok: false, why: 'nostore' };
+    try {
+      const r = await this.plugin.purchase({ productIdentifier: sku, productId: sku });
+      if (!r || r.cancelled || r.responseCode === 1) return { ok: false, why: 'cancelled' };
+      /* A receipt is checked by whoever issued it. Locally that means
+         the plugin's own verification and nothing more, which is enough
+         for a single-player game with no leaderboard — the only person
+         a forged receipt cheats is the person holding the phone. It is
+         not enough the day this game keeps anything on a server, and
+         that is the day this call grows a second half. */
+      return { ok: true, receipt: r };
+    } catch (e) {
+      return { ok: false, why: 'failed' };
+    }
+  },
+
+  async restore() {
+    if (!this.ready()) return { ok: false, why: 'nostore' };
+    try { await this.plugin.restorePurchases(); return { ok: true }; }
+    catch (e) { return { ok: false, why: 'failed' }; }
+  }
+};
 
 /* ===== 20-audio.js ===== */
 /* ============================================================
@@ -4522,15 +4954,32 @@ function musicDuck(amount, time) {
 const SFX = {
 
   /* ---- interface ---- */
+  /* The interface used to be made of different material from the board.
+
+     Rendered offline and measured, tap was 0.0005 rms against a tile
+     pop's 0.003 and a win's 0.029 — six times under the quietest thing
+     the game does on purpose — 47ms long against the pop's 387, and
+     half again as bright. A click and a blip, which is what a phone
+     keypad is made of. And it is not a minor voice: tap is called
+     twenty-one times in 60-ui.js and select twice, so almost every
+     sound a player hears while moving around the game was that one.
+
+     They are mallets now, the same voice the board clears tiles with,
+     and they sit on the same pentatonic PENT that pop and combo use
+     rather than on the arbitrary 620 and 520 they had. Moving through
+     the game is consonant with playing it, and choosing something
+     rises: tap sits on E, select a fifth above it on G. The tick sits
+     higher than either, small and quick, because it marks a thumb
+     passing rather than answers a decision. */
   tap() {
-    click(6000, .05);
-    tone({ f: 620, f2: 780, dur: .07, type: 'triangle', gain: .075, send: .1 });
+    mallet(semi(PENT[7]), { gain: .085, dur: .17, send: .10,
+      partials: [[1, 1, 1], [3.94, .16, .40]] });
+    click(5200, .028);
   },
   select() {
-    click(5600, .06);
-    tone({ f: 520, f2: 700, dur: .1, type: 'triangle', gain: .105, send: .14 });
-    noiseBurst({ fc: 3400, dur: .04, gain: .038, q: 2 });
-    thump(150, .045, .07);
+    mallet(semi(PENT[8]), { gain: .105, dur: .24, send: .15 });
+    noiseBurst({ fc: 3400, dur: .04, gain: .03, q: 2 });
+    thump(150, .04, .07);
   },
   bad() {
     tone({ f: 200, f2: 140, dur: .16, type: 'sawtooth', gain: .09, filter: 'lowpass', fc: 700 });
@@ -4541,7 +4990,15 @@ const SFX = {
     noiseBurst({ fc: 1200, fc2: 2600, dur: .1, gain: .038, q: .8 });
     thump(120, .05, .08);
   },
-  uiTick() { click(7200, .035); tone({ f: 900, dur: .035, type: 'square', gain: .04 }); },
+  /* The lightest of the three, for a control a thumb runs along rather
+     than presses once — the shop's five category tabs, which used to
+     fire the full tap each time. It was also dead: nothing called it,
+     and at a 0.009 peak it was under the 0.012 the suite calls
+     inaudible, so it could not have been heard if anything had. It is
+     in the suite's list now. */
+  uiTick() {
+    mallet(semi(PENT[9]), { gain: .075, dur: .11, send: .05, partials: [[1, 1, 1]] });
+  },
 
   /* ---- the board ----
      `chain` is the cascade depth, `i` the index inside one clear,
@@ -4980,26 +5437,70 @@ function drawPip(c, kind, x, y, r, col) {
 }
 
 /* ---------------- ears ---------------- */
-function drawEars(c, spec, s, back) {
+/* What the ears are doing.
+
+   An animal's ears are the loudest thing on its face and these were
+   welded on: the same angle whether the pet was delighted or asleep.
+   The room already knows the mood — it picks idle behaviour and thought
+   bubbles from it — so it costs nothing to say it here too.
+
+   `rot` turns the ear about its base, positive being outward and down.
+   `droop` shortens it, which is what a tired ear does. `out` slides it
+   off the skull a little for the alert poses. */
+/* how wide the pupil opens, by mood */
+const PUPIL_DILATE = {
+  happy: 1.16, content: 1, hungry: 1.12, lonely: .94,
+  dirty: .95, bored: .86, tired: .80, sleeping: .78
+};
+
+const EAR_POSE = {
+  happy:    { rot: -.13, out: .020, droop: -.04 },
+  content:  { rot: 0, out: 0, droop: 0 },
+  hungry:   { rot: -.08, out: .026, droop: 0 },
+  lonely:   { rot: .17, out: -.010, droop: .10 },
+  dirty:    { rot: .11, out: 0, droop: .07 },
+  bored:    { rot: .21, out: .008, droop: .14 },
+  tired:    { rot: .32, out: .018, droop: .22 },
+  sleeping: { rot: .36, out: .022, droop: .26 }
+};
+
+function drawEars(c, spec, s, back, o) {
   const b = spec.breed, fur = spec.fur, fur2 = spec.fur2, inner = spec.inner || '#E8A0A8';
   const k = b.ear;
   if (back && (k === 'droop' || k === 'flop' || k === 'button')) return;   // drawn in front
   if (!back && !(k === 'droop' || k === 'flop' || k === 'button')) return;
 
+  const pose = EAR_POSE[(o && o.mood) || 'content'] || EAR_POSE.content;
   const ear = (sx) => {
     c.save(); c.scale(sx, 1);
+    /* turn about where the ear leaves the skull, not about the face,
+       or a tired ear slides off the head instead of folding down */
+    if (pose.rot || pose.droop || pose.out) {
+      c.translate(.22 * s + pose.out * s, -.26 * s);
+      c.rotate(pose.rot);
+      c.scale(1, 1 - pose.droop);
+      c.translate(-.22 * s, .26 * s);
+    }
     if (k === 'triangle') {
+      /* Set wide on the skull and leaning out, about a third of the
+         head tall. The old pair were small tabs perched on the crown. */
       c.fillStyle = fur;
       c.beginPath();
-      c.moveTo(.16 * s, -.30 * s);
-      c.quadraticCurveTo(.30 * s, -.72 * s, .46 * s, -.34 * s);
-      c.quadraticCurveTo(.34 * s, -.20 * s, .16 * s, -.30 * s);
+      c.moveTo(.08 * s, -.28 * s);
+      c.quadraticCurveTo(.23 * s, -.82 * s, .49 * s, -.32 * s);
+      c.quadraticCurveTo(.33 * s, -.14 * s, .08 * s, -.28 * s);
       c.fill();
-      c.fillStyle = inner;
+      /* the inside of an ear is a cone: dark where it meets the skull,
+         catching light toward the tip. Flat colour made it a sticker. */
+      const ig1 = c.createLinearGradient(.20 * s, -.24 * s, .34 * s, -.62 * s);
+      ig1.addColorStop(0, shade(inner, -.30));
+      ig1.addColorStop(.55, inner);
+      ig1.addColorStop(1, shade(inner, .22));
+      c.fillStyle = ig1;
       c.beginPath();
-      c.moveTo(.23 * s, -.32 * s);
-      c.quadraticCurveTo(.31 * s, -.58 * s, .39 * s, -.34 * s);
-      c.quadraticCurveTo(.31 * s, -.26 * s, .23 * s, -.32 * s);
+      c.moveTo(.16 * s, -.30 * s);
+      c.quadraticCurveTo(.26 * s, -.66 * s, .41 * s, -.33 * s);
+      c.quadraticCurveTo(.29 * s, -.21 * s, .16 * s, -.30 * s);
       c.fill();
     } else if (k === 'tall') {
       c.fillStyle = spec.point || fur2;
@@ -5015,10 +5516,24 @@ function drawEars(c, spec, s, back) {
       c.quadraticCurveTo(.31 * s, -.24 * s, .21 * s, -.31 * s);
       c.fill();
     } else if (k === 'round') {
+      /* Round-eared, still a cat: a broad triangle with a soft tip.
+         Two circles on a circle is a bear, which is what this was. */
       c.fillStyle = fur;
-      ellipse(c, .34 * s, -.34 * s, .16 * s, .17 * s, -.28); c.fill();
-      c.fillStyle = inner;
-      ellipse(c, .35 * s, -.33 * s, .085 * s, .095 * s, -.28); c.fill();
+      c.beginPath();
+      c.moveTo(.09 * s, -.27 * s);
+      c.quadraticCurveTo(.20 * s, -.74 * s, .46 * s, -.35 * s);
+      c.quadraticCurveTo(.32 * s, -.15 * s, .09 * s, -.27 * s);
+      c.fill();
+      const ig2 = c.createLinearGradient(.20 * s, -.24 * s, .32 * s, -.58 * s);
+      ig2.addColorStop(0, shade(inner, -.30));
+      ig2.addColorStop(.55, inner);
+      ig2.addColorStop(1, shade(inner, .22));
+      c.fillStyle = ig2;
+      c.beginPath();
+      c.moveTo(.17 * s, -.29 * s);
+      c.quadraticCurveTo(.24 * s, -.60 * s, .39 * s, -.35 * s);
+      c.quadraticCurveTo(.29 * s, -.21 * s, .17 * s, -.29 * s);
+      c.fill();
     } else if (k === 'droop') {
       c.fillStyle = fur2;
       c.beginPath();
@@ -5084,12 +5599,46 @@ function headPath(c, spec, s) {
     c.bezierCurveTo(.39 * s, .20 * s, .24 * s, .44 * s, 0, .44 * s);
     c.bezierCurveTo(-.24 * s, .44 * s, -.39 * s, .20 * s, -.40 * s, -.04 * s);
   } else {
-    c.moveTo(-.41 * s, -.08 * s);
-    c.bezierCurveTo(-.41 * s, -.34 * s, -.24 * s, -.42 * s, 0, -.42 * s);
-    c.bezierCurveTo(.24 * s, -.42 * s, .41 * s, -.34 * s, .41 * s, -.08 * s);
-    c.bezierCurveTo(.41 * s, .18 * s, .25 * s, .40 * s, 0, .40 * s);
-    c.bezierCurveTo(-.25 * s, .40 * s, -.41 * s, .18 * s, -.41 * s, -.08 * s);
+    /* A cat's head is a wedge, not a ball: the skull is moderate, the
+       cheeks are the widest part, and it tapers to a small chin. Drawn
+       as a circle with ears on top — which is what this was — it reads
+       as a bear, and the Sable read as one most of all. */
+    c.moveTo(-.43 * s, .02 * s);
+    c.bezierCurveTo(-.44 * s, -.26 * s, -.24 * s, -.42 * s, 0, -.42 * s);
+    c.bezierCurveTo(.24 * s, -.42 * s, .44 * s, -.26 * s, .43 * s, .02 * s);
+    c.bezierCurveTo(.42 * s, .22 * s, .26 * s, .36 * s, .11 * s, .42 * s);
+    c.bezierCurveTo(.04 * s, .45 * s, -.04 * s, .45 * s, -.11 * s, .42 * s);
+    c.bezierCurveTo(-.26 * s, .36 * s, -.42 * s, .22 * s, -.43 * s, .02 * s);
   }
+  c.closePath();
+}
+
+/* A tabby mark is thick where it leaves the spine and thin where it
+   ends, and it follows the curve of the skull. Stroked with a round cap
+   it is a bar with two dome ends, which is what these were: at .045 of
+   the head wide and .75 opaque they read as painted-on stripes rather
+   than fur.
+
+   This walks a quadratic spine and offsets it by a width that falls
+   from w0 to w1, so the mark tapers along its length. */
+function taperMark(c, x0, y0, cx, cy, x1, y1, w0, w1) {
+  const N = 14, L = [], R = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, u = 1 - t;
+    const px = u * u * x0 + 2 * u * t * cx + t * t * x1;
+    const py = u * u * y0 + 2 * u * t * cy + t * t * y1;
+    const tx = 2 * u * (cx - x0) + 2 * t * (x1 - cx);
+    const ty = 2 * u * (cy - y0) + 2 * t * (y1 - cy);
+    const len = Math.hypot(tx, ty) || 1;
+    const nx = -ty / len, ny = tx / len;
+    const w = (w0 + (w1 - w0) * t) * .5;
+    L.push([px + nx * w, py + ny * w]);
+    R.push([px - nx * w, py - ny * w]);
+  }
+  c.beginPath();
+  c.moveTo(L[0][0], L[0][1]);
+  for (let i = 1; i < L.length; i++) c.lineTo(L[i][0], L[i][1]);
+  for (let i = R.length - 1; i >= 0; i--) c.lineTo(R[i][0], R[i][1]);
   c.closePath();
 }
 
@@ -5098,18 +5647,23 @@ function drawMarkings(c, spec, s) {
   c.save();
   headPath(c, spec, s); c.clip();
   if (b.mark === 'tabby') {
-    c.strokeStyle = rgba(spec.fur2, .75); c.lineWidth = s * .045; c.lineCap = 'round';
-    c.beginPath();
-    c.moveTo(-.14 * s, -.40 * s); c.lineTo(-.07 * s, -.24 * s);
-    c.moveTo(0, -.44 * s); c.lineTo(0, -.26 * s);
-    c.moveTo(.14 * s, -.40 * s); c.lineTo(.07 * s, -.24 * s);
-    c.stroke();
-    c.beginPath();
-    c.moveTo(-.42 * s, -.12 * s); c.lineTo(-.26 * s, -.10 * s);
-    c.moveTo(-.42 * s, .02 * s); c.lineTo(-.28 * s, .02 * s);
-    c.moveTo(.42 * s, -.12 * s); c.lineTo(.26 * s, -.10 * s);
-    c.moveTo(.42 * s, .02 * s); c.lineTo(.28 * s, .02 * s);
-    c.stroke();
+    c.fillStyle = rgba(spec.fur2, .58);
+    /* the forehead's M, fanning out from the brow rather than three
+       parallel scratches */
+    taperMark(c, -.05 * s, -.22 * s, -.13 * s, -.34 * s, -.17 * s, -.44 * s, s * .052, s * .012);
+    c.fill();
+    taperMark(c, 0, -.24 * s, 0, -.36 * s, 0, -.47 * s, s * .050, s * .011);
+    c.fill();
+    taperMark(c, .05 * s, -.22 * s, .13 * s, -.34 * s, .17 * s, -.44 * s, s * .052, s * .012);
+    c.fill();
+    /* cheek bars, curving back with the cheek */
+    c.fillStyle = rgba(spec.fur2, .46);
+    [-1, 1].forEach(sx => {
+      taperMark(c, sx * .25 * s, -.13 * s, sx * .36 * s, -.14 * s, sx * .44 * s, -.09 * s, s * .046, s * .014);
+      c.fill();
+      taperMark(c, sx * .27 * s, .01 * s, sx * .37 * s, .02 * s, sx * .44 * s, .06 * s, s * .042, s * .013);
+      c.fill();
+    });
   } else if (b.mark === 'patch') {
     c.fillStyle = rgba(spec.fur2, .9);
     ellipse(c, -.20 * s, -.16 * s, .19 * s, .16 * s, -.2); c.fill();
@@ -5118,19 +5672,21 @@ function drawMarkings(c, spec, s) {
     c.moveTo(0, -.46 * s); c.quadraticCurveTo(.07 * s, -.14 * s, 0, .14 * s);
     c.quadraticCurveTo(-.07 * s, -.14 * s, 0, -.46 * s); c.fill();
   } else if (b.mark === 'points') {
-    const gr = c.createRadialGradient(0, .18 * s, .05 * s, 0, .18 * s, .40 * s);
+    /* the points sit on the muzzle, which moved down with the features;
+       left where it was the mask covered the eyes instead of the nose */
+    const gr = c.createRadialGradient(0, .32 * s, .05 * s, 0, .32 * s, .34 * s);
     gr.addColorStop(0, rgba(spec.fur2, .92));
     gr.addColorStop(.62, rgba(spec.fur2, .42));
     gr.addColorStop(1, rgba(spec.fur2, 0));
     c.fillStyle = gr;
-    ellipse(c, 0, .12 * s, .40 * s, .36 * s); c.fill();
+    ellipse(c, 0, .30 * s, .34 * s, .28 * s); c.fill();
   } else if (b.mark === 'mask') {
-    const gr = c.createRadialGradient(0, .12 * s, .04 * s, 0, .12 * s, .40 * s);
+    const gr = c.createRadialGradient(0, .26 * s, .04 * s, 0, .26 * s, .36 * s);
     gr.addColorStop(0, rgba(spec.fur2, .95));
     gr.addColorStop(.55, rgba(spec.fur2, .78));
     gr.addColorStop(1, rgba(spec.fur2, 0));
     c.fillStyle = gr;
-    ellipse(c, 0, .10 * s, .34 * s, .32 * s); c.fill();
+    ellipse(c, 0, .24 * s, .32 * s, .28 * s); c.fill();
     c.strokeStyle = rgba(spec.fur2, .5); c.lineWidth = s * .035; c.lineCap = 'round';
     c.beginPath();
     c.moveTo(-.17 * s, -.24 * s); c.quadraticCurveTo(0, -.34 * s, .17 * s, -.24 * s);
@@ -5186,12 +5742,22 @@ function featureInk(spec) { return darkCoat(spec) ? '#E4D8C8' : '#2A2118'; }
    same animal. The eye is the first thing anyone reads, so each breed
    gets its own: size, slant, lid, and whether it has brows at all. */
 const FACE_LOOK = {
-  marmalade: { r: .094, x: .172, y: -.05, tilt: -.13, almond: true, lid: .55, brow: 0 },
-  beagle: { r: .100, x: .178, y: -.045, tilt: .10, almond: false, lid: .35, brow: .8 },
-  void: { r: .118, x: .180, y: -.05, tilt: 0, almond: false, lid: .18, brow: 0 },
-  retriever: { r: .090, x: .172, y: -.055, tilt: .07, almond: false, lid: .62, brow: 0 },
-  siamese: { r: .097, x: .178, y: -.048, tilt: -.24, almond: true, lid: .48, brow: 0 },
-  pug: { r: .122, x: .196, y: -.068, tilt: 0, almond: false, lid: .12, brow: .7 }
+  /* Baby schema, which is the whole of what makes a drawn animal read
+     as cute and is not a matter of taste: a large cranium, eyes that
+     are big and sit at or below the middle of the face, and a nose and
+     mouth clustered low and small. These eyes were .09 to .12 of the
+     head and sat above the midline — the proportions of an adult
+     animal, which is why the faces were merely tidy.
+
+     Doubling them is most of the difference. `x` has to open up with
+     `r` or they meet in the middle, and `y` goes positive: below
+     centre, with forehead above. */
+  marmalade: { r: .156, x: .190, y: .045, tilt: -.09, almond: true, lid: .34, brow: 0 },
+  beagle: { r: .158, x: .186, y: .030, tilt: .06, almond: false, lid: .20, brow: .8 },
+  void: { r: .164, x: .194, y: .040, tilt: 0, almond: false, lid: .10, brow: 0 },
+  retriever: { r: .154, x: .182, y: .022, tilt: .05, almond: false, lid: .34, brow: 0 },
+  siamese: { r: .154, x: .188, y: .046, tilt: -.16, almond: true, lid: .28, brow: 0 },
+  pug: { r: .170, x: .198, y: .012, tilt: 0, almond: false, lid: .06, brow: .7 }
 };
 function lookOf(spec) { return FACE_LOOK[spec.breed.id] || FACE_LOOK.marmalade; }
 
@@ -5238,23 +5804,55 @@ function drawEye(c, x, y, r, spec, o, side) {
   eyePath(c, rx, ry, look.almond); c.fill();
 
   /* iris — lifted on a dark coat so it parts from both fur and pupil */
+  /* A brown-eyed dog has an iris near black, and against a pupil that
+     is now half the eye it merges into one hole — the Pug went from
+     eyes to voids. Anything this dark gets lifted until there is an
+     iris to see. */
+  let iris = dk ? shade(spec.eyes, .34) : spec.eyes;
+  const irgb = hex2rgb(iris);
+  const ilum = (irgb[0] * .299 + irgb[1] * .587 + irgb[2] * .114) / 255;
+  if (ilum < .30) iris = shade(iris, .30 + (.30 - ilum) * 1.5);
   const ig = c.createRadialGradient(dx, dy - ry * .2, rx * .1, dx, dy, rx * .95);
-  const iris = dk ? shade(spec.eyes, .34) : spec.eyes;
-  ig.addColorStop(0, shade(iris, .3));
+  ig.addColorStop(0, shade(iris, .34));
   ig.addColorStop(.62, iris);
-  ig.addColorStop(1, shade(iris, -.3));
+  ig.addColorStop(1, shade(iris, -.34));
   c.fillStyle = ig;
+  ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
+  /* An eye is a wet ball under a lid, and two things say so: the lid
+     drops a shadow across the top of the iris, and light bounces back
+     off the bottom of it. Without them the iris is a flat disc, which
+     is what these were — a green circle with a black dot on it. */
+  const shadeTop = c.createLinearGradient(0, dy - ry * .9, 0, dy + ry * .15);
+  shadeTop.addColorStop(0, rgba('#100C16', .55));
+  shadeTop.addColorStop(1, rgba('#100C16', 0));
+  c.fillStyle = shadeTop;
+  ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
+  const bounce = c.createLinearGradient(0, dy + ry * .25, 0, dy + ry * .9);
+  bounce.addColorStop(0, rgba(shade(iris, .55), 0));
+  bounce.addColorStop(1, rgba(shade(iris, .55), .75));
+  c.fillStyle = bounce;
   ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
 
   /* pupil — a slit for cats, round for dogs */
+  /* A thin slit is an alert predator. Cute is a big soft pupil that
+     fills the eye — every cat anyone has ever put on a T-shirt has one.
+     The cat keeps a taller-than-wide shape so it is still a cat's eye,
+     but it is wide enough to read as pupil rather than as a knife. */
+  /* A pupil is not a fixed hole. It opens when an animal is pleased or
+     wants something and closes when it is bored or half asleep, and it
+     is the cheapest expression in the whole face — nothing else here
+     moves and the pet still looks like it is feeling something. */
+  const dil = PUPIL_DILATE[(o && o.mood) || 'content'] || 1;
   c.fillStyle = '#17141B';
-  if (spec.breed.species === 'cat') ellipse(c, dx, dy, rx * .26, ry * .68);
-  else ellipse(c, dx, dy, rx * .46, ry * .48);
+  if (spec.breed.species === 'cat') ellipse(c, dx, dy, rx * .50 * dil, ry * .70 * dil);
+  else ellipse(c, dx, dy, rx * .54 * dil, ry * .56 * dil);
   c.fill();
 
   /* the lid: what stops an eye looking like a bead */
   if (look.lid > .02) {
-    c.fillStyle = rgba(shade(spec.fur2, -.15), .55 * look.lid + .2);
+    /* a shadow, not a swatch of coat: at half-opaque fur colour this
+       read as a brown smear sitting on the eye */
+    c.fillStyle = rgba('#1A1420', .30 * look.lid + .12);
     c.beginPath();
     c.moveTo(-rx * 1.1, -ry * 1.1);
     c.lineTo(rx * 1.1, -ry * 1.1);
@@ -5265,15 +5863,22 @@ function drawEye(c, x, y, r, spec, o, side) {
   }
 
   /* highlights */
-  c.fillStyle = rgba('#FFFFFF', .92);
-  ellipse(c, -rx * .3 + dx, -ry * .34 + dy, rx * .27, ry * .25); c.fill();
-  c.fillStyle = rgba('#FFFFFF', .5);
-  ellipse(c, rx * .28 + dx, ry * .32 + dy, rx * .13, ry * .12); c.fill();
+  /* A hard white ellipse is a sticker. A reflection has a core and a
+     falloff, and a second, smaller one opposite it. */
+  const hx = -rx * .34 + dx, hy = -ry * .40 + dy, hr = rx * .34;
+  const hg = c.createRadialGradient(hx, hy, hr * .12, hx, hy, hr);
+  hg.addColorStop(0, rgba('#FFFFFF', .95));
+  hg.addColorStop(.55, rgba('#FFFFFF', .62));
+  hg.addColorStop(1, rgba('#FFFFFF', 0));
+  c.fillStyle = hg;
+  ellipse(c, hx, hy, hr, hr * .92); c.fill();
+  c.fillStyle = rgba('#FFFFFF', .40);
+  ellipse(c, rx * .30 + dx, ry * .34 + dy, rx * .10, ry * .09); c.fill();
   c.restore();
 
   /* the rim of the eye */
-  c.strokeStyle = dk ? rgba('#FFFFFF', .26) : rgba('#2A2118', .30);
-  c.lineWidth = r * .1;
+  c.strokeStyle = dk ? rgba('#FFFFFF', .20) : rgba('#2A2118', .22);
+  c.lineWidth = r * .038;
   eyePath(c, rx, ry, look.almond); c.stroke();
   c.restore();
 }
@@ -5292,29 +5897,63 @@ function drawBrows(c, spec, s) {
 
 function drawNoseMouth(c, spec, s, o) {
   const f = spec.breed.face, cat = spec.breed.species === 'cat';
-  const ny = f === 'dog' ? .17 * s : f === 'flat' ? .10 * s : .11 * s;
-  const nw = f === 'dog' ? .085 * s : f === 'flat' ? .11 * s : .075 * s;
+  /* under the eyes, not beside them: with the eyes doubled the muzzle
+     has to drop or the face has no forehead and no chin, just features */
+  const ny = f === 'dog' ? .30 * s : f === 'flat' ? .26 * s : .27 * s;
+  const nw = f === 'dog' ? .075 * s : f === 'flat' ? .095 * s : .064 * s;
 
   /* muzzle patch */
   if (f !== 'cat' || spec.breed.mark === 'points') {
     c.fillStyle = rgba(spec.belly, f === 'flat' ? .35 : .8);
     ellipse(c, 0, ny + .04 * s, nw * 2.5, nw * 1.9); c.fill();
   }
+  /* A cat has two whisker pads with the nose sitting in the notch
+     between them. Cats were the one face that got no muzzle at all —
+     the test above excludes them — so the nose floated on a flat plane
+     and the whiskers came out of nowhere. That, more than anything
+     else, is what stopped them reading as cats.
+
+     Lightened fur rather than the belly colour, because a dark coat's
+     belly is dark too and the pads have to catch light on Sable. */
+  if (cat) {
+    const pw = nw * 1.95, ph = nw * 1.45, py = ny + nw * .95;
+    c.save();
+    c.fillStyle = rgba('#000000', .07);
+    ellipse(c, 0, py + nw * .30, pw * 1.9, ph * 1.15); c.fill();
+    /* a dark coat needs a gentler lift or the pads become a pale mask */
+    c.fillStyle = rgba(mix(spec.fur, '#FFFFFF', darkCoat(spec) ? .16 : .30),
+      darkCoat(spec) ? .55 : .85);
+    ellipse(c, -pw * .60, py, pw, ph); c.fill();
+    ellipse(c, pw * .60, py, pw, ph); c.fill();
+    c.restore();
+  }
   /* nose */
-  c.fillStyle = cat ? (spec.nose || '#E08A96')
+  const noseBase = cat ? (spec.nose || '#E08A96')
     : darkCoat(spec) ? mix('#33292A', '#B6A79E', .6) : '#33292A';
+  /* a nose is a small wet wedge, not a flat swatch */
+  const ng = c.createLinearGradient(0, ny - nw, 0, ny + nw);
+  ng.addColorStop(0, shade(noseBase, .26));
+  ng.addColorStop(.6, noseBase);
+  ng.addColorStop(1, shade(noseBase, -.24));
+  c.fillStyle = ng;
   c.beginPath();
   c.moveTo(-nw, ny - nw * .5);
   c.quadraticCurveTo(0, ny - nw * .85, nw, ny - nw * .5);
   c.quadraticCurveTo(nw * .75, ny + nw * .75, 0, ny + nw * .95);
   c.quadraticCurveTo(-nw * .75, ny + nw * .75, -nw, ny - nw * .5);
   c.fill();
-  c.fillStyle = rgba('#FFFFFF', .3);
-  ellipse(c, -nw * .3, ny - nw * .28, nw * .3, nw * .2, -.3); c.fill();
+  const nhx = -nw * .28, nhy = ny - nw * .30;
+  const nh = c.createRadialGradient(nhx, nhy, nw * .04, nhx, nhy, nw * .38);
+  nh.addColorStop(0, rgba('#FFFFFF', .62));
+  nh.addColorStop(1, rgba('#FFFFFF', 0));
+  c.fillStyle = nh;
+  ellipse(c, nhx, nhy, nw * .38, nw * .26, -.3); c.fill();
 
   /* mouth */
-  c.strokeStyle = rgba(featureInk(spec), darkCoat(spec) ? .55 : .7);
-  c.lineWidth = s * .034; c.lineCap = 'round';
+  /* the smile was s*.034 at .7 — a thick dark squiggle against a face
+     whose other lines are half that. */
+  c.strokeStyle = rgba(featureInk(spec), darkCoat(spec) ? .42 : .52);
+  c.lineWidth = s * .024; c.lineCap = 'round';
   const my = ny + nw * .95;
   if (o.mouth === 'open') {
     c.fillStyle = '#8C3B4A';
@@ -5349,23 +5988,41 @@ function drawNoseMouth(c, spec, s, o) {
   }
   /* whiskers */
   if (cat) {
-    c.strokeStyle = rgba(PAL.dark ? '#FFFFFF' : '#3A2E22', .32);
-    c.lineWidth = s * .018;
+    /* A whisker is thick at the pad and comes to a point, and it droops.
+       Stroked at an even width these were three grey wires the length of
+       the head — the most machine-looking thing on the face. */
+    const wc = PAL.dark ? '#FFFFFF' : '#3A2E22';
     [-1, 1].forEach(sx => {
       c.save(); c.scale(sx, 1);
-      c.beginPath();
-      c.moveTo(.11 * s, ny + .02 * s); c.quadraticCurveTo(.30 * s, ny - .04 * s, .43 * s, ny - .09 * s);
-      c.moveTo(.11 * s, ny + .06 * s); c.quadraticCurveTo(.31 * s, ny + .06 * s, .45 * s, ny + .05 * s);
-      c.stroke();
+      c.fillStyle = rgba(wc, .30);
+      taperMark(c, .16 * s, ny + .02 * s, .31 * s, ny - .07 * s, .45 * s, ny - .12 * s, s * .020, s * .002);
+      c.fill();
+      c.fillStyle = rgba(wc, .26);
+      taperMark(c, .15 * s, ny + .07 * s, .31 * s, ny + .05 * s, .46 * s, ny + .04 * s, s * .019, s * .002);
+      c.fill();
+      c.fillStyle = rgba(wc, .20);
+      taperMark(c, .14 * s, ny + .10 * s, .29 * s, ny + .15 * s, .41 * s, ny + .19 * s, s * .016, s * .002);
+      c.fill();
       c.restore();
     });
   }
 }
 
-function drawBlush(c, spec, s) {
-  c.fillStyle = rgba('#E88494', PAL.dark ? .26 : .3);
-  ellipse(c, -.27 * s, .12 * s, .10 * s, .062 * s); c.fill();
-  ellipse(c, .27 * s, .12 * s, .10 * s, .062 * s); c.fill();
+/* Colour in the cheeks, by how it feels. A flat blush on a miserable
+   animal is the same mistake as a fixed ear: the face wearing an
+   expression it does not have. */
+const BLUSH_BY_MOOD = {
+  happy: 1.35, content: 1, hungry: .85, lonely: .55,
+  dirty: .55, bored: .5, tired: .4, sleeping: .7
+};
+function drawBlush(c, spec, s, o) {
+  const k = BLUSH_BY_MOOD[(o && o.mood) || 'content'];
+  const a = (PAL.dark ? .26 : .3) * (k === undefined ? 1 : k);
+  if (a < .02) return;
+  const w = .10 * s * (k > 1 ? 1.12 : 1);
+  c.fillStyle = rgba('#E88494', a);
+  ellipse(c, -.27 * s, .12 * s, w, .062 * s); c.fill();
+  ellipse(c, .27 * s, .12 * s, w, .062 * s); c.fill();
 }
 
 /* ---------------- hats ---------------- */
@@ -5470,7 +6127,7 @@ function drawFace(c, spec, s, o) {
   o = o || {};
   c.save();
   if (o.squash) c.scale(1 + o.squash, 1 - o.squash);
-  drawEars(c, spec, s, true);
+  drawEars(c, spec, s, true, o);
   /* head */
   const gr = c.createLinearGradient(0, -.45 * s, 0, .45 * s);
   gr.addColorStop(0, shade(spec.fur, .13));
@@ -5479,6 +6136,25 @@ function drawFace(c, spec, s, o) {
   c.fillStyle = gr;
   headPath(c, spec, s); c.fill();
   drawMarkings(c, spec, s);
+  /* Form. The head was filled with one linear gradient running top to
+     bottom, which is a flat disc with a lighter half — a balloon. A key
+     light from the upper left and an occlusion under the jaw give it a
+     front and a back, and the markings sit under both because pigment
+     is under light, not over it. */
+  c.save();
+  headPath(c, spec, s); c.clip();
+  const key = c.createRadialGradient(-.16 * s, -.24 * s, s * .04, -.10 * s, -.14 * s, s * .74);
+  key.addColorStop(0, rgba('#FFFFFF', .30));
+  key.addColorStop(.5, rgba('#FFFFFF', .10));
+  key.addColorStop(1, rgba('#FFFFFF', 0));
+  c.fillStyle = key;
+  headPath(c, spec, s); c.fill();
+  const jaw = c.createLinearGradient(0, .06 * s, 0, .46 * s);
+  jaw.addColorStop(0, rgba('#2A1E12', 0));
+  jaw.addColorStop(1, rgba('#2A1E12', .20));
+  c.fillStyle = jaw;
+  headPath(c, spec, s); c.fill();
+  c.restore();
   /* rim light */
   c.save();
   headPath(c, spec, s); c.clip();
@@ -5486,13 +6162,23 @@ function drawFace(c, spec, s, o) {
   headPath(c, spec, s * .995); c.stroke();
   c.restore();
 
-  drawBlush(c, spec, s);
+  /* fur along the jaw, so the head has an edge made of hair rather than
+     a bezier. The body already had this; the head was a smooth outline. */
+  c.save();
+  headPath(c, spec, s); c.clip();
+  furEdge(c, 0, .02 * s, .43 * s, .43 * s, Math.PI * .18, Math.PI * .82, 11, s * .030,
+    rgba(shade(spec.fur, -.12), .5));
+  furEdge(c, 0, .02 * s, .43 * s, .43 * s, Math.PI * 1.16, Math.PI * 1.84, 9, s * .026,
+    rgba(shade(spec.fur, .16), .45));
+  c.restore();
+
+  drawBlush(c, spec, s, o);
   const look = lookOf(spec);
   drawBrows(c, spec, s);
   drawEye(c, -look.x * s, look.y * s, look.r * s, spec, o, -1);
   drawEye(c, look.x * s, look.y * s, look.r * s, spec, o, 1);
   drawNoseMouth(c, spec, s, o);
-  drawEars(c, spec, s, false);
+  drawEars(c, spec, s, false, o);
   if (spec.hat) drawHat(c, spec.hat, spec, s);
   c.restore();
 }
@@ -5627,11 +6313,18 @@ function drawBody(c, spec, s, o) {
   ellipse(c, -.30 * s, .74 * s, .17 * s, .19 * s, .18); c.fill();
 
   /* ---- body mass ---- */
+  /* A seated animal is narrow at the shoulder and widest at the haunch.
+     This was a symmetric bell — the same curve up and down, widest
+     halfway — which is why the room pet read as a mound with a head on
+     it. The shoulders come in and the widest point drops; a cat carries
+     it a little narrower than a dog. */
+  const shoulder = cat ? .235 : .255;
+  const flank = cat ? .455 : .475;
   const bodyPath = () => {
     c.beginPath();
-    c.moveTo(-.27 * s, .30 * s + lift);
-    c.bezierCurveTo(-.46 * s, .48 * s, -.47 * s, .90 * s, 0, .90 * s);
-    c.bezierCurveTo(.47 * s, .90 * s, .46 * s, .48 * s, .27 * s, .30 * s + lift);
+    c.moveTo(-shoulder * s, .30 * s + lift);
+    c.bezierCurveTo(-.42 * s, .52 * s, -flank * s, .90 * s, 0, .90 * s);
+    c.bezierCurveTo(flank * s, .90 * s, .42 * s, .52 * s, shoulder * s, .30 * s + lift);
     c.closePath();
   };
   const bodyGr = c.createLinearGradient(-.2 * s, .28 * s, .28 * s, .95 * s);
@@ -5748,9 +6441,9 @@ function drawBody(c, spec, s, o) {
 /* ---------------- tiles ---------------- */
 const SP = { NONE: 0, ROW: 1, COL: 2, BOMB: 3, RAIN: 4 };
 const spriteCache = new Map();
-function tileSprite(type, sp, px, marks, blink) {
+function tileSprite(type, sp, px, marks, blink, cheer) {
   const key = type + '|' + sp + '|' + Math.round(px) + '|' + (marks ? 1 : 0)
-    + '|' + (blink ? 'b' : '_') + '|' + (PAL.dark ? 'd' : 'l')
+    + '|' + (blink ? 'b' : '_') + '|' + (cheer ? 'c' : '_') + '|' + (PAL.dark ? 'd' : 'l')
     /* who is standing in the slot, and in what coat: adopting a pet or
        buying it a new coat has to reach the board */
     + '|' + (typeof CAST_SIG === 'string' ? CAST_SIG : '');
@@ -5764,7 +6457,7 @@ function tileSprite(type, sp, px, marks, blink) {
   const c = cv.getContext('2d');
   c.setTransform(dpr, 0, 0, dpr, 0, 0);
   c.translate(W / 2, W / 2);
-  paintTile(c, type, sp, px, marks, blink);
+  paintTile(c, type, sp, px, marks, blink, cheer);
   cv._pad = pad; cv._w = W;
   spriteCache.set(key, cv);
   return cv;
@@ -5808,11 +6501,13 @@ function clearSprites() {
   spriteCache.clear();
   blockerCache.clear();
   mudOverCache.clear();
-  if (typeof clearBeds === 'function') clearBeds();
-  if (typeof clearBrushes === 'function') clearBrushes();
+  /* the room and the physics keep their own caches off the same
+     palette; they say so themselves rather than being named here */
+  EV.emit('repaint');
 }
+EV.on('cast', clearSprites);
 
-function paintTile(c, type, sp, px, marks, blink) {
+function paintTile(c, type, sp, px, marks, blink, cheer) {
   /* the look belongs to whoever is standing in the slot, not to the slot */
   const breed = slotBreed(type);
   const b = BREEDS[breed];
@@ -5904,7 +6599,9 @@ function paintTile(c, type, sp, px, marks, blink) {
   const shape = tileShape(breed);
   c.save();
   c.translate(0, s * (.015 + shape.faceY));
-  drawFace(c, spec, s * .715 * shape.faceScale, { mouth: 'smile', blink: blink ? 1 : 0 });
+  /* a matched tile is having the best moment of its short life */
+  drawFace(c, spec, s * .715 * shape.faceScale,
+    { mouth: cheer ? 'open' : 'smile', blink: blink ? 1 : 0, mood: cheer ? 'happy' : 'content' });
   c.restore();
 
   /* the casing goes on last, around the outside */
@@ -7658,6 +8355,7 @@ function cellSprite(px, odd) {
   return cv;
 }
 function clearBeds() { bedCache.clear(); }
+EV.on('repaint', clearBeds);
 
 function drawCellBed(c, cx, cy, s, cell, odd) {
   if (cell && cell.hole) return;
@@ -8727,6 +9425,7 @@ function crumbBrush(col, col2) {
   return cv;
 }
 function clearBrushes() { _blobs.clear(); _streaks.clear(); _tufts.clear(); _crumbs.clear(); }
+EV.on('repaint', clearBrushes);
 
 /* ---------------- particle drawing ---------------- */
 function drawParticles(c, filterAdd) {
@@ -9734,7 +10433,23 @@ const G = {
 /* Shared by layoutBoard and the self-heal check in renderGame — if the
    two ever disagreed the board would re-layout every frame and throw the
    sprite cache away with it. */
-const BOARD_PAD = 14;
+/* The tray's inner margin.
+
+   Measured, the board is width-bound on every portrait phone and never
+   height-bound — 47dp available across against 75dp down on a Pixel 7
+   Pro — so the lane above it is not competing with it for room, and
+   shrinking that scene would buy the board nothing at all. The only
+   dimension left is this one.
+
+   It is also the width of the tray's own frame, which drawTray() drew
+   at a hardcoded 11 while this said 14 — so the frame had three pixels
+   of slack it never used. Taking the padding down to the frame's own
+   width is a free dp of tile on a big phone and one on a 320px one,
+   where a 35dp tile was the thing most likely to take the wrong swipe.
+   The two are one number now: set this below the frame width and the
+   tray gets clipped by the canvas, which is exactly what happened the
+   first time this was tried at 8. */
+const BOARD_PAD = 11;
 function boardCellFor(wrap, B) {
   if (!wrap || !B || wrap.clientWidth <= 0) return 0;
   return Math.max(22, Math.floor(Math.min(
@@ -9858,7 +10573,10 @@ function startLevel(n, opts) {
   G.spending = false;      /* nothing is mid-ability on a fresh board */
   G.n = n;
   G.epoch++;                          /* anything still running belongs to the old board */
-  G.def = levelDef(n);
+  /* the daily is a second generator with its own seed and its own
+     sizing, not a level number, so the caller picks rather than the
+     level table reaching into the save to find out how far you got */
+  G.def = n === DAILY_LEVEL ? dailyLevel(SAVE.reached) : levelDef(n);
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
   const pet = activePet();
@@ -10860,12 +11578,18 @@ async function firePetAbility() {
 }
 /* Which tile the pet is charged by and aims at on this board. The
    breed while the board deals it; the tile beside it when it does not,
-   so no ability is ever pointed at a colour that is not in play. */
-function favType() {
+   so no ability is ever pointed at a colour that is not in play.
+
+   `types` is optional because the level card has to answer this before
+   there is a board to ask. Answering it separately is exactly how the
+   card came to promise one animal and the board charge on another, so
+   there is one of these now and the card calls it. */
+function favType(types) {
   const pet = activePet();
   /* the slot the pet is standing in, not its breed index: with the cast
      putting your own first, those are no longer the same number */
-  return favTypeFor(pet ? castSlot(pet.breed) : 0, G.B ? G.B.types : 0);
+  return favTypeFor(pet ? castSlot(pet.breed) : 0,
+    types === undefined ? (G.B ? G.B.types : 0) : types);
 }
 /* "Sniffs out tiles and turns them into what you actually need."
 
@@ -11023,7 +11747,10 @@ async function finishWin() {
   }
   await wait(360);
   if (stale(_ep)) return;
-  showWin();
+  /* the board says the level was won. What that looks like is not
+     the board's business, and used to be: this called straight into
+     the results sheet in 60-ui.js. */
+  EV.emit('won');
 }
 async function finishLose() {
   const _ep = levelEpoch();
@@ -11034,7 +11761,7 @@ async function finishLose() {
   if (pet) { G.petMood = 'sad'; G.petMoodT = 3; }
   await wait(600);
   if (stale(_ep)) return;
-  showLose();
+  EV.emit('lost');
 }
 
 /* ---------------- render ---------------- */
@@ -11082,7 +11809,7 @@ function renderGame(dt) {
   c.translate(-G.cw / 2, -G.ch / 2);
 
   /* the tray the board sits in */
-  drawTray(c, G.ox, G.oy, G.boardW, G.boardH, 11);
+  drawTray(c, G.ox, G.oy, G.boardW, G.boardH, BOARD_PAD);
 
   /* cells */
   eachCell(B, (cell, r, c2) => {
@@ -11119,14 +11846,21 @@ function renderGame(dt) {
     const bob = (t.tw || t.dying) ? 0 : idleBob(t, tsec);
     const lift = picked ? .10 : 0;
     const px = G.ox + (t.x + d[0]) * G.cell + G.cell / 2;
-    const py = G.oy + (t.y + d[1] + bob - lift) * G.cell + G.cell / 2;
+    let py = G.oy + (t.y + d[1] + bob - lift) * G.cell + G.cell / 2;
     let sc = t.scale * (1 + d[2] * .25) * (picked ? 1.07 : 1);
-    let sx = 1, sy = 1;
+    let sx = 1, sy = 1, rot = 0;
     let alpha = 1;
     if (t.dying > 0) {
       const k = clamp((t.dying - (t.dieDelay || 0)), 0, 1);
       sc = t.scale * popScale(k);
       alpha = popAlpha(k);
+      /* it jumps. popScale() alone swells the tile in place, which is a
+         balloon inflating; a hop off the floor with a tilt in it is a
+         small animal being pleased with itself. Sine over the first
+         two thirds, so it is back down before it fades out. */
+      const hop = Math.sin(Math.min(1, k / .66) * Math.PI);
+      py -= hop * G.cell * .22;
+      rot = Math.sin(k * 9.2) * .10 * (1 - k);
     }
     if (t.jiggle > 0) {
       /* squash on impact, then wobble out — volume stays put, so it
@@ -11143,6 +11877,7 @@ function renderGame(dt) {
     c.save();
     c.globalAlpha = alpha;
     c.translate(px, py);
+    if (rot) c.rotate(rot);
     c.scale(sc * sx, sc * sy);
     if (t.type === PUP) {
       /* a slot, not a breed: paintPup resolves through the cast now, so
@@ -11151,8 +11886,12 @@ function renderGame(dt) {
          walking a Pug */
       paintPup(c, G.cell * .94, activePet() ? castSlot(activePet().breed) : 0);
     } else {
+      /* A tile that has just been matched grins and jumps before it
+         goes. The board was a grid of identical polite smiles clearing
+         in silence; this is the half-second where the thing you did
+         lands, and it costs one more cached sprite per breed. */
       const sp = tileSprite(t.type, t.sp, G.cell * .90, SAVE.settings.marks,
-        t.blinkT > 0 && !t.dying);
+        t.blinkT > 0 && !t.dying, t.dying > 0);
       const w = sp._w;
       c.drawImage(sp, -w / 2, -w / 2, w, w);
       if (t.dying > 0) {
@@ -11981,6 +12720,9 @@ function renderRoom(dt) {
 
     drawBody(c, spec, scale, {
       blink, mouth, headTilt: tilt * ROOM.facing,
+      /* the ears already know how it feels; so does everything else on
+         this screen, and they were the last part still deadpan */
+      mood,
       /* a moving animal breathes with its steps, a still one with the
          rig; asleep the rig already deepens it */
       breath: moving ? Math.sin(ROOM.t * 4.5) : rig.breath,
@@ -12401,6 +13143,12 @@ function drawMapNode(c, n) {
   }
   c.restore();
 }
+/* Whether the lane is the screen being looked at. It used to read
+   SCREEN, which lives in 60-ui.js — the map asking the interface where
+   the player is. It is told instead. */
+let mapShown = false;
+EV.on('screen', name => { mapShown = name === 'map'; });
+
 function bindMap() {
   const cv = $('#mapCanvas');
   const wrap = $('#mapWrap');
@@ -12408,7 +13156,7 @@ function bindMap() {
   wrap.addEventListener('scroll', () => {
     if (queued) return;
     queued = true;
-    requestAnimationFrame(() => { queued = false; if (SCREEN === 'map') drawMap(); });
+    requestAnimationFrame(() => { queued = false; if (mapShown) drawMap(); });
   }, { passive: true });
   cv.addEventListener('click', ev => {
     const rect = cv.getBoundingClientRect();
@@ -12419,7 +13167,7 @@ function bindMap() {
         audioResume();
         if (n.n > SAVE.reached) { SFX.bad(); toast(T('map_locked', { n: SAVE.reached }), 'lock'); return; }
         SFX.select();
-        openLevelIntro(n.n);
+        EV.emit('lane', n.n);
         return;
       }
     }
@@ -12478,6 +13226,7 @@ function setScreen(name) {
      it is a fall, so the ear knows which way you went */
   if (SCREEN) SFX.swish(name === 'game');
   SCREEN = name;
+  EV.emit('screen', name);
   $$('.screen').forEach(s => s.classList.toggle('on', s.id === 'scr-' + name));
   const inGame = name === 'game';
   $('#topbar').style.display = inGame ? 'none' : '';
@@ -12505,6 +13254,19 @@ function syncPurse() {
   $('#chipCoins').innerHTML = IC.coin + '<span class="num">' + fmt(SAVE.coins) + '</span>';
   $('#chipTreats').innerHTML = IC.treat + '<span class="num">' + fmt(SAVE.treats) + '</span>';
 }
+
+/* What the interface answers to.
+
+   These four used to be calls made from underneath: the board called
+   showWin(), the save called syncPurse(), the lane called
+   openLevelIntro(). Every one of them was a lower layer deciding what
+   the screen should do. They are subscriptions now, and the direction
+   of the arrow is the whole point — nothing below this file names
+   anything in it. */
+EV.on('purse', syncPurse);
+EV.on('won', showWin);
+EV.on('lost', showLose);
+EV.on('lane', openLevelIntro);
 
 /* ---------------- home ---------------- */
 function heroGift() {
@@ -12566,7 +13328,7 @@ function renderHome() {
     ${giftReady() ? heroGift() : ''}
     ${(() => {
       const d = dailyState();
-      const def = levelDef(DAILY_LEVEL);
+      const def = dailyLevel(SAVE.reached);
       return `
       <button class="card todayTile dailyCard" id="dailyCard">
         <span class="di">${IC.paw}</span>
@@ -12921,14 +13683,25 @@ function paintArtCanvases(root) {
     const c = fitCanvas(cv, px, px);
     drawFurniturePreview(c, cv.dataset.room, px);
   });
-  $$('canvas[data-hat]', root).forEach(cv => {
+  /* A hat or collar canvas is a *preview*: the active pet wearing the
+     thing, so you can see it before you buy it. A canvas that already
+     says which body to draw is not one of those — and the family list's
+     rows carry all three attributes, because a row states the pet's
+     breed and also what it is wearing.
+
+     Without :not([data-body]) those rows match here too, and each one
+     is painted three times: once as itself, then twice more as the
+     active pet. The last write won, so every pet in the family list was
+     drawn as whichever pet was on the board. Two canvases, byte for
+     byte identical, with the right breed in their own data attributes. */
+  $$('canvas[data-hat]:not([data-body])', root).forEach(cv => {
     const px = askSize(cv, 54);
     const c = fitCanvas(cv, px, px);
     c.translate(px / 2, px * .62);
     const pet = activePet();
     drawFace(c, Object.assign(specOfPet(pet), { hat: cv.dataset.hat, collar: 'none' }), px * .34, { mouth: 'smile' });
   });
-  $$('canvas[data-collar]', root).forEach(cv => {
+  $$('canvas[data-collar]:not([data-body])', root).forEach(cv => {
     const px = askSize(cv, 54);
     const c = fitCanvas(cv, px, px);
     c.translate(px / 2, px * .18);
@@ -13030,7 +13803,7 @@ function renderShop() {
       <div class="eyebrow" style="margin-bottom:6px">${T('shop_treats_t')}</div>
       <div style="font-size:var(--t-small);color:var(--text-faint);line-height:1.5">${T('shop_treats_s')}</div>
     </div>`;
-  $$('.tabs button', pad).forEach(b => b.addEventListener('click', () => { SFX.tap(); SHOP_TAB = b.dataset.t; renderShop(); }));
+  $$('.tabs button', pad).forEach(b => b.addEventListener('click', () => { SFX.uiTick(); SHOP_TAB = b.dataset.t; renderShop(); }));
   paintArtCanvases(pad);
   $$('[data-buy]', pad).forEach(b => b.addEventListener('click', () => buyThing(b.dataset.buy, b.dataset.kind)));
   $$('[data-equip]', pad).forEach(b => b.addEventListener('click', () => equipThing(b.dataset.equip, b.dataset.kind)));
@@ -13437,15 +14210,7 @@ function openLevelIntro(n) {
 
   /* every fifth level pays treats the first time, and used to do it
      without warning anyone it was going to */
-  /* Treats are paid at the gates now, not every fifth level.
-
-     Modelled over ninety days, treats arrived about five a day and were
-     spent about never: four hundred of them piled up, which makes a
-     three-star clear pay in a currency the player has stopped counting.
-     Halving the faucet is most of the fix, and paying it at the gate is
-     the half that is also better design — the gate is the level somebody
-     remembers, and it should be the level that pays. */
-  const firstTreats = (n !== DAILY_LEVEL && isGate(n) && !SAVE.stars[n]) ? 2 : 0;
+  const firstTreats = (n !== DAILY_LEVEL && n % 5 === 0 && !SAVE.stars[n]) ? ECON.everyFifthTreats : 0;
 
   const m = modal(`
     <div class="eyebrow">${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
@@ -13470,8 +14235,8 @@ function openLevelIntro(n) {
         : (LANG === 'tr' ? 'Bakımı desteği açar' : 'Care unlocks perks')}</span>
     </div>
     <div class="goalItem">
-      <canvas data-tile="${favTypeFor(pet.breed, def.types)}" width="34" height="34"></canvas>
-      <span class="t"><b>${T('lvl_charges')}</b>${breedName(favTypeFor(pet.breed, def.types))}</span>
+      <canvas data-tile="${favType(def.types)}" width="34" height="34"></canvas>
+      <span class="t"><b>${T('lvl_charges')}</b>${castName(favType(def.types))}</span>
     </div>` : ''}
     <div class="eyebrow">${T('lvl_boosters')}</div>
     <button class="goalItem" id="pickMoves" style="width:100%">
@@ -13510,6 +14275,110 @@ function openLevelIntro(n) {
     maybeTutorial(def);
   });
 }
+/* The one place money is asked for.
+
+   Opened three ways and no others: the treat chip in the header, and the
+   two moments the player has just been told no — out of moves near the
+   end of a level, out of hearts. `why` is which of those it was, and it
+   puts a line at the top saying what the treats would have done, because
+   a store that opens without saying why it opened is an interruption.
+
+   Nothing in here can charge anything yet. When BILLING is not ready the
+   prices still show — they are what the thing will cost — and the button
+   says the shop is shut instead of pretending to take a card. */
+function treatStore(why) {
+  const live = BILLING.ready();
+  const j = jarState();
+  const reason = why === 'continue' ? T('store_why_continue')
+    : why === 'hearts' ? T('store_why_hearts') : '';
+  const tag = (sku, usd) => {
+    const p = BILLING.price(sku, null);
+    return p ? p : `<span style="opacity:.75">${T('store_about', { p: usd })}</span>`;
+  };
+  const row = (id, kind, title, sub, btn, on) => `
+    <div class="offer"${on ? ' style="opacity:.6"' : ''}>
+      <span class="ot"><b>${title}</b><small>${sub}</small></span>
+      ${on ? `<span class="btn sm" style="pointer-events:none">${IC.check}</span>`
+      : `<button class="btn sm" data-pay="${id}" data-kind="${kind}">${btn}</button>`}
+    </div>`;
+
+  const m = modal(`
+    <span style="color:var(--plum);width:48px;height:48px;align-self:center">${IC.treat}</span>
+    <h2>${T('store_t')}</h2>
+    ${reason ? `<p><b style="color:var(--accent-strong)">${reason}</b></p>` : ''}
+    <p style="color:var(--text-dim)">${T('store_s')}</p>
+
+    ${!j.fill ? '' : jarFull()
+      ? row('jar', 'jar', T('store_jar_t'), T('store_jar_full', { n: j.fill }),
+        `${T('store_jar_open')} · ${tag(JAR.sku, JAR.usd)}`)
+      /* A jar that is not full has no button on it.
+
+         It had one, at the full price, which meant a player could pay
+         $2.99 for the sixty-eight treats in it on a day the same $2.99
+         would have bought a hundred and fifty a fortnight later. That is
+         a worse deal than the smallest pack and it is only ever taken by
+         somebody who did not do the arithmetic — which is the precise
+         thing I said this file would not do. So it fills in public and
+         sells nothing until it is worth buying. */
+      : `<div class="offer" style="opacity:.7">
+          <span class="ot"><b>${T('store_jar_t')}</b>
+            <small>${T('store_jar_s', { n: j.fill, c: JAR.cap })}</small>
+            <span style="display:block;height:5px;border-radius:3px;background:var(--surface-3);overflow:hidden;margin-top:5px">
+              <span style="display:block;height:100%;width:${Math.round(j.fill / JAR.cap * 100)}%;background:var(--plum)"></span>
+            </span></span>
+        </div>`}
+
+    ${TREAT_PACKS.map(p => row(p.id, 'pack',
+      T('store_pack', { n: p.treats }) + (p.best ? ' ★' : ''),
+      p[LANG] || p.en, tag(p.sku, p.usd))).join('')}
+
+    ${row('club', 'club', T('store_club_t'),
+      clubActive() ? T('store_club_on') : T('store_club_s', { n: PET_CLUB.dailyTreats }),
+      tag(PET_CLUB.sku, PET_CLUB.usd) + T('store_per_month'), clubActive())}
+
+    ${live ? `<button class="btn ghost wide" id="stRestore"
+      style="font-size:var(--t-micro)">${T('store_restore')}</button>` : ''}
+    <button class="btn primary wide" id="stOk">${T('ok')}</button>
+  `);
+
+  /* Every button lands here, and the grant is on the far side of a
+     receipt. There is no path through this function that adds a treat
+     because a store was missing. */
+  $$('[data-pay]', m.el).forEach(b => b.addEventListener('click', async () => {
+    if (!live) { SFX.bad(); storeShut(); return; }
+    const kind = b.dataset.kind;
+    const id = b.dataset.pay;
+    const sku = kind === 'pack' ? TREAT_PACKS.find(x => x.id === id).sku
+      : kind === 'jar' ? JAR.sku : PET_CLUB.sku;
+    b.disabled = true;
+    const r = await BILLING.buy(sku);
+    b.disabled = false;
+    if (!r.ok) {
+      if (r.why === 'nostore') { storeShut(); return; }
+      if (r.why !== 'cancelled') { SFX.bad(); toast(T('store_failed'), 'treat'); }
+      return;
+    }
+    const got = grantPurchase(kind, id);
+    SFX.coin();
+    syncPurse();
+    m.close();
+    if (kind === 'club') toast(T('store_club_on'), 'treat');
+    else toast(T('store_thanks', { n: got }), 'treat');
+  }));
+  const rs = $('#stRestore', m.el);
+  if (rs) rs.addEventListener('click', async () => { await BILLING.restore(); syncPurse(); });
+  $('#stOk', m.el).addEventListener('click', m.close);
+}
+/* Said plainly, in its own card, rather than as a disabled button with
+   no explanation — which reads as a bug rather than as a fact. */
+function storeShut() {
+  const m = modal(`
+    <h2>${T('store_shut_t')}</h2>
+    <p>${T('store_shut_s')}</p>
+    <button class="btn primary wide" id="ssOk">${T('ok')}</button>`);
+  $('#ssOk', m.el).addEventListener('click', m.close);
+}
+
 function noHeartsSheet() {
   const line = () => T('lvl_no_hearts_sub', { m: HEART_REFILL / MIN, t: fmtTime(heartsIn()) });
   let tick = null;
@@ -13519,7 +14388,7 @@ function noHeartsSheet() {
     <p id="nhLine">${line()}</p>
     <div class="row">
       <button class="btn ghost" id="nhWait">${T('lvl_wait')}</button>
-      <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: 3 })}</button>
+      <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: ECON.heartRefillTreats })}</button>
     </div>
   `, { onClose: () => { if (tick) clearInterval(tick); onHeartArrived = () => { }; } });
 
@@ -13539,8 +14408,8 @@ function noHeartsSheet() {
   };
   $('#nhWait', m.el).addEventListener('click', m.close);
   $('#nhBuy', m.el).addEventListener('click', () => {
-    if (SAVE.treats < 3) { SFX.bad(); toast(LANG === 'tr' ? 'Ödül yetmiyor' : 'Not enough treats', 'treat'); return; }
-    SAVE.treats -= 3;
+    if (SAVE.treats < ECON.heartRefillTreats) { SFX.bad(); treatStore('hearts'); return; }
+    SAVE.treats -= ECON.heartRefillTreats;
     SAVE.hearts = HEART_MAX;
     SAVE.heartAt = now();
     persist(true);
@@ -13566,32 +14435,22 @@ function showWin() {
   if (newBest) SAVE.scores[n] = G.score;
   SAVE.reached = Math.max(SAVE.reached, n + 1);
   SAVE.stats.cleared++;
-  /* What a level pays.
-
-     Measured over a simulated month in test/economy.js, the old formula
-     — 30 + 22 a star + a point of score per 1400 — paid about six
-     hundred coins a day against a recurring demand of twenty-five. Every
-     animal was adopted by day five and the entire shop was bought out by
-     day twenty-five, after which coins kept arriving and there was
-     nothing left they could be turned into. A reward that cannot be
-     spent is not a reward.
-
-     The score term was the worse half. Star targets climb as the lane
-     goes, so a term in the score is a faucet that widens the longer
-     somebody plays — the opposite of what an economy wants, and
-     invisible without playing a month out on paper. It is smaller now
-     and it is capped, so a level deep in the run cannot pay more than a
-     level is worth.
-
-     Re-measured with these numbers: the shop still has something worth
-     saving for on day ninety, boosters become about a fifth of what a
-     player spends instead of a rounding error, and nobody is ever short
-     of the price of a bowl of food. */
-  const coins = Math.round((14 + stars * 9 + Math.min(25, Math.floor(G.score / 4000)))
-    * traitCoinScale(activePet()));
+  /* A cleared level paid its full reward every time it was cleared, so
+     the fastest coins in the game were on whichever early level you
+     could three-star in ninety seconds — and a currency you can farm is
+     not a currency. First clear pays in full; going back pays a tenth,
+     or a quarter if you actually beat the number you left there. */
+  const base = Math.round((ECON.winBase + stars * ECON.winPerStar
+    + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
+  const rate = first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
+  const coins = Math.max(first ? 0 : 1, Math.round(base * rate));
   let treats = 0;
-  if (stars === 3 && prev < 3) treats += 1;
-  if (first && isGate(n)) treats += 2;      /* see the note in openLevelIntro */
+  if (stars === 3 && prev < 3) treats += ECON.threeStarTreats;
+  if (first && n % 5 === 0) treats += ECON.everyFifthTreats;
+  /* and the jar takes its couple, on a replay as well: it is the one
+     thing in the economy that is paid for time rather than progress,
+     which is exactly why it is the offer I trust */
+  const jarFilled = jarAdd();
   SAVE.coins += coins;
   SAVE.treats += treats;
   const pet = activePet();
@@ -13614,6 +14473,12 @@ function showWin() {
       ${treats ? `<span class="reward" style="color:var(--plum)">${IC.treat}+${treats}</span>` : ''}
       <span class="reward" style="color:var(--sage)">${IC.paw}+${bondXp} ${T('win_bond')}</span>
     </div>
+    ${first ? '' : `<p style="color:var(--text-faint);font-size:var(--t-micro);margin-top:-4px">${T('win_replay')}</p>`}
+    ${jarFilled && jarFull() ? `<div class="offer">
+      <span class="ot"><b>${T('store_jar_t')}</b>
+        <small>${T('store_jar_full', { n: jarState().fill })}</small></span>
+      <button class="btn sm" id="wJar">${T('store_jar_open')}</button>
+    </div>` : ''}
     ${pet ? `<p>${T('win_petline', { name: pet.name })}</p>` : ''}
     <div class="row">
       <button class="btn ghost" id="wMap">${T('to_map')}</button>
@@ -13621,6 +14486,8 @@ function showWin() {
     </div>
   `, { dismissable: false });
   paintArtCanvases(m.el);
+  const wj = $('#wJar', m.el);
+  if (wj) wj.addEventListener('click', () => { SFX.tap(); treatStore(); });
   $$('.starsRow .s', m.el).forEach((s, i) => {
     if (i < stars) setTimeout(() => { s.classList.add('pop'); SFX.star(i); }, 220 + i * 260);
     else s.classList.add('pop');
@@ -13661,6 +14528,20 @@ function showLose() {
     })
     .filter(x => x.have < x.g.need);
   const close = short.length > 0 && short.every(x => x.have / x.g.need >= .8);
+  /* Whether the level is worth carrying on with, which is a different
+     question from whether the card should say "so close" — that one is
+     about every goal being nearly done, this one is about the board as a
+     whole. Five more moves finishes a board at eight tenths. It does not
+     finish one at two, and offering it there sells a player a level that
+     was already lost. They find that out after paying, once, and then
+     the button is dead for the rest of the game. So below the line the
+     card does not carry the offer at all. */
+  const done = G.goals.reduce((a, g) => {
+    const have = g.kind === GK.SCORE ? G.score
+      : g.kind === GK.BRAMBLE ? Math.max(0, g.need - brambleCount(G.B)) : g.have;
+    return a + Math.min(1, have / g.need);
+  }, 0) / Math.max(1, G.goals.length);
+  const worthCarryingOn = done >= ECON.continueAt;
   /* The subtitle used to read the shortfall back as a sentence:
      "You needed Walk 2 home, Score 9500." Goal lines are written as
      instructions — "Walk 2 home", "Collect 44 Sable" — and an
@@ -13685,11 +14566,11 @@ function showLose() {
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn primary" id="lRetry">${T('retry')}</button>
     </div>
-    ${G.usedExtra ? '' : `
+    ${G.usedExtra || !worthCarryingOn ? '' : `
     <div class="offer">
       <span class="ot">
-        <b>${T('lose_extra')}</b>
-        <small>${T('lose_extra_sub', { n: 2 })}</small>
+        <b>${T('lose_extra', { n: ECON.continueMoves })}</b>
+        <small>${T('lose_extra_sub', { n: ECON.continueTreats })}</small>
       </span>
       <button class="btn sm" id="lExtra">${T('shop_buy')}</button>
     </div>`}
@@ -13698,12 +14579,14 @@ function showLose() {
   paintArtCanvases(m.el);
   const ex = $('#lExtra', m.el);
   if (ex) ex.addEventListener('click', () => {
-    if (SAVE.treats < 2) { SFX.bad(); toast(LANG === 'tr' ? 'Ödül yetmiyor' : 'Not enough treats', 'treat'); return; }
-    SAVE.treats -= 2; persist(true); syncPurse();
+    /* short of treats is the one moment the player actually wants the
+       jar, so it opens there rather than being told no by a toast */
+    if (SAVE.treats < ECON.continueTreats) { SFX.bad(); treatStore('continue'); return; }
+    SAVE.treats -= ECON.continueTreats; persist(true); syncPurse();
     m.close();
     G.usedExtra = true;
     G.over = false; G.busy = false;
-    G.moves = 5;
+    G.moves = ECON.continueMoves;
     syncHud();
     SFX.coin();
   });
@@ -13805,7 +14688,7 @@ function howToPlay() {
 function startDailyWalk() {
   audioResume();
   SFX.tap();
-  const def = levelDef(DAILY_LEVEL);
+  const def = dailyLevel(SAVE.reached);
   const pet = activePet();
   const perks = perksFor(pet);
   const m = modal(`
@@ -14442,15 +15325,17 @@ function boot() {
   $('#btnQuit').innerHTML = IC.back;
   $('#btnQuit').addEventListener('click', () => { SFX.tap(); confirmQuit(); });
   $('#chipHearts').addEventListener('click', () => { if (SAVE.hearts < HEART_MAX) noHeartsSheet(); });
-  $('#chipTreats').addEventListener('click', () => {
-    const m = modal(`<span style="color:var(--plum);width:48px;height:48px;align-self:center">${IC.treat}</span>
-      <h2>${T('shop_treats_t')}</h2><p>${T('shop_treats_s')}</p>
-      <button class="btn primary wide" id="trOk">${T('ok')}</button>`);
-    $('#trOk', m.el).addEventListener('click', m.close);
-  });
+  /* the chip explained what treats were and then stopped, which was the
+     right card back when there was nothing to do about it */
+  $('#chipTreats').addEventListener('click', () => { SFX.tap(); treatStore(); });
 
   catchUpPets();
   heartTick();
+  clubTick();
+  /* what these cost where the player actually is; the store's answer
+     replaces the fallback labels whenever it arrives, and nothing waits
+     on it */
+  BILLING.refresh();
   syncPurse();
   /* a save carried over from an older build may already have earned
      things, so sweep once on load rather than waiting for the next win */
@@ -14575,7 +15460,7 @@ window.BL = {
   checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
-  openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, confirmQuit,
+  openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, treatStore, confirmQuit,
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
   simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY, petRig, syncGoals, drawLevelScene,
   castOf, castBreed, castSlot, castName, castRebuild, slotGem, slotBreed,
@@ -14588,5 +15473,86 @@ window.BL = {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 else boot();
+
+/* ===== 75-native.js ===== */
+/* ============================================================
+   75 — the native shell, when there is one
+   ============================================================
+
+   The game is a web page first and stays one. Everything here is
+   guarded on the Capacitor bridge being present, so in a browser this
+   file registers nothing and costs nothing.
+
+   The plugins are reached through window.Capacitor.Plugins rather than
+   imported. That is not a shortcut around a bundler — it is how the
+   bridge exposes them, and it means the shipped HTML still has no
+   import statement and no dependency in it. The npm package exists for
+   the native half, which registers the Java side at build time. */
+
+const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform &&
+                  window.Capacitor.isNativePlatform());
+
+/* ---------------- the hardware back button ----------------
+
+   Android sends back to the activity, and an activity that does nothing
+   with it finishes — so without this the button closes the whole game
+   from anywhere, mid-level, with no warning. That is not a small
+   omission; it is the single most-pressed control on the device doing
+   the most destructive thing in the app.
+
+   What it should do is what the on-screen back does, which the game
+   already knows how to decide:
+
+     a sheet is open        close the top one
+     a level is being played  ask, the same as the quit button
+     anywhere but home      go home
+     home                   leave, but say so first
+
+   The last one is a double press. Exiting a game because a thumb
+   brushed the bar is worse than one extra tap, and the toast is already
+   in the game. */
+let leaveArmed = 0;
+/* Shorter than the toast, deliberately. A toast lives 1.9s and takes
+   .32s to fade, so a 2.5s window outlives the only thing telling the
+   player it is open — and a second press into that gap closes the game
+   with nothing on screen having asked for it. The offer should never
+   outlast the sentence that made it. */
+const LEAVE_WINDOW = 2000;
+
+function nativeBack() {
+  /* a sheet first, whatever else is true: it is the thing in front */
+  if (sheetIsOpen()) {
+    const top = modalStack[modalStack.length - 1];
+    if (top) { SFX.tap(); top.close(); return; }
+  }
+  if (SCREEN === 'game') { SFX.tap(); confirmQuit(); return; }
+  if (SCREEN !== 'home') { SFX.tap(); setScreen('home'); return; }
+
+  if (now() - leaveArmed < LEAVE_WINDOW) {
+    const App = window.Capacitor.Plugins.App;
+    if (App && App.exitApp) App.exitApp();
+    return;
+  }
+  leaveArmed = now();
+  toast(T('leave_again'), 'back');
+}
+
+if (NATIVE) {
+  const P = window.Capacitor.Plugins || {};
+  if (P.App && P.App.addListener) {
+    P.App.addListener('backButton', nativeBack);
+  }
+  /* The web build keeps its service worker — it is what makes the game
+     work on the underground. A native shell has no use for one: the
+     files never travel, and a cache-first rule would pin an old build
+     across an app update. tools/pack.js leaves it out of the payload,
+     and this clears any that a player's WebView picked up from visiting
+     the web version on the same device. */
+  if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+    navigator.serviceWorker.getRegistrations()
+      .then(rs => rs.forEach(r => r.unregister()))
+      .catch(() => { });
+  }
+}
 })();
 </script>
