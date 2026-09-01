@@ -772,15 +772,17 @@ function equipThing(id, kind, quiet) {
 }
 
 /* ---------------- family ---------------- */
-/* Cheap at the front, steep at the back.
+/* Left where it was, on purpose.
 
-   The old curve was near enough linear, and against the old faucet it
-   meant every animal was home inside a week — the whole marquee arc of
-   the game, spent in five days. This one hands the second animal over
-   almost immediately, because that is the moment somebody learns the
-   game gives things back, and then stretches: the fifth is a month of
-   playing and the sixth is a long way past that. */
-const ADOPT_COST = [0, 250, 650, 1600, 3200, 6000];
+   This curve was briefly steepened — cheap at the front, dear at the
+   back — to stretch an adoption arc that was finishing inside a week.
+   That was the right diagnosis of the wrong half: the arc was short
+   because the faucet was wide, and the faucet has since been closed at
+   the source (halved payout, a tenth for a replay, real prices on the
+   treat sinks). test/economy.js is calibrated against these numbers and
+   the tighter faucet together, so changing them here without
+   re-measuring would be trading a verified balance for an opinion. */
+const ADOPT_COST = [0, 350, 700, 1200, 1800, 2600];
 const ADOPT_LEVEL = [0, 5, 12, 20, 28, 36];
 /* Order matters here more than it looks.
 
