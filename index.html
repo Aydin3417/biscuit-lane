@@ -10751,12 +10751,25 @@ function syncGoals(bumpIdx) {
     })());
     if (bumpIdx === i) { g.el.classList.remove('tick'); void g.el.offsetWidth; g.el.classList.add('tick'); }
   });
-  /* The lane behind the board shows the walk as a line of paw prints,
-     and a print is laid when the goals move. Repainting that scene is a
-     full canvas of gradients and about two hundred shapes, so it is not
-     something to do on every cascade tick — only when the walk has
-     actually taken a step. Fourteen prints, so fourteen repaints in a
-     whole level at worst. */
+}
+
+/* The lane behind the board shows the walk as a line of paw prints, and
+   a print is laid when the goals move.
+
+   This used to sit at the end of syncGoals, which is a HUD update and
+   runs on every tick of a cascade. Repainting the lane is a full canvas
+   of gradients and about two hundred shapes, so during a particle storm
+   several of those landed inside measured frames and pushed one to 57ms
+   — a third of a second of stutter, on the one screen where stutter is
+   felt. The branch alone passed that check four runs out of four; the
+   merge failed it, which is how a cost that belongs to neither side on
+   its own gets found.
+
+   It belongs once a move, after the board has settled, which is where it
+   is called from now. Fourteen prints, so fourteen repaints in a whole
+   level at worst. */
+function paintWalk() {
+  if (!G.B || G.over) return;
   const step = Math.round(sceneProgress() * 14);
   if (step !== G.walkStep) { G.walkStep = step; drawLevelScene(); }
 }
@@ -11480,6 +11493,7 @@ async function tryMove(a, b) {
   if (stale(_ep)) return;
   await creepBrambles();
   await workMoles();
+  paintWalk();
   if (stale(_ep)) return;
   G.busy = false;
   checkEnd();
