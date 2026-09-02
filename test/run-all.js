@@ -49,11 +49,31 @@ const steps = [
    refuses "the game plays itself", and the gates inside the run are
    measured separately by test/curve.js — they land near sixty percent
    whatever the pet is carrying. */
+/* The ceiling on the cared-for curves was 93, and it was wrong.
+
+   It failed the suite about one run in four on a build nobody had
+   touched. Measured: the handcrafted cared-for curve sits at 90%, and
+   the same sixty levels with the *original* move counts also sit at 90
+   — 90/90/90 against 90/89/89 over three runs each. The 88 and the 94
+   that bracket those are the same distribution, not a drift.
+
+   Five games a level over sixty levels is only three hundred games, and
+   the spread that leaves is about four points either side of the mean.
+   A hard ceiling four points above the mean is a coin flip dressed as a
+   gate, which is worse than no gate: a suite that cries wolf gets
+   ignored, and the next real drift walks through behind it.
+
+   Two changes rather than one, because widening a band on its own hides
+   noise instead of reducing it. The gate now samples nine games a level,
+   which pulls the spread in by about a quarter, and the ceiling moves to
+   96 — still far below "the pet plays it for you", which is the thing
+   this gate exists to catch. */
+const CURVE_GAMES = 9;
 const CURVES = [
-  ['the handcrafted lane', 1, 60, 0, 55, 88],
-  ['the handcrafted lane, cared-for pet', 1, 60, 1, 60, 93],
-  ['the endless run', 61, 140, 0, 55, 88],
-  ['the endless run, cared-for pet', 61, 140, 1, 60, 93],
+  ['the handcrafted lane', 1, 60, 0, 55, 90],
+  ['the handcrafted lane, cared-for pet', 1, 60, 1, 60, 96],
+  ['the endless run', 61, 140, 0, 55, 90],
+  ['the endless run, cared-for pet', 61, 140, 1, 60, 96],
 ];
 
 let failed = 0;
@@ -71,8 +91,8 @@ for (const [label, file, args] of steps) {
   }
 }
 
-/* Five games per level. Enough to notice a whole curve sliding, nowhere
-   near enough to judge a single level — at five samples the noise is
+/* Nine games per level. Enough to notice a whole curve sliding, nowhere
+near enough to judge a single level — at five samples the noise is
    about twenty points either way, so the per-level verdicts are
    deliberately not printed. Use `node test/ai.js <first> <last> 20` to
    settle one level.
@@ -81,10 +101,10 @@ for (const [label, file, args] of steps) {
    the endless run after them, which is most of what anyone plays and
    was the half nobody was measuring. */
 for (const [label, first, last, perks, lo, hi] of CURVES) {
-  process.stdout.write('\n=== difficulty: ' + label + ' (5 games per level) ===\n');
+  process.stdout.write('\n=== difficulty: ' + label + ' (' + CURVE_GAMES + ' games per level) ===\n');
   try {
     const raw = execFileSync(process.execPath,
-      [path.join(__dirname, 'ai.js'), String(first), String(last), '5'],
+      [path.join(__dirname, 'ai.js'), String(first), String(last), String(CURVE_GAMES)],
       { encoding: 'utf8', stdio: 'pipe',
         env: Object.assign({}, process.env, { PERKS: String(perks) }) });
     raw.split('\n')

@@ -209,6 +209,18 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   box-shadow:0 6px 18px -10px rgba(70,45,20,.4);
   flex:0 0 auto;
 }
+/* The wordmark does not fit on a phone, and never did.
+
+   Three chips, a gear and the bar's own padding come to about 290 of
+   a 390px screen before the name gets a pixel — and the hearts chip
+   grows a refill clock exactly when the player is most likely to be
+   looking at it. So it clipped to "Bisc…" on every phone from 320 to
+   430, which reads as a broken layout rather than a small one.
+
+   A truncated name looks like a bug; no name looks like a decision.
+   The logo is the brandmark anyway, and nobody needs telling which
+   game they already have open. The words come back where there is
+   room for them. */
 .brandmark{ display:flex; align-items:center; gap:8px; margin-right:auto; min-width:0; }
 /* A canvas is sized in pixels by fitCanvas, and a window that has just
    been resized has canvases still carrying their old width. The resize
@@ -233,6 +245,7 @@ canvas{ max-width:100%; }
    can afford to lose a letter. */
 .brandmark .bn{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); letter-spacing:-.02em; white-space:nowrap; line-height:1.1;
   min-width:0; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width:429px){ .brandmark .bn{ display:none; } }
 .brandmark .bn small{ display:block; font-family:"Karla",sans-serif; font-weight:500; font-size:var(--t-nano); letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); margin-top:1px;
   overflow:hidden; text-overflow:ellipsis; }
 .purse{ display:flex; align-items:center; gap:6px; }
@@ -733,7 +746,7 @@ canvas{ max-width:100%; }
 .choice.on{ border-color:var(--accent-strong); transform:translateY(-2px); box-shadow:var(--shadow-2); }
 .choice:active{ transform:scale(.96); }
 .swatches{ display:flex; gap:9px; justify-content:center; flex-wrap:wrap; }
-.sw{ width:38px; height:38px; border-radius:50%; border:3px solid transparent; box-shadow:var(--shadow-1); transition:transform .14s; }
+.sw{ width:44px; height:44px; border-radius:50%; border:3px solid transparent; box-shadow:var(--shadow-1); transition:transform .14s; }
 .sw.on{ border-color:var(--text); transform:scale(1.1); }
 .field{
   width:100%; padding:13px 15px; border-radius:16px; background:var(--surface);

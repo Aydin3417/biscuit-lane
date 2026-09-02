@@ -53,13 +53,30 @@ function wait(ms) {
   if (FAST_FORWARD) return Promise.resolve();
   if (reduceMotion()) ms = Math.min(ms, 60);
   return new Promise(res => {
-    if (document.hidden) { setTimeout(res, Math.min(ms, 120)); return; }
+    let done = false;
+    const finish = () => { if (done) return; done = true; res(); };
+    if (document.hidden) { setTimeout(finish, Math.min(ms, 120)); return; }
     const t0 = performance.now();
     const step = t => {
-      if (document.hidden) { setTimeout(res, 0); return; }
-      (t - t0 >= ms) ? res() : requestAnimationFrame(step);
+      if (done) return;
+      if (document.hidden) { setTimeout(finish, 0); return; }
+      (t - t0 >= ms) ? finish() : requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
+    /* The floor under the rAF chain.
+
+       `document.hidden` is not the only way frames stop. An occluded
+       WebView, split screen, a system overlay, a picture-in-picture
+       window over the top — all of them can halt rAF while the page
+       still calls itself visible, and visibilitychange never fires, so
+       nothing restarts anything. The wait then never resolves, and
+       whatever was awaiting it never finishes: tryMove holds G.busy
+       across four of these, so the board locks and the only way out is
+       to quit the level and lose the heart.
+
+       Watched happen. The timer costs nothing and cannot be starved by
+       the same thing that starves the frames. */
+    setTimeout(finish, ms + 400);
   });
 }
 
@@ -422,9 +439,17 @@ function sheetIsOpen() {
    second and a half, which is both unpleasant in the hand and rude to
    the battery. */
 let lastBuzzAt = 0;
+/* Chrome refuses navigator.vibrate until the frame has been touched,
+   and says so in the console every single time. Boot alone fired it
+   forty times before a finger had gone anywhere near the glass —
+   nothing the player could feel, and a wall of red under anyone trying
+   to read a real error. The motor cannot run before the first gesture
+   anyway, so asking is only noise. */
+let userGestured = false;
+function markGesture() { userGestured = true; }
 function buzz(pattern) {
   try {
-    if (!SAVE || !SAVE.settings.haptics) return;
+    if (!SAVE || !SAVE.settings.haptics || !userGestured) return;
     if (navigator.vibrate) navigator.vibrate(pattern);
     lastBuzzAt = Date.now();
   } catch (e) { /* unsupported */ }
@@ -452,6 +477,25 @@ const HAP = {
 function fmt(n) {
   n = Math.round(n);
   return n >= 10000 ? n.toLocaleString('en-US') : String(n);
+}
+/* The purse, which has a width budget the score does not.
+
+   Three chips and a wordmark share one bar. At six figures the coins
+   chip alone took enough of it that "Biscuit Lane" clipped to "Bisc…"
+   on every phone from 320 up, and on the smallest the wordmark vanished
+   and the logo squashed to a sliver. The exact number matters in the
+   shop, where there is room for it; up here only the size does. */
+function fmtPurse(n) {
+  n = Math.round(n);
+  if (n < 1000) return String(n);
+  /* 999950 rounds to 1000k, which is not a smaller thing to read than
+     999,999 — it is a wronger one. The handover is where the k form
+     stops being shorter. */
+  if (n < 999500) {
+    const k = n / 1000;
+    return (k < 100 ? +k.toFixed(1) : Math.round(k)) + 'k';
+  }
+  return +(n / 1000000).toFixed(1) + 'M';
 }
 function fmtTime(ms) {
   if (ms <= 0) return '0:00';

@@ -437,10 +437,28 @@ function drawMap() {
   const ph = roomPhase(PAL.dark);
   const sky = skyColours(ph);
   const total = MAP.total || H;
+  /* The ground changes under you as the lane crosses into a new
+     stretch. One gradient down the whole scroll rather than a band per
+     chapter, so the change is a walk rather than a step — you notice
+     you are somewhere else without ever being shown a seam.
+
+     The lane runs bottom-to-top, so level 1 is at `total` and the
+     furthest level is at 0, and the stops go in that order. */
   const grad = c.createLinearGradient(0, 0, 0, total);
   grad.addColorStop(0, PAL.dark ? '#1A2430' : mix(sky[2], '#C7D8A8', .5));
-  grad.addColorStop(.14, PAL.dark ? '#20301F' : '#B7CE95');
-  grad.addColorStop(1, PAL.dark ? '#1B2A1B' : '#A8C489');
+  const topLevel = MAP.nodes.length ? MAP.nodes[0].n : 1;
+  const stops = [];
+  for (let n = 1; n <= topLevel; n += BLOCK) {
+    const node = MAP.nodes.find(x => x.n === n);
+    if (!node) continue;
+    stops.push([clamp(node.y / total, 0, 1), chapterGround(n)]);
+  }
+  /* nearest-first down the canvas */
+  stops.sort((a2, b2) => a2[0] - b2[0]).forEach(([at, col]) => {
+    grad.addColorStop(clamp(at, .02, .98), col);
+  });
+  if (!stops.length) grad.addColorStop(.14, PAL.dark ? '#20301F' : '#B7CE95');
+  grad.addColorStop(1, chapterGround(1));
   c.fillStyle = grad;
   c.fillRect(0, 0, W, total);
 
@@ -597,6 +615,36 @@ function drawMap() {
   c.fillStyle = PAL.textDim;
   c.font = '700 12px Karla, sans-serif';
   c.fillText(LANG === 'tr' ? 'YUKARISI HENÜZ İNŞA EDİLMEDİ' : 'THE LANE KEEPS GOING', W / 2, 34);
+  c.restore();
+
+  /* ---- where you are, and what you are walking toward ----
+
+     Pinned to the top of the view rather than to the lane, so it is
+     legible at any scroll position: the stretch you are looking at, and
+     how much of it is behind you. This is the answer to "why am I
+     playing level 34", which the map had no way of giving. */
+  c.save();
+  c.translate(0, off);
+  const here = MAP.nodes.slice().reverse()
+    .find(n2 => n2.y >= off + 40 && n2.y <= off + H) || { n: SAVE.reached };
+  const label = chapterName(here.n);
+  const first = chapterFirst(here.n), last = chapterLast(here.n);
+  let done = 0;
+  for (let i = first; i <= last; i++) if (SAVE.stars[i] > 0) done++;
+  c.textAlign = 'left';
+  c.font = '800 15px Grandstander, sans-serif';
+  const tw = c.measureText(label).width;
+  const bw = Math.max(tw + 74, 150), bx = W / 2 - bw / 2;
+  c.fillStyle = rgba(PAL.dark ? '#0E1512' : '#FFFDF7', .82);
+  rr(c, bx, 8, bw, 30, 15); c.fill();
+  c.strokeStyle = rgba(PAL.line || (PAL.dark ? '#3A4A3A' : '#D8CDB4'), .9);
+  c.lineWidth = 1; c.stroke();
+  c.fillStyle = PAL.text;
+  c.fillText(label, bx + 14, 28);
+  c.textAlign = 'right';
+  c.font = '700 12px Karla, sans-serif';
+  c.fillStyle = PAL.textDim;
+  c.fillText(done + '/' + BLOCK, bx + bw - 14, 27);
   c.restore();
   c.restore();                            /* undo the scroll translate */
 }

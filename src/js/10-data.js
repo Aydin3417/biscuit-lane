@@ -98,6 +98,53 @@ const EYE_COLORS = [
   { id: 'hazel', hex: '#8A6A3A' }, { id: 'grey', hex: '#8E98A6' }
 ];
 
+/* ---------- the stretches of the lane ----------
+
+   The lane was sixty levels arranged as a corridor. It already had a
+   rhythm — isGate() marks every tenth — but nothing on the screen said
+   where you were or what you were walking toward, so the middle of the
+   game read as flat however well the curve underneath it was tuned. A
+   player with no destination has no reason to want the next one.
+
+   Six named stretches of ten, each with its own ground. The tint is the
+   part that does the work: the lane visibly changes colour under you as
+   you cross into a new one, which is the difference between a corridor
+   and a journey, and it costs one gradient stop rather than a screen.
+
+   Past sixty the run is generated and so are the names — it keeps
+   walking, and says which time round it is.
+
+   `day` and `dusk` are the ground the lane is drawn on, light and dark.
+   They stay close in value on purpose: this is a puzzle board's
+   backdrop, and a stretch that shouts is a stretch you stop looking
+   past. */
+const CHAPTERS = [
+  { id: 'doorstep', en: 'The Doorstep',    tr: 'Kapı Önü',      day: '#B7CE95', dusk: '#20301F' },
+  { id: 'allot',    en: 'The Allotments',  tr: 'Bostanlar',     day: '#C8CE8E', dusk: '#2A3220' },
+  { id: 'common',   en: 'The Common',      tr: 'Çayır',         day: '#A9CE9E', dusk: '#1E3226' },
+  { id: 'canal',    en: 'The Canal Path',  tr: 'Kanal Yolu',    day: '#9CC8B4', dusk: '#1B3030' },
+  { id: 'orchard',  en: 'The Old Orchard', tr: 'Eski Bahçe',    day: '#CDC08D', dusk: '#302B1E' },
+  { id: 'home',     en: 'Home Again',      tr: 'Eve Dönüş',     day: '#C6BE9E', dusk: '#2B2A22' }
+];
+/* which stretch a level belongs to, and how far into it. BLOCK lives in
+   11-design.js, which is read after this one — the bundle is one scope
+   and these are only ever called after boot, so the reference resolves. */
+function chapterIdx(n) { return Math.floor((Math.max(1, n) - 1) / BLOCK); }
+function chapterOf(n) { return CHAPTERS[chapterIdx(n) % CHAPTERS.length]; }
+/* how many times round the lane this is; 0 for the authored sixty */
+function chapterLap(n) { return Math.floor(chapterIdx(n) / CHAPTERS.length); }
+function chapterName(n) {
+  const ch = chapterOf(n);
+  const lap = chapterLap(n);
+  const base = LANG === 'tr' ? ch.tr : ch.en;
+  return lap ? base + ' ' + (lap + 1) : base;
+}
+/* the first level of the stretch this one is in, and the last */
+function chapterFirst(n) { return chapterIdx(n) * BLOCK + 1; }
+function chapterLast(n) { return chapterFirst(n) + BLOCK - 1; }
+/* the ground a stretch is drawn on, in whichever theme is up */
+function chapterGround(n) { const ch = chapterOf(n); return PAL.dark ? ch.dusk : ch.day; }
+
 /* ---------- abilities ---------- */
 const ABILITIES = {
   pounce: {
@@ -278,7 +325,13 @@ const COLLARS = [
   { id: 'teal', en: 'Teal collar', tr: 'Camgöbeği tasma', cost: 40, hex: '#3E9E9E' },
   { id: 'gold', en: 'Gold collar', tr: 'Altın tasma', cost: 130, hex: '#E0A73C' },
   { id: 'plum', en: 'Plum collar', tr: 'Mor tasma', cost: 40, hex: '#7E62A8' },
-  { id: 'bandana', en: 'Bandana', tr: 'Bandana', cost: 95, hex: '#E07A4B', bandana: true }
+  { id: 'bandana', en: 'Bandana', tr: 'Bandana', cost: 95, hex: '#E07A4B', bandana: true },
+  /* four more, same reason as the themes above: a collar is one colour
+     and a player with six animals wants six of them */
+  { id: 'moss',   en: 'Moss collar',    tr: 'Yosun tasma',   cost: 40,  hex: '#7A9463' },
+  { id: 'sky',    en: 'Sky collar',     tr: 'Gök tasma',     cost: 40,  hex: '#6FA8D6' },
+  { id: 'rose',   en: 'Rose collar',    tr: 'Gül tasma',     cost: 40,  hex: '#E09BB0' },
+  { id: 'silver', en: 'Silver collar',  tr: 'Gümüş tasma',   cost: 130, hex: '#B9C2CC' }
 ];
 const FURNITURE = [
   { id: 'rug', en: 'Round rug', tr: 'Yuvarlak halı', cost: 80, slot: 'floor', enDesc: 'Warm spot by the window.', trDesc: 'Pencere önünde sıcak bir yer.' },
@@ -294,7 +347,20 @@ const ROOM_THEMES = [
   { id: 'oat', en: 'Oat', tr: 'Yulaf', cost: 0, wall: '#E4D3B8', wall2: '#D3BE9E', floor: '#C79A6A' },
   { id: 'sage', en: 'Sage', tr: 'Adaçayı', cost: 150, wall: '#BFD3C1', wall2: '#A5BCA8', floor: '#B08A62' },
   { id: 'blush', en: 'Blush', tr: 'Pudra', cost: 150, wall: '#EBC9C6', wall2: '#D6ACA9', floor: '#C09070' },
-  { id: 'night', en: 'Deep blue', tr: 'Gece mavisi', cost: 220, wall: '#3D4C66', wall2: '#2E3A50', floor: '#6A5240' }
+  { id: 'night', en: 'Deep blue', tr: 'Gece mavisi', cost: 220, wall: '#3D4C66', wall2: '#2E3A50', floor: '#6A5240' },
+  /* The shop ran out of things to want on day 28 of an ordinary month,
+     which is a content problem wearing a currency problem's clothes.
+     Themes are the cheapest honest answer: they are three colours each,
+     they change the whole room, and the room is the screen a player
+     looks at between every level. Priced above the first four, because
+     by the time these are reachable a cleared level pays the same and
+     there is nothing else left to spend it on. */
+  { id: 'clay',    en: 'Terracotta', tr: 'Kiremit',     cost: 260, wall: '#E0BBA4', wall2: '#C79A82', floor: '#A9714E' },
+  { id: 'mint',    en: 'Mint',       tr: 'Nane',        cost: 260, wall: '#C6DCCE', wall2: '#A8C4B4', floor: '#B69370' },
+  { id: 'plumroom',en: 'Damson',     tr: 'Mürdüm',      cost: 300, wall: '#C7B3D4', wall2: '#A894B8', floor: '#8E6C58' },
+  { id: 'ink',     en: 'Ink',        tr: 'Mürekkep',    cost: 340, wall: '#3A4048', wall2: '#2B3037', floor: '#5A4C42' },
+  { id: 'butter',  en: 'Buttermilk', tr: 'Ayran',       cost: 300, wall: '#F0DFB4', wall2: '#DCC694', floor: '#C0996B' },
+  { id: 'moss',    en: 'Moss',       tr: 'Yosun',       cost: 340, wall: '#9FB08A', wall2: '#849474', floor: '#7E6A4E' }
 ];
 
 /* How many baskets ride the board at once on a rescue level. A pup only
@@ -334,6 +400,9 @@ const TRAITS = {
   }
 };
 const TRAIT_AT_BOND = 3;
+/* and the other half of the gate, which the card never mentioned:
+   a bond alone settles nothing without a pattern of care behind it */
+const TRAIT_AT_CARE = 3;
 
 /* ---------- the shelf ----------
    Each one reads straight off the save, so nothing has to be recorded
@@ -433,6 +502,81 @@ const BADGES = [
     id: 'decor', icon: 'brush', fam: 'care', en: 'Interior decorator', tr: 'İç mimar',
     enDesc: 'Own five things for the room.', trDesc: 'Oda için beş eşyan olsun.',
     of: 5, at: s => Object.keys(s.furniture || {}).length, coins: 180
+  },
+
+  /* ---- the second tier ----
+
+     The shelf held nineteen and every one of them was an early-game
+     count: clear a level, clear ten, clear thirty. A player past level
+     fifty had nothing left on it, which is the wrong shape for the only
+     collection in the game — the shelf should still be filling on the
+     day the levels run out.
+
+     These are for playing well rather than for playing more. Most of
+     them read a `stats` figure that was already being kept and had
+     nothing looking at it. */
+  {
+    id: 'chain7', icon: 'star', fam: 'lane', en: 'One thing led to another', tr: 'Biri diğerini getirdi',
+    enDesc: 'Reach a seven-deep cascade.', trDesc: 'Yedi kademelik bir zincir yakala.',
+    of: 7, at: s => s.stats.bestCombo, coins: 80,  treats: 1
+  },
+  {
+    id: 'lane60', icon: 'home', fam: 'lane', en: 'The whole lane', tr: 'Yolun sonu',
+    enDesc: 'Clear all sixty levels down the lane.', trDesc: 'Yoldaki altmış bölümün hepsini geç.',
+    /* only the authored sixty count: a player deep into the generated
+       run has more keys than that and would otherwise be handed this
+       for levels it is not about */
+    of: 60, at: s => Object.keys(s.stars || {}).filter(k => +k <= 60).length, coins: 200, treats: 2
+  },
+  {
+    id: 'run100', icon: 'play', fam: 'lane', en: 'Past the hundred', tr: 'Yüzü geçti',
+    enDesc: 'Reach level one hundred.', trDesc: 'Yüzüncü bölüme ulaş.',
+    of: 100, at: s => s.reached, coins: 150, treats: 2
+  },
+  {
+    id: 'star30', icon: 'star', fam: 'lane', en: 'Thirty perfect', tr: 'Otuz kusursuz',
+    enDesc: 'Three-star thirty levels.', trDesc: 'Otuz bölümü üç yıldızla bitir.',
+    of: 30, at: s => Object.keys(s.stars || {}).filter(k => s.stars[k] >= 3).length, coins: 120, treats: 1
+  },
+  {
+    id: 'pop50k', icon: 'paw', fam: 'lane', en: 'Fifty thousand faces', tr: 'Elli bin yüz',
+    enDesc: 'Clear fifty thousand tiles.', trDesc: 'Elli bin taş patlat.',
+    of: 50000, at: s => s.stats.tilesPopped, coins: 100, treats: 1
+  },
+  {
+    id: 'rescue50', icon: 'ball', fam: 'lane', en: 'Nobody left behind', tr: 'Kimse geride kalmadı',
+    enDesc: 'Bring fifty puppies safely down.', trDesc: 'Elli yavruyu sağ salim indir.',
+    of: 50, at: s => s.stats.rescued, coins: 90,  treats: 1
+  },
+  {
+    id: 'family3', icon: 'paw', fam: 'care', en: 'A full house', tr: 'Kalabalık ev',
+    enDesc: 'Have three animals at home.', trDesc: 'Evde üç hayvanın olsun.',
+    of: 3, at: s => (s.pets || []).length, coins: 100, treats: 1
+  },
+  {
+    id: 'family6', icon: 'home', fam: 'care', en: 'All six home', tr: 'Altısı da evde',
+    enDesc: 'Adopt every breed on the lane.', trDesc: 'Yoldaki her cinsi sahiplen.',
+    of: 6, at: s => (s.pets || []).length, coins: 200, treats: 3
+  },
+  {
+    id: 'grown2', icon: 'flame', fam: 'care', en: 'Raised them right', tr: 'İyi büyüttün',
+    enDesc: 'Raise two animals to grown.', trDesc: 'İki hayvanı yetişkinliğe getir.',
+    of: 2, at: s => (s.pets || []).filter(p => p && p.bond >= 12).length, coins: 120, treats: 1
+  },
+  {
+    id: 'traits2', icon: 'brush', fam: 'care', en: 'Two of a kind', tr: 'İki ayrı karakter',
+    enDesc: 'Settle two animals into a character.', trDesc: 'İki hayvanın karakteri belli olsun.',
+    of: 2, at: s => (s.pets || []).filter(p => p && p.trait).length, coins: 80,  treats: 1
+  },
+  {
+    id: 'care300', icon: 'bath', fam: 'care', en: 'Never once forgotten', tr: 'Hiç unutulmadı',
+    enDesc: 'Look after them three hundred times.', trDesc: 'Onlara üç yüz kez bak.',
+    of: 300, at: s => s.stats.cared, coins: 100, treats: 1
+  },
+  {
+    id: 'streak30', icon: 'flame', fam: 'care', en: 'A month of it', tr: 'Bir ay boyunca',
+    enDesc: 'Come back thirty days running.', trDesc: 'Otuz gün üst üste gel.',
+    of: 30, at: s => s.streak, coins: 150, treats: 3
   }
 ];
 function badgeName(b) { return LANG === 'tr' ? b.tr : b.en; }
@@ -564,7 +708,7 @@ const LEVELS = [
   },
   { n: 5, w: 8, h: 8, types: 5, moves: 23, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 17300, want: 0.9 },
   {
-    n: 6, w: 8, h: 8, types: 5, moves: 18, goals: [[GK.CRATE, 0, 28]], base: 9200, want: 0.9,
+    n: 6, w: 8, h: 8, types: 5, moves: 15, goals: [[GK.CRATE, 0, 28]], base: 9200, want: 0.9,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
   { n: 7, w: 8, h: 8, types: 5, moves: 26, goals: [[GK.RESCUE, 0, 2]], base: 9800, want: 0.93, tut: 'rescue' },
@@ -583,7 +727,7 @@ const LEVELS = [
   },
   { n: 12, w: 8, h: 9, types: 5, moves: 31, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 16300, want: 0.9 },
   {
-    n: 13, w: 8, h: 8, types: 6, moves: 30, goals: [[GK.MUD, 0, 24]], base: 8900, want: 0.91,
+    n: 13, w: 8, h: 8, types: 6, moves: 22, goals: [[GK.MUD, 0, 24]], base: 8900, want: 0.91,
     map: ['MMMM....', 'MMMM....', '........', '........', '........', '........', '....MMMM', '....MMMM']
   },
   {
@@ -591,7 +735,7 @@ const LEVELS = [
     map: ['........', '........', '.vvvvvv.', '.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........']
   },
   {
-    n: 15, w: 8, h: 9, types: 5, moves: 25, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 19800, want: 0.91,
+    n: 15, w: 8, h: 9, types: 5, moves: 22, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 19800, want: 0.91,
     map: ['..c..c..', '.cc..cc.', '........', '.c....c.', '........', '.c....c.', '........', '.cc..cc.', '..c..c..']
   },
   {
@@ -609,7 +753,7 @@ const LEVELS = [
   { n: 19, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15200, want: 0.84 },
   { n: 20, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.RESCUE, 0, 1], [GK.SCORE, 0, 9500]], base: 10900, want: 0.72 },
   {
-    n: 21, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 24]], base: 12400, want: 0.91,
+    n: 21, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 24]], base: 12400, want: 0.91,
     map: ['........', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', '........']
   },
   {

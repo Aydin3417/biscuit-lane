@@ -240,6 +240,18 @@ button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; 
   box-shadow:0 6px 18px -10px rgba(70,45,20,.4);
   flex:0 0 auto;
 }
+/* The wordmark does not fit on a phone, and never did.
+
+   Three chips, a gear and the bar's own padding come to about 290 of
+   a 390px screen before the name gets a pixel — and the hearts chip
+   grows a refill clock exactly when the player is most likely to be
+   looking at it. So it clipped to "Bisc…" on every phone from 320 to
+   430, which reads as a broken layout rather than a small one.
+
+   A truncated name looks like a bug; no name looks like a decision.
+   The logo is the brandmark anyway, and nobody needs telling which
+   game they already have open. The words come back where there is
+   room for them. */
 .brandmark{ display:flex; align-items:center; gap:8px; margin-right:auto; min-width:0; }
 /* A canvas is sized in pixels by fitCanvas, and a window that has just
    been resized has canvases still carrying their old width. The resize
@@ -264,6 +276,7 @@ canvas{ max-width:100%; }
    can afford to lose a letter. */
 .brandmark .bn{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); letter-spacing:-.02em; white-space:nowrap; line-height:1.1;
   min-width:0; overflow:hidden; text-overflow:ellipsis; }
+@media (max-width:429px){ .brandmark .bn{ display:none; } }
 .brandmark .bn small{ display:block; font-family:"Karla",sans-serif; font-weight:500; font-size:var(--t-nano); letter-spacing:.14em; text-transform:uppercase; color:var(--text-faint); margin-top:1px;
   overflow:hidden; text-overflow:ellipsis; }
 .purse{ display:flex; align-items:center; gap:6px; }
@@ -764,7 +777,7 @@ canvas{ max-width:100%; }
 .choice.on{ border-color:var(--accent-strong); transform:translateY(-2px); box-shadow:var(--shadow-2); }
 .choice:active{ transform:scale(.96); }
 .swatches{ display:flex; gap:9px; justify-content:center; flex-wrap:wrap; }
-.sw{ width:38px; height:38px; border-radius:50%; border:3px solid transparent; box-shadow:var(--shadow-1); transition:transform .14s; }
+.sw{ width:44px; height:44px; border-radius:50%; border:3px solid transparent; box-shadow:var(--shadow-1); transition:transform .14s; }
 .sw.on{ border-color:var(--text); transform:scale(1.1); }
 .field{
   width:100%; padding:13px 15px; border-radius:16px; background:var(--surface);
@@ -1182,13 +1195,30 @@ function wait(ms) {
   if (FAST_FORWARD) return Promise.resolve();
   if (reduceMotion()) ms = Math.min(ms, 60);
   return new Promise(res => {
-    if (document.hidden) { setTimeout(res, Math.min(ms, 120)); return; }
+    let done = false;
+    const finish = () => { if (done) return; done = true; res(); };
+    if (document.hidden) { setTimeout(finish, Math.min(ms, 120)); return; }
     const t0 = performance.now();
     const step = t => {
-      if (document.hidden) { setTimeout(res, 0); return; }
-      (t - t0 >= ms) ? res() : requestAnimationFrame(step);
+      if (done) return;
+      if (document.hidden) { setTimeout(finish, 0); return; }
+      (t - t0 >= ms) ? finish() : requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
+    /* The floor under the rAF chain.
+
+       `document.hidden` is not the only way frames stop. An occluded
+       WebView, split screen, a system overlay, a picture-in-picture
+       window over the top — all of them can halt rAF while the page
+       still calls itself visible, and visibilitychange never fires, so
+       nothing restarts anything. The wait then never resolves, and
+       whatever was awaiting it never finishes: tryMove holds G.busy
+       across four of these, so the board locks and the only way out is
+       to quit the level and lose the heart.
+
+       Watched happen. The timer costs nothing and cannot be starved by
+       the same thing that starves the frames. */
+    setTimeout(finish, ms + 400);
   });
 }
 
@@ -1551,9 +1581,17 @@ function sheetIsOpen() {
    second and a half, which is both unpleasant in the hand and rude to
    the battery. */
 let lastBuzzAt = 0;
+/* Chrome refuses navigator.vibrate until the frame has been touched,
+   and says so in the console every single time. Boot alone fired it
+   forty times before a finger had gone anywhere near the glass —
+   nothing the player could feel, and a wall of red under anyone trying
+   to read a real error. The motor cannot run before the first gesture
+   anyway, so asking is only noise. */
+let userGestured = false;
+function markGesture() { userGestured = true; }
 function buzz(pattern) {
   try {
-    if (!SAVE || !SAVE.settings.haptics) return;
+    if (!SAVE || !SAVE.settings.haptics || !userGestured) return;
     if (navigator.vibrate) navigator.vibrate(pattern);
     lastBuzzAt = Date.now();
   } catch (e) { /* unsupported */ }
@@ -1581,6 +1619,25 @@ const HAP = {
 function fmt(n) {
   n = Math.round(n);
   return n >= 10000 ? n.toLocaleString('en-US') : String(n);
+}
+/* The purse, which has a width budget the score does not.
+
+   Three chips and a wordmark share one bar. At six figures the coins
+   chip alone took enough of it that "Biscuit Lane" clipped to "Bisc…"
+   on every phone from 320 up, and on the smallest the wordmark vanished
+   and the logo squashed to a sliver. The exact number matters in the
+   shop, where there is room for it; up here only the size does. */
+function fmtPurse(n) {
+  n = Math.round(n);
+  if (n < 1000) return String(n);
+  /* 999950 rounds to 1000k, which is not a smaller thing to read than
+     999,999 — it is a wronger one. The handover is where the k form
+     stops being shorter. */
+  if (n < 999500) {
+    const k = n / 1000;
+    return (k < 100 ? +k.toFixed(1) : Math.round(k)) + 'k';
+  }
+  return +(n / 1000000).toFixed(1) + 'M';
 }
 function fmtTime(ms) {
   if (ms <= 0) return '0:00';
@@ -1748,7 +1805,8 @@ const STRINGS = {
     /* settings */
     set_t: 'Settings',
     set_sound: 'Sound effects', set_sound_s: 'Pops, blasts and small victories.',
-    set_music: 'Music', set_music_s: 'A quiet loop for the shop.',
+    set_music: 'Music', set_music_s: 'A quiet loop behind the game.',
+    set_data: 'Share play data', set_data_s: 'Anonymous counts of levels played and errors hit. Never your pet, never your name.',
     set_haptics: 'Vibration', set_haptics_s: 'Only on phones that support it.',
     set_theme: 'Light', set_theme_s: 'Morning or evening on the lane.',
     set_auto: 'Auto', set_day: 'Day', set_dusk: 'Dusk',
@@ -1811,8 +1869,10 @@ const STRINGS = {
     shelf_won: 'Something for the shelf',
     trait_t: 'Turned out {trait}',
     trait_sub: '{name} was {how}, and it shows. {what}',
+    eye_green: 'Green eyes', eye_amber: 'Amber eyes', eye_blue: 'Blue eyes',
+    eye_copper: 'Copper eyes', eye_hazel: 'Hazel eyes', eye_grey: 'Grey eyes',
     trait_none: 'Still working out who they are.',
-    trait_pending: 'A trait settles at bond level {n}.',
+    trait_pending: 'A trait settles past bond {n}, once you have looked after them the same way {c} times.',
     goal_bramble: 'Cut back {n} brambles',
     a11y_bramble: 'under brambles',
     a11y_bramble_grew: 'The brambles took another tile.',
@@ -1997,7 +2057,8 @@ const STRINGS = {
 
     set_t: 'Ayarlar',
     set_sound: 'Ses efektleri', set_sound_s: 'Patlamalar, çıtırtılar, küçük zaferler.',
-    set_music: 'Müzik', set_music_s: 'Dükkan için sakin bir döngü.',
+    set_music: 'Müzik', set_music_s: 'Oyunun arkasında sakin bir döngü.',
+    set_data: 'Oyun verisi paylaş', set_data_s: 'Oynanan bölümlerin ve karşılaşılan hataların anonim sayıları. Ne evcil hayvanın, ne adın.',
     set_haptics: 'Titreşim', set_haptics_s: 'Sadece destekleyen telefonlarda.',
     set_theme: 'Işık', set_theme_s: 'Sokakta sabah mı, akşam mı?',
     set_auto: 'Oto', set_day: 'Gündüz', set_dusk: 'Akşam',
@@ -2057,8 +2118,10 @@ const STRINGS = {
     shelf_won: 'Rafa bir şey daha',
     trait_t: '{trait} çıktı',
     trait_sub: '{name} {how} ve belli oluyor. {what}',
+    eye_green: 'Yeşil gözler', eye_amber: 'Kehribar gözler', eye_blue: 'Mavi gözler',
+    eye_copper: 'Bakır gözler', eye_hazel: 'Ela gözler', eye_grey: 'Gri gözler',
     trait_none: 'Kim olduğunu henüz bulmaya çalışıyor.',
-    trait_pending: 'Karakteri {n}. bağ seviyesinde belli olur.',
+    trait_pending: 'Karakteri {n}. bağ seviyesinden sonra, ona {c} kez aynı şekilde baktığında belli olur.',
     goal_bramble: '{n} böğürtlen kes',
     a11y_bramble: 'böğürtlen altında',
     a11y_bramble_grew: 'Böğürtlenler bir kare daha aldı.',
@@ -2243,6 +2306,53 @@ const EYE_COLORS = [
   { id: 'hazel', hex: '#8A6A3A' }, { id: 'grey', hex: '#8E98A6' }
 ];
 
+/* ---------- the stretches of the lane ----------
+
+   The lane was sixty levels arranged as a corridor. It already had a
+   rhythm — isGate() marks every tenth — but nothing on the screen said
+   where you were or what you were walking toward, so the middle of the
+   game read as flat however well the curve underneath it was tuned. A
+   player with no destination has no reason to want the next one.
+
+   Six named stretches of ten, each with its own ground. The tint is the
+   part that does the work: the lane visibly changes colour under you as
+   you cross into a new one, which is the difference between a corridor
+   and a journey, and it costs one gradient stop rather than a screen.
+
+   Past sixty the run is generated and so are the names — it keeps
+   walking, and says which time round it is.
+
+   `day` and `dusk` are the ground the lane is drawn on, light and dark.
+   They stay close in value on purpose: this is a puzzle board's
+   backdrop, and a stretch that shouts is a stretch you stop looking
+   past. */
+const CHAPTERS = [
+  { id: 'doorstep', en: 'The Doorstep',    tr: 'Kapı Önü',      day: '#B7CE95', dusk: '#20301F' },
+  { id: 'allot',    en: 'The Allotments',  tr: 'Bostanlar',     day: '#C8CE8E', dusk: '#2A3220' },
+  { id: 'common',   en: 'The Common',      tr: 'Çayır',         day: '#A9CE9E', dusk: '#1E3226' },
+  { id: 'canal',    en: 'The Canal Path',  tr: 'Kanal Yolu',    day: '#9CC8B4', dusk: '#1B3030' },
+  { id: 'orchard',  en: 'The Old Orchard', tr: 'Eski Bahçe',    day: '#CDC08D', dusk: '#302B1E' },
+  { id: 'home',     en: 'Home Again',      tr: 'Eve Dönüş',     day: '#C6BE9E', dusk: '#2B2A22' }
+];
+/* which stretch a level belongs to, and how far into it. BLOCK lives in
+   11-design.js, which is read after this one — the bundle is one scope
+   and these are only ever called after boot, so the reference resolves. */
+function chapterIdx(n) { return Math.floor((Math.max(1, n) - 1) / BLOCK); }
+function chapterOf(n) { return CHAPTERS[chapterIdx(n) % CHAPTERS.length]; }
+/* how many times round the lane this is; 0 for the authored sixty */
+function chapterLap(n) { return Math.floor(chapterIdx(n) / CHAPTERS.length); }
+function chapterName(n) {
+  const ch = chapterOf(n);
+  const lap = chapterLap(n);
+  const base = LANG === 'tr' ? ch.tr : ch.en;
+  return lap ? base + ' ' + (lap + 1) : base;
+}
+/* the first level of the stretch this one is in, and the last */
+function chapterFirst(n) { return chapterIdx(n) * BLOCK + 1; }
+function chapterLast(n) { return chapterFirst(n) + BLOCK - 1; }
+/* the ground a stretch is drawn on, in whichever theme is up */
+function chapterGround(n) { const ch = chapterOf(n); return PAL.dark ? ch.dusk : ch.day; }
+
 /* ---------- abilities ---------- */
 const ABILITIES = {
   pounce: {
@@ -2423,7 +2533,13 @@ const COLLARS = [
   { id: 'teal', en: 'Teal collar', tr: 'Camgöbeği tasma', cost: 40, hex: '#3E9E9E' },
   { id: 'gold', en: 'Gold collar', tr: 'Altın tasma', cost: 130, hex: '#E0A73C' },
   { id: 'plum', en: 'Plum collar', tr: 'Mor tasma', cost: 40, hex: '#7E62A8' },
-  { id: 'bandana', en: 'Bandana', tr: 'Bandana', cost: 95, hex: '#E07A4B', bandana: true }
+  { id: 'bandana', en: 'Bandana', tr: 'Bandana', cost: 95, hex: '#E07A4B', bandana: true },
+  /* four more, same reason as the themes above: a collar is one colour
+     and a player with six animals wants six of them */
+  { id: 'moss',   en: 'Moss collar',    tr: 'Yosun tasma',   cost: 40,  hex: '#7A9463' },
+  { id: 'sky',    en: 'Sky collar',     tr: 'Gök tasma',     cost: 40,  hex: '#6FA8D6' },
+  { id: 'rose',   en: 'Rose collar',    tr: 'Gül tasma',     cost: 40,  hex: '#E09BB0' },
+  { id: 'silver', en: 'Silver collar',  tr: 'Gümüş tasma',   cost: 130, hex: '#B9C2CC' }
 ];
 const FURNITURE = [
   { id: 'rug', en: 'Round rug', tr: 'Yuvarlak halı', cost: 80, slot: 'floor', enDesc: 'Warm spot by the window.', trDesc: 'Pencere önünde sıcak bir yer.' },
@@ -2439,7 +2555,20 @@ const ROOM_THEMES = [
   { id: 'oat', en: 'Oat', tr: 'Yulaf', cost: 0, wall: '#E4D3B8', wall2: '#D3BE9E', floor: '#C79A6A' },
   { id: 'sage', en: 'Sage', tr: 'Adaçayı', cost: 150, wall: '#BFD3C1', wall2: '#A5BCA8', floor: '#B08A62' },
   { id: 'blush', en: 'Blush', tr: 'Pudra', cost: 150, wall: '#EBC9C6', wall2: '#D6ACA9', floor: '#C09070' },
-  { id: 'night', en: 'Deep blue', tr: 'Gece mavisi', cost: 220, wall: '#3D4C66', wall2: '#2E3A50', floor: '#6A5240' }
+  { id: 'night', en: 'Deep blue', tr: 'Gece mavisi', cost: 220, wall: '#3D4C66', wall2: '#2E3A50', floor: '#6A5240' },
+  /* The shop ran out of things to want on day 28 of an ordinary month,
+     which is a content problem wearing a currency problem's clothes.
+     Themes are the cheapest honest answer: they are three colours each,
+     they change the whole room, and the room is the screen a player
+     looks at between every level. Priced above the first four, because
+     by the time these are reachable a cleared level pays the same and
+     there is nothing else left to spend it on. */
+  { id: 'clay',    en: 'Terracotta', tr: 'Kiremit',     cost: 260, wall: '#E0BBA4', wall2: '#C79A82', floor: '#A9714E' },
+  { id: 'mint',    en: 'Mint',       tr: 'Nane',        cost: 260, wall: '#C6DCCE', wall2: '#A8C4B4', floor: '#B69370' },
+  { id: 'plumroom',en: 'Damson',     tr: 'Mürdüm',      cost: 300, wall: '#C7B3D4', wall2: '#A894B8', floor: '#8E6C58' },
+  { id: 'ink',     en: 'Ink',        tr: 'Mürekkep',    cost: 340, wall: '#3A4048', wall2: '#2B3037', floor: '#5A4C42' },
+  { id: 'butter',  en: 'Buttermilk', tr: 'Ayran',       cost: 300, wall: '#F0DFB4', wall2: '#DCC694', floor: '#C0996B' },
+  { id: 'moss',    en: 'Moss',       tr: 'Yosun',       cost: 340, wall: '#9FB08A', wall2: '#849474', floor: '#7E6A4E' }
 ];
 
 /* How many baskets ride the board at once on a rescue level. A pup only
@@ -2479,6 +2608,9 @@ const TRAITS = {
   }
 };
 const TRAIT_AT_BOND = 3;
+/* and the other half of the gate, which the card never mentioned:
+   a bond alone settles nothing without a pattern of care behind it */
+const TRAIT_AT_CARE = 3;
 
 /* ---------- the shelf ----------
    Each one reads straight off the save, so nothing has to be recorded
@@ -2578,6 +2710,81 @@ const BADGES = [
     id: 'decor', icon: 'brush', fam: 'care', en: 'Interior decorator', tr: 'İç mimar',
     enDesc: 'Own five things for the room.', trDesc: 'Oda için beş eşyan olsun.',
     of: 5, at: s => Object.keys(s.furniture || {}).length, coins: 180
+  },
+
+  /* ---- the second tier ----
+
+     The shelf held nineteen and every one of them was an early-game
+     count: clear a level, clear ten, clear thirty. A player past level
+     fifty had nothing left on it, which is the wrong shape for the only
+     collection in the game — the shelf should still be filling on the
+     day the levels run out.
+
+     These are for playing well rather than for playing more. Most of
+     them read a `stats` figure that was already being kept and had
+     nothing looking at it. */
+  {
+    id: 'chain7', icon: 'star', fam: 'lane', en: 'One thing led to another', tr: 'Biri diğerini getirdi',
+    enDesc: 'Reach a seven-deep cascade.', trDesc: 'Yedi kademelik bir zincir yakala.',
+    of: 7, at: s => s.stats.bestCombo, coins: 80,  treats: 1
+  },
+  {
+    id: 'lane60', icon: 'home', fam: 'lane', en: 'The whole lane', tr: 'Yolun sonu',
+    enDesc: 'Clear all sixty levels down the lane.', trDesc: 'Yoldaki altmış bölümün hepsini geç.',
+    /* only the authored sixty count: a player deep into the generated
+       run has more keys than that and would otherwise be handed this
+       for levels it is not about */
+    of: 60, at: s => Object.keys(s.stars || {}).filter(k => +k <= 60).length, coins: 200, treats: 2
+  },
+  {
+    id: 'run100', icon: 'play', fam: 'lane', en: 'Past the hundred', tr: 'Yüzü geçti',
+    enDesc: 'Reach level one hundred.', trDesc: 'Yüzüncü bölüme ulaş.',
+    of: 100, at: s => s.reached, coins: 150, treats: 2
+  },
+  {
+    id: 'star30', icon: 'star', fam: 'lane', en: 'Thirty perfect', tr: 'Otuz kusursuz',
+    enDesc: 'Three-star thirty levels.', trDesc: 'Otuz bölümü üç yıldızla bitir.',
+    of: 30, at: s => Object.keys(s.stars || {}).filter(k => s.stars[k] >= 3).length, coins: 120, treats: 1
+  },
+  {
+    id: 'pop50k', icon: 'paw', fam: 'lane', en: 'Fifty thousand faces', tr: 'Elli bin yüz',
+    enDesc: 'Clear fifty thousand tiles.', trDesc: 'Elli bin taş patlat.',
+    of: 50000, at: s => s.stats.tilesPopped, coins: 100, treats: 1
+  },
+  {
+    id: 'rescue50', icon: 'ball', fam: 'lane', en: 'Nobody left behind', tr: 'Kimse geride kalmadı',
+    enDesc: 'Bring fifty puppies safely down.', trDesc: 'Elli yavruyu sağ salim indir.',
+    of: 50, at: s => s.stats.rescued, coins: 90,  treats: 1
+  },
+  {
+    id: 'family3', icon: 'paw', fam: 'care', en: 'A full house', tr: 'Kalabalık ev',
+    enDesc: 'Have three animals at home.', trDesc: 'Evde üç hayvanın olsun.',
+    of: 3, at: s => (s.pets || []).length, coins: 100, treats: 1
+  },
+  {
+    id: 'family6', icon: 'home', fam: 'care', en: 'All six home', tr: 'Altısı da evde',
+    enDesc: 'Adopt every breed on the lane.', trDesc: 'Yoldaki her cinsi sahiplen.',
+    of: 6, at: s => (s.pets || []).length, coins: 200, treats: 3
+  },
+  {
+    id: 'grown2', icon: 'flame', fam: 'care', en: 'Raised them right', tr: 'İyi büyüttün',
+    enDesc: 'Raise two animals to grown.', trDesc: 'İki hayvanı yetişkinliğe getir.',
+    of: 2, at: s => (s.pets || []).filter(p => p && p.bond >= 12).length, coins: 120, treats: 1
+  },
+  {
+    id: 'traits2', icon: 'brush', fam: 'care', en: 'Two of a kind', tr: 'İki ayrı karakter',
+    enDesc: 'Settle two animals into a character.', trDesc: 'İki hayvanın karakteri belli olsun.',
+    of: 2, at: s => (s.pets || []).filter(p => p && p.trait).length, coins: 80,  treats: 1
+  },
+  {
+    id: 'care300', icon: 'bath', fam: 'care', en: 'Never once forgotten', tr: 'Hiç unutulmadı',
+    enDesc: 'Look after them three hundred times.', trDesc: 'Onlara üç yüz kez bak.',
+    of: 300, at: s => s.stats.cared, coins: 100, treats: 1
+  },
+  {
+    id: 'streak30', icon: 'flame', fam: 'care', en: 'A month of it', tr: 'Bir ay boyunca',
+    enDesc: 'Come back thirty days running.', trDesc: 'Otuz gün üst üste gel.',
+    of: 30, at: s => s.streak, coins: 150, treats: 3
   }
 ];
 function badgeName(b) { return LANG === 'tr' ? b.tr : b.en; }
@@ -2709,7 +2916,7 @@ const LEVELS = [
   },
   { n: 5, w: 8, h: 8, types: 5, moves: 23, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 17300, want: 0.9 },
   {
-    n: 6, w: 8, h: 8, types: 5, moves: 18, goals: [[GK.CRATE, 0, 28]], base: 9200, want: 0.9,
+    n: 6, w: 8, h: 8, types: 5, moves: 15, goals: [[GK.CRATE, 0, 28]], base: 9200, want: 0.9,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
   { n: 7, w: 8, h: 8, types: 5, moves: 26, goals: [[GK.RESCUE, 0, 2]], base: 9800, want: 0.93, tut: 'rescue' },
@@ -2728,7 +2935,7 @@ const LEVELS = [
   },
   { n: 12, w: 8, h: 9, types: 5, moves: 31, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 16300, want: 0.9 },
   {
-    n: 13, w: 8, h: 8, types: 6, moves: 30, goals: [[GK.MUD, 0, 24]], base: 8900, want: 0.91,
+    n: 13, w: 8, h: 8, types: 6, moves: 22, goals: [[GK.MUD, 0, 24]], base: 8900, want: 0.91,
     map: ['MMMM....', 'MMMM....', '........', '........', '........', '........', '....MMMM', '....MMMM']
   },
   {
@@ -2736,7 +2943,7 @@ const LEVELS = [
     map: ['........', '........', '.vvvvvv.', '.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........']
   },
   {
-    n: 15, w: 8, h: 9, types: 5, moves: 25, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 19800, want: 0.91,
+    n: 15, w: 8, h: 9, types: 5, moves: 22, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 19800, want: 0.91,
     map: ['..c..c..', '.cc..cc.', '........', '.c....c.', '........', '.c....c.', '........', '.cc..cc.', '..c..c..']
   },
   {
@@ -2754,7 +2961,7 @@ const LEVELS = [
   { n: 19, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15200, want: 0.84 },
   { n: 20, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.RESCUE, 0, 1], [GK.SCORE, 0, 9500]], base: 10900, want: 0.72 },
   {
-    n: 21, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 24]], base: 12400, want: 0.91,
+    n: 21, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 24]], base: 12400, want: 0.91,
     map: ['........', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', '........']
   },
   {
@@ -3630,6 +3837,7 @@ function freshSave() {
     v: SAVE_VERSION,
     created: now(),
     lastSeen: now(),
+    install: 0,               // random, made on first boot, forgotten with the save
     coins: 120,
     treats: 6,
     hearts: HEART_MAX,
@@ -3650,7 +3858,7 @@ function freshSave() {
     streak: 0,
     lastGift: 0,
     seen: {},                  // tutorial flags
-    settings: { sound: true, music: false, haptics: true, lang: 'en', theme: 'auto', marks: false },
+    settings: { sound: true, music: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true },
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
     jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing
@@ -3665,6 +3873,10 @@ function freshSave() {
    have been corrupted is put back inside its legal range. A save that
    cannot be read is replaced rather than allowed to crash the boot. */
 const SAVE_VERSION = 2;
+/* what a build calls itself when it reports anything. Bumped by hand,
+   with android/app/build.gradle's versionName, so a crash from an old
+   install is not read as one from the current one. */
+const APP_VERSION = '1.0.0';
 
 function migrate(d) {
   const v = d.v || 1;
@@ -3676,6 +3888,12 @@ function migrate(d) {
     });
     d.badges = d.badges || {};
   }
+  /* Both of these are new in this build and neither is version-gated:
+     an older save simply has not got them, and a player who already
+     turned telemetry off must not have it turned back on by an
+     upgrade. */
+  if (typeof d.install !== 'number' || !d.install) d.install = 0;
+  if (d.settings && d.settings.telemetry === undefined) d.settings.telemetry = true;
   d.v = SAVE_VERSION;
   return d;
 }
@@ -4054,7 +4272,7 @@ function settleTrait(p) {
     const n = (p.care && p.care[k]) || 0;
     if (n > bestN) { bestN = n; best = map[k]; }
   });
-  if (!best || bestN < 3) return null;      /* not enough of a pattern yet */
+  if (!best || bestN < TRAIT_AT_CARE) return null;   /* not enough of a pattern yet */
   p.trait = best;
   persist();
   return best;
@@ -4466,6 +4684,161 @@ const BILLING = {
     catch (e) { return { ok: false, why: 'failed' }; }
   }
 };
+
+/* ===== 18-telemetry.js ===== */
+/* ============================================================
+   18 — telemetry: what the game knows about how it is going
+   ============================================================
+
+   The game shipped with no measurement of any kind. Not a thin one —
+   none: no analytics, no crash capture, nothing that could answer "how
+   far did people get" or "did it fall over on somebody's phone". A
+   thousand installs would have produced a thousand silences.
+
+   This is the seam for it, built the same way as 17-billing.js and for
+   the same reason: the shape exists so that choosing a vendor is a
+   change to one function rather than to the game. Nothing here talks to
+   a network. There is no endpoint, no key, no third-party script, and
+   the bundle still has no runtime dependency — `sink` is null and
+   events go into a ring buffer on the device and nowhere else.
+
+   Two rules underneath, and they are not negotiable when a sink does
+   get wired up:
+
+     Nothing identifying ever goes in. No pet names, no free text, no
+     device id, no ad id. `install` is a random number this file makes
+     up, it lives only in the save, and wiping the save forgets it.
+
+     The player can turn it off, and off means nothing is queued rather
+     than queued-but-unsent. That is what makes the Play data-safety
+     answer "no data collected" honest while there is no sink, and what
+     makes it truthful afterwards.
+*/
+
+const TELEMETRY_MAX = 300;        /* events held before the oldest drop */
+const TELEMETRY_KEY = 'biscuit-lane-events';
+
+const TRACK = {
+  /* ---------- the seam ----------
+
+     Assign a function here and every buffered event, and everything
+     after it, is handed over. It takes an array and returns a promise
+     resolving true when the batch is safely away; anything else and the
+     batch stays in the buffer to go again next time.
+
+       TRACK.sink = async batch => {
+         const r = await fetch(MY_ENDPOINT, {
+           method: 'POST', headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ events: batch })
+         });
+         return r.ok;
+       };
+
+     Wiring one is the point at which this stops being local, so it is
+     also the point at which the privacy policy and the Play data-safety
+     form have to say so. */
+  sink: null,
+
+  buf: [],
+  install: 0,
+  session: 0,
+  t0: 0,
+  ready: false,
+
+  on() {
+    /* no sink means nothing leaves the device, but the switch still
+       governs whether anything is even written down */
+    return !!(SAVE && SAVE.settings && SAVE.settings.telemetry !== false);
+  },
+
+  init() {
+    if (this.ready) return;
+    this.ready = true;
+    this.t0 = now();
+    this.session = Math.floor(Math.random() * 1e9);
+    if (!SAVE.install) SAVE.install = Math.floor(Math.random() * 1e12);
+    this.install = SAVE.install;
+    try {
+      const held = localStorage.getItem(TELEMETRY_KEY);
+      if (held) this.buf = JSON.parse(held) || [];
+    } catch (e) { this.buf = []; }
+    /* Anything the game throws, caught where it lands.
+
+       The board swallows a lot on purpose — a broken sound must not
+       stop a level — so an exception can happen and leave no trace at
+       all. These two are the only places it cannot hide. */
+    window.addEventListener('error', e => {
+      TRACK.fail('error', e && e.message, e && e.filename, e && e.lineno);
+    });
+    window.addEventListener('unhandledrejection', e => {
+      const r = e && e.reason;
+      TRACK.fail('reject', r && (r.message || String(r)), r && r.stack);
+    });
+  },
+
+  /* An event is a name, a few numbers, and when. Values are coerced:
+     a number stays a number, a short token stays a token, and anything
+     else is dropped rather than guessed at — which is how a pet's name
+     would otherwise have found its way into a payload. */
+  track(name, props) {
+    if (!this.on() || !this.ready) return;
+    const e = { e: name, t: now() - this.t0, s: this.session };
+    if (props) Object.keys(props).forEach(k => {
+      const v = props[k];
+      if (typeof v === 'number' && isFinite(v)) e[k] = Math.round(v * 100) / 100;
+      else if (typeof v === 'boolean') e[k] = v ? 1 : 0;
+      else if (typeof v === 'string' && v.length <= 24 && /^[\w.:-]+$/.test(v)) e[k] = v;
+    });
+    this.buf.push(e);
+    if (this.buf.length > TELEMETRY_MAX) this.buf.splice(0, this.buf.length - TELEMETRY_MAX);
+    this.save();
+  },
+
+  /* Failures carry a trimmed message and no stack beyond the first
+     frame: a stack is where file paths and, on some devices, usernames
+     live. The line number is enough to find it in a build you made. */
+  fail(kind, msg, where, line) {
+    if (!this.on() || !this.ready) return;
+    this.buf.push({
+      e: 'fail', k: kind, t: now() - this.t0, s: this.session,
+      m: String(msg || '').slice(0, 120),
+      w: String(where || '').split('/').pop().slice(0, 40),
+      l: +line || 0
+    });
+    if (this.buf.length > TELEMETRY_MAX) this.buf.shift();
+    this.save();
+  },
+
+  save() {
+    try { localStorage.setItem(TELEMETRY_KEY, JSON.stringify(this.buf)); } catch (e) { }
+  },
+
+  /* Hand the buffer over, if there is anywhere to hand it. Failure is
+     silent and keeps the batch: a game does not owe the player a
+     message about its own bookkeeping. */
+  async flush() {
+    if (!this.sink || !this.buf.length || !this.on()) return false;
+    const batch = this.buf.slice(0, 120);
+    try {
+      const ok = await this.sink(batch.map(e =>
+        Object.assign({ i: this.install, v: APP_VERSION }, e)));
+      if (ok !== true) return false;
+      this.buf = this.buf.slice(batch.length);
+      this.save();
+      return true;
+    } catch (e) { return false; }
+  },
+
+  /* What the buffer holds, for the settings screen and for anyone
+     wanting to read it off a device before a sink exists. */
+  dump() { return this.buf.slice(); },
+  clear() { this.buf = []; this.save(); }
+};
+
+/* The shorthand the rest of the game calls. A free function because
+   `TRACK.track(...)` at two hundred call sites reads like bookkeeping,
+   and this is meant to disappear into the line it sits on. */
+function track(name, props) { TRACK.track(name, props); }
 
 /* ===== 20-audio.js ===== */
 /* ============================================================
@@ -10117,7 +10490,7 @@ function tilesOfType(B, type) {
 const G = {
   B: null, def: null, n: 1,
   moves: 0, score: 0, goals: [],
-  busy: true, over: false, running: false,
+  busy: true, busyT: 0, over: false, running: false, startedAt: 0,
   sel: null, pointer: null,
   charge: 0, scoreMul: 1, spending: false,
   chain: 0, bestChain: 0,
@@ -10285,6 +10658,8 @@ function startLevel(n, opts) {
      sizing, not a level number, so the caller picks rather than the
      level table reaching into the save to find out how far you got */
   G.def = n === DAILY_LEVEL ? dailyLevel(SAVE.reached) : levelDef(n);
+  G.startedAt = now();
+  track('level_start', { n: n, moves: G.def.moves, tries: (SAVE.stats.played || 0) });
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
   const pet = activePet();
@@ -10964,7 +11339,20 @@ async function resolveBoard(swapCells) {
     const groups = findMatches(G.B);
     if (!groups.length) break;
     G.chain++;
-    if (G.chain > 1) G.shake = Math.max(G.shake, Math.min(6, G.chain));
+    /* The top of the curve had a ceiling on it: shake was clamped to 6,
+       so a twelve-deep cascade landed exactly as hard as a six-deep one
+       and the rarest thing in the game felt like the second-rarest.
+       Praise words and pitch already climb; the camera did not.
+
+       Past four it gets a zoom and a flash as well, because that is the
+       point where a cascade stops being a good move and starts being a
+       story the player will tell. */
+    if (G.chain > 1) G.shake = Math.max(G.shake, Math.min(13, G.chain * 1.5));
+    if (G.chain === 4) FX.punchZoom(.7);
+    if (G.chain >= 5) {
+      FX.punchZoom(.5 + Math.min(.7, (G.chain - 5) * .16));
+      G.flash = Math.max(G.flash, Math.min(.4, .16 + (G.chain - 5) * .06));
+    }
     await clearGroups(groups, swapCells);
     if (stale(_ep)) return;
     swapCells = null;
@@ -10979,6 +11367,121 @@ async function resolveBoard(swapCells) {
   }
   G.hintT = 0;
 }
+/* ---------------- the pet's own move ----------------
+
+   The ability was the one mechanic nothing else in the genre has, and
+   it was also the quietest thing in the game: a 0.35 flash, some rings,
+   and four hundred milliseconds. Combos shook the screen. This did not
+   even do that, and the animal whose move it was stayed a 58px portrait
+   in the corner the whole time.
+
+   So it leaps. Out of the companion button, across the tray on an arc,
+   down onto the cell it is about to open up — and the board takes the
+   landing. The rig is the one the room already uses; nothing here is
+   new art. */
+function startPetLeap(r, c) {
+  const pet = activePet();
+  if (!pet || reduceMotion()) return;
+  G.leap = {
+    t: 0, ttl: .52,
+    x0: -G.cell * .35, y0: G.ch + G.cell * .35,
+    x1: cellX(c) + G.cell / 2, y1: cellY(r) + G.cell / 2,
+    spec: specOfPet(pet)
+  };
+}
+function stepLeap(dt) {
+  if (!G.leap) return;
+  G.leap.t += dt;
+  if (G.leap.t >= G.leap.ttl + .34) G.leap = null;
+}
+function drawLeap(c) {
+  const L = G.leap;
+  if (!L) return;
+  const k = clamp(L.t / L.ttl, 0, 1);
+  const e = E.out(k);
+  const x = lerp(L.x0, L.x1, e);
+  const y = lerp(L.y0, L.y1, e);
+  /* the arc: a hop over the board rather than a slide across it */
+  const hop = Math.sin(k * Math.PI) * G.cell * 1.9;
+  /* squashed on the way up, stretched at the top, splatted on landing */
+  const land = clamp((L.t - L.ttl) / .34, 0, 1);
+  const squash = k < 1 ? (1 - k) * .12 : -Math.sin(land * Math.PI) * .18;
+  const s = G.cell * (k < 1 ? 1.15 : 1.15 * (1 + Math.sin(land * Math.PI) * .1));
+  /* The rig is drawn upward from the feet, so a pet landing on the top
+     row puts its head through the ceiling and gets sliced off by the
+     canvas. Keep the whole animal on the tray — a target near an edge
+     is exactly where the eye already is. */
+  const top = s * .95 + 4;
+  const px = clamp(x, s * .5, G.cw - s * .5);
+  const py = Math.max(y - hop, top);
+  c.save();
+  c.translate(px, py);
+  c.scale(1 + squash, 1 - squash);
+  c.rotate(k < 1 ? (1 - k) * -.22 : 0);
+  c.translate(0, -s * .93);
+  drawBody(c, L.spec, s, { mouth: 'smile', tail: Math.sin(L.t * 22) * .5 });
+  c.restore();
+}
+
+/* The camera half of the same thing.
+
+   runCombo has always set G.shake to 9. This set nothing at all, which
+   is why a move that could clear ten blockers landed softer than an
+   ordinary four-match. Same vocabulary as a combo, one step louder,
+   because this one costs a whole meter. */
+function abilityLaunch(epi) {
+  const B = G.B;
+  if (!B) return;
+  track('ability', { n: G.n });
+  const r = epi ? epi[0] : Math.floor(B.h / 2);
+  const c = epi ? epi[1] : Math.floor(B.w / 2);
+  startPetLeap(r, c);
+  G.shake = Math.max(G.shake, 14);
+  FX.punchZoom(1.1);
+  FX.sweep(G.ox, G.oy, G.boardW, G.boardH, { ttl: .55, col: '#FFFFFF', a: .3 });
+  FX.glow(cellX(c) + G.cell / 2, cellY(r) + G.cell / 2, G.cell * .3, G.cell * 2.4, PAL.accent, .5);
+}
+
+/* ---------------- the stuck-board watchdog ----------------
+
+   Every mutation of the board runs behind G.busy, and every one of them
+   is a chain of awaits. If a single link never resolves, the flag is
+   never cleared, and the board is dead: taps do nothing, the level
+   cannot be finished, and the only way out is to quit and lose the
+   heart. There was no recovery from it at all.
+
+   wait() now has a timeout under its rAF chain, which should make that
+   unreachable. This is the second line, because "should be unreachable"
+   is exactly what was believed about the first one.
+
+   It only fires when nothing is actually in flight — no tween, no
+   particle, no floating number — so a legitimately long sequence is
+   never cut short. A win is exempt: finishWin holds the flag on purpose
+   while it spends the leftover moves. */
+const BUSY_MAX = 5;
+function busyWatch(dt) {
+  if (!G.busy || G.over || !G.B) { G.busyT = 0; return; }
+  if (anyTileMoving() || G.particles.length || G.floats.length || G.beams.length) { G.busyT = 0; return; }
+  G.busyT = (G.busyT || 0) + dt;
+  if (G.busyT < BUSY_MAX) return;
+  G.busyT = 0;
+  /* Snap anything half-tweened onto its cell, drop the flags, and let
+     the board finish itself. resolveBoard is safe to enter here: it
+     re-reads the grid rather than trusting whatever was in flight. */
+  eachCell(G.B, (cell, r, c) => {
+    if (!cell.tile) return;
+    cell.tile.tw = null; cell.tile.x = c; cell.tile.y = r;
+  });
+  G.busy = false; G.spending = false; G.sel = null;
+  syncHud();
+  resolveBoard(null).then(() => { if (!G.over) checkEnd(); });
+}
+function anyTileMoving() {
+  let moving = false;
+  eachCell(G.B, cell => { if (cell.tile && cell.tile.tw) moving = true; });
+  return moving;
+}
+
 async function doShuffleQuiet() {
   const _ep = levelEpoch();
   await wait(260);
@@ -11173,9 +11676,12 @@ async function firePetAbility() {
   const B = G.B;
   const goalType = primaryGoalType();
   const keys = new Set();
+  /* where the pet is going to land */
+  let epi = null;
 
   if (kind === 'pounce') {
     const spots = pickSpots(goalType, abilityStep('pounce', stage));
+    epi = spots[0];
     spots.forEach(([r, c]) => {
       for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) keys.add((r + dr) + ':' + (c + dc));
       ring(r, c, PAL.accent);
@@ -11185,14 +11691,24 @@ async function firePetAbility() {
     const blockers = [];
     eachCell(B, (cell, r, c) => { if (cell.crate > 0 || cell.mud > 0 || cell.ice > 0 || cell.bram > 0) blockers.push([r, c]); });
     shuffleArr(blockers);
-    blockers.slice(0, abilityStep('dig', stage)).forEach(([r, c]) => keys.add(r + ':' + c));
-    if (!blockers.length) pickSpots(goalType, 3 + stage).forEach(([r, c]) => keys.add(r + ':' + c));
+    const dug = blockers.slice(0, abilityStep('dig', stage));
+    dug.forEach(([r, c]) => keys.add(r + ':' + c));
+    if (!blockers.length) {
+      const fall = pickSpots(goalType, 3 + stage);
+      epi = fall[0];
+      fall.forEach(([r, c]) => keys.add(r + ':' + c));
+    } else epi = dug[0];
     SFX.crate();
   } else if (kind === 'shadow') {
     const spots = [];
     eachCell(B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && cell.ice === 0) spots.push([r, c]); });
     shuffleArr(spots);
-    spots.slice(0, abilityStep('shadow', stage)).forEach(([r, c]) => {
+    const lit = spots.slice(0, abilityStep('shadow', stage));
+    epi = lit[0];
+    abilityLaunch(epi);
+    await wait(240);
+    if (stale(_ep)) return;
+    lit.forEach(([r, c]) => {
       const t = B.cell[r][c].tile;
       t.sp = Math.random() < .5 ? SP.ROW : SP.COL;
       t.jiggle = 1; t.scale = .5;
@@ -11207,10 +11723,13 @@ async function firePetAbility() {
   } else if (kind === 'fetch') {
     /* through pickSpots, so a board holding fewer of the wanted colour
        than the card promises still gets the number the card promises */
-    pickSpots(goalType, abilityStep('fetch', stage)).forEach(([r, c]) => keys.add(r + ':' + c));
+    const fetched = pickSpots(goalType, abilityStep('fetch', stage));
+    epi = fetched[0];
+    fetched.forEach(([r, c]) => keys.add(r + ':' + c));
     SFX.rocket();
   } else if (kind === 'chorus') {
     const spots = pickSpots(goalType, abilityStep('chorus', stage));
+    epi = spots[0];
     spots.forEach(([r, c]) => {
       for (let i = 0; i < B.w; i++) keys.add(r + ':' + i);
       for (let i = 0; i < B.h; i++) keys.add(i + ':' + c);
@@ -11218,7 +11737,12 @@ async function firePetAbility() {
     });
     SFX.rocket();
   } else if (kind === 'snuffle') {
-    snuffleSpots(goalType, abilityStep('snuffle', stage)).forEach(([r, c]) => {
+    const sniffed = snuffleSpots(goalType, abilityStep('snuffle', stage));
+    epi = sniffed[0];
+    abilityLaunch(epi);
+    await wait(240);
+    if (stale(_ep)) return;
+    sniffed.forEach(([r, c]) => {
       const t = B.cell[r][c].tile;
       t.type = goalType; t.jiggle = 1; t.scale = .6;
       burst(r, c, BREEDS[goalType].gem, 6, .8);
@@ -11232,6 +11756,10 @@ async function firePetAbility() {
     checkEnd();
     return;
   }
+  /* the pet gets its beat before the board answers it */
+  abilityLaunch(epi);
+  await wait(240);
+  if (stale(_ep)) return;
   await blastWaves(keys, 2);
   if (stale(_ep)) return;
   await settleBoard();
@@ -11373,6 +11901,8 @@ function checkEnd() {
 async function finishWin() {
   const _ep = levelEpoch();
   G.busy = true;
+  track('level_win', { n: G.n, left: G.moves, score: G.score,
+    stars: G.starsEarned, chain: G.bestChain, secs: (now() - (G.startedAt || now())) / 1000 });
   SFX.win();
   buzz(HAP.win);
   FX.sweep(G.ox, G.oy, G.boardW, G.boardH, { ttl: .9, col: '#FFFFFF', a: .5 });
@@ -11420,6 +11950,12 @@ async function finishWin() {
 async function finishLose() {
   const _ep = levelEpoch();
   G.busy = true;
+  /* `short` is the share of the goal still outstanding: a level
+     people lose at 5% is tuned, one they lose at 60% is a wall. */
+  const need = G.goals.reduce((a, g) => a + g.need, 0);
+  const have = G.goals.reduce((a, g) => a + Math.min(g.have, g.need), 0);
+  track('level_lose', { n: G.n, score: G.score, short: need ? 1 - have / need : 0,
+    secs: (now() - (G.startedAt || now())) / 1000 });
   SFX.lose();
   buzz(HAP.lose);
   const pet = activePet();
@@ -11442,6 +11978,7 @@ function gameLoopStart() {
     /* the real gap, before the clamp hides it: the effects layer scales
        itself down on a device that is not keeping up */
     FX.load(raw);
+    busyWatch(dt);
     renderGame(dt);
     G.raf = requestAnimationFrame(loop);
   };
@@ -11690,6 +12227,9 @@ function renderGame(dt) {
      the composite flips per particle. */
   FX.draw(c);
   FX.drawBands(c);
+  /* the pet lands on top of the debris it just made, under the numbers */
+  stepLeap(dt);
+  drawLeap(c);
   FX.drawText(c);
 
   /* the last few moves get warmer and start to breathe */
@@ -12524,10 +13064,28 @@ function drawMap() {
   const ph = roomPhase(PAL.dark);
   const sky = skyColours(ph);
   const total = MAP.total || H;
+  /* The ground changes under you as the lane crosses into a new
+     stretch. One gradient down the whole scroll rather than a band per
+     chapter, so the change is a walk rather than a step — you notice
+     you are somewhere else without ever being shown a seam.
+
+     The lane runs bottom-to-top, so level 1 is at `total` and the
+     furthest level is at 0, and the stops go in that order. */
   const grad = c.createLinearGradient(0, 0, 0, total);
   grad.addColorStop(0, PAL.dark ? '#1A2430' : mix(sky[2], '#C7D8A8', .5));
-  grad.addColorStop(.14, PAL.dark ? '#20301F' : '#B7CE95');
-  grad.addColorStop(1, PAL.dark ? '#1B2A1B' : '#A8C489');
+  const topLevel = MAP.nodes.length ? MAP.nodes[0].n : 1;
+  const stops = [];
+  for (let n = 1; n <= topLevel; n += BLOCK) {
+    const node = MAP.nodes.find(x => x.n === n);
+    if (!node) continue;
+    stops.push([clamp(node.y / total, 0, 1), chapterGround(n)]);
+  }
+  /* nearest-first down the canvas */
+  stops.sort((a2, b2) => a2[0] - b2[0]).forEach(([at, col]) => {
+    grad.addColorStop(clamp(at, .02, .98), col);
+  });
+  if (!stops.length) grad.addColorStop(.14, PAL.dark ? '#20301F' : '#B7CE95');
+  grad.addColorStop(1, chapterGround(1));
   c.fillStyle = grad;
   c.fillRect(0, 0, W, total);
 
@@ -12684,6 +13242,36 @@ function drawMap() {
   c.fillStyle = PAL.textDim;
   c.font = '700 12px Karla, sans-serif';
   c.fillText(LANG === 'tr' ? 'YUKARISI HENÜZ İNŞA EDİLMEDİ' : 'THE LANE KEEPS GOING', W / 2, 34);
+  c.restore();
+
+  /* ---- where you are, and what you are walking toward ----
+
+     Pinned to the top of the view rather than to the lane, so it is
+     legible at any scroll position: the stretch you are looking at, and
+     how much of it is behind you. This is the answer to "why am I
+     playing level 34", which the map had no way of giving. */
+  c.save();
+  c.translate(0, off);
+  const here = MAP.nodes.slice().reverse()
+    .find(n2 => n2.y >= off + 40 && n2.y <= off + H) || { n: SAVE.reached };
+  const label = chapterName(here.n);
+  const first = chapterFirst(here.n), last = chapterLast(here.n);
+  let done = 0;
+  for (let i = first; i <= last; i++) if (SAVE.stars[i] > 0) done++;
+  c.textAlign = 'left';
+  c.font = '800 15px Grandstander, sans-serif';
+  const tw = c.measureText(label).width;
+  const bw = Math.max(tw + 74, 150), bx = W / 2 - bw / 2;
+  c.fillStyle = rgba(PAL.dark ? '#0E1512' : '#FFFDF7', .82);
+  rr(c, bx, 8, bw, 30, 15); c.fill();
+  c.strokeStyle = rgba(PAL.line || (PAL.dark ? '#3A4A3A' : '#D8CDB4'), .9);
+  c.lineWidth = 1; c.stroke();
+  c.fillStyle = PAL.text;
+  c.fillText(label, bx + 14, 28);
+  c.textAlign = 'right';
+  c.font = '700 12px Karla, sans-serif';
+  c.fillStyle = PAL.textDim;
+  c.fillText(done + '/' + BLOCK, bx + bw - 14, 27);
   c.restore();
   c.restore();                            /* undo the scroll translate */
 }
@@ -12890,8 +13478,8 @@ function syncPurse() {
   const inT = heartsIn();
   h.innerHTML = IC.heart + '<span class="num">' + SAVE.hearts + '</span>' +
     (SAVE.hearts >= HEART_MAX ? '' : '<span class="sub num">' + fmtTime(inT) + '</span>');
-  $('#chipCoins').innerHTML = IC.coin + '<span class="num">' + fmt(SAVE.coins) + '</span>';
-  $('#chipTreats').innerHTML = IC.treat + '<span class="num">' + fmt(SAVE.treats) + '</span>';
+  $('#chipCoins').innerHTML = IC.coin + '<span class="num">' + fmtPurse(SAVE.coins) + '</span>';
+  $('#chipTreats').innerHTML = IC.treat + '<span class="num">' + fmtPurse(SAVE.treats) + '</span>';
 }
 
 /* What the interface answers to.
@@ -13023,7 +13611,7 @@ function renderHome() {
       ${pet.trait
       ? `<div style="font-size:var(--t-small)"><b style="font-family:Grandstander,sans-serif">${traitName(pet.trait)}.</b>
          <span style="color:var(--text-dim)">${traitDesc(pet.trait)}</span></div>`
-      : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('trait_none')} ${T('trait_pending', { n: TRAIT_AT_BOND })}</div>`}
+      : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('trait_none')} ${T('trait_pending', { n: TRAIT_AT_BOND, c: TRAIT_AT_CARE })}</div>`}
       <div class="divide"></div>
       <div class="eyebrow">${T('home_perk')}</div>
       ${perks.length
@@ -13059,6 +13647,7 @@ function showMood(text) {
   b._t = setTimeout(() => b.classList.remove('on'), 2600);
 }
 function afterCare(pet, moodKey, bondXp, careKind) {
+  track('care', { kind: careKind || 'none', bond: pet ? pet.bond : 0 });
   const grew = addBond(pet, bondXp);
   const newTrait = careKind ? bumpCare(pet, careKind) : null;
   pet.lastCare = now();
@@ -13677,7 +14266,7 @@ function openPetSheet(id) {
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.heart}</span>
       <span class="t">${p.trait
         ? '<b>' + traitName(p.trait) + '</b>' + traitDesc(p.trait)
-        : '<b>' + T('trait_none') + '</b>' + T('trait_pending', { n: TRAIT_AT_BOND })}</span>
+        : '<b>' + T('trait_none') + '</b>' + T('trait_pending', { n: TRAIT_AT_BOND, c: TRAIT_AT_CARE })}</span>
     </div>
     <div class="row">
       ${isActive ? '' : `<button class="btn primary" id="psActive">${T('fam_setactive')}</button>`}
@@ -13728,6 +14317,7 @@ function tryAdopt(breedIdx, cost, need) {
   SFX.tap();
   customiseSheet(breedIdx, (coat, eye, name) => {
     SAVE.coins -= cost;
+    track('adopt', { breed: breedIdx, owned: SAVE.pets.length });
     const p = makePet(breedIdx, coat, eye, name);
     SAVE.pets.push(p);
     /* the lane fills with your own: one fewer stranger on every board
@@ -13772,7 +14362,7 @@ function customiseSheet(breedIdx, done) {
       <span class="nm" style="font-size:var(--t-micro)">${LANG === 'tr' ? co.tr : co.en}</span>
     </button>`).join('');
   $('#csEyes', m.el).innerHTML = EYE_COLORS.map((e, i) =>
-    `<button class="sw ${i === eye ? 'on' : ''}" data-eye="${i}" style="background:${e.hex}"></button>`).join('');
+    `<button class="sw ${i === eye ? 'on' : ''}" data-eye="${i}" aria-label="${T('eye_' + e.id)}" title="${T('eye_' + e.id)}" style="background:${e.hex}"></button>`).join('');
   paintArtCanvases(m.el); art();
   $$('[data-coat]', m.el).forEach(b => b.addEventListener('click', () => {
     coat = +b.dataset.coat; SFX.tap();
@@ -13830,6 +14420,21 @@ function paintGoalIcons(root) {
     else { c.fillStyle = PAL.accent; c.save(); c.scale(px / 24, px / 24); c.translate(-12, -12); c.fill(new Path2D('m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5-4.7-4.6 6.5-.9z')); c.restore(); }
   });
 }
+/* The card is worth reading by level ten and is noise before it.
+
+   A player opening this for the first time met a move budget, a collect
+   goal, the pet's name, its ability, a blocker count, four perk chips,
+   a charge line, a booster offer and a heart cost — about ten ideas,
+   none of which mean anything yet, before a single swap. The steepest
+   part of the whole game was minute one, and it was made of text.
+
+   So the opening levels go straight to the board. The card starts
+   carrying itself once the player has something to hang it on: the goal
+   chips at 2, perks once a pet has a bond worth reading at 5, and the
+   full card with its booster row from 8. Nothing is hidden that the
+   player could act on — boosters below 8 are not yet owned, and the
+   perks are applied whether or not the card lists them. */
+const INTRO_FROM = 8;
 function openLevelIntro(n) {
   heartTick();
   const def = levelDef(n);
@@ -13837,13 +14442,26 @@ function openLevelIntro(n) {
   const perks = perksFor(pet);
   let useMoves = false;
   if (SAVE.hearts <= 0) { noHeartsSheet(); return; }
+  /* straight in, the first time through the opening levels. Everything
+     the Start button does, in the same order — the heart is still spent,
+     the screen still changes, and the level's own coach mark still
+     runs. Skipping the card must not skip the level's cost. */
+  if (n !== DAILY_LEVEL && n < INTRO_FROM && !SAVE.stars[n]) {
+    if (!spendHeart()) { noHeartsSheet(); return; }
+    track('level_skip_intro', { n: n });
+    syncPurse();
+    setScreen('game');
+    startLevel(n, { perks: perks });
+    maybeTutorial(def);
+    return;
+  }
 
   /* every fifth level pays treats the first time, and used to do it
      without warning anyone it was going to */
   const firstTreats = (n !== DAILY_LEVEL && n % 5 === 0 && !SAVE.stars[n]) ? ECON.everyFifthTreats : 0;
 
   const m = modal(`
-    <div class="eyebrow">${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
+    <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
     <h2>${T('lvl_goals')}</h2>
     ${def.gate ? `<div class="goalItem gateNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
@@ -13918,6 +14536,7 @@ function openLevelIntro(n) {
    says the shop is shut instead of pretending to take a card. */
 function treatStore(why) {
   const live = BILLING.ready();
+  track('store_open', { why: why || 'chip', live: live });
   const j = jarState();
   const reason = why === 'continue' ? T('store_why_continue')
     : why === 'hearts' ? T('store_why_hearts') : '';
@@ -13981,13 +14600,16 @@ function treatStore(why) {
     const sku = kind === 'pack' ? TREAT_PACKS.find(x => x.id === id).sku
       : kind === 'jar' ? JAR.sku : PET_CLUB.sku;
     b.disabled = true;
+    track('buy_try', { sku: sku });
     const r = await BILLING.buy(sku);
     b.disabled = false;
     if (!r.ok) {
+      track('buy_fail', { why: r.why || 'unknown' });
       if (r.why === 'nostore') { storeShut(); return; }
       if (r.why !== 'cancelled') { SFX.bad(); toast(T('store_failed'), 'treat'); }
       return;
     }
+    track('buy_ok', { sku: sku });
     const got = grantPurchase(kind, id);
     SFX.coin();
     syncPurse();
@@ -14010,6 +14632,7 @@ function storeShut() {
 }
 
 function noHeartsSheet() {
+  track('hearts_empty', { n: SAVE.reached });
   const line = () => T('lvl_no_hearts_sub', { m: HEART_REFILL / MIN, t: fmtTime(heartsIn()) });
   let tick = null;
   const m = modal(`
@@ -14250,6 +14873,7 @@ function confirmQuit() {
   $('#qNo', m.el).addEventListener('click', m.close);
   $('#qYes', m.el).addEventListener('click', () => {
     m.close();
+    track('level_quit', { n: G.n, left: G.moves });
     SAVE.hearts = Math.min(HEART_MAX, SAVE.hearts + 1);
     persist(true);
     leaveLevel();
@@ -14406,6 +15030,7 @@ function openDailyGift() {
   if (!giftReady()) return;
   const day = giftDay();
   const { reward } = claimGift();
+  track('gift', { day: day, streak: SAVE.streak });
   SFX.levelup();
   const bits = [];
   if (reward.coins) bits.push(`<span class="reward" style="color:var(--accent-strong)">${IC.coin}+${reward.coins}</span>`);
@@ -14462,6 +15087,7 @@ function openSettings() {
       ${row('music', T('set_music'), T('set_music_s'), SAVE.settings.music)}
       ${row('haptics', T('set_haptics'), T('set_haptics_s'), SAVE.settings.haptics)}
       ${row('marks', T('set_marks'), T('set_marks_s'), SAVE.settings.marks)}
+      ${row('telemetry', T('set_data'), T('set_data_s'), SAVE.settings.telemetry !== false)}
       <div class="switchRow themeRow">
         <span class="lb">${T('set_theme')}<small>${T('set_theme_s')}</small></span>
         <span class="seg" id="segTheme">
@@ -14621,6 +15247,7 @@ function maybeTutorial(def) {
 
 /* ---------------- onboarding ---------------- */
 function runOnboarding() {
+  track('onb_open');
   $('#onb').classList.add('on');
   const card = $('#onbCard');
   let step = 0, breedIdx = 0, coat = 0, eye = 0;
@@ -14675,7 +15302,7 @@ function runOnboarding() {
         </div>
         <div class="eyebrow">${T('onb_eyes')}</div>
         <div class="swatches">
-          ${EYE_COLORS.map((e, i) => `<button class="sw ${i === eye ? 'on' : ''}" data-e="${i}" style="background:${e.hex}"></button>`).join('')}
+          ${EYE_COLORS.map((e, i) => `<button class="sw ${i === eye ? 'on' : ''}" data-e="${i}" aria-label="${T('eye_' + e.id)}" title="${T('eye_' + e.id)}" style="background:${e.hex}"></button>`).join('')}
         </div>
         <div class="row"><button class="btn ghost" id="obBack">${T('onb_back')}</button>
         <button class="btn primary" id="obNext">${T('onb_next')}</button></div>
@@ -14717,7 +15344,7 @@ function runOnboarding() {
   const next = () => {
     audioResume();
     SFX.tap();
-    if (step < 3) { step++; render(); return; }
+    if (step < 3) { step++; track('onb_step', { step: step }); render(); return; }
     /* two taps in one frame would adopt twice and greet the first pet
        by the second one's name */
     if (adopted) return;
@@ -14728,6 +15355,7 @@ function runOnboarding() {
     SAVE.activePet = p.id;
     castChanged();
     persist(true);
+    track('onb_done', { breed: breedIdx, coat: coat, eye: eye });
     $('#onb').classList.remove('on');
     petVoiceBreed(breedIdx);
     welcomeModal(p);
@@ -14959,11 +15587,32 @@ function boot() {
      replaces the fallback labels whenever it arrives, and nothing waits
      on it */
   BILLING.refresh();
+  /* before anything else in boot can throw, so that if it does the
+     handler is already listening */
+  TRACK.init();
+  track('boot', { reached: SAVE.reached, pets: SAVE.pets.length,
+    day: Math.floor((now() - (SAVE.created || now())) / DAY) });
   syncPurse();
   /* a save carried over from an older build may already have earned
      things, so sweep once on load rather than waiting for the next win */
   const owed = checkBadges();
   if (owed.length) setTimeout(() => badgeModal(owed), 1200);
+
+  /* The first touch of the glass, once.
+
+     Two things wait on it. The vibration motor, which the browser will
+     not start before a gesture and complains about in the console every
+     time it is asked; and the audio context, which is created suspended
+     — so a save that has music on still boots silent, and used to stay
+     that way until the player happened to press something that called
+     audioResume by hand. */
+  const wake = () => {
+    markGesture();
+    audioResume();
+    if (SAVE.settings.music) musicStart();
+  };
+  window.addEventListener('pointerdown', wake, { once: true });
+  window.addEventListener('keydown', wake, { once: true });
 
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', onResize);
@@ -14982,6 +15631,9 @@ function boot() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       musicStop(); persist(true);
+      /* the one moment a batch is worth sending: the player has
+         stopped, so nothing is competing for the frame */
+      TRACK.flush();
       gameLoopStop(); roomStop();
     } else {
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
@@ -15081,6 +15733,7 @@ window.BL = {
   levelDef, findMatches, allMoves, hasMove, tryMove, canSwap, firePetAbility, persist, wipeSave,
   perksFor, activePet, makePet, healPet, loadSave, freshSave, BREEDS, LEVELS,
   checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait,
+  track, TRACK,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
   openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, treatStore, confirmQuit,

@@ -656,9 +656,17 @@ async function run() {
       BL.setScreen('map');
       BL.openLevelIntro(n);
       await sleep(140);
+      /* Two ways in, and the check is about what the player is told
+         rather than which of them told it. The opening levels go
+         straight to the board — the card is noise before there is
+         anything to hang it on — so there is no Start button to press
+         and maybeTutorial has already run. From level 8 the card is
+         shown and the level starts behind it.
+
+         The assertion below is unchanged either way: a sheet has to be
+         up, and it has to say something. */
       const go = D.getElementById('liGo');
-      if (!go) { missing.push(key + ': no way into level ' + n); continue; }
-      go.click();
+      if (go) go.click();
       await sleep(700);
       const card = D.querySelector('.sheet');
       const said = card ? card.textContent.replace(/\s+/g, ' ').trim() : '';

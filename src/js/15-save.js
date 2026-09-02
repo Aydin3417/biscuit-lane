@@ -18,6 +18,7 @@ function freshSave() {
     v: SAVE_VERSION,
     created: now(),
     lastSeen: now(),
+    install: 0,               // random, made on first boot, forgotten with the save
     coins: 120,
     treats: 6,
     hearts: HEART_MAX,
@@ -38,7 +39,7 @@ function freshSave() {
     streak: 0,
     lastGift: 0,
     seen: {},                  // tutorial flags
-    settings: { sound: true, music: false, haptics: true, lang: 'en', theme: 'auto', marks: false },
+    settings: { sound: true, music: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true },
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
     jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing
@@ -53,6 +54,10 @@ function freshSave() {
    have been corrupted is put back inside its legal range. A save that
    cannot be read is replaced rather than allowed to crash the boot. */
 const SAVE_VERSION = 2;
+/* what a build calls itself when it reports anything. Bumped by hand,
+   with android/app/build.gradle's versionName, so a crash from an old
+   install is not read as one from the current one. */
+const APP_VERSION = '1.0.0';
 
 function migrate(d) {
   const v = d.v || 1;
@@ -64,6 +69,12 @@ function migrate(d) {
     });
     d.badges = d.badges || {};
   }
+  /* Both of these are new in this build and neither is version-gated:
+     an older save simply has not got them, and a player who already
+     turned telemetry off must not have it turned back on by an
+     upgrade. */
+  if (typeof d.install !== 'number' || !d.install) d.install = 0;
+  if (d.settings && d.settings.telemetry === undefined) d.settings.telemetry = true;
   d.v = SAVE_VERSION;
   return d;
 }
@@ -442,7 +453,7 @@ function settleTrait(p) {
     const n = (p.care && p.care[k]) || 0;
     if (n > bestN) { bestN = n; best = map[k]; }
   });
-  if (!best || bestN < 3) return null;      /* not enough of a pattern yet */
+  if (!best || bestN < TRAIT_AT_CARE) return null;   /* not enough of a pattern yet */
   p.trait = best;
   persist();
   return best;

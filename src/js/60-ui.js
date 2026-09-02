@@ -67,8 +67,8 @@ function syncPurse() {
   const inT = heartsIn();
   h.innerHTML = IC.heart + '<span class="num">' + SAVE.hearts + '</span>' +
     (SAVE.hearts >= HEART_MAX ? '' : '<span class="sub num">' + fmtTime(inT) + '</span>');
-  $('#chipCoins').innerHTML = IC.coin + '<span class="num">' + fmt(SAVE.coins) + '</span>';
-  $('#chipTreats').innerHTML = IC.treat + '<span class="num">' + fmt(SAVE.treats) + '</span>';
+  $('#chipCoins').innerHTML = IC.coin + '<span class="num">' + fmtPurse(SAVE.coins) + '</span>';
+  $('#chipTreats').innerHTML = IC.treat + '<span class="num">' + fmtPurse(SAVE.treats) + '</span>';
 }
 
 /* What the interface answers to.
@@ -200,7 +200,7 @@ function renderHome() {
       ${pet.trait
       ? `<div style="font-size:var(--t-small)"><b style="font-family:Grandstander,sans-serif">${traitName(pet.trait)}.</b>
          <span style="color:var(--text-dim)">${traitDesc(pet.trait)}</span></div>`
-      : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('trait_none')} ${T('trait_pending', { n: TRAIT_AT_BOND })}</div>`}
+      : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('trait_none')} ${T('trait_pending', { n: TRAIT_AT_BOND, c: TRAIT_AT_CARE })}</div>`}
       <div class="divide"></div>
       <div class="eyebrow">${T('home_perk')}</div>
       ${perks.length
@@ -236,6 +236,7 @@ function showMood(text) {
   b._t = setTimeout(() => b.classList.remove('on'), 2600);
 }
 function afterCare(pet, moodKey, bondXp, careKind) {
+  track('care', { kind: careKind || 'none', bond: pet ? pet.bond : 0 });
   const grew = addBond(pet, bondXp);
   const newTrait = careKind ? bumpCare(pet, careKind) : null;
   pet.lastCare = now();
@@ -854,7 +855,7 @@ function openPetSheet(id) {
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.heart}</span>
       <span class="t">${p.trait
         ? '<b>' + traitName(p.trait) + '</b>' + traitDesc(p.trait)
-        : '<b>' + T('trait_none') + '</b>' + T('trait_pending', { n: TRAIT_AT_BOND })}</span>
+        : '<b>' + T('trait_none') + '</b>' + T('trait_pending', { n: TRAIT_AT_BOND, c: TRAIT_AT_CARE })}</span>
     </div>
     <div class="row">
       ${isActive ? '' : `<button class="btn primary" id="psActive">${T('fam_setactive')}</button>`}
@@ -905,6 +906,7 @@ function tryAdopt(breedIdx, cost, need) {
   SFX.tap();
   customiseSheet(breedIdx, (coat, eye, name) => {
     SAVE.coins -= cost;
+    track('adopt', { breed: breedIdx, owned: SAVE.pets.length });
     const p = makePet(breedIdx, coat, eye, name);
     SAVE.pets.push(p);
     /* the lane fills with your own: one fewer stranger on every board
@@ -949,7 +951,7 @@ function customiseSheet(breedIdx, done) {
       <span class="nm" style="font-size:var(--t-micro)">${LANG === 'tr' ? co.tr : co.en}</span>
     </button>`).join('');
   $('#csEyes', m.el).innerHTML = EYE_COLORS.map((e, i) =>
-    `<button class="sw ${i === eye ? 'on' : ''}" data-eye="${i}" style="background:${e.hex}"></button>`).join('');
+    `<button class="sw ${i === eye ? 'on' : ''}" data-eye="${i}" aria-label="${T('eye_' + e.id)}" title="${T('eye_' + e.id)}" style="background:${e.hex}"></button>`).join('');
   paintArtCanvases(m.el); art();
   $$('[data-coat]', m.el).forEach(b => b.addEventListener('click', () => {
     coat = +b.dataset.coat; SFX.tap();
@@ -1007,6 +1009,21 @@ function paintGoalIcons(root) {
     else { c.fillStyle = PAL.accent; c.save(); c.scale(px / 24, px / 24); c.translate(-12, -12); c.fill(new Path2D('m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5-4.7-4.6 6.5-.9z')); c.restore(); }
   });
 }
+/* The card is worth reading by level ten and is noise before it.
+
+   A player opening this for the first time met a move budget, a collect
+   goal, the pet's name, its ability, a blocker count, four perk chips,
+   a charge line, a booster offer and a heart cost — about ten ideas,
+   none of which mean anything yet, before a single swap. The steepest
+   part of the whole game was minute one, and it was made of text.
+
+   So the opening levels go straight to the board. The card starts
+   carrying itself once the player has something to hang it on: the goal
+   chips at 2, perks once a pet has a bond worth reading at 5, and the
+   full card with its booster row from 8. Nothing is hidden that the
+   player could act on — boosters below 8 are not yet owned, and the
+   perks are applied whether or not the card lists them. */
+const INTRO_FROM = 8;
 function openLevelIntro(n) {
   heartTick();
   const def = levelDef(n);
@@ -1014,13 +1031,26 @@ function openLevelIntro(n) {
   const perks = perksFor(pet);
   let useMoves = false;
   if (SAVE.hearts <= 0) { noHeartsSheet(); return; }
+  /* straight in, the first time through the opening levels. Everything
+     the Start button does, in the same order — the heart is still spent,
+     the screen still changes, and the level's own coach mark still
+     runs. Skipping the card must not skip the level's cost. */
+  if (n !== DAILY_LEVEL && n < INTRO_FROM && !SAVE.stars[n]) {
+    if (!spendHeart()) { noHeartsSheet(); return; }
+    track('level_skip_intro', { n: n });
+    syncPurse();
+    setScreen('game');
+    startLevel(n, { perks: perks });
+    maybeTutorial(def);
+    return;
+  }
 
   /* every fifth level pays treats the first time, and used to do it
      without warning anyone it was going to */
   const firstTreats = (n !== DAILY_LEVEL && n % 5 === 0 && !SAVE.stars[n]) ? ECON.everyFifthTreats : 0;
 
   const m = modal(`
-    <div class="eyebrow">${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
+    <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
     <h2>${T('lvl_goals')}</h2>
     ${def.gate ? `<div class="goalItem gateNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
@@ -1095,6 +1125,7 @@ function openLevelIntro(n) {
    says the shop is shut instead of pretending to take a card. */
 function treatStore(why) {
   const live = BILLING.ready();
+  track('store_open', { why: why || 'chip', live: live });
   const j = jarState();
   const reason = why === 'continue' ? T('store_why_continue')
     : why === 'hearts' ? T('store_why_hearts') : '';
@@ -1158,13 +1189,16 @@ function treatStore(why) {
     const sku = kind === 'pack' ? TREAT_PACKS.find(x => x.id === id).sku
       : kind === 'jar' ? JAR.sku : PET_CLUB.sku;
     b.disabled = true;
+    track('buy_try', { sku: sku });
     const r = await BILLING.buy(sku);
     b.disabled = false;
     if (!r.ok) {
+      track('buy_fail', { why: r.why || 'unknown' });
       if (r.why === 'nostore') { storeShut(); return; }
       if (r.why !== 'cancelled') { SFX.bad(); toast(T('store_failed'), 'treat'); }
       return;
     }
+    track('buy_ok', { sku: sku });
     const got = grantPurchase(kind, id);
     SFX.coin();
     syncPurse();
@@ -1187,6 +1221,7 @@ function storeShut() {
 }
 
 function noHeartsSheet() {
+  track('hearts_empty', { n: SAVE.reached });
   const line = () => T('lvl_no_hearts_sub', { m: HEART_REFILL / MIN, t: fmtTime(heartsIn()) });
   let tick = null;
   const m = modal(`
@@ -1427,6 +1462,7 @@ function confirmQuit() {
   $('#qNo', m.el).addEventListener('click', m.close);
   $('#qYes', m.el).addEventListener('click', () => {
     m.close();
+    track('level_quit', { n: G.n, left: G.moves });
     SAVE.hearts = Math.min(HEART_MAX, SAVE.hearts + 1);
     persist(true);
     leaveLevel();
@@ -1583,6 +1619,7 @@ function openDailyGift() {
   if (!giftReady()) return;
   const day = giftDay();
   const { reward } = claimGift();
+  track('gift', { day: day, streak: SAVE.streak });
   SFX.levelup();
   const bits = [];
   if (reward.coins) bits.push(`<span class="reward" style="color:var(--accent-strong)">${IC.coin}+${reward.coins}</span>`);
@@ -1639,6 +1676,7 @@ function openSettings() {
       ${row('music', T('set_music'), T('set_music_s'), SAVE.settings.music)}
       ${row('haptics', T('set_haptics'), T('set_haptics_s'), SAVE.settings.haptics)}
       ${row('marks', T('set_marks'), T('set_marks_s'), SAVE.settings.marks)}
+      ${row('telemetry', T('set_data'), T('set_data_s'), SAVE.settings.telemetry !== false)}
       <div class="switchRow themeRow">
         <span class="lb">${T('set_theme')}<small>${T('set_theme_s')}</small></span>
         <span class="seg" id="segTheme">
@@ -1798,6 +1836,7 @@ function maybeTutorial(def) {
 
 /* ---------------- onboarding ---------------- */
 function runOnboarding() {
+  track('onb_open');
   $('#onb').classList.add('on');
   const card = $('#onbCard');
   let step = 0, breedIdx = 0, coat = 0, eye = 0;
@@ -1852,7 +1891,7 @@ function runOnboarding() {
         </div>
         <div class="eyebrow">${T('onb_eyes')}</div>
         <div class="swatches">
-          ${EYE_COLORS.map((e, i) => `<button class="sw ${i === eye ? 'on' : ''}" data-e="${i}" style="background:${e.hex}"></button>`).join('')}
+          ${EYE_COLORS.map((e, i) => `<button class="sw ${i === eye ? 'on' : ''}" data-e="${i}" aria-label="${T('eye_' + e.id)}" title="${T('eye_' + e.id)}" style="background:${e.hex}"></button>`).join('')}
         </div>
         <div class="row"><button class="btn ghost" id="obBack">${T('onb_back')}</button>
         <button class="btn primary" id="obNext">${T('onb_next')}</button></div>
@@ -1894,7 +1933,7 @@ function runOnboarding() {
   const next = () => {
     audioResume();
     SFX.tap();
-    if (step < 3) { step++; render(); return; }
+    if (step < 3) { step++; track('onb_step', { step: step }); render(); return; }
     /* two taps in one frame would adopt twice and greet the first pet
        by the second one's name */
     if (adopted) return;
@@ -1905,6 +1944,7 @@ function runOnboarding() {
     SAVE.activePet = p.id;
     castChanged();
     persist(true);
+    track('onb_done', { breed: breedIdx, coat: coat, eye: eye });
     $('#onb').classList.remove('on');
     petVoiceBreed(breedIdx);
     welcomeModal(p);

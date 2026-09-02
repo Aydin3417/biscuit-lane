@@ -204,11 +204,32 @@ function boot() {
      replaces the fallback labels whenever it arrives, and nothing waits
      on it */
   BILLING.refresh();
+  /* before anything else in boot can throw, so that if it does the
+     handler is already listening */
+  TRACK.init();
+  track('boot', { reached: SAVE.reached, pets: SAVE.pets.length,
+    day: Math.floor((now() - (SAVE.created || now())) / DAY) });
   syncPurse();
   /* a save carried over from an older build may already have earned
      things, so sweep once on load rather than waiting for the next win */
   const owed = checkBadges();
   if (owed.length) setTimeout(() => badgeModal(owed), 1200);
+
+  /* The first touch of the glass, once.
+
+     Two things wait on it. The vibration motor, which the browser will
+     not start before a gesture and complains about in the console every
+     time it is asked; and the audio context, which is created suspended
+     — so a save that has music on still boots silent, and used to stay
+     that way until the player happened to press something that called
+     audioResume by hand. */
+  const wake = () => {
+    markGesture();
+    audioResume();
+    if (SAVE.settings.music) musicStart();
+  };
+  window.addEventListener('pointerdown', wake, { once: true });
+  window.addEventListener('keydown', wake, { once: true });
 
   window.addEventListener('resize', onResize);
   window.addEventListener('orientationchange', onResize);
@@ -227,6 +248,9 @@ function boot() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       musicStop(); persist(true);
+      /* the one moment a batch is worth sending: the player has
+         stopped, so nothing is competing for the frame */
+      TRACK.flush();
       gameLoopStop(); roomStop();
     } else {
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
@@ -326,6 +350,7 @@ window.BL = {
   levelDef, findMatches, allMoves, hasMove, tryMove, canSwap, firePetAbility, persist, wipeSave,
   perksFor, activePet, makePet, healPet, loadSave, freshSave, BREEDS, LEVELS,
   checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait,
+  track, TRACK,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
   openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, treatStore, confirmQuit,

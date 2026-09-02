@@ -4,7 +4,7 @@
 const G = {
   B: null, def: null, n: 1,
   moves: 0, score: 0, goals: [],
-  busy: true, over: false, running: false,
+  busy: true, busyT: 0, over: false, running: false, startedAt: 0,
   sel: null, pointer: null,
   charge: 0, scoreMul: 1, spending: false,
   chain: 0, bestChain: 0,
@@ -172,6 +172,8 @@ function startLevel(n, opts) {
      sizing, not a level number, so the caller picks rather than the
      level table reaching into the save to find out how far you got */
   G.def = n === DAILY_LEVEL ? dailyLevel(SAVE.reached) : levelDef(n);
+  G.startedAt = now();
+  track('level_start', { n: n, moves: G.def.moves, tries: (SAVE.stats.played || 0) });
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
   const pet = activePet();
@@ -851,7 +853,20 @@ async function resolveBoard(swapCells) {
     const groups = findMatches(G.B);
     if (!groups.length) break;
     G.chain++;
-    if (G.chain > 1) G.shake = Math.max(G.shake, Math.min(6, G.chain));
+    /* The top of the curve had a ceiling on it: shake was clamped to 6,
+       so a twelve-deep cascade landed exactly as hard as a six-deep one
+       and the rarest thing in the game felt like the second-rarest.
+       Praise words and pitch already climb; the camera did not.
+
+       Past four it gets a zoom and a flash as well, because that is the
+       point where a cascade stops being a good move and starts being a
+       story the player will tell. */
+    if (G.chain > 1) G.shake = Math.max(G.shake, Math.min(13, G.chain * 1.5));
+    if (G.chain === 4) FX.punchZoom(.7);
+    if (G.chain >= 5) {
+      FX.punchZoom(.5 + Math.min(.7, (G.chain - 5) * .16));
+      G.flash = Math.max(G.flash, Math.min(.4, .16 + (G.chain - 5) * .06));
+    }
     await clearGroups(groups, swapCells);
     if (stale(_ep)) return;
     swapCells = null;
@@ -866,6 +881,121 @@ async function resolveBoard(swapCells) {
   }
   G.hintT = 0;
 }
+/* ---------------- the pet's own move ----------------
+
+   The ability was the one mechanic nothing else in the genre has, and
+   it was also the quietest thing in the game: a 0.35 flash, some rings,
+   and four hundred milliseconds. Combos shook the screen. This did not
+   even do that, and the animal whose move it was stayed a 58px portrait
+   in the corner the whole time.
+
+   So it leaps. Out of the companion button, across the tray on an arc,
+   down onto the cell it is about to open up — and the board takes the
+   landing. The rig is the one the room already uses; nothing here is
+   new art. */
+function startPetLeap(r, c) {
+  const pet = activePet();
+  if (!pet || reduceMotion()) return;
+  G.leap = {
+    t: 0, ttl: .52,
+    x0: -G.cell * .35, y0: G.ch + G.cell * .35,
+    x1: cellX(c) + G.cell / 2, y1: cellY(r) + G.cell / 2,
+    spec: specOfPet(pet)
+  };
+}
+function stepLeap(dt) {
+  if (!G.leap) return;
+  G.leap.t += dt;
+  if (G.leap.t >= G.leap.ttl + .34) G.leap = null;
+}
+function drawLeap(c) {
+  const L = G.leap;
+  if (!L) return;
+  const k = clamp(L.t / L.ttl, 0, 1);
+  const e = E.out(k);
+  const x = lerp(L.x0, L.x1, e);
+  const y = lerp(L.y0, L.y1, e);
+  /* the arc: a hop over the board rather than a slide across it */
+  const hop = Math.sin(k * Math.PI) * G.cell * 1.9;
+  /* squashed on the way up, stretched at the top, splatted on landing */
+  const land = clamp((L.t - L.ttl) / .34, 0, 1);
+  const squash = k < 1 ? (1 - k) * .12 : -Math.sin(land * Math.PI) * .18;
+  const s = G.cell * (k < 1 ? 1.15 : 1.15 * (1 + Math.sin(land * Math.PI) * .1));
+  /* The rig is drawn upward from the feet, so a pet landing on the top
+     row puts its head through the ceiling and gets sliced off by the
+     canvas. Keep the whole animal on the tray — a target near an edge
+     is exactly where the eye already is. */
+  const top = s * .95 + 4;
+  const px = clamp(x, s * .5, G.cw - s * .5);
+  const py = Math.max(y - hop, top);
+  c.save();
+  c.translate(px, py);
+  c.scale(1 + squash, 1 - squash);
+  c.rotate(k < 1 ? (1 - k) * -.22 : 0);
+  c.translate(0, -s * .93);
+  drawBody(c, L.spec, s, { mouth: 'smile', tail: Math.sin(L.t * 22) * .5 });
+  c.restore();
+}
+
+/* The camera half of the same thing.
+
+   runCombo has always set G.shake to 9. This set nothing at all, which
+   is why a move that could clear ten blockers landed softer than an
+   ordinary four-match. Same vocabulary as a combo, one step louder,
+   because this one costs a whole meter. */
+function abilityLaunch(epi) {
+  const B = G.B;
+  if (!B) return;
+  track('ability', { n: G.n });
+  const r = epi ? epi[0] : Math.floor(B.h / 2);
+  const c = epi ? epi[1] : Math.floor(B.w / 2);
+  startPetLeap(r, c);
+  G.shake = Math.max(G.shake, 14);
+  FX.punchZoom(1.1);
+  FX.sweep(G.ox, G.oy, G.boardW, G.boardH, { ttl: .55, col: '#FFFFFF', a: .3 });
+  FX.glow(cellX(c) + G.cell / 2, cellY(r) + G.cell / 2, G.cell * .3, G.cell * 2.4, PAL.accent, .5);
+}
+
+/* ---------------- the stuck-board watchdog ----------------
+
+   Every mutation of the board runs behind G.busy, and every one of them
+   is a chain of awaits. If a single link never resolves, the flag is
+   never cleared, and the board is dead: taps do nothing, the level
+   cannot be finished, and the only way out is to quit and lose the
+   heart. There was no recovery from it at all.
+
+   wait() now has a timeout under its rAF chain, which should make that
+   unreachable. This is the second line, because "should be unreachable"
+   is exactly what was believed about the first one.
+
+   It only fires when nothing is actually in flight — no tween, no
+   particle, no floating number — so a legitimately long sequence is
+   never cut short. A win is exempt: finishWin holds the flag on purpose
+   while it spends the leftover moves. */
+const BUSY_MAX = 5;
+function busyWatch(dt) {
+  if (!G.busy || G.over || !G.B) { G.busyT = 0; return; }
+  if (anyTileMoving() || G.particles.length || G.floats.length || G.beams.length) { G.busyT = 0; return; }
+  G.busyT = (G.busyT || 0) + dt;
+  if (G.busyT < BUSY_MAX) return;
+  G.busyT = 0;
+  /* Snap anything half-tweened onto its cell, drop the flags, and let
+     the board finish itself. resolveBoard is safe to enter here: it
+     re-reads the grid rather than trusting whatever was in flight. */
+  eachCell(G.B, (cell, r, c) => {
+    if (!cell.tile) return;
+    cell.tile.tw = null; cell.tile.x = c; cell.tile.y = r;
+  });
+  G.busy = false; G.spending = false; G.sel = null;
+  syncHud();
+  resolveBoard(null).then(() => { if (!G.over) checkEnd(); });
+}
+function anyTileMoving() {
+  let moving = false;
+  eachCell(G.B, cell => { if (cell.tile && cell.tile.tw) moving = true; });
+  return moving;
+}
+
 async function doShuffleQuiet() {
   const _ep = levelEpoch();
   await wait(260);
@@ -1060,9 +1190,12 @@ async function firePetAbility() {
   const B = G.B;
   const goalType = primaryGoalType();
   const keys = new Set();
+  /* where the pet is going to land */
+  let epi = null;
 
   if (kind === 'pounce') {
     const spots = pickSpots(goalType, abilityStep('pounce', stage));
+    epi = spots[0];
     spots.forEach(([r, c]) => {
       for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) keys.add((r + dr) + ':' + (c + dc));
       ring(r, c, PAL.accent);
@@ -1072,14 +1205,24 @@ async function firePetAbility() {
     const blockers = [];
     eachCell(B, (cell, r, c) => { if (cell.crate > 0 || cell.mud > 0 || cell.ice > 0 || cell.bram > 0) blockers.push([r, c]); });
     shuffleArr(blockers);
-    blockers.slice(0, abilityStep('dig', stage)).forEach(([r, c]) => keys.add(r + ':' + c));
-    if (!blockers.length) pickSpots(goalType, 3 + stage).forEach(([r, c]) => keys.add(r + ':' + c));
+    const dug = blockers.slice(0, abilityStep('dig', stage));
+    dug.forEach(([r, c]) => keys.add(r + ':' + c));
+    if (!blockers.length) {
+      const fall = pickSpots(goalType, 3 + stage);
+      epi = fall[0];
+      fall.forEach(([r, c]) => keys.add(r + ':' + c));
+    } else epi = dug[0];
     SFX.crate();
   } else if (kind === 'shadow') {
     const spots = [];
     eachCell(B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && cell.ice === 0) spots.push([r, c]); });
     shuffleArr(spots);
-    spots.slice(0, abilityStep('shadow', stage)).forEach(([r, c]) => {
+    const lit = spots.slice(0, abilityStep('shadow', stage));
+    epi = lit[0];
+    abilityLaunch(epi);
+    await wait(240);
+    if (stale(_ep)) return;
+    lit.forEach(([r, c]) => {
       const t = B.cell[r][c].tile;
       t.sp = Math.random() < .5 ? SP.ROW : SP.COL;
       t.jiggle = 1; t.scale = .5;
@@ -1094,10 +1237,13 @@ async function firePetAbility() {
   } else if (kind === 'fetch') {
     /* through pickSpots, so a board holding fewer of the wanted colour
        than the card promises still gets the number the card promises */
-    pickSpots(goalType, abilityStep('fetch', stage)).forEach(([r, c]) => keys.add(r + ':' + c));
+    const fetched = pickSpots(goalType, abilityStep('fetch', stage));
+    epi = fetched[0];
+    fetched.forEach(([r, c]) => keys.add(r + ':' + c));
     SFX.rocket();
   } else if (kind === 'chorus') {
     const spots = pickSpots(goalType, abilityStep('chorus', stage));
+    epi = spots[0];
     spots.forEach(([r, c]) => {
       for (let i = 0; i < B.w; i++) keys.add(r + ':' + i);
       for (let i = 0; i < B.h; i++) keys.add(i + ':' + c);
@@ -1105,7 +1251,12 @@ async function firePetAbility() {
     });
     SFX.rocket();
   } else if (kind === 'snuffle') {
-    snuffleSpots(goalType, abilityStep('snuffle', stage)).forEach(([r, c]) => {
+    const sniffed = snuffleSpots(goalType, abilityStep('snuffle', stage));
+    epi = sniffed[0];
+    abilityLaunch(epi);
+    await wait(240);
+    if (stale(_ep)) return;
+    sniffed.forEach(([r, c]) => {
       const t = B.cell[r][c].tile;
       t.type = goalType; t.jiggle = 1; t.scale = .6;
       burst(r, c, BREEDS[goalType].gem, 6, .8);
@@ -1119,6 +1270,10 @@ async function firePetAbility() {
     checkEnd();
     return;
   }
+  /* the pet gets its beat before the board answers it */
+  abilityLaunch(epi);
+  await wait(240);
+  if (stale(_ep)) return;
   await blastWaves(keys, 2);
   if (stale(_ep)) return;
   await settleBoard();
@@ -1260,6 +1415,8 @@ function checkEnd() {
 async function finishWin() {
   const _ep = levelEpoch();
   G.busy = true;
+  track('level_win', { n: G.n, left: G.moves, score: G.score,
+    stars: G.starsEarned, chain: G.bestChain, secs: (now() - (G.startedAt || now())) / 1000 });
   SFX.win();
   buzz(HAP.win);
   FX.sweep(G.ox, G.oy, G.boardW, G.boardH, { ttl: .9, col: '#FFFFFF', a: .5 });
@@ -1307,6 +1464,12 @@ async function finishWin() {
 async function finishLose() {
   const _ep = levelEpoch();
   G.busy = true;
+  /* `short` is the share of the goal still outstanding: a level
+     people lose at 5% is tuned, one they lose at 60% is a wall. */
+  const need = G.goals.reduce((a, g) => a + g.need, 0);
+  const have = G.goals.reduce((a, g) => a + Math.min(g.have, g.need), 0);
+  track('level_lose', { n: G.n, score: G.score, short: need ? 1 - have / need : 0,
+    secs: (now() - (G.startedAt || now())) / 1000 });
   SFX.lose();
   buzz(HAP.lose);
   const pet = activePet();
@@ -1329,6 +1492,7 @@ function gameLoopStart() {
     /* the real gap, before the clamp hides it: the effects layer scales
        itself down on a device that is not keeping up */
     FX.load(raw);
+    busyWatch(dt);
     renderGame(dt);
     G.raf = requestAnimationFrame(loop);
   };
@@ -1577,6 +1741,9 @@ function renderGame(dt) {
      the composite flips per particle. */
   FX.draw(c);
   FX.drawBands(c);
+  /* the pet lands on top of the debris it just made, under the numbers */
+  stepLeap(dt);
+  drawLeap(c);
   FX.drawText(c);
 
   /* the last few moves get warmer and start to breathe */
