@@ -3183,3 +3183,57 @@ It relabels everything now, guarded by a DOM check because the language
 can be set before the interface exists, and the call site no longer has
 to remember. A promise a function makes in its own comment should be one
 it keeps.
+
+## The first five minutes, played rather than imagined
+
+Everything else here measures the game from the inside: the solver plays
+levels, a model plays months, the suite drives the DOM. None of it
+answers what happens to somebody who has never seen this before, in their
+first session, tap by tap.
+
+`tools/firstrun.js` starts from an empty save and does what a person
+does — opens the game, presses through the onboarding, plays the first
+levels through the real interface — and photographs everything it passes.
+
+Two of its first three findings were faults in the tool, which is worth
+saying because both looked exactly like bugs in the game.
+
+It reported *"the level ended and nothing was shown"* four times out of
+five. The photograph showed the game explaining how to swap tiles over a
+board that had already been cleared — because the bot never dismissed the
+tutorial and played straight through it, so the win sheet queued behind
+a modal that was never closed. Then, with that fixed, it still reported
+nothing shown: it had waited a fixed 1.6 seconds, and the celebration was
+still running. Measured properly, the answer is **0.6 to 0.8 seconds from
+the last move to the sheet**, which is the number that actually matters
+and is a good one.
+
+The onboarding is four taps and six and a half seconds.
+
+### The one that was real
+
+```
+after 5 levels: reached 4, 0 hearts
+```
+
+A heart was spent on every attempt, won or lost, and nothing ever gave
+one back. Two and a half minutes into a first session a new player was at
+zero hearts and a twenty-five minute wait — and it did that whether they
+were any good or not. Somebody who cleared all five levels was locked out
+exactly as fast as somebody who failed all five.
+
+That is not what the meter is for. Every game in this genre takes a life
+for losing and none of them charges for winning: hearts are a brake on
+repeated failure, not a tax on playing. Clearing a level returns the
+heart now, so the meter only ever counts levels that beat you.
+
+Replayed: **after eight levels, reached nine, still holding a heart** —
+and that is a bot playing random legal moves, which is a considerably
+worse player than a person.
+
+The refund does not move the refill clock, because the clock only
+restarts from a full purse and a heart arriving would otherwise push the
+next free one further away. And the economy holds: modelled at both eight
+and eighteen levels a day, there is still something worth saving for on
+day ninety, because a cleared level pays a tenth on replay and the extra
+play is new levels rather than farmed ones.

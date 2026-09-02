@@ -14477,6 +14477,29 @@ function showWin() {
   if (newBest) SAVE.scores[n] = G.score;
   SAVE.reached = Math.max(SAVE.reached, n + 1);
   SAVE.stats.cleared++;
+
+  /* A heart back for clearing it.
+
+     A heart was spent on every attempt, won or lost, and nothing gave it
+     back. Played out as a first session — five levels, two and a half
+     minutes — that put a new player at zero hearts and a twenty-five
+     minute wait, and it did that whether they were good at the game or
+     not. Somebody who cleared all five was locked out exactly as fast as
+     somebody who failed all five.
+
+     That is not what the meter is for. Hearts are a brake on repeated
+     failure; every game in this genre takes a life for losing and none
+     of them charges for winning. So winning returns it, and the meter
+     only ever counts levels that beat you.
+
+     The clock only restarts from a full purse, so a refund must not move
+     it — otherwise clearing a level while waiting would push the next
+     free heart further away. */
+  if (SAVE.hearts < HEART_MAX) {
+    SAVE.hearts++;
+    if (SAVE.hearts >= HEART_MAX) SAVE.heartAt = now();
+    syncPurse();
+  }
   /* A cleared level paid its full reward every time it was cleared, so
      the fastest coins in the game were on whichever early level you
      could three-star in ninety seconds — and a currency you can farm is
