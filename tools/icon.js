@@ -96,6 +96,62 @@ const SAFE = 72 / 108;
     return out;
   }, [DENSITIES, LEGACY_DP, ADAPTIVE_DP, SAFE]);
 
+  /* ---------- and the same mark again, for iOS ----------
+
+     Xcode wants one 1024 icon and three copies of a launch image, all
+     under Assets.xcassets with the filenames the generated Contents.json
+     already names. A generated Capacitor project ships Capacitor's own
+     logo in both slots, which is what would have gone to review.
+
+     The icon is drawn without a safe-area inset: iOS masks to a fixed
+     squircle rather than letting a launcher choose, so the mark can use
+     the same eleven percent the web icon does. The splash is the ground
+     with the mark small and centred, on a square big enough for any
+     device in either orientation. */
+  const iosDir = path.join(__dirname, '..', 'ios', 'App', 'App', 'Assets.xcassets');
+  if (fs.existsSync(iosDir)) {
+    const shots = await page.evaluate(() => {
+      const ground = (c, w, h) => {
+        const g = c.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, '#F6E3C4'); g.addColorStop(1, '#E2C79E');
+        c.fillStyle = g; c.fillRect(0, 0, w, h);
+      };
+      const icon = px => {
+        const cv = document.createElement('canvas');
+        cv.width = px; cv.height = px;
+        const c = cv.getContext('2d');
+        ground(c, px, px);
+        const pad = px * .11;
+        c.save(); c.translate(pad, pad); BL.drawLogo(c, px - pad * 2); c.restore();
+        return cv.toDataURL('image/png');
+      };
+      const splash = px => {
+        const cv = document.createElement('canvas');
+        cv.width = px; cv.height = px;
+        const c = cv.getContext('2d');
+        ground(c, px, px);
+        /* a fifth of the square, centred: it has to look deliberate on a
+           tall phone and on a wide tablet, and only the middle is safe */
+        const s = px * .2, pad = (px - s) / 2;
+        c.save(); c.translate(pad, pad); BL.drawLogo(c, s); c.restore();
+        return cv.toDataURL('image/png');
+      };
+      return { icon: icon(1024), splash: splash(2732) };
+    });
+    const put = (rel, url) => {
+      const f = path.join(iosDir, rel);
+      fs.mkdirSync(path.dirname(f), { recursive: true });
+      fs.writeFileSync(f, Buffer.from(url.slice(url.indexOf(',') + 1), 'base64'));
+      return (fs.statSync(f).size / 1024).toFixed(0);
+    };
+    put('AppIcon.appiconset/AppIcon-512@2x.png', shots.icon);
+    ['splash-2732x2732.png', 'splash-2732x2732-1.png', 'splash-2732x2732-2.png']
+      .forEach(n => put('Splash.imageset/' + n, shots.splash));
+    console.log('  ios: AppIcon 1024 and three launch images');
+  } else {
+    console.log('  ios/ not present — skipped the Xcode asset set');
+  }
+
   await browser.close();
   server.stop();
 
