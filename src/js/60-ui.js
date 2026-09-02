@@ -1047,7 +1047,7 @@ function openLevelIntro(n) {
 
   /* every fifth level pays treats the first time, and used to do it
      without warning anyone it was going to */
-  const firstTreats = (n !== DAILY_LEVEL && n % 5 === 0 && !SAVE.stars[n]) ? ECON.everyFifthTreats : 0;
+  const firstTreats = (n !== DAILY_LEVEL && n % ECON.milestoneEvery === 0 && !SAVE.stars[n]) ? ECON.milestoneTreats : 0;
 
   const m = modal(`
     <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
@@ -1288,7 +1288,7 @@ function showWin() {
   const coins = Math.max(first ? 0 : 1, Math.round(base * rate));
   let treats = 0;
   if (stars === 3 && prev < 3) treats += ECON.threeStarTreats;
-  if (first && n % 5 === 0) treats += ECON.everyFifthTreats;
+  if (first && n % ECON.milestoneEvery === 0) treats += ECON.milestoneTreats;
   /* and the jar takes its couple, on a replay as well: it is the one
      thing in the economy that is paid for time rather than progress,
      which is exactly why it is the offer I trust */

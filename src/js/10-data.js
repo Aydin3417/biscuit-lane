@@ -232,12 +232,22 @@ const ECON = {
   /* treats on the gift ladder: day 4 and day 7 only, 1 and 3. Was day
      3, 6 and 7 for 2, 2 and 5 — nine a week, on top of fourteen from
      the walk. */
-  giftTreats: { 4: 1, 7: 3 },
+  giftTreats: { 4: 1, 7: 2 },
   /* the two bounded ones. These are paid once per level, so they are
      capped by how much game there is rather than by how long you play,
      and they are the reward for playing well rather than for showing
      up. Kept, but the every-fifth bonus comes down from 2. */
-  threeStarTreats: 1, everyFifthTreats: 1,
+  /* Measured, once test/economy.js could see hearts: free treat income
+     came to six a day, and this table was written for five. The gap is
+     the whole reason the carry-on offer was a formality — a month of
+     ordinary play earned 179 treats against the 162 it wanted, so the
+     nine-treat decision was never a decision.
+
+     The milestone moves from every fifth level to every tenth, which is
+     where most of the excess was, and the seventh-day gift comes down by
+     one. Three stars still pays: that one is for playing well, and it is
+     the last treat income to touch. */
+  threeStarTreats: 1, milestoneTreats: 1, milestoneEvery: 10,
 
   heartRefillMin: 25,
   /* the sinks. Nine treats to carry on is Candy Crush's number for the
@@ -246,7 +256,11 @@ const ECON = {
      is not a decision, and 3 for a full set of hearts meant the wait
      never had to be waited. */
   continueTreats: 9, continueMoves: 5,
-  heartRefillTreats: 12,
+  /* Was twelve, against a player who is holding seven at the moment
+     the pool empties — which made it not an offer but a wall with a
+     price written on it. Nine is the carry-on price, and a player who
+     has just been stopped should be looking at a number they recognise. */
+  heartRefillTreats: 9,
   /* and the gate on the offer. An extra five moves at 20% of the goal
      is not an offer, it is a sale of a lost level — the player finds
      that out after paying, once, and then never trusts the button

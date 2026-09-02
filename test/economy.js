@@ -68,7 +68,19 @@ const winCoins = (stars, score) =>
    its three-star target. Six levels is a session. */
 const CLEAR_RATE = .80;
 const THREE_STAR = .40;
-const SESSION_LEVELS = 6;
+let SESSION_LEVELS = 6;
+/* How the day is spread. Hearts refill on a wall clock, so six levels
+   taken in one sitting and six taken in three are not the same demand
+   at all — the first meets the wall and the second never sees it. Two
+   sittings is the shape of a casual mobile session.
+
+   The gap between them is what decides whether the pool ever empties,
+   and it is the number this file was missing entirely. */
+let SESSIONS = 2;
+const SESSION_MINUTES = 14;         /* how long a sitting takes */
+/* what a player does when the hearts run out mid-sitting: mostly they
+   stop, which is the whole point of the mechanic. Some pay. */
+const PAY_TO_CARRY_ON = .22;
 const SCORE_TYPICAL = 24000;
 /* Of the levels that are lost, how many were lost near the end — which
    is the only place the carry-on offer is allowed to appear. Half is a
@@ -120,6 +132,13 @@ function run(days, farm, seed) {
   let coins = 120, treats = 6, level = 1, streak = 0;
   let earned = 0, spent = 0, treatsIn = 6, treatsOut = 0;
   let continues = 0, refills = 0, jar = 0, jarFills = 0;
+  /* hearts as a resource rather than an assumption: `dry` counts the
+     times the pool emptied mid-sitting, `lost` the levels not played
+     because of it. Those two are the whole question of whether the
+     lives system does anything. */
+  let hearts = X.HEART_MAX, dry = 0, lost = 0;
+  /* offers made, and offers the player could not afford */
+  let wanted = 0, short = 0;
   const badgesPaid = {};
   let cleared = 0, threeStars = 0, replays = 0, satDay = 0;
   let bought = 0, boosters = 0;
@@ -148,13 +167,40 @@ function run(days, farm, seed) {
     coins += E.dailyWalkCoins; earned += E.dailyWalkCoins;
     take(E.dailyWalkTreats);
 
-    for (let i = 0; i < SESSION_LEVELS; i++) {
+    /* hearts regenerate on the clock between sittings, capped at the
+       pool — you cannot bank more than HEART_MAX however long you stay
+       away, which is the only reason the wall exists at all */
+    const perSitting = Math.max(1, Math.round(SESSION_LEVELS / SESSIONS));
+    const gapMin = (24 * 60 - SESSIONS * SESSION_MINUTES) / SESSIONS;
+    for (let sit = 0; sit < SESSIONS; sit++) {
+      hearts = Math.min(X.HEART_MAX, hearts + Math.floor(gapMin / E.heartRefillMin));
+      let want = perSitting;
+      for (let i = 0; i < want; i++) {
+      /* an attempt costs a heart before the board is even dealt */
+      if (hearts <= 0) {
+        hearts += Math.floor(SESSION_MINUTES / E.heartRefillMin);
+        if (hearts <= 0) {
+          dry++;
+          /* out, mid-sitting. Refill for treats, or stop for today. */
+          if (treats >= E.heartRefillTreats && rnd() < PAY_TO_CARRY_ON) {
+            treats -= E.heartRefillTreats; treatsOut += E.heartRefillTreats;
+            refills++; hearts = X.HEART_MAX;
+          } else { lost += want - i; break; }
+        }
+      }
+      hearts--;
       if (rnd() >= CLEAR_RATE) {
         /* a lost level. Near the end it is worth nine treats to carry
            on, and carrying on clears it — which is the whole reason the
            offer is only allowed to appear near the end. */
-        if (rnd() < CLOSE_LOSS && treats >= E.continueTreats) {
-          treats -= E.continueTreats; treatsOut += E.continueTreats; continues++;
+        if (rnd() < CLOSE_LOSS) {
+          /* The offer was made. Whether it was taken is the number that
+             says if nine treats is a decision or a formality: a price
+             the free income always covers is not a price. */
+          wanted++;
+          if (treats >= E.continueTreats) {
+            treats -= E.continueTreats; treatsOut += E.continueTreats; continues++;
+          } else { short++; continue; }
         } else {
           continue;
         }
@@ -170,18 +216,10 @@ function run(days, farm, seed) {
       if (three) threeStars++;
       if (!farm) level++;
       if (three) take(E.threeStarTreats);
-      if (!farm && level % 5 === 0) take(E.everyFifthTreats);
+      if (!farm && level % E.milestoneEvery === 0) take(E.milestoneTreats);
       /* the jar takes its couple either way */
       if (jar < JARCAP) { jar = Math.min(JARCAP, jar + E.jarPerLevel); if (jar >= JARCAP) jarFills++; }
-    }
-
-    /* Hearts. Five, one every twenty-five minutes, one spent per
-       attempt: a six-level session at an 80% clear rate is between seven
-       and eight attempts, so the wall is met most days. A patient player
-       waits it out; this one buys a refill only when treats are piling
-       up and it costs nothing to. */
-    if (treats >= 40 && rnd() < .5) {
-      treats -= E.heartRefillTreats; treatsOut += E.heartRefillTreats; refills++;
+      }
     }
 
     X.BADGES.forEach(b => {
@@ -236,7 +274,7 @@ function run(days, farm, seed) {
   }
   return {
     satDay, bought, boosters, coins, treats, level, pets, earned, spent, weeks, cleared, replays,
-    treatsIn, treatsOut, continues, refills, jar, jarFills
+    treatsIn, treatsOut, continues, refills, jar, jarFills, dry, lost, wanted, short
   };
 }
 const JARCAP = X.JAR.cap;
@@ -282,7 +320,34 @@ r.weeks.forEach(w => {
 console.log('\n  coins:  earned ' + r.earned + ', spent ' + r.spent + ', holding ' + r.coins);
 console.log('  treats: earned ' + r.treatsIn + ', spent ' + r.treatsOut + ', holding ' + r.treats);
 console.log('          ' + r.continues + ' carried-on levels, ' + r.refills + ' heart refills');
+console.log('  hearts: ran out ' + r.dry + ' times, ' + r.lost + ' levels not played for want of one');
+console.log('  carry-on: offered ' + r.wanted + ', taken ' + r.continues + ', ' +
+  r.short + ' turned down for want of treats (' +
+  (r.wanted ? Math.round(r.short / r.wanted * 100) : 0) + '%)');
 console.log('  jar:    ' + r.jar + ' of ' + JARCAP + ', filled ' + r.jarFills + ' time(s)');
+
+/* ---------- the same month at three appetites ----------
+
+   A lives system is not a number, it is a slope: it should be invisible
+   to somebody dipping in twice a day and real to somebody who has found
+   the game. Measuring one play rate and calling hearts tuned is how they
+   came to do nothing at all. */
+console.log('\n  the same month, at three appetites\n');
+console.log('  levels/day  sittings   dry   levels lost   refills   treats held  carry-on short');
+const SWEEP = [[6, 2], [12, 2], [24, 3], [40, 4]];
+const wasLevels = SESSION_LEVELS, wasSessions = SESSIONS;
+SWEEP.forEach(([lv, si]) => {
+  SESSION_LEVELS = lv; SESSIONS = si;
+  const t = [];
+  for (let i = 1; i <= TRIALS; i++) t.push(run(days, farm, i * 7919));
+  const m = k => median(t.map(x => x[k]));
+  const w = m('wanted'), sh = m('short');
+  console.log('  ' + String(lv).padStart(10) + String(si).padStart(10) +
+    String(m('dry')).padStart(6) + String(m('lost')).padStart(14) +
+    String(m('refills')).padStart(10) + String(m('treats')).padStart(14) +
+    String(w ? Math.round(sh / w * 100) + '%' : '-').padStart(14));
+});
+SESSION_LEVELS = wasLevels; SESSIONS = wasSessions;
 
 let bad = 0;
 /* The two thresholds are judged on the medians, not on this one run:
