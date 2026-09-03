@@ -338,6 +338,25 @@ canvas{ max-width:100%; }
   box-shadow:var(--edge-hi), var(--shadow-1); overflow:hidden;
 }
 .card.pad16{ padding:15px; }
+/* Three weights, because the home screen had one.
+
+   Five cards with the same radius, fill, border and shadow is not a
+   hierarchy, it is a list — and it left the one button the player came
+   to press at the same volume as a progress read-out they glance at once
+   a week.
+
+   `hero` is the thing you came for. `quiet` is reference: no card at
+   all, a hairline and the page's own ground, so it recedes instead of
+   competing. Ordinary `.card` is what is left in between. */
+.card.hero{
+  box-shadow:var(--edge-hi), 0 10px 26px -12px rgba(70,45,20,.5);
+  border-color:color-mix(in srgb, var(--accent) 46%, var(--line-soft));
+}
+.card.quiet{
+  background:transparent; border:none; box-shadow:none; border-radius:0;
+  border-top:1px solid var(--line-soft);
+}
+.card.quiet.pad16{ padding:15px 3px 2px; }
 .sectitle{ display:flex; align-items:baseline; gap:8px; padding:0 3px; }
 .sectitle h3{ font-size:var(--t-title); }
 .sectitle .hint{ font-size:var(--t-micro); color:var(--text-faint); margin-left:auto; font-weight:600; }
@@ -415,8 +434,20 @@ canvas{ max-width:100%; }
 .pill.info{ background:var(--surface-2); color:var(--text-dim); border:1px solid var(--line-soft); }
 
 /* ---------- pet home ---------- */
+/* The room and the page below it were two pictures bolted together: the
+   canvas ended on a ruled horizontal line, through the middle of a
+   floorboard, and the cards began on flat ground underneath. Reading
+   down the screen you crossed a seam rather than a room.
+
+   The canvas is masked over its last thirty-odd pixels instead, so the
+   floor dissolves into the page's own ground. Nothing is redrawn — it is
+   the same room, stopping properly. */
 .roomwrap{ position:relative; flex:0 0 auto; }
-#room{ display:block; width:100%; touch-action:manipulation; }
+#room{
+  display:block; width:100%; touch-action:manipulation;
+  -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%);
+  mask-image:linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%);
+}
 .roomtop{ position:absolute; left:13px; right:13px; top:11px; display:flex; align-items:flex-start; gap:10px; pointer-events:none; }
 .namecard{
   pointer-events:auto;
@@ -672,11 +703,14 @@ canvas{ max-width:100%; }
 .starsRow .s.pop{ transform:none; opacity:1; }
 .rewardRow{ display:flex; justify-content:center; gap:13px; flex-wrap:wrap; }
 /* ---------- the card that starts the game ---------- */
+/* The one button the player came to press. It had the same footprint,
+   the same lift and nearly the same colour as the errands beneath it. */
 .playHero{
-  display:flex; align-items:center; gap:12px; text-align:left; padding:14px 14px 14px 16px;
+  display:flex; align-items:center; gap:12px; text-align:left; padding:17px 15px 17px 17px;
   border-color:var(--accent-strong);
-  background:linear-gradient(135deg, var(--accent-soft), var(--surface) 62%);
+  background:linear-gradient(135deg, var(--accent-soft), var(--surface) 74%);
 }
+.playHero .ph-go{ box-shadow:var(--edge-hi), 0 6px 14px -6px rgba(120,70,10,.55); }
 .playHero .ph-l{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
 .playHero .ph-l b{ font-family:"Grandstander",sans-serif; font-size:var(--t-h2); line-height:1.1; }
 .playHero .ph-l small{ color:var(--text-dim); font-size:var(--t-micro); line-height:1.35; }
@@ -877,9 +911,13 @@ canvas{ max-width:100%; }
 .todayTile .btn{ width:100%; margin-top:auto; }
 /* With nothing beside it there is no reason to keep the narrow column:
    one tile alone lays itself out across the row like the banner it is. */
+/* Alone it was already laid out along the row — what made it read as
+   heavy as the Care panel was its height, not its axis. */
 .todayRow:has(.todayTile:only-child) .todayTile{
-  flex-direction:row; align-items:center; gap:12px; padding:13px 14px;
+  flex-direction:row; align-items:center; gap:12px; padding:10px 13px;
 }
+.todayRow:has(.todayTile:only-child) .todayTile .di,
+.todayRow:has(.todayTile:only-child) .todayTile .gi{ width:26px; height:26px; }
 .todayRow:has(.todayTile:only-child) .todayTile .dt,
 .todayRow:has(.todayTile:only-child) .todayTile .gt{ flex:1 1 auto; width:auto; }
 .todayRow:has(.todayTile:only-child) .todayTile .btn{ width:auto; margin-top:0; }

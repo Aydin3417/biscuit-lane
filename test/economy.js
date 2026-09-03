@@ -46,7 +46,7 @@ require('./_modules.js').WITH_SAVE.forEach(f =>
 
 const X = vm.runInContext(
   '({ FOODS, TOYS, BOOSTERS, HATS, COLLARS, FURNITURE, ROOM_THEMES, BADGES, giftFor,' +
-  '   HEART_MAX, ECON, JAR, PET_CLUB, TREAT_PACKS })', ctx);
+  '   HEART_MAX, ECON, JAR, TREAT_PACKS })', ctx);
 const E = X.ECON;
 
 /* the one number that still lives somewhere this cannot import, because

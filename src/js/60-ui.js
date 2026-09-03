@@ -124,7 +124,7 @@ function renderHome() {
   const nextDef = levelDef(nextN);
   const nextBest = SAVE.scores[nextN] || 0;
   const heroCard = `
-    <button class="card playHero" id="goPlay">
+    <button class="card hero playHero" id="goPlay">
       <span class="ph-l">
         <span class="eyebrow">${T('home_next')}</span>
         <b>${T('lvl_intro', { n: nextN })}</b>
@@ -182,7 +182,7 @@ function renderHome() {
     </div>
 
     ${giftReady() ? '' : `
-    <div class="card pad16 giftWait" id="giftWait">
+    <div class="card quiet pad16 giftWait" id="giftWait">
       <span class="gi">${IC.flame}</span>
       <span class="gt">
         <b>${T('home_streak', { n: SAVE.streak })}</b>
@@ -191,9 +191,9 @@ function renderHome() {
       ${giftLadder(giftDayNext())}
     </div>`}
 
-    <div class="card pad16" style="display:flex;flex-direction:column;gap:10px">
+    <div class="card quiet pad16" style="display:flex;flex-direction:column;gap:10px">
       <div class="sectitle"><h3>${T('home_bond', { name: pet.name })}</h3>
-        <span class="hint">${T('home_bond_hint', { lv: pet.bond, have: pet.bondXp, need: bondNeed(pet.bond) })}</span></div>
+        <span class="hint">${T('home_bond_hint', { lv: pet.bond, have: fmtXp(pet.bondXp), need: bondNeed(pet.bond) })}</span></div>
       <div class="bar"><i style="width:${bondPct}%;background:linear-gradient(90deg,var(--rose),var(--accent))"></i></div>
       <div class="divide"></div>
       <div class="eyebrow">${LANG === 'tr' ? 'Karakter' : 'Who they are'}</div>
@@ -599,24 +599,28 @@ function shelfHtml() {
 }
 
 /* ---------------- shop ---------------- */
-let SHOP_TAB = 'food';
+let SHOP_TAB = 'care';
 function renderShop() {
   const pad = $('#shopPad');
+  /* Three, not five.
+
+     Food and toys are the same errand — things the pet gets through —
+     and hats, collars, furniture and themes are all the same question of
+     how the place looks. Five tabs made a shop of thirty-odd items feel
+     like a filing cabinet, and the player had to guess which drawer a
+     collar was in. */
   const tabs = [
-    ['food', T('shop_food')], ['toys', T('shop_toys')], ['boost', T('shop_boost')],
-    ['style', T('shop_style')], ['room', T('shop_room')]
+    ['care', T('shop_care')], ['boost', T('shop_boost')], ['look', T('shop_look')]
   ];
   let body = '';
-  if (SHOP_TAB === 'food') body = shopFood();
-  else if (SHOP_TAB === 'toys') body = shopToys();
-  else if (SHOP_TAB === 'boost') body = shopBoost();
-  else if (SHOP_TAB === 'style') body = shopStyle();
-  else body = shopRoom();
+  if (SHOP_TAB === 'boost') body = shopBoost();
+  else if (SHOP_TAB === 'look') body = shopStyle() + shopRoom();
+  else body = shopFood() + shopToys();
 
   pad.innerHTML = `
     <div class="tabs">${tabs.map(t => `<button data-t="${t[0]}" class="${SHOP_TAB === t[0] ? 'on' : ''}">${t[1]}</button>`).join('')}</div>
     ${body}
-    <div class="card pad16" style="text-align:center">
+    <div class="card quiet pad16" style="text-align:center">
       <div class="eyebrow" style="margin-bottom:6px">${T('shop_treats_t')}</div>
       <div style="font-size:var(--t-small);color:var(--text-faint);line-height:1.5">${T('shop_treats_s')}</div>
     </div>`;
@@ -629,6 +633,15 @@ function renderShop() {
 function priceTag(cost, treat) {
   return `<span style="display:inline-flex;align-items:center;gap:4px">${treat ? IC.treat : IC.coin}<span class="num">${cost}</span></span>`;
 }
+/* A toy card has always ended "+26 joy" and a food card ended with the
+   joke and nothing else, so there was no way to tell stew from kibble
+   but the price. Same shape for both now. */
+function foodEffect(f) {
+  const bits = [];
+  if (f.food) bits.push('+' + f.food + ' ' + T('st_food').toLowerCase());
+  if (f.joy) bits.push('+' + f.joy + ' ' + T('st_joy').toLowerCase());
+  return bits.length ? ' <span style="color:var(--text-faint)">' + bits.join(', ') + '</span>' : '';
+}
 function shopFood() {
   return `<div class="sectitle"><h3>${T('shop_food')}</h3></div>
   <div class="grid2">${FOODS.map(f => `
@@ -636,7 +649,7 @@ function shopFood() {
       <div class="art"><canvas data-art="${f.id}" width="74" height="74"></canvas>
         ${(SAVE.food[f.id] || 0) ? `<span class="stock" title="${T('shop_have', { n: SAVE.food[f.id] })}">&times;${SAVE.food[f.id]}</span>` : ''}</div>
       <div class="nm">${goodName(f)}</div>
-      <div class="ds">${goodDesc(f)}</div>
+      <div class="ds">${goodDesc(f)}${foodEffect(f)}</div>
       <button class="btn sm price" data-buy="${f.id}" data-kind="food">${T('shop_buy')} ${priceTag(f.cost, f.treat)}</button>
     </div>`).join('')}</div>`;
 }
@@ -1170,10 +1183,6 @@ function treatStore(why) {
       T('store_pack', { n: p.treats }) + (p.best ? ' ★' : ''),
       p[LANG] || p.en, tag(p.sku, p.usd))).join('')}
 
-    ${row('club', 'club', T('store_club_t'),
-      clubActive() ? T('store_club_on') : T('store_club_s', { n: PET_CLUB.dailyTreats }),
-      tag(PET_CLUB.sku, PET_CLUB.usd) + T('store_per_month'), clubActive())}
-
     ${live ? `<button class="btn ghost wide" id="stRestore"
       style="font-size:var(--t-micro)">${T('store_restore')}</button>` : ''}
     <button class="btn primary wide" id="stOk">${T('ok')}</button>
@@ -1187,7 +1196,7 @@ function treatStore(why) {
     const kind = b.dataset.kind;
     const id = b.dataset.pay;
     const sku = kind === 'pack' ? TREAT_PACKS.find(x => x.id === id).sku
-      : kind === 'jar' ? JAR.sku : PET_CLUB.sku;
+      : JAR.sku;
     b.disabled = true;
     track('buy_try', { sku: sku });
     const r = await BILLING.buy(sku);
@@ -1203,8 +1212,7 @@ function treatStore(why) {
     SFX.coin();
     syncPurse();
     m.close();
-    if (kind === 'club') toast(T('store_club_on'), 'treat');
-    else toast(T('store_thanks', { n: got }), 'treat');
+    toast(T('store_thanks', { n: got }), 'treat');
   }));
   const rs = $('#stRestore', m.el);
   if (rs) rs.addEventListener('click', async () => { await BILLING.restore(); syncPurse(); });

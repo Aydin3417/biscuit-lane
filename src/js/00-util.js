@@ -497,6 +497,13 @@ function fmtPurse(n) {
   }
   return +(n / 1000000).toFixed(1) + 'M';
 }
+/* A bond figure as a player should read it. One decimal at most, and
+   none when the number is whole: .34 shows as 0.3 so petting visibly did
+   something, 1.02 shows as 1. */
+function fmtXp(n) {
+  const r = Math.round(n * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
 function fmtTime(ms) {
   if (ms <= 0) return '0:00';
   const s = Math.ceil(ms / 1000);

@@ -43,7 +43,6 @@ function freshSave() {
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
     jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing
-    club: null,                    // the subscription, once there is one to have
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
   };
 }
@@ -93,7 +92,7 @@ function healPet(p) {
     out[k] = isFinite(n) ? clamp(n, 0, 100) : 60;
   });
   out.bond = Math.max(0, Math.round(+out.bond || 0));
-  out.bondXp = Math.max(0, +out.bondXp || 0);
+  out.bondXp = Math.max(0, Math.round((+out.bondXp || 0) * 100) / 100);
   /* a recovered entry with no readable name is named after its breed
      rather than left blank */
   /* and a save from an older build, or one somebody edited by hand,
@@ -140,8 +139,6 @@ function loadSave() {
     SAVE.daily = Object.assign({ day: 0, done: false, best: 0, streak: 0 }, d.daily || {});
     SAVE.jar = Object.assign({ fill: 0, opened: 0 }, d.jar || {});
     SAVE.jar.fill = clamp(Math.round(+SAVE.jar.fill || 0), 0, JAR.cap);
-    /* a club with no end date, or one that ended, is simply not a club */
-    SAVE.club = (d.club && isFinite(d.club.until) && d.club.until > now()) ? d.club : null;
 
     SAVE.pets = (Array.isArray(d.pets) ? d.pets : []).map(healPet).filter(Boolean);
     if (!SAVE.pets.some(p => p.id === SAVE.activePet)) {
@@ -233,11 +230,6 @@ function heartsIn() {
   return Math.max(0, HEART_REFILL - (now() - SAVE.heartAt));
 }
 function spendHeart() {
-  /* The club's one real promise. Not a bigger bucket or a faster
-     refill — the wait simply does not apply, which is the only version
-     of this that is worth a monthly price and the only one that cannot
-     quietly get worse later. */
-  if (clubActive()) return true;
   heartTick();
   if (SAVE.hearts <= 0) return false;
   heartClockStart();
@@ -423,7 +415,13 @@ function goodDesc(g) { return LANG === 'tr' ? (g.trDesc || g.enDesc || '') : (g.
 function bondNeed(level) { return 4 + level * 2; }
 function addBond(p, xp) {
   if (!p) return false;
-  p.bondXp += xp;
+  /* Petting is worth .34 — a third of a proper care action, on purpose.
+     Three of them is 1.0200000000000002 in binary floating point, and
+     the home card printed that number in full: "Level 5 ·
+     1.0200000000000002/14 to next". Rounded on the way in, so the error
+     can never compound across a save's lifetime rather than being tidied
+     up at each of the places that read it. */
+  p.bondXp = Math.round((p.bondXp + xp) * 100) / 100;
   let grew = false;
   const before = petStageIdx(p);
   while (p.bondXp >= bondNeed(p.bond)) {
@@ -627,7 +625,7 @@ function perkChips(perks) {
   return out;
 }
 
-/* ---------- the jar, the club ----------
+/* ---------- the jar ----------
    State, so it lives with the rest of the state. The store that charges
    for any of it is 17-billing, and it knows about these; they do not
    know about it. */
@@ -666,28 +664,8 @@ function grantPurchase(kind, id) {
     persist(true);
     return got;
   }
-  if (kind === 'club') {
-    SAVE.club = { since: now(), until: now() + 30 * DAY, lastPaid: 0 };
-    persist(true);
-    return 1;
-  }
-  return 0;
-}
 
-/* Whether the club is live right now. The date is the store's business
-   once this is real; until then this is what the rest of the game asks. */
-function clubActive() {
-  return !!(SAVE.club && SAVE.club.until > now());
-}
-/* the club's daily treats, handed over on the first look of each day */
-function clubTick() {
-  if (!clubActive()) return 0;
-  const today = dayStamp(now());
-  if (SAVE.club.lastPaid === today) return 0;
-  SAVE.club.lastPaid = today;
-  SAVE.treats += PET_CLUB.dailyTreats;
-  persist(true);
-  return PET_CLUB.dailyTreats;
+  return 0;
 }
 
 /* ---------- the daily walk ---------- */

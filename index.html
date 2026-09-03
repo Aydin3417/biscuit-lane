@@ -369,6 +369,25 @@ canvas{ max-width:100%; }
   box-shadow:var(--edge-hi), var(--shadow-1); overflow:hidden;
 }
 .card.pad16{ padding:15px; }
+/* Three weights, because the home screen had one.
+
+   Five cards with the same radius, fill, border and shadow is not a
+   hierarchy, it is a list — and it left the one button the player came
+   to press at the same volume as a progress read-out they glance at once
+   a week.
+
+   `hero` is the thing you came for. `quiet` is reference: no card at
+   all, a hairline and the page's own ground, so it recedes instead of
+   competing. Ordinary `.card` is what is left in between. */
+.card.hero{
+  box-shadow:var(--edge-hi), 0 10px 26px -12px rgba(70,45,20,.5);
+  border-color:color-mix(in srgb, var(--accent) 46%, var(--line-soft));
+}
+.card.quiet{
+  background:transparent; border:none; box-shadow:none; border-radius:0;
+  border-top:1px solid var(--line-soft);
+}
+.card.quiet.pad16{ padding:15px 3px 2px; }
 .sectitle{ display:flex; align-items:baseline; gap:8px; padding:0 3px; }
 .sectitle h3{ font-size:var(--t-title); }
 .sectitle .hint{ font-size:var(--t-micro); color:var(--text-faint); margin-left:auto; font-weight:600; }
@@ -446,8 +465,20 @@ canvas{ max-width:100%; }
 .pill.info{ background:var(--surface-2); color:var(--text-dim); border:1px solid var(--line-soft); }
 
 /* ---------- pet home ---------- */
+/* The room and the page below it were two pictures bolted together: the
+   canvas ended on a ruled horizontal line, through the middle of a
+   floorboard, and the cards began on flat ground underneath. Reading
+   down the screen you crossed a seam rather than a room.
+
+   The canvas is masked over its last thirty-odd pixels instead, so the
+   floor dissolves into the page's own ground. Nothing is redrawn — it is
+   the same room, stopping properly. */
 .roomwrap{ position:relative; flex:0 0 auto; }
-#room{ display:block; width:100%; touch-action:manipulation; }
+#room{
+  display:block; width:100%; touch-action:manipulation;
+  -webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%);
+  mask-image:linear-gradient(to bottom, #000 calc(100% - 34px), transparent 100%);
+}
 .roomtop{ position:absolute; left:13px; right:13px; top:11px; display:flex; align-items:flex-start; gap:10px; pointer-events:none; }
 .namecard{
   pointer-events:auto;
@@ -703,11 +734,14 @@ canvas{ max-width:100%; }
 .starsRow .s.pop{ transform:none; opacity:1; }
 .rewardRow{ display:flex; justify-content:center; gap:13px; flex-wrap:wrap; }
 /* ---------- the card that starts the game ---------- */
+/* The one button the player came to press. It had the same footprint,
+   the same lift and nearly the same colour as the errands beneath it. */
 .playHero{
-  display:flex; align-items:center; gap:12px; text-align:left; padding:14px 14px 14px 16px;
+  display:flex; align-items:center; gap:12px; text-align:left; padding:17px 15px 17px 17px;
   border-color:var(--accent-strong);
-  background:linear-gradient(135deg, var(--accent-soft), var(--surface) 62%);
+  background:linear-gradient(135deg, var(--accent-soft), var(--surface) 74%);
 }
+.playHero .ph-go{ box-shadow:var(--edge-hi), 0 6px 14px -6px rgba(120,70,10,.55); }
 .playHero .ph-l{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
 .playHero .ph-l b{ font-family:"Grandstander",sans-serif; font-size:var(--t-h2); line-height:1.1; }
 .playHero .ph-l small{ color:var(--text-dim); font-size:var(--t-micro); line-height:1.35; }
@@ -908,9 +942,13 @@ canvas{ max-width:100%; }
 .todayTile .btn{ width:100%; margin-top:auto; }
 /* With nothing beside it there is no reason to keep the narrow column:
    one tile alone lays itself out across the row like the banner it is. */
+/* Alone it was already laid out along the row — what made it read as
+   heavy as the Care panel was its height, not its axis. */
 .todayRow:has(.todayTile:only-child) .todayTile{
-  flex-direction:row; align-items:center; gap:12px; padding:13px 14px;
+  flex-direction:row; align-items:center; gap:12px; padding:10px 13px;
 }
+.todayRow:has(.todayTile:only-child) .todayTile .di,
+.todayRow:has(.todayTile:only-child) .todayTile .gi{ width:26px; height:26px; }
 .todayRow:has(.todayTile:only-child) .todayTile .dt,
 .todayRow:has(.todayTile:only-child) .todayTile .gt{ flex:1 1 auto; width:auto; }
 .todayRow:has(.todayTile:only-child) .todayTile .btn{ width:auto; margin-top:0; }
@@ -1639,6 +1677,13 @@ function fmtPurse(n) {
   }
   return +(n / 1000000).toFixed(1) + 'M';
 }
+/* A bond figure as a player should read it. One decimal at most, and
+   none when the number is whole: .34 shows as 0.3 so petting visibly did
+   something, 1.02 shows as 1. */
+function fmtXp(n) {
+  const r = Math.round(n * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
 function fmtTime(ms) {
   if (ms <= 0) return '0:00';
   const s = Math.ceil(ms / 1000);
@@ -1768,11 +1813,7 @@ const STRINGS = {
     store_jar_full: 'Full. {n} treats waiting.',
     store_jar_open: 'Open it',
     store_pack: '{n} treats',
-    store_club_t: 'Pet Club',
-    store_club_s: 'Hearts never run out, and {n} treats every day.',
-    store_club_on: 'You are in the club.',
     store_about: 'about {p}',
-    store_per_month: '/mo',
     store_restore: 'Restore a purchase',
     store_shut_t: 'The shop is not open yet',
     store_shut_s: 'There is nowhere to pay from this build — it has no store account behind it. Everything here can still be earned by playing, and the jar fills either way.',
@@ -1781,14 +1822,15 @@ const STRINGS = {
     store_failed: 'That did not go through. Nothing was charged.',
 
     /* shop */
-    shop_food: 'Food', shop_toys: 'Toys', shop_boost: 'Boosters', shop_style: 'Style', shop_room: 'Room',
+    shop_food: 'Food', shop_toys: 'Toys', shop_boost: 'Boosters',
+    shop_care: 'Care', shop_look: 'Looks',
     shop_buy: 'Buy', shop_owned: 'Owned', shop_wear: 'Wear', shop_worn: 'Worn', 
     shop_place: 'Put in room', shop_placed: 'In room',
     shop_have: 'x{n} in the cupboard',
     shop_poor: 'Not enough coins',
     shop_bought: 'Bought {item}',
     shop_treats_t: 'Treats',
-    shop_treats_s: 'Treats come from daily baskets, three-star clears and level milestones. There is nothing to buy with real money here.',
+    shop_treats_s: 'Everything on this page is bought with coins you earned. Treats come from daily baskets, three-star clears and milestones.',
 
     /* family */
     fam_title: 'Your family',
@@ -2023,11 +2065,7 @@ const STRINGS = {
     store_jar_full: 'Doldu. {n} ödül bekliyor.',
     store_jar_open: 'Aç',
     store_pack: '{n} ödül',
-    store_club_t: 'Kulüp',
-    store_club_s: 'Kalpler hiç bitmez, ve her gün {n} ödül.',
-    store_club_on: 'Kulüptesin.',
     store_about: 'yaklaşık {p}',
-    store_per_month: '/ay',
     store_restore: 'Aldığımı geri yükle',
     store_shut_t: 'Dükkân henüz açık değil',
     store_shut_s: 'Bu sürümde ödeme yapılacak bir yer yok — arkasında mağaza hesabı yok. Buradaki her şey oynayarak da kazanılabilir, ve kavanoz her hâlükârda doluyor.',
@@ -2035,14 +2073,15 @@ const STRINGS = {
     store_thanks: 'Kutuya {n} ödül girdi',
     store_failed: 'İşlem geçmedi. Hiçbir ücret alınmadı.',
 
-    shop_food: 'Yiyecek', shop_toys: 'Oyuncak', shop_boost: 'Destek', shop_style: 'Tarz', shop_room: 'Oda',
+    shop_food: 'Yiyecek', shop_toys: 'Oyuncak', shop_boost: 'Destek',
+    shop_care: 'Bakım', shop_look: 'Görünüm',
     shop_buy: 'Al', shop_owned: 'Sende', shop_wear: 'Tak', shop_worn: 'Takılı', 
     shop_place: 'Odaya koy', shop_placed: 'Odada',
     shop_have: 'Dolapta {n} tane',
     shop_poor: 'Altın yetmiyor',
     shop_bought: '{item} alındı',
     shop_treats_t: 'Ödüller',
-    shop_treats_s: 'Ödüller günlük sepetten, üç yıldızlı geçişlerden ve bölüm hediyelerinden gelir. Burada gerçek parayla alınan hiçbir şey yok.',
+    shop_treats_s: 'Bu sayfadaki her şey kazandığın altınla alınır. Ödüller günlük sepetten, üç yıldızlı geçişlerden ve bölüm hediyelerinden gelir.',
 
     fam_title: 'Ailen',
     fam_active: 'Tahtada',
@@ -2489,17 +2528,8 @@ const ECON = {
    Turkey, where it also ages badly month to month. */
 const TREAT_PACKS = [
   { id: 'pocket', sku: 'treats_pocket_40', treats: 40, usd: '$1.99', en: 'Pocketful', tr: 'Bir avuç' },
-  { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı', best: true },
-  { id: 'tin', sku: 'treats_tin_250', treats: 250, usd: '$9.99', en: 'Biscuit tin', tr: 'Bisküvi kutusu' }
+  { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı', best: true }
 ];
-
-/* The subscription. Unlimited hearts is the part worth paying for —
-   it removes the wait rather than shortening it — and the daily treats
-   mean it also covers the two sinks without a second purchase. */
-const PET_CLUB = {
-  sku: 'pet_club_monthly', usd: '$4.99', dailyTreats: 15,
-  en: 'Pet Club', tr: 'Kulüp'
-};
 
 /* ---------- the treat jar ----------
 
@@ -2942,12 +2972,18 @@ const LEVELS = [
     n: 9, w: 8, h: 8, types: 5, moves: 28, goals: [[GK.SCORE, 0, 19000]], base: 25200, want: 0.85,
     map: ['##....##', '#......#', '........', '........', '........', '........', '#......#', '##....##']
   },
-  { n: 10, w: 8, h: 9, types: 5, moves: 29, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26700, want: 0.82 },
+  {
+    n: 10, w: 8, h: 9, types: 5, moves: 29, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26700, want: 0.82,
+    map: ['##....##', '#......#', '........', '........', '........', '........', '........', '........', '........']
+  },
   {
     n: 11, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.CRATE, 0, 28]], base: 10300, want: 0.85,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', '........', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
-  { n: 12, w: 8, h: 9, types: 5, moves: 31, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 16300, want: 0.9 },
+  {
+    n: 12, w: 8, h: 9, types: 5, moves: 31, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 16300, want: 0.9,
+    map: ['#......#', '........', '........', '........', '........', '........', '........', '........', '........']
+  },
   {
     n: 13, w: 8, h: 8, types: 6, moves: 22, goals: [[GK.MUD, 0, 24]], base: 8900, want: 0.91,
     map: ['MMMM....', 'MMMM....', '........', '........', '........', '........', '....MMMM', '....MMMM']
@@ -2972,8 +3008,14 @@ const LEVELS = [
     n: 18, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 16]], base: 14000, want: 0.81,
     map: ['C......C', '........', '..cccc..', '..c..c..', '..c..c..', '..cccc..', '........', 'C......C', '........']
   },
-  { n: 19, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15200, want: 0.84 },
-  { n: 20, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.RESCUE, 0, 1], [GK.SCORE, 0, 9500]], base: 10900, want: 0.72 },
+  {
+    n: 19, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15200, want: 0.84,
+    map: ['####..##', '###....#', '##......', '#.......', '........', '........', '........', '........', '........']
+  },
+  {
+    n: 20, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.RESCUE, 0, 1], [GK.SCORE, 0, 9500]], base: 10900, want: 0.72,
+    map: ['..####..', '..####..', '........', '........', '........', '........', '........', '........', '........']
+  },
   {
     n: 21, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 24]], base: 12400, want: 0.91,
     map: ['........', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', '........']
@@ -2994,7 +3036,10 @@ const LEVELS = [
     n: 25, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 12700, want: 0.88,
     map: ['mmmmmmmm', 'm.c..c.m', 'm......m', 'm..cc..m', 'm..cc..m', 'm......m', 'm.c..c.m', 'mmmmmmmm', '........']
   },
-  { n: 26, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 14600, want: 0.69 },
+  {
+    n: 26, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 14600, want: 0.69,
+    map: ['##....##', '#......#', '#......#', '........', '........', '........', '........', '........', '........']
+  },
   {
     n: 27, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.CRATE, 0, 22]], base: 13000, want: 0.83,
     map: ['CC....CC', 'C......C', '..cccc..', '..c..c..', '..c..c..', '..cccc..', 'C......C', 'CC....CC', '........']
@@ -3003,7 +3048,10 @@ const LEVELS = [
     n: 28, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 17700, want: 0.85,
     map: ['MMMMMMMM', 'MMMMMMMM', '........', '........', '........', '........', '........', '........', '........']
   },
-  { n: 29, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 15100, want: 0.72 },
+  {
+    n: 29, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 15100, want: 0.72,
+    map: ['.######.', '.######.', '..####..', '........', '........', '........', '........', '........', '........']
+  },
   {
     n: 30, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 12800, want: 0.72,
     map: ['........', '........', '.vvvvvv.', '.v....v.', '.v....v.', '.v....v.', '.vvvvvv.', '........', '........']
@@ -3016,7 +3064,10 @@ const LEVELS = [
     n: 32, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 14800, want: 0.75,
     map: ['........', '.c....c.', '........', '..c..c..', '........', '..c..c..', '........', '.c....c.', '........']
   },
-  { n: 33, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.COLLECT, 0, 42], [GK.COLLECT, 3, 36], [GK.COLLECT, 5, 30]], base: 16900, want: 0.84 },
+  {
+    n: 33, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.COLLECT, 0, 42], [GK.COLLECT, 3, 36], [GK.COLLECT, 5, 30]], base: 16900, want: 0.84,
+    map: ['.######.', '..####..', '...##...', '........', '........', '........', '........', '........', '........']
+  },
   {
     n: 34, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.MUD, 0, 60]], base: 13900, want: 0.81,
     map: ['MMMMMMMM', 'M......M', 'M.mmmm.M', 'M.m..m.M', 'M.m..m.M', 'M.mmmm.M', 'M......M', 'MMMMMMMM', '........']
@@ -3025,7 +3076,10 @@ const LEVELS = [
     n: 35, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 12500, want: 0.8,
     map: ['........', '.cc..cc.', '........', '..c..c..', '........', '..c..c..', '........', '.cc..cc.', '........']
   },
-  { n: 36, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.SCORE, 0, 16000]], base: 22400, want: 0.86 },
+  {
+    n: 36, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.SCORE, 0, 16000]], base: 22400, want: 0.86,
+    map: ['###..###', '##....##', '##....##', '........', '........', '........', '........', '........', '........']
+  },
   {
     n: 37, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 13700, want: 0.69,
     map: ['mmmmmmmm', '........', '..mmmm..', '........', '........', '........', '..mmmm..', '........', 'mmmmmmmm']
@@ -3038,10 +3092,16 @@ const LEVELS = [
     n: 39, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 14100, want: 0.66,
     map: ['MMMMMMMM', 'Mc.cc.cM', 'M......M', 'M......M', 'M......M', 'M......M', 'M......M', 'Mc.cc.cM', 'MMMMMMMM']
   },
-  { n: 40, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 17400, want: 0.63 },
+  {
+    n: 40, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 17400, want: 0.63,
+    map: ['##....##', '##....##', '........', '........', '........', '........', '........', '........', '........']
+  },
 
   /* ---- the lane keeps going: 41 to 60 ---- */
-  { n: 41, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.COLLECT, 0, 34], [GK.COLLECT, 3, 28]], base: 13600, want: 0.91 },
+  {
+    n: 41, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.COLLECT, 0, 34], [GK.COLLECT, 3, 28]], base: 13600, want: 0.91,
+    map: ['#.#..#.#', '#.#..#.#', '........', '........', '........', '........', '........', '........', '........']
+  },
   {
     n: 42, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11900, want: 0.78,
     map: ['........', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', '........', '........']
@@ -3070,12 +3130,18 @@ const LEVELS = [
     n: 48, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 12200, want: 0.78,
     map: ['cc....cc', '........', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '........', 'cc....cc', '........']
   },
-  { n: 49, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 11000]], base: 14500, want: 0.72 },
+  {
+    n: 49, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 11000]], base: 14500, want: 0.72,
+    map: ['########', '.###.###', '..#...#.', '........', '........', '........', '........', '........', '........']
+  },
   {
     n: 50, w: 8, h: 9, types: 6, moves: 24, goals: [[GK.MUD, 0, 40], [GK.CRATE, 0, 8], [GK.COLLECT, 0, 26]], base: 12500, want: 0.69,
     map: ['MMMMMMMM', 'M.cccc.M', 'M......M', 'M......M', 'M......M', 'M......M', 'M.cccc.M', 'MMMMMMMM', '........']
   },
-  { n: 51, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 13100, want: 0.91 },
+  {
+    n: 51, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 13100, want: 0.91,
+    map: ['###..###', '##....##', '#......#', '........', '........', '........', '........', '........', '........']
+  },
   {
     n: 52, w: 8, h: 9, types: 6, moves: 47, goals: [[GK.BRAMBLE, 0, 24]], base: 19800, want: 0.69,
     map: ['.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........', '.vvvvvv.', '.vvvvvv.', '........']
@@ -3084,8 +3150,14 @@ const LEVELS = [
     n: 53, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 17300, want: 0.75,
     map: ['iCiiiiCi', '........', '..CCCC..', '........', '........', '........', '..CCCC..', '........', 'iCiiiiCi']
   },
-  { n: 54, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.RESCUE, 0, 3]], base: 14100, want: 0.69 },
-  { n: 55, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.SCORE, 0, 16400]], base: 24500, want: 0.84 },
+  {
+    n: 54, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.RESCUE, 0, 3]], base: 14100, want: 0.69,
+    map: ['##....##', '##....##', '#......#', '#......#', '........', '........', '........', '........', '........']
+  },
+  {
+    n: 55, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.SCORE, 0, 16400]], base: 24500, want: 0.84,
+    map: ['#####...', '####....', '###.....', '##......', '#.......', '........', '........', '........', '........']
+  },
   {
     n: 56, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.MUD, 0, 38]], base: 10900, want: 0.83,
     map: ['mmmmmmmm', 'mmmmmmmm', 'mmmmmmmm', '........', '........', '........', 'mmmmmmmm', 'mmmmmmmm', '........']
@@ -3098,7 +3170,10 @@ const LEVELS = [
     n: 58, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.CRATE, 0, 30]], base: 7600, want: 0.8,
     map: ['CCCCCCCC', 'C......C', 'C.cccc.C', 'C.c..c.C', 'C.c..c.C', 'C.cccc.C', 'C......C', 'CCCCCCCC', '........']
   },
-  { n: 59, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 15000, want: 0.63 },
+  {
+    n: 59, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 15000, want: 0.63,
+    map: ['..####..', '...##...', '...##...', '........', '........', '........', '........', '........', '........']
+  },
   {
     n: 60, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 15600, want: 0.63,
     map: ['mmmmmmmm', '.cc..cc.', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '.cc..cc.', 'mmmmmmmm', '........']
@@ -3876,7 +3951,6 @@ function freshSave() {
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
     jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing
-    club: null,                    // the subscription, once there is one to have
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
   };
 }
@@ -3926,7 +4000,7 @@ function healPet(p) {
     out[k] = isFinite(n) ? clamp(n, 0, 100) : 60;
   });
   out.bond = Math.max(0, Math.round(+out.bond || 0));
-  out.bondXp = Math.max(0, +out.bondXp || 0);
+  out.bondXp = Math.max(0, Math.round((+out.bondXp || 0) * 100) / 100);
   /* a recovered entry with no readable name is named after its breed
      rather than left blank */
   /* and a save from an older build, or one somebody edited by hand,
@@ -3973,8 +4047,6 @@ function loadSave() {
     SAVE.daily = Object.assign({ day: 0, done: false, best: 0, streak: 0 }, d.daily || {});
     SAVE.jar = Object.assign({ fill: 0, opened: 0 }, d.jar || {});
     SAVE.jar.fill = clamp(Math.round(+SAVE.jar.fill || 0), 0, JAR.cap);
-    /* a club with no end date, or one that ended, is simply not a club */
-    SAVE.club = (d.club && isFinite(d.club.until) && d.club.until > now()) ? d.club : null;
 
     SAVE.pets = (Array.isArray(d.pets) ? d.pets : []).map(healPet).filter(Boolean);
     if (!SAVE.pets.some(p => p.id === SAVE.activePet)) {
@@ -4066,11 +4138,6 @@ function heartsIn() {
   return Math.max(0, HEART_REFILL - (now() - SAVE.heartAt));
 }
 function spendHeart() {
-  /* The club's one real promise. Not a bigger bucket or a faster
-     refill — the wait simply does not apply, which is the only version
-     of this that is worth a monthly price and the only one that cannot
-     quietly get worse later. */
-  if (clubActive()) return true;
   heartTick();
   if (SAVE.hearts <= 0) return false;
   heartClockStart();
@@ -4256,7 +4323,13 @@ function goodDesc(g) { return LANG === 'tr' ? (g.trDesc || g.enDesc || '') : (g.
 function bondNeed(level) { return 4 + level * 2; }
 function addBond(p, xp) {
   if (!p) return false;
-  p.bondXp += xp;
+  /* Petting is worth .34 — a third of a proper care action, on purpose.
+     Three of them is 1.0200000000000002 in binary floating point, and
+     the home card printed that number in full: "Level 5 ·
+     1.0200000000000002/14 to next". Rounded on the way in, so the error
+     can never compound across a save's lifetime rather than being tidied
+     up at each of the places that read it. */
+  p.bondXp = Math.round((p.bondXp + xp) * 100) / 100;
   let grew = false;
   const before = petStageIdx(p);
   while (p.bondXp >= bondNeed(p.bond)) {
@@ -4460,7 +4533,7 @@ function perkChips(perks) {
   return out;
 }
 
-/* ---------- the jar, the club ----------
+/* ---------- the jar ----------
    State, so it lives with the rest of the state. The store that charges
    for any of it is 17-billing, and it knows about these; they do not
    know about it. */
@@ -4499,28 +4572,8 @@ function grantPurchase(kind, id) {
     persist(true);
     return got;
   }
-  if (kind === 'club') {
-    SAVE.club = { since: now(), until: now() + 30 * DAY, lastPaid: 0 };
-    persist(true);
-    return 1;
-  }
-  return 0;
-}
 
-/* Whether the club is live right now. The date is the store's business
-   once this is real; until then this is what the rest of the game asks. */
-function clubActive() {
-  return !!(SAVE.club && SAVE.club.until > now());
-}
-/* the club's daily treats, handed over on the first look of each day */
-function clubTick() {
-  if (!clubActive()) return 0;
-  const today = dayStamp(now());
-  if (SAVE.club.lastPaid === today) return 0;
-  SAVE.club.lastPaid = today;
-  SAVE.treats += PET_CLUB.dailyTreats;
-  persist(true);
-  return PET_CLUB.dailyTreats;
+  return 0;
 }
 
 /* ---------- the daily walk ---------- */
@@ -4655,7 +4708,7 @@ const BILLING = {
   async refresh() {
     if (!this.ready()) return false;
     try {
-      const skus = TREAT_PACKS.map(p => p.sku).concat([PET_CLUB.sku, JAR.sku]);
+      const skus = TREAT_PACKS.map(p => p.sku).concat([JAR.sku]);
       const r = await this.plugin.getProducts({ productIdentifiers: skus, productIds: skus });
       const list = (r && (r.products || r.productList)) || [];
       list.forEach(p => {
@@ -6740,6 +6793,20 @@ function clearSprites() {
 }
 EV.on('cast', clearSprites);
 
+/* How much of a tile the animal takes.
+
+   It was .715, and that is why the board read as amateur. A face across
+   seventy percent of a piece leaves no piece: seventy-two tiles became a
+   hundred and forty-four large glossy eyes all looking at you at once,
+   and the silhouette underneath — the diamond, the hexagon, the shield,
+   the star — was almost entirely hidden behind it. Shape is the fastest
+   thing the eye sorts on and it had been painted over.
+
+   At about half, the tile is a shape again and the animal is the detail
+   inside it, which is the right way round: you match on the silhouette,
+   and the face is the reason you smile while you do it. Rendered side by
+   side at .715, .60, .50 and .42 before choosing. */
+let TILE_FACE = .52;
 function paintTile(c, type, sp, px, marks, blink, cheer) {
   /* the look belongs to whoever is standing in the slot, not to the slot */
   const breed = slotBreed(type);
@@ -6833,7 +6900,7 @@ function paintTile(c, type, sp, px, marks, blink, cheer) {
   c.save();
   c.translate(0, s * (.015 + shape.faceY));
   /* a matched tile is having the best moment of its short life */
-  drawFace(c, spec, s * .715 * shape.faceScale,
+  drawFace(c, spec, s * TILE_FACE * shape.faceScale,
     { mouth: cheer ? 'open' : 'smile', blink: blink ? 1 : 0, mood: cheer ? 'happy' : 'content' });
   c.restore();
 
@@ -7673,28 +7740,80 @@ function paintGood(c, id, s) {
 }
 
 /* ---------------- logo ---------------- */
+/* The mark.
+
+   It was a dark muzzle and two small dark ears on an orange tile, and at
+   the size an icon is actually seen — 48px in a launcher, less in a
+   store grid — dark-on-orange has almost no contrast, so all three
+   shapes collapsed into one brown blob with two dots in it. The idea
+   underneath was right and worth keeping: one head wearing a cat's ear
+   and a dog's, because that is the whole game in one shape.
+
+   So the same idea, drawn to survive being small. The head is cream on
+   the warm ground rather than the other way round, which is the single
+   biggest gain. The two ears are large and different in silhouette — a
+   pricked triangle against a hanging lobe — so the joke is legible
+   rather than implied. And the eyes are big and dark, because at 48px
+   the eyes are the only feature that still reads.
+
+   Checked at 512, 180, 96, 48 and 32 before it was kept. */
 function drawLogo(c, s) {
   c.save();
   c.translate(s / 2, s / 2);
-  const g = c.createLinearGradient(0, -s * .45, 0, s * .45);
-  g.addColorStop(0, PAL.accent);
-  g.addColorStop(1, mix(PAL.accent, PAL.rose, .5));
+
+  /* the tile */
+  const g = c.createLinearGradient(0, -s * .5, 0, s * .5);
+  g.addColorStop(0, mix(PAL.accent, '#FFFFFF', .12));
+  g.addColorStop(1, mix(PAL.accent, PAL.rose, .42));
   c.fillStyle = g;
   squircle(c, -s * .46, -s * .46, s * .92, s * .92, 4.2); c.fill();
-  c.strokeStyle = rgba('#FFFFFF', .35); c.lineWidth = s * .05;
-  squircle(c, -s * .44, -s * .45, s * .88, s * .9, 4.2); c.stroke();
-  /* a cat and a dog ear meeting over a biscuit */
-  c.fillStyle = rgba(PAL.dark ? '#131A26' : '#3A2A18', .85);
+  c.strokeStyle = rgba('#FFFFFF', .3); c.lineWidth = s * .045;
+  squircle(c, -s * .44, -s * .44, s * .88, s * .88, 4.2); c.stroke();
+
+  const fur = '#FBEBD2';
+  const ear = '#EBD3B0';        /* a shade back, so an ear is not the head */
+  /* the hanging ear reaches further right than the pricked one does
+     left, so the animal is nudged over to sit on the tile's centre */
+  c.translate(-s * .022, 0);
+
+  /* Ears first and darker, with the head laid over them: an ear that is
+     the same colour as the skull it is attached to has no edge, and the
+     first draft lost the dog's entirely. */
+  c.fillStyle = ear;
+
+  /* the cat's, pricked, left — a short wide triangle rather than a spike */
   c.beginPath();
-  c.moveTo(-s * .30, -s * .04); c.quadraticCurveTo(-s * .22, -s * .38, -s * .06, -s * .1);
-  c.quadraticCurveTo(-s * .18, -s * .02, -s * .30, -s * .04); c.fill();
+  c.moveTo(-s * .265, -s * .04);
+  c.lineTo(-s * .245, -s * .33);
+  c.lineTo(-s * .025, -s * .155);
+  c.closePath(); c.fill();
+
+  /* the dog's, hanging clear of the head on the right */
   c.beginPath();
-  c.moveTo(s * .30, -s * .06); c.quadraticCurveTo(s * .34, -s * .3, s * .1, -s * .22);
-  c.quadraticCurveTo(s * .16, -s * .06, s * .30, -s * .06); c.fill();
-  ellipse(c, 0, s * .14, s * .24, s * .21); c.fill();
-  c.fillStyle = rgba('#FFFFFF', .9);
-  ellipse(c, -s * .09, s * .1, s * .045, s * .05); c.fill();
-  ellipse(c, s * .09, s * .1, s * .045, s * .05); c.fill();
+  c.moveTo(s * .10, -s * .17);
+  c.bezierCurveTo(s * .32, -s * .25, s * .40, s * .02, s * .31, s * .17);
+  c.bezierCurveTo(s * .24, s * .25, s * .13, s * .11, s * .10, -s * .17);
+  c.closePath(); c.fill();
+
+  /* the head */
+  c.fillStyle = fur;
+  ellipse(c, 0, s * .04, s * .275, s * .265); c.fill();
+
+  /* eyes: the only feature that survives 32px */
+  c.fillStyle = '#3A2A18';
+  ellipse(c, -s * .105, s * .0, s * .058, s * .068); c.fill();
+  ellipse(c, s * .105, s * .0, s * .058, s * .068); c.fill();
+  c.fillStyle = rgba('#FFFFFF', .92);
+  ellipse(c, -s * .086, -s * .024, s * .021, s * .025); c.fill();
+  ellipse(c, s * .124, -s * .024, s * .021, s * .025); c.fill();
+
+  /* and a nose, small enough to be a detail rather than a third eye */
+  c.fillStyle = '#C87A5A';
+  c.beginPath();
+  c.moveTo(-s * .032, s * .115); c.lineTo(s * .032, s * .115);
+  c.quadraticCurveTo(0, s * .175, -s * .032, s * .115);
+  c.closePath(); c.fill();
+
   c.restore();
 }
 
@@ -9080,6 +9199,39 @@ function drawLevelScene() {
       c.restore();
     }
     c.restore();
+
+    /* And the animal making them.
+
+       The prints told the walk and nobody was taking it. A third of the
+       play screen was a lane with fourteen impressions in it and no
+       walker — which is a strange thing for a game whose whole idea is
+       getting an animal home, and it is why that band read as wallpaper
+       however much was drawn into it.
+
+       It stands at the head of the trail: down by the tray at the start
+       of a level, further up the lane as the goals come in, small with
+       distance. Painted here rather than animated, because the scene is
+       already repainted whenever the walk advances a step, so it costs
+       one draw per goal rather than one per frame. */
+    const walker = typeof activePet === 'function' ? activePet() : null;
+    if (walker && walked < .995) {
+      const u = clamp(1 - walked, .04, 1);
+      const wy = y0 + span * (u * u * .5 + u * .5);
+      const wx = cxAt(u);
+      /* the same perspective the prints use, so it stands on them */
+      const ws = (18 + u * 40);
+      c.save();
+      c.translate(wx, wy + 2);
+      /* a soft contact shadow: without one it floats above the path */
+      c.globalAlpha = dark ? .3 : .22;
+      c.fillStyle = '#000000';
+      ellipse(c, 0, 0, ws * .34, ws * .12); c.fill();
+      c.globalAlpha = 1;
+      c.translate(0, -ws * .93);
+      drawBody(c, specOfPet(walker), ws, { mouth: 'smile', tail: Math.sin(walked * 9) * .6 });
+      c.restore();
+    }
+
     /* tufts breaking the edge, so the join is not a ruled line */
     c.globalAlpha = .85;
     const tr = mulberry(77);
@@ -13549,7 +13701,7 @@ function renderHome() {
   const nextDef = levelDef(nextN);
   const nextBest = SAVE.scores[nextN] || 0;
   const heroCard = `
-    <button class="card playHero" id="goPlay">
+    <button class="card hero playHero" id="goPlay">
       <span class="ph-l">
         <span class="eyebrow">${T('home_next')}</span>
         <b>${T('lvl_intro', { n: nextN })}</b>
@@ -13607,7 +13759,7 @@ function renderHome() {
     </div>
 
     ${giftReady() ? '' : `
-    <div class="card pad16 giftWait" id="giftWait">
+    <div class="card quiet pad16 giftWait" id="giftWait">
       <span class="gi">${IC.flame}</span>
       <span class="gt">
         <b>${T('home_streak', { n: SAVE.streak })}</b>
@@ -13616,9 +13768,9 @@ function renderHome() {
       ${giftLadder(giftDayNext())}
     </div>`}
 
-    <div class="card pad16" style="display:flex;flex-direction:column;gap:10px">
+    <div class="card quiet pad16" style="display:flex;flex-direction:column;gap:10px">
       <div class="sectitle"><h3>${T('home_bond', { name: pet.name })}</h3>
-        <span class="hint">${T('home_bond_hint', { lv: pet.bond, have: pet.bondXp, need: bondNeed(pet.bond) })}</span></div>
+        <span class="hint">${T('home_bond_hint', { lv: pet.bond, have: fmtXp(pet.bondXp), need: bondNeed(pet.bond) })}</span></div>
       <div class="bar"><i style="width:${bondPct}%;background:linear-gradient(90deg,var(--rose),var(--accent))"></i></div>
       <div class="divide"></div>
       <div class="eyebrow">${LANG === 'tr' ? 'Karakter' : 'Who they are'}</div>
@@ -14024,24 +14176,28 @@ function shelfHtml() {
 }
 
 /* ---------------- shop ---------------- */
-let SHOP_TAB = 'food';
+let SHOP_TAB = 'care';
 function renderShop() {
   const pad = $('#shopPad');
+  /* Three, not five.
+
+     Food and toys are the same errand — things the pet gets through —
+     and hats, collars, furniture and themes are all the same question of
+     how the place looks. Five tabs made a shop of thirty-odd items feel
+     like a filing cabinet, and the player had to guess which drawer a
+     collar was in. */
   const tabs = [
-    ['food', T('shop_food')], ['toys', T('shop_toys')], ['boost', T('shop_boost')],
-    ['style', T('shop_style')], ['room', T('shop_room')]
+    ['care', T('shop_care')], ['boost', T('shop_boost')], ['look', T('shop_look')]
   ];
   let body = '';
-  if (SHOP_TAB === 'food') body = shopFood();
-  else if (SHOP_TAB === 'toys') body = shopToys();
-  else if (SHOP_TAB === 'boost') body = shopBoost();
-  else if (SHOP_TAB === 'style') body = shopStyle();
-  else body = shopRoom();
+  if (SHOP_TAB === 'boost') body = shopBoost();
+  else if (SHOP_TAB === 'look') body = shopStyle() + shopRoom();
+  else body = shopFood() + shopToys();
 
   pad.innerHTML = `
     <div class="tabs">${tabs.map(t => `<button data-t="${t[0]}" class="${SHOP_TAB === t[0] ? 'on' : ''}">${t[1]}</button>`).join('')}</div>
     ${body}
-    <div class="card pad16" style="text-align:center">
+    <div class="card quiet pad16" style="text-align:center">
       <div class="eyebrow" style="margin-bottom:6px">${T('shop_treats_t')}</div>
       <div style="font-size:var(--t-small);color:var(--text-faint);line-height:1.5">${T('shop_treats_s')}</div>
     </div>`;
@@ -14054,6 +14210,15 @@ function renderShop() {
 function priceTag(cost, treat) {
   return `<span style="display:inline-flex;align-items:center;gap:4px">${treat ? IC.treat : IC.coin}<span class="num">${cost}</span></span>`;
 }
+/* A toy card has always ended "+26 joy" and a food card ended with the
+   joke and nothing else, so there was no way to tell stew from kibble
+   but the price. Same shape for both now. */
+function foodEffect(f) {
+  const bits = [];
+  if (f.food) bits.push('+' + f.food + ' ' + T('st_food').toLowerCase());
+  if (f.joy) bits.push('+' + f.joy + ' ' + T('st_joy').toLowerCase());
+  return bits.length ? ' <span style="color:var(--text-faint)">' + bits.join(', ') + '</span>' : '';
+}
 function shopFood() {
   return `<div class="sectitle"><h3>${T('shop_food')}</h3></div>
   <div class="grid2">${FOODS.map(f => `
@@ -14061,7 +14226,7 @@ function shopFood() {
       <div class="art"><canvas data-art="${f.id}" width="74" height="74"></canvas>
         ${(SAVE.food[f.id] || 0) ? `<span class="stock" title="${T('shop_have', { n: SAVE.food[f.id] })}">&times;${SAVE.food[f.id]}</span>` : ''}</div>
       <div class="nm">${goodName(f)}</div>
-      <div class="ds">${goodDesc(f)}</div>
+      <div class="ds">${goodDesc(f)}${foodEffect(f)}</div>
       <button class="btn sm price" data-buy="${f.id}" data-kind="food">${T('shop_buy')} ${priceTag(f.cost, f.treat)}</button>
     </div>`).join('')}</div>`;
 }
@@ -14595,10 +14760,6 @@ function treatStore(why) {
       T('store_pack', { n: p.treats }) + (p.best ? ' ★' : ''),
       p[LANG] || p.en, tag(p.sku, p.usd))).join('')}
 
-    ${row('club', 'club', T('store_club_t'),
-      clubActive() ? T('store_club_on') : T('store_club_s', { n: PET_CLUB.dailyTreats }),
-      tag(PET_CLUB.sku, PET_CLUB.usd) + T('store_per_month'), clubActive())}
-
     ${live ? `<button class="btn ghost wide" id="stRestore"
       style="font-size:var(--t-micro)">${T('store_restore')}</button>` : ''}
     <button class="btn primary wide" id="stOk">${T('ok')}</button>
@@ -14612,7 +14773,7 @@ function treatStore(why) {
     const kind = b.dataset.kind;
     const id = b.dataset.pay;
     const sku = kind === 'pack' ? TREAT_PACKS.find(x => x.id === id).sku
-      : kind === 'jar' ? JAR.sku : PET_CLUB.sku;
+      : JAR.sku;
     b.disabled = true;
     track('buy_try', { sku: sku });
     const r = await BILLING.buy(sku);
@@ -14628,8 +14789,7 @@ function treatStore(why) {
     SFX.coin();
     syncPurse();
     m.close();
-    if (kind === 'club') toast(T('store_club_on'), 'treat');
-    else toast(T('store_thanks', { n: got }), 'treat');
+    toast(T('store_thanks', { n: got }), 'treat');
   }));
   const rs = $('#stRestore', m.el);
   if (rs) rs.addEventListener('click', async () => { await BILLING.restore(); syncPurse(); });
@@ -15482,9 +15642,21 @@ function onResize() {
    this only stops the double-tap zoom that survives it. */
 function themeColorSync() {
   const m = document.querySelector('meta[name="theme-color"]');
-  if (!m) return;
-  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
-  if (bg) m.setAttribute('content', bg);
+  if (m) {
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    if (bg) m.setAttribute('content', bg);
+  }
+  /* On a phone the meta tag decides nothing: the status bar belongs to
+     the system, and Capacitor's generated activity left it an opaque
+     grey shelf above a cream game. The app draws behind the bars now, so
+     the game's own background fills them — but the icons in them are
+     drawn by Android, which cannot read a canvas and has to be told
+     which way round this is. One boolean, through the one interface the
+     activity exposes; absent in a browser, where the meta tag is the
+     whole story. */
+  try {
+    if (window.BLBars && window.BLBars.light) window.BLBars.light(!PAL.dark);
+  } catch (e) { /* not on a phone, or an older shell */ }
 }
 
 /* When the game is one file with nothing beside it — which is how it is
@@ -15596,7 +15768,6 @@ function boot() {
 
   catchUpPets();
   heartTick();
-  clubTick();
   /* what these cost where the player actually is; the store's answer
      replaces the fallback labels whenever it arrives, and nothing waits
      on it */
@@ -15746,7 +15917,7 @@ window.BL = {
   setScreen, startLevel, openLevelIntro, renderHome, renderShop, renderFamily,
   levelDef, findMatches, allMoves, hasMove, tryMove, canSwap, firePetAbility, persist, wipeSave,
   perksFor, activePet, makePet, healPet, loadSave, freshSave, BREEDS, LEVELS,
-  checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait,
+  checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait, addBond,
   track, TRACK,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
@@ -15758,7 +15929,9 @@ window.BL = {
   /* render entry points, so a frame can be forced without rAF */
   renderGame, renderRoom, drawMap, layoutBoard, mapLayout, roomLayout, applyTheme,
   paintTile, paintCrate, paintMud, paintPup, paintGood, drawFace, drawBody,
-  specOf, specOfPet, fitCanvas, get PAL() { return PAL; }, FX, SFX
+  specOf, specOfPet, fitCanvas, get PAL() { return PAL; }, FX, SFX,
+  get faceScale() { return TILE_FACE; },
+  set faceScale(v) { TILE_FACE = v; clearSprites(); }
 };
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

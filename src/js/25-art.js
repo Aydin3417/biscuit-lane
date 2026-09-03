@@ -1137,6 +1137,20 @@ function clearSprites() {
 }
 EV.on('cast', clearSprites);
 
+/* How much of a tile the animal takes.
+
+   It was .715, and that is why the board read as amateur. A face across
+   seventy percent of a piece leaves no piece: seventy-two tiles became a
+   hundred and forty-four large glossy eyes all looking at you at once,
+   and the silhouette underneath — the diamond, the hexagon, the shield,
+   the star — was almost entirely hidden behind it. Shape is the fastest
+   thing the eye sorts on and it had been painted over.
+
+   At about half, the tile is a shape again and the animal is the detail
+   inside it, which is the right way round: you match on the silhouette,
+   and the face is the reason you smile while you do it. Rendered side by
+   side at .715, .60, .50 and .42 before choosing. */
+let TILE_FACE = .52;
 function paintTile(c, type, sp, px, marks, blink, cheer) {
   /* the look belongs to whoever is standing in the slot, not to the slot */
   const breed = slotBreed(type);
@@ -1230,7 +1244,7 @@ function paintTile(c, type, sp, px, marks, blink, cheer) {
   c.save();
   c.translate(0, s * (.015 + shape.faceY));
   /* a matched tile is having the best moment of its short life */
-  drawFace(c, spec, s * .715 * shape.faceScale,
+  drawFace(c, spec, s * TILE_FACE * shape.faceScale,
     { mouth: cheer ? 'open' : 'smile', blink: blink ? 1 : 0, mood: cheer ? 'happy' : 'content' });
   c.restore();
 
@@ -2070,27 +2084,80 @@ function paintGood(c, id, s) {
 }
 
 /* ---------------- logo ---------------- */
+/* The mark.
+
+   It was a dark muzzle and two small dark ears on an orange tile, and at
+   the size an icon is actually seen — 48px in a launcher, less in a
+   store grid — dark-on-orange has almost no contrast, so all three
+   shapes collapsed into one brown blob with two dots in it. The idea
+   underneath was right and worth keeping: one head wearing a cat's ear
+   and a dog's, because that is the whole game in one shape.
+
+   So the same idea, drawn to survive being small. The head is cream on
+   the warm ground rather than the other way round, which is the single
+   biggest gain. The two ears are large and different in silhouette — a
+   pricked triangle against a hanging lobe — so the joke is legible
+   rather than implied. And the eyes are big and dark, because at 48px
+   the eyes are the only feature that still reads.
+
+   Checked at 512, 180, 96, 48 and 32 before it was kept. */
 function drawLogo(c, s) {
   c.save();
   c.translate(s / 2, s / 2);
-  const g = c.createLinearGradient(0, -s * .45, 0, s * .45);
-  g.addColorStop(0, PAL.accent);
-  g.addColorStop(1, mix(PAL.accent, PAL.rose, .5));
+
+  /* the tile */
+  const g = c.createLinearGradient(0, -s * .5, 0, s * .5);
+  g.addColorStop(0, mix(PAL.accent, '#FFFFFF', .12));
+  g.addColorStop(1, mix(PAL.accent, PAL.rose, .42));
   c.fillStyle = g;
   squircle(c, -s * .46, -s * .46, s * .92, s * .92, 4.2); c.fill();
-  c.strokeStyle = rgba('#FFFFFF', .35); c.lineWidth = s * .05;
-  squircle(c, -s * .44, -s * .45, s * .88, s * .9, 4.2); c.stroke();
-  /* a cat and a dog ear meeting over a biscuit */
-  c.fillStyle = rgba(PAL.dark ? '#131A26' : '#3A2A18', .85);
+  c.strokeStyle = rgba('#FFFFFF', .3); c.lineWidth = s * .045;
+  squircle(c, -s * .44, -s * .44, s * .88, s * .88, 4.2); c.stroke();
+
+  const fur = '#FBEBD2';
+  const ear = '#EBD3B0';        /* a shade back, so an ear is not the head */
+  /* the hanging ear reaches further right than the pricked one does
+     left, so the animal is nudged over to sit on the tile's centre */
+  c.translate(-s * .022, 0);
+
+  /* Ears first and darker, with the head laid over them: an ear that is
+     the same colour as the skull it is attached to has no edge, and the
+     first draft lost the dog's entirely. */
+  c.fillStyle = ear;
+
+  /* the cat's, pricked, left — a short wide triangle rather than a spike */
   c.beginPath();
-  c.moveTo(-s * .30, -s * .04); c.quadraticCurveTo(-s * .22, -s * .38, -s * .06, -s * .1);
-  c.quadraticCurveTo(-s * .18, -s * .02, -s * .30, -s * .04); c.fill();
+  c.moveTo(-s * .265, -s * .04);
+  c.lineTo(-s * .245, -s * .33);
+  c.lineTo(-s * .025, -s * .155);
+  c.closePath(); c.fill();
+
+  /* the dog's, hanging clear of the head on the right */
   c.beginPath();
-  c.moveTo(s * .30, -s * .06); c.quadraticCurveTo(s * .34, -s * .3, s * .1, -s * .22);
-  c.quadraticCurveTo(s * .16, -s * .06, s * .30, -s * .06); c.fill();
-  ellipse(c, 0, s * .14, s * .24, s * .21); c.fill();
-  c.fillStyle = rgba('#FFFFFF', .9);
-  ellipse(c, -s * .09, s * .1, s * .045, s * .05); c.fill();
-  ellipse(c, s * .09, s * .1, s * .045, s * .05); c.fill();
+  c.moveTo(s * .10, -s * .17);
+  c.bezierCurveTo(s * .32, -s * .25, s * .40, s * .02, s * .31, s * .17);
+  c.bezierCurveTo(s * .24, s * .25, s * .13, s * .11, s * .10, -s * .17);
+  c.closePath(); c.fill();
+
+  /* the head */
+  c.fillStyle = fur;
+  ellipse(c, 0, s * .04, s * .275, s * .265); c.fill();
+
+  /* eyes: the only feature that survives 32px */
+  c.fillStyle = '#3A2A18';
+  ellipse(c, -s * .105, s * .0, s * .058, s * .068); c.fill();
+  ellipse(c, s * .105, s * .0, s * .058, s * .068); c.fill();
+  c.fillStyle = rgba('#FFFFFF', .92);
+  ellipse(c, -s * .086, -s * .024, s * .021, s * .025); c.fill();
+  ellipse(c, s * .124, -s * .024, s * .021, s * .025); c.fill();
+
+  /* and a nose, small enough to be a detail rather than a third eye */
+  c.fillStyle = '#C87A5A';
+  c.beginPath();
+  c.moveTo(-s * .032, s * .115); c.lineTo(s * .032, s * .115);
+  c.quadraticCurveTo(0, s * .175, -s * .032, s * .115);
+  c.closePath(); c.fill();
+
   c.restore();
 }
+

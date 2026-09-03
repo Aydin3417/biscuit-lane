@@ -85,9 +85,21 @@ function onResize() {
    this only stops the double-tap zoom that survives it. */
 function themeColorSync() {
   const m = document.querySelector('meta[name="theme-color"]');
-  if (!m) return;
-  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
-  if (bg) m.setAttribute('content', bg);
+  if (m) {
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+    if (bg) m.setAttribute('content', bg);
+  }
+  /* On a phone the meta tag decides nothing: the status bar belongs to
+     the system, and Capacitor's generated activity left it an opaque
+     grey shelf above a cream game. The app draws behind the bars now, so
+     the game's own background fills them — but the icons in them are
+     drawn by Android, which cannot read a canvas and has to be told
+     which way round this is. One boolean, through the one interface the
+     activity exposes; absent in a browser, where the meta tag is the
+     whole story. */
+  try {
+    if (window.BLBars && window.BLBars.light) window.BLBars.light(!PAL.dark);
+  } catch (e) { /* not on a phone, or an older shell */ }
 }
 
 /* When the game is one file with nothing beside it — which is how it is
@@ -199,7 +211,6 @@ function boot() {
 
   catchUpPets();
   heartTick();
-  clubTick();
   /* what these cost where the player actually is; the store's answer
      replaces the fallback labels whenever it arrives, and nothing waits
      on it */
@@ -349,7 +360,7 @@ window.BL = {
   setScreen, startLevel, openLevelIntro, renderHome, renderShop, renderFamily,
   levelDef, findMatches, allMoves, hasMove, tryMove, canSwap, firePetAbility, persist, wipeSave,
   perksFor, activePet, makePet, healPet, loadSave, freshSave, BREEDS, LEVELS,
-  checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait,
+  checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait, addBond,
   track, TRACK,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
@@ -361,7 +372,9 @@ window.BL = {
   /* render entry points, so a frame can be forced without rAF */
   renderGame, renderRoom, drawMap, layoutBoard, mapLayout, roomLayout, applyTheme,
   paintTile, paintCrate, paintMud, paintPup, paintGood, drawFace, drawBody,
-  specOf, specOfPet, fitCanvas, get PAL() { return PAL; }, FX, SFX
+  specOf, specOfPet, fitCanvas, get PAL() { return PAL; }, FX, SFX,
+  get faceScale() { return TILE_FACE; },
+  set faceScale(v) { TILE_FACE = v; clearSprites(); }
 };
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);

@@ -57,7 +57,7 @@ const BILLING = {
   async refresh() {
     if (!this.ready()) return false;
     try {
-      const skus = TREAT_PACKS.map(p => p.sku).concat([PET_CLUB.sku, JAR.sku]);
+      const skus = TREAT_PACKS.map(p => p.sku).concat([JAR.sku]);
       const r = await this.plugin.getProducts({ productIdentifiers: skus, productIds: skus });
       const list = (r && (r.products || r.productList)) || [];
       list.forEach(p => {

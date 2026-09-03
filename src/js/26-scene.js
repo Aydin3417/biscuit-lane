@@ -1379,6 +1379,39 @@ function drawLevelScene() {
       c.restore();
     }
     c.restore();
+
+    /* And the animal making them.
+
+       The prints told the walk and nobody was taking it. A third of the
+       play screen was a lane with fourteen impressions in it and no
+       walker — which is a strange thing for a game whose whole idea is
+       getting an animal home, and it is why that band read as wallpaper
+       however much was drawn into it.
+
+       It stands at the head of the trail: down by the tray at the start
+       of a level, further up the lane as the goals come in, small with
+       distance. Painted here rather than animated, because the scene is
+       already repainted whenever the walk advances a step, so it costs
+       one draw per goal rather than one per frame. */
+    const walker = typeof activePet === 'function' ? activePet() : null;
+    if (walker && walked < .995) {
+      const u = clamp(1 - walked, .04, 1);
+      const wy = y0 + span * (u * u * .5 + u * .5);
+      const wx = cxAt(u);
+      /* the same perspective the prints use, so it stands on them */
+      const ws = (18 + u * 40);
+      c.save();
+      c.translate(wx, wy + 2);
+      /* a soft contact shadow: without one it floats above the path */
+      c.globalAlpha = dark ? .3 : .22;
+      c.fillStyle = '#000000';
+      ellipse(c, 0, 0, ws * .34, ws * .12); c.fill();
+      c.globalAlpha = 1;
+      c.translate(0, -ws * .93);
+      drawBody(c, specOfPet(walker), ws, { mouth: 'smile', tail: Math.sin(walked * 9) * .6 });
+      c.restore();
+    }
+
     /* tufts breaking the edge, so the join is not a ruled line */
     c.globalAlpha = .85;
     const tr = mulberry(77);

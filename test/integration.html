@@ -749,7 +749,9 @@ async function run() {
     BL.save.hats = {};
     BL.renderShop();
     await sleep(120);
-    const style = [...D.querySelectorAll('#scr-shop button')].filter(b => /Style|Stil/.test(b.textContent))[0];
+    /* the shop went from five tabs to three; hats live under Looks now */
+    const style = [...D.querySelectorAll('#scr-shop .tabs button')]
+      .filter(b => /Looks|Görünüm/.test(b.textContent))[0];
     if (style) { style.click(); await sleep(140); }
     const hat = [...D.querySelectorAll('#scr-shop [data-buy]')]
       .find(b => b.dataset.kind === 'hat' && b.dataset.buy !== 'none');
