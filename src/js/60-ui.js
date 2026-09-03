@@ -1139,9 +1139,15 @@ function openLevelIntro(n) {
 function treatStore(why) {
   const live = BILLING.ready();
   track('store_open', { why: why || 'chip', live: live });
+  /* No store, nothing to sell. Three priced rows that all answer "the
+     shop is shut" is worse than no rows: the player taps one, is told
+     no, and stops trusting the next thing the game offers. Until a
+     billing plugin is installed this says where treats come from, which
+     is true and useful, and asks for nothing. */
+  if (!live) { earnTreatsSheet(why); return; }
   const j = jarState();
-  const reason = why === 'continue' ? T('store_why_continue')
-    : why === 'hearts' ? T('store_why_hearts') : '';
+  const reason = why === 'continue' ? T('store_why_continue', { n: ECON.continueTreats })
+    : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
   const tag = (sku, usd) => {
     const p = BILLING.price(sku, null);
     return p ? p : `<span style="opacity:.75">${T('store_about', { p: usd })}</span>`;
@@ -1217,6 +1223,32 @@ function treatStore(why) {
   const rs = $('#stRestore', m.el);
   if (rs) rs.addEventListener('click', async () => { await BILLING.restore(); syncPurse(); });
   $('#stOk', m.el).addEventListener('click', m.close);
+}
+/* What the treat sheet becomes while there is no till.
+
+   Everything in here the player can act on today: play a level, take the
+   walk, come back tomorrow. No prices, no buttons that refuse. */
+function earnTreatsSheet(why) {
+  const j = jarState();
+  const reason = why === 'continue' ? T('store_why_continue', { n: ECON.continueTreats })
+    : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
+  const line = (icon, text) => `
+    <div class="goalItem">
+      <span style="width:32px;display:grid;place-items:center;color:var(--plum)">${icon}</span>
+      <span class="t">${text}</span>
+    </div>`;
+  const m = modal(`
+    <span style="color:var(--plum);width:48px;height:48px;align-self:center">${IC.treat}</span>
+    <h2>${T('earn_t')}</h2>
+    ${reason ? `<p><b style="color:var(--accent-strong)">${reason}</b></p>` : ''}
+    <p style="color:var(--text-dim)">${T('earn_s')}</p>
+    ${line(IC.paw, T('earn_walk'))}
+    ${line(IC.star, T('earn_star'))}
+    ${line(IC.gift, T('earn_gift'))}
+    ${j.fill ? line(IC.treat, T('earn_jar', { n: j.fill, c: JAR.cap })) : ''}
+    <button class="btn primary wide" id="etOk">${T('ok')}</button>
+  `);
+  $('#etOk', m.el).addEventListener('click', m.close);
 }
 /* Said plainly, in its own card, rather than as a disabled button with
    no explanation — which reads as a bug rather than as a fact. */
