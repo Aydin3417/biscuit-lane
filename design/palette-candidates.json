@@ -1,0 +1,87 @@
+{
+ "why": "Measured answers to standing question 1 in DIRECTION.md. Not decisions.",
+ "hueDrift": 0,
+ "keepTone": true,
+ "today": {
+  "worstPair": 5.2,
+  "where": "tritanopia marmalade/pug"
+ },
+ "candidates": [
+  {
+   "label": "en ayrık",
+   "worstPair": 32.1,
+   "where": "tritanopia beagle/siamese",
+   "driftFromToday": 23,
+   "colours": [
+    {
+     "id": "marmalade",
+     "from": "#F2843C",
+     "to": "#f67725"
+    },
+    {
+     "id": "beagle",
+     "from": "#4E9EDE",
+     "to": "#4194d5"
+    },
+    {
+     "id": "void",
+     "from": "#8E6FD6",
+     "to": "#5c31be"
+    },
+    {
+     "id": "retriever",
+     "from": "#F0C243",
+     "to": "#f8db8d"
+    },
+    {
+     "id": "siamese",
+     "from": "#4FBF95",
+     "to": "#aadfcb"
+    },
+    {
+     "id": "pug",
+     "from": "#EE7C97",
+     "to": "#db1544"
+    }
+   ]
+  },
+  {
+   "label": "en az değişen (yakın skorla)",
+   "worstPair": 28.2,
+   "where": "tritanopia marmalade/pug",
+   "driftFromToday": 16,
+   "colours": [
+    {
+     "id": "marmalade",
+     "from": "#F2843C",
+     "to": "#bb6a34"
+    },
+    {
+     "id": "beagle",
+     "from": "#4E9EDE",
+     "to": "#53a2e1"
+    },
+    {
+     "id": "void",
+     "from": "#8E6FD6",
+     "to": "#6f47ca"
+    },
+    {
+     "id": "retriever",
+     "from": "#F0C243",
+     "to": "#facd52"
+    },
+    {
+     "id": "siamese",
+     "from": "#4FBF95",
+     "to": "#afdaca"
+    },
+    {
+     "id": "pug",
+     "from": "#EE7C97",
+     "to": "#fd5b82"
+    }
+   ]
+  }
+ ]
+}

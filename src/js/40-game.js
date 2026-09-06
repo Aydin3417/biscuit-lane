@@ -340,6 +340,7 @@ function syncGoals(bumpIdx) {
         : g.kind === GK.COLLECT ? breedName(g.arg)
           : g.kind === GK.CRATE ? T('goal_crate', { n: g.need })
             : g.kind === GK.MUD ? T('goal_mud', { n: g.need })
+              : g.kind === GK.MOLE ? T('goal_mole', { n: g.need })
               : g.kind === GK.BRAMBLE ? T('goal_bramble', { n: g.need })
                 : T('goal_rescue', { n: g.need });
       const have = g.kind === GK.SCORE ? G.score : g.have;
@@ -347,12 +348,25 @@ function syncGoals(bumpIdx) {
     })());
     if (bumpIdx === i) { g.el.classList.remove('tick'); void g.el.offsetWidth; g.el.classList.add('tick'); }
   });
-  /* The lane behind the board shows the walk as a line of paw prints,
-     and a print is laid when the goals move. Repainting that scene is a
-     full canvas of gradients and about two hundred shapes, so it is not
-     something to do on every cascade tick — only when the walk has
-     actually taken a step. Fourteen prints, so fourteen repaints in a
-     whole level at worst. */
+}
+
+/* The lane behind the board shows the walk as a line of paw prints, and
+   a print is laid when the goals move.
+
+   This used to sit at the end of syncGoals, which is a HUD update and
+   runs on every tick of a cascade. Repainting the lane is a full canvas
+   of gradients and about two hundred shapes, so during a particle storm
+   several of those landed inside measured frames and pushed one to 57ms
+   — a third of a second of stutter, on the one screen where stutter is
+   felt. The branch alone passed that check four runs out of four; the
+   merge failed it, which is how a cost that belongs to neither side on
+   its own gets found.
+
+   It belongs once a move, after the board has settled, which is where it
+   is called from now. Fourteen prints, so fourteen repaints in a whole
+   level at worst. */
+function paintWalk() {
+  if (!G.B || G.over) return;
   const step = Math.round(sceneProgress() * 14);
   if (step !== G.walkStep) { G.walkStep = step; drawLevelScene(); }
 }
@@ -576,6 +590,16 @@ function hitCell(B, r, c, ctx, direct) {
         SFX.crate(n.crate > 0, npan);
         FX.splinters(nx, ny, G.cell, n.crate === 0);
       }
+      /* A molehill is filled in from beside it, exactly as a crate is
+         broken from beside it. Same verb, so there is nothing new to
+         learn about how to deal with it — only about when. */
+      if (n && n.mole > 0 && moleHit(B, n)) {
+        if (n.mole === 0) { ctx.mole++; ring(r2, c2, '#8A6A44'); }
+        const [nx, ny, npan] = cellFX(r2, c2);
+        SFX.mud(npan);
+        buzzOften(HAP.crack, 110);
+        burst(r2, c2, '#6B4A2C', n.mole === 0 ? 12 : 6, 1);
+      }
     });
   }
 }
@@ -686,6 +710,7 @@ function applyCounts(ctx) {
     if (g.kind === GK.COLLECT && ctx.collect[g.arg]) { g.have += ctx.collect[g.arg]; bumped = i; }
     if (g.kind === GK.MUD && ctx.mud) { g.have += ctx.mud; bumped = i; }
     if (g.kind === GK.CRATE && ctx.crate) { g.have += ctx.crate; bumped = i; }
+    if (g.kind === GK.MOLE && ctx.mole) { g.have += ctx.mole; bumped = i; }
     if (g.kind === GK.BRAMBLE) {
       const left = brambleCount(G.B);
       const was = g.have;
@@ -1095,6 +1120,36 @@ async function runCombo(kind, a, b) {
    that is only in the comment is worse than no comment, so it is gone
    rather than half-built — if it is ever wanted, brambles have 47% of
    their move budget spare and the numbers would have to move with it. */
+/* The hills push earth up between moves.
+
+   Unlike the bramble this runs whether or not the level has a molehill
+   goal: a hill on a board is a hill on a board, and a level that put one
+   there as a hazard rather than as a target should still have to deal
+   with it. */
+async function workMoles() {
+  const _ep = levelEpoch();
+  if (G.over || !G.B) return;
+  if (moleCount(G.B) === 0) return;
+  const pushed = moleTick(G.B);
+  if (!pushed.length) return;
+  pushed.forEach(rc => {
+    ring(rc[0], rc[1], '#8A6A44');
+    burst(rc[0], rc[1], '#6B4A2C', 7, .8);
+  });
+  SFX.mud(G.B ? (pushed[0][1] / Math.max(1, G.B.w - 1)) * 1.6 - .8 : 0);
+  buzzOften(HAP.crack, 140);
+  say(T('a11y_mole_pushed', { n: pushed.length }));
+  /* a mud goal counts what is on the board, so earth arriving moves it
+     the wrong way and the player has to be shown that */
+  const g = G.goals.find(x => x.kind === GK.MUD);
+  if (g) syncGoals(G.goals.indexOf(g));
+  /* the render loop redraws every frame, so there is nothing to repaint
+     here — only a beat, so the earth is seen arriving rather than being
+     found already there */
+  await wait(reduceMotion() ? 30 : 160);
+  if (stale(_ep)) return;
+}
+
 async function creepBrambles() {
   const _ep = levelEpoch();
   if (G.over) return;
@@ -1162,6 +1217,8 @@ async function tryMove(a, b) {
   else await resolveBoard([a, b]);
   if (stale(_ep)) return;
   await creepBrambles();
+  await workMoles();
+  paintWalk();
   if (stale(_ep)) return;
   G.busy = false;
   checkEnd();
@@ -1649,6 +1706,31 @@ function renderGame(dt) {
     if (cell.crate > 0) {
       drawBlocker(c, 'crate', cellX(c2) + G.cell / 2, cellY(r) + G.cell / 2, G.cell * .96, cell.crate);
     }
+    /* Molehills, and the number that makes them worth caring about.
+
+       The mound is a cached sprite; the count is not, because it changes
+       every move and is the entire point. It sits in a pale disc so it
+       reads against turned earth, and it goes warm on the last move
+       before something is pushed up — the one frame where a player
+       should feel like doing something about it. */
+    if (cell.mole > 0) {
+      const x = cellX(c2) + G.cell / 2, y = cellY(r) + G.cell / 2;
+      drawBlocker(c, 'mole', x, y, G.cell * .96, cell.mole);
+      const left = cell.moleT;
+      const soon = left <= 1;
+      const rr = G.cell * .17;
+      c.save();
+      c.beginPath(); c.arc(x, y + G.cell * .22, rr, 0, Math.PI * 2);
+      c.fillStyle = soon ? PAL.accent : rgba('#F6EADA', .92);
+      c.fill();
+      c.lineWidth = Math.max(1, G.cell * .022);
+      c.strokeStyle = rgba('#3A2A18', soon ? .5 : .3); c.stroke();
+      c.fillStyle = soon ? inkOn(PAL.accent) : '#3A2A18';
+      c.font = '800 ' + Math.round(G.cell * .24) + 'px Grandstander, sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(String(left), x, y + G.cell * .235);
+      c.restore();
+    }
   });
 
   /* selection + hint */
@@ -1924,6 +2006,7 @@ function describeCell(r, c) {
   if (cell.ice > 0) extra.push(T('a11y_ice'));
   if (cell.mud > 0) extra.push(T('a11y_mud', { n: cell.mud }));
   if (cell.bram > 0) extra.push(T('a11y_bramble'));
+  if (cell.mole > 0) extra.push(T('a11y_mole', { n: cell.moleT }));
   return what + (extra.length ? ', ' + extra.join(', ') : '');
 }
 function sayCell(r, c) {

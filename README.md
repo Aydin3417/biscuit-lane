@@ -2848,6 +2848,408 @@ were. The second one is a shame — the high cheek bars really did stop
 the Marmalade reading wide — but it took the character out of the face
 to do it, and a plainer face is a worse trade than a slightly broad one.
 
+## Two models, one game
+
+The visual direction is Gemini's and the game feel is mine. That split
+only works if the handoff is a contract rather than a conversation, so
+it is four files and a loop.
+
+### What Gemini can and cannot hand over
+
+Not art. There are no image files in this game and there will not be,
+and the reason is arithmetic rather than pride. The player picks a
+breed, a coat and an eye colour, and *their* pet's colours appear on the
+board tiles: six breeds by coats by eye colours by four growth stages by
+six silhouettes by special states by two themes is thousands of sprites.
+As drawings it is a few hundred lines of Canvas. And Day and Dusk
+recolour everything at runtime from CSS custom properties, which a
+raster sprite cannot follow.
+
+So the handoff is **direction** — palette, proportion, shape language,
+lighting, weight, spacing — and the drawing stays code. That is not a
+consolation prize. Choosing the six tile hues is the highest-leverage
+visual decision in the game, and it is exactly the kind of decision a
+model that is good at images should be making.
+
+The architecture happened to be ready for it: one `:root` block in the
+stylesheet is the single source of truth, and `readPalette()` hands the
+same values to the Canvas art at runtime. A palette change lands in one
+place and reaches both the DOM and every drawn pixel.
+
+### The loop
+
+```
+node tools/shots.js look      the built game, photographed
+node tools/art-direct.js      Gemini judges it against design/DIRECTION.md
+                              → design/critique/NNN.json
+  ... I read the findings and build the ones that are right ...
+node tools/art-gate.js        does it still play?
+```
+
+`design/DIRECTION.md` is the contract, and the interesting half of it is
+the constraints: no image files, colour is gameplay, everything redraws
+at 60fps on a phone, both themes always, contrast is enforced. A
+director who does not know those proposes things that cannot be built,
+and every round trip spent discovering that again is wasted.
+
+Findings come back as structured JSON with required fields — screen,
+element, problem, why, fix, severity, confidence. That schema is doing
+real work: "the palette is warm and inviting" cannot be expressed in it.
+Nothing is applied automatically. A finding is an argument, and some
+arguments are wrong.
+
+### The gate, which is the point
+
+An art direction can break this game in ways a screenshot cannot show.
+
+`tools/art-gate.js` runs the checks this project already had, in the
+order that matters after a visual change: the palette, the strings, the
+module graph, 39 checks in a real browser, the frame budget, and the
+bug sweep. About three minutes. `--full` adds the difficulty sweep.
+
+The one that had to be written new is `test/palette.js`, and it is the
+one that matters most:
+
+> The solver compares type indices. It has never once looked at a
+> colour, so every clear rate in this README was measured by a player
+> who cannot be confused.
+
+Two tile colours moving closer together makes every board harder and
+**nothing in the difficulty suite would notice**. So the palette is now
+measured directly: every tile against every other tile, in normal vision
+and under protanopia, deuteranopia and tritanopia, against a recorded
+baseline in `design/palette-baseline.json`.
+
+Verified by breaking it — moving Sable's purple toward Beagle's blue:
+
+```
+normal          beagle / void    37.6 -> 10.7    x below the floor
+protanopia      beagle / void    24.4 ->  7.0    x worse than baseline
+deuteranopia    beagle / void     6.6 ->  3.5    x worse than baseline
+```
+
+### What it found on the first run
+
+A standing defect nobody had measured. With deuteranopia — the common
+kind, about one man in sixteen — Beagle blue and Sable purple sit **6.6
+dE apart**, which is to say a deuteranope cannot tell those two tiles
+apart by colour at all. With tritanopia, Marmalade and Pug collapse to
+5.2.
+
+The board does not rest on colour alone: each tile carries its own
+silhouette and those are always on, so the gap costs a deuteranope the
+glance rather than the game. But it is a real gap, it predates all of
+this, and moving one colour does not fix it — separating the purple just
+makes Siamese and Pug the new closest pair. Six hues that stay apart
+under three kinds of colour blindness is a design problem, which is
+precisely what the loop above is for. It is the first standing question
+in `DIRECTION.md`.
+
+The test does not fail on it. Failing every run for a known gap nobody
+is fixing this minute trains people to ignore the test. It fails on
+regression against the baseline, and reports the gap as a note.
+
+## The economy was dead on day twenty-five
+
+Every other system in this game had been measured. This one never had,
+and it is the one that decides whether there is any reason to open the
+game in the second month.
+
+`test/economy.js` walks an ordinary player through ninety days: plays
+until the hearts run out, wins about as often as each level is designed
+to be won, keeps the animal fed, buys what a person would buy. What it
+found on the first run:
+
+```
+day 5    every animal adopted — the whole marquee arc, gone in a week
+day 25   everything in the shop is bought
+         1,406 coins a day arriving against a recurring demand of 25
+         28,000 coins piled up with nothing they could be turned into
+```
+
+A reward that cannot be spent is not a reward. A shop nobody needs is a
+screen nobody opens.
+
+### The faucet was widening on its own
+
+The payout was `30 + 22 a star + one coin per 1,400 points of score`, and
+that last term is the interesting one. Star targets climb as the lane
+goes — level 1 asks for 11,500 and the generated run keeps rising — so a
+term in the score is a faucet that *widens the longer somebody plays*.
+
+The first version of the model missed this, because it used a fixed
+score. It reads the real star targets out of the level table now, and it
+reads the payout formula out of `showWin` rather than carrying its own
+copy — which it did carry, briefly, with the result that the report
+cheerfully described an economy that had already been changed.
+
+### What changed
+
+```
+payout      30 + 22/star + score/1400        14 + 9/star + min(25, score/4000)
+adoption    350 700 1200 1800 2600           250 650 1600 3200 6000
+```
+
+The score term is smaller and capped, so a level deep in the run cannot
+pay more than a level is worth. The adoption curve is cheap at the front
+and steep at the back: the second animal arrives almost immediately,
+because that is the moment somebody learns the game gives things back,
+and the fifth is a month of playing.
+
+Re-measured:
+
+```
+                        before      after
+economy dies            day 25      still alive at day 90
+boosters, as a share
+of what is spent        9%          18%
+short of food money     never       never
+```
+
+Boosters are the point of that second row. They are the only sink in
+this game that cannot run out — they cost coins and they are consumed —
+and the mechanism was already fully built. What stopped it working was
+that coins were so plentiful that buying one was not a decision. Nothing
+was added; the faucet was closed until the thing that already existed
+started to matter.
+
+### It is a guardrail now, not a report
+
+The finding is only worth something if it cannot come back quietly, so
+`test/economy.js` fails: nobody may ever be unable to feed the animal,
+and there has to be something worth saving for past day sixty.
+
+Verified by breaking it in both directions. Putting the old payout back
+fails with *nothing left to buy from day 34*. The first version of the
+too-tight check did **not** fail on a payout of five coins a win —
+because the daily gift alone cleared the coins-per-day bar it was
+measuring. Money per day says nothing. What says something is whether a
+player who turned up every day for three months actually got anywhere,
+so it asks that instead, and now reports *no second animal in 90 days*.
+
+## Something new at level seventy-six
+
+Three hundred levels of the same six goal kinds is the generated run's
+real weakness. It has a designed rhythm now, and a rhythm played on the
+same six instruments for three hundred bars is still the same six
+instruments.
+
+So there is a seventh, and it is held back: molehills start at level 76.
+A mechanic handed over at the start is a mechanic; a mechanic that turns
+up a long way in is an event.
+
+**What it does.** A molehill sits in a cell like a crate — nothing on it,
+nothing through it — and counts down in plain sight. At zero it pushes a
+patch of earth onto a neighbour and starts again. It is filled in the way
+a crate is broken, by clearing a tile beside it, because a mechanic that
+needs a new verb needs a tutorial nobody reads.
+
+**What it adds.** Every other blocker here is patient. A crate waits, mud
+waits, ice waits; a bramble spreads, but slowly and everywhere at once,
+so it never asks the player to care about one square in particular. This
+one does: carry on with the goal, or spend two moves now shutting the
+thing up. It is the first thing on this board that makes somebody choose
+a *place* rather than a match.
+
+### Three measurements, three different answers
+
+**One.** Three hills, closed by any adjacent clear: **100% cleared with a
+third of the moves spare.** A blocker that deals with itself is not a
+decision. So the hill digs itself back in — every push adds a layer.
+
+**Two.** Still 100%. A single four-in-a-row beside a hill was removing it
+outright, because damage was counted per cleared cell. It is one layer a
+move now, keyed on the board so a cascade cannot chip the same hill four
+times on the way down. That is what turned it into something you have to
+come back to on purpose, several moves running, while its clock runs.
+
+**Three.** The generated levels then measured **0% to 3% cleared** while a
+hand-built board with the same mechanic measured 95%.
+
+### The bug that would have poisoned everything after it
+
+`cloneBoard` in the solver copied cell fields by name:
+
+```js
+{ hole, crate, mud, ice, bram, r, c, tile }
+```
+
+Molehills were added to the engine and not to that list, so the solver
+evaluated every candidate move on a board where the hills **did not
+exist**. It could not see them, never chose to hit them, and only ever
+chipped one by accident.
+
+Nothing in the suite could have caught it, because the numbers it
+produced were plausible. A hard new mechanic measuring hard is exactly
+what you expect. It was only visible because the same mechanic on a
+hand-built board measured a hundred percent, and two numbers that far
+apart have to have a reason.
+
+The clone copies whatever scalars the cell has now, so the next blocker
+somebody invents is cloned correctly without anyone remembering to.
+
+With the fix, the same levels measure **28% to 69%**, and level 77 lands
+on its designed target exactly: 69% wanted, 69% measured.
+
+Two other things had to be taught about the new mechanic, and both had
+been taught the same lesson by crates once already: the board-invariant
+check counted the cell under a hill as empty, and the solver scored only
+*closed* hills, so a greedy player got no credit for the first two hits
+on a three-layer one and therefore never made them.
+
+### Three sources of variance, one lever
+
+Calibrated and dropped into the run, molehill levels missed their
+targets by 22% on average — and worse than the average, they were
+*unpredictable*. Levels identical in board size, tile count, hill count
+and move budget measured anywhere from 25% to 91% cleared.
+
+Each round of that came from the same mistake in a different place: the
+mechanic had more than one thing varying, so the move budget could not
+steer it.
+
+**The count.** Two to four hills. A hill is a large fraction of a level,
+and three against four moved the clear rate further than the entire move
+budget did. Fixed at three.
+
+**The edges.** A hill is closed from beside it, so its difficulty is
+decided by how many sides it has: three against a wall, two in a corner,
+four in the open. Hills are placed in the interior only — the same
+lesson the corner cells taught the mud and crate goals.
+
+**The depth.** Three in ten hills were built three layers deep, and a
+three-layer hill that heals is not a harder version of a two-layer one,
+it is a different mechanic. All hills are two.
+
+Even then it sat at 17%, and the reason was the mechanic itself rather
+than the generator: at a four-move cycle, three self-healing hills need
+two hits each inside their own window, three times over, and at the
+budget the model chose that came to eighteen moves. That is not
+difficulty, it is a coin, and where the three hills happened to land
+decided it. The cycle is five moves now.
+
+```
+                  before      after
+average miss      22%         5%      (sampling noise alone is 9%)
+worst level       43%         17%
+range measured    25-91%      78-94%
+```
+
+The cost is that molehills are rarer: the curve's floor rose to 75%, so
+the generator only assigns them to levels that want a high clear rate,
+and they appear on about one level in twelve past 76 rather than one in
+four. A mechanic that lands within the noise on every level it takes is
+worth more than one that appears twice as often and builds walls.
+
+`test/calibrate.js --only=mole` was written for this: re-measuring one
+kind is ten minutes against an hour for all seven, and it merges into the
+curve that is already there rather than replacing it. Four rounds of
+measure-change-measure would not have happened at an hour each.
+
+## Ship-ready
+
+A game that is finished and cannot be submitted is not finished. Three
+things were missing, and none of them were code.
+
+**A privacy policy.** Google Play requires a URL for every app, and the
+game had none. Writing it took reading the source rather than a template:
+there is no analytics, no advertising, no crash reporting, no third-party
+SDK and no server, the save lives in localStorage and nowhere else, and
+the only `fetch` in the whole game is a same-origin check on its own
+manifest. `privacy.html` says exactly that, in both languages, and it is
+short because there is nothing to hide behind length.
+
+**A listing.** `store/LISTING.md` carries the title, the 80-character
+short description and the full description in English and Turkish, the
+Data Safety answers, the expected content rating, and — separately — the
+five things only a person with an account and a bank card can do.
+
+**The pictures.** `tools/store.js` drives the real game at Play's
+1080×1920 and photographs five states in both languages, then draws the
+1024×500 feature graphic *in the page* using the game's own palette, its
+own tile silhouettes and its own animal drawing code — so the banner and
+the game cannot drift apart, because they are the same functions.
+
+Two goes at the screenshots, both instructive. The first caught the board
+mid-fill: half empty cells, half tiles in mid-air. Waiting for every cell
+to hold a tile fixed the model and not the picture, because the fall is
+an animation and the model finishes first. `BL.fast` — the flag the test
+suite already had for skipping tweens — is what actually settles it.
+
+### A promise a function made and did not keep
+
+Driving the game from the outside found a real bug. `setLang` carried
+this comment:
+
+> Done here rather than at the call site: this is the one place the
+> language changes, and a caller that forgets leaves the game half
+> translated.
+
+It relabelled the aria attributes and stopped. The visible tab bar came
+from `relabelEverything()`, which the one call site went on to call
+itself — so the promise held for exactly one caller and no other. Driven
+by a tool, the game came up in Turkish with **Home / Play / Shop /
+Family** along the bottom.
+
+It relabels everything now, guarded by a DOM check because the language
+can be set before the interface exists, and the call site no longer has
+to remember. A promise a function makes in its own comment should be one
+it keeps.
+
+## The first five minutes, played rather than imagined
+
+Everything else here measures the game from the inside: the solver plays
+levels, a model plays months, the suite drives the DOM. None of it
+answers what happens to somebody who has never seen this before, in their
+first session, tap by tap.
+
+`tools/firstrun.js` starts from an empty save and does what a person
+does — opens the game, presses through the onboarding, plays the first
+levels through the real interface — and photographs everything it passes.
+
+Two of its first three findings were faults in the tool, which is worth
+saying because both looked exactly like bugs in the game.
+
+It reported *"the level ended and nothing was shown"* four times out of
+five. The photograph showed the game explaining how to swap tiles over a
+board that had already been cleared — because the bot never dismissed the
+tutorial and played straight through it, so the win sheet queued behind
+a modal that was never closed. Then, with that fixed, it still reported
+nothing shown: it had waited a fixed 1.6 seconds, and the celebration was
+still running. Measured properly, the answer is **0.6 to 0.8 seconds from
+the last move to the sheet**, which is the number that actually matters
+and is a good one.
+
+The onboarding is four taps and six and a half seconds.
+
+### The one that was real
+
+```
+after 5 levels: reached 4, 0 hearts
+```
+
+A heart was spent on every attempt, won or lost, and nothing ever gave
+one back. Two and a half minutes into a first session a new player was at
+zero hearts and a twenty-five minute wait — and it did that whether they
+were any good or not. Somebody who cleared all five levels was locked out
+exactly as fast as somebody who failed all five.
+
+That is not what the meter is for. Every game in this genre takes a life
+for losing and none of them charges for winning: hearts are a brake on
+repeated failure, not a tax on playing. Clearing a level returns the
+heart now, so the meter only ever counts levels that beat you.
+
+Replayed: **after eight levels, reached nine, still holding a heart** —
+and that is a bot playing random legal moves, which is a considerably
+worse player than a person.
+
+The refund does not move the refill clock, because the clock only
+restarts from a full purse and a heart arriving would otherwise push the
+next free one further away. And the economy holds: modelled at both eight
+and eighteen levels a day, there is still something worth saving for on
+day ninety, because a cleared level pays a tenth on replay and the extra
+play is new levels rather than farmed ones.
+
 ## Measuring a game that measured nothing
 
 The game shipped with no telemetry of any kind. Not a thin layer — none.

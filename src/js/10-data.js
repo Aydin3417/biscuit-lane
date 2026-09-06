@@ -143,7 +143,10 @@ function chapterName(n) {
 function chapterFirst(n) { return chapterIdx(n) * BLOCK + 1; }
 function chapterLast(n) { return chapterFirst(n) + BLOCK - 1; }
 /* the ground a stretch is drawn on, in whichever theme is up */
-function chapterGround(n) { const ch = chapterOf(n); return PAL.dark ? ch.dusk : ch.day; }
+/* The caller passes the time of day rather than this table reaching
+   into the palette: a list of chapters should not know that a dusk
+   theme exists, only that each of its stretches has two grounds. */
+function chapterGround(n, dusk) { const ch = chapterOf(n); return dusk ? ch.dusk : ch.day; }
 
 /* ---------- abilities ---------- */
 const ABILITIES = {
@@ -641,7 +644,7 @@ function favTypeFor(breed, types) {
 const CHARGE_FAV = 4.2, CHARGE_OTHER = .55;
 
 /* ---------- goal kinds ---------- */
-const GK = { SCORE: 'score', COLLECT: 'collect', CRATE: 'crate', MUD: 'mud', RESCUE: 'rescue', BRAMBLE: 'bramble' };
+const GK = { SCORE: 'score', COLLECT: 'collect', CRATE: 'crate', MUD: 'mud', RESCUE: 'rescue', BRAMBLE: 'bramble', MOLE: 'mole' };
 /* how many cells a bramble patch may ever cover, as a share of the
    open board — without this a bad run could strangle the level */
 const BRAMBLE_CAP = 0.42;
@@ -989,13 +992,17 @@ function normaliseGoals(def) {
    the level number. These sit a little easier than the handcrafted run:
    the endless tail is somewhere to keep playing, not a difficulty wall.
    Measured with test/ai.js over the 41-70 run. */
+/* the level the run stops repeating itself */
+const MOLE_FROM = 76;
+
 const GEN = {
   mud:     { fill: .58, deep: .70, base: 8200,  moves: 22 },
   crate:   { fill: .46, deep: .38, base: 6400,  moves: 24 },
   bramble: { goal: n => 12 + n * 2, base: 11500, moves: 30 },
   collect: { base: 10500, moves: 30 },
   rescue:  { base: 10000, moves: 32 },
-  score:   { base: 13400, moves: 30 }
+  score:   { base: 13400, moves: 30 },
+  mole:    { base: 9800,  moves: 36 }
 };
 
 /* Tiles a move is worth, measured by playing: a solver on a five-colour
@@ -1098,7 +1105,16 @@ function levelDef(n, ref) {
     return def;
   }
   const r = mulberry(n * 7919);
-  const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE];
+  /* Molehills arrive part way through the run rather than at the start.
+
+     Three hundred levels of the same six goal kinds is the run's real
+     weakness, and a mechanic held back is worth more than a mechanic
+     handed over: level seventy-six is a long way into a game, and
+     something genuinely new turning up there is the difference between
+     a run that continues and a run that repeats. Before that the lane
+     has enough to teach. */
+  const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE]
+    .concat(n >= MOLE_FROM ? [GK.MOLE] : []);
 
   /* What this level is for comes before what it is made of.
 
@@ -1173,6 +1189,50 @@ function levelDef(n, ref) {
     ? shapeMask(SHAPES[Math.floor(r() * SHAPES.length)], w, h, r)
     : null;
 
+  /* Where the hills sit.
+
+     Spread out and never touching, because two hills side by side heal
+     each other's neighbourhood and the level stops being a race and
+     starts being a wall. Kept off the top and bottom rows so tiles can
+     still fall past them. */
+  const hills = new Set();
+  if (kind === GK.MOLE) {
+    /* Two to four.
+
+       Measured, five and six are not hard levels, they are walls: the
+       first generated batch ran three to six hills and came out at
+       nought to three percent cleared, because every hill heals every
+       four moves and a player cannot be in six places at once. Three is
+       where the mechanic is a race rather than a defeat. */
+    /* Three, always.
+
+       The count was two to four, and a hill is a large fraction of a
+       level: three against four moved the clear rate further than the
+       whole move budget did, so the budget could not steer. One number
+       for the mechanic and one lever for the difficulty. */
+    const wantHills = 3;
+    let guard = 0;
+    while (hills.size < wantHills && guard++ < 200) {
+      /* Interior only.
+
+         A hill is closed from beside it, so how hard it is depends
+         entirely on how many sides it has. One against the right-hand
+         wall has three neighbours and one in a corner has two, which
+         made otherwise identical levels measure 34% and 88% — the same
+         lesson the corner cells taught the mud and crate goals. Keeping
+         every hill off the edges takes the variance out at the source
+         instead of pricing it afterwards. */
+      const y = 1 + Math.floor(r() * (h - 2));
+      const x = 1 + Math.floor(r() * (w - 2));
+      let clash = false;
+      hills.forEach(k => {
+        const [hy, hx] = k.split(':').map(Number);
+        if (Math.abs(hy - y) <= 1 && Math.abs(hx - x) <= 1) clash = true;
+      });
+      if (!clash) hills.add(y + ':' + x);
+    }
+  }
+
   const map = [];
   for (let y = 0; y < h; y++) {
     let row = '';
@@ -1182,6 +1242,16 @@ function levelDef(n, ref) {
         row += blob.has(y + ':' + x) ? 'v' : '.';
         continue;
       }
+      /* Every hill the same depth.
+
+         Three in ten were being built three layers deep, and a
+         three-layer hill that heals is a different mechanic from a
+         two-layer one: levels on almost the same budget measured 34% and
+         100%. That was the third source of variance to come out of this
+         goal, after the count and the edges, and the rule each time was
+         the same — the mechanic is one thing and the move budget is the
+         only lever, or the budget cannot steer. */
+      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += 'o'; continue; }
       if (kind === GK.MUD && shaped.has(y + ':' + x)) { row += r() < GEN.mud.deep ? 'M' : 'm'; continue; }
       if (kind === GK.CRATE && shaped.has(y + ':' + x) && y > 0 && y < h - 1) {
         /* a goal counts crates, not hits, so a second layer is the only
@@ -1287,6 +1357,12 @@ function levelDef(n, ref) {
     /* three baskets down a board nobody designed measured at 0% */
     goals.push([GK.RESCUE, 0, 2]);
     base = GEN.rescue.base + tier * 400;
+  } else if (kind === GK.MOLE) {
+    /* every hill on the board. Leaving one open means leaving the board
+       getting worse, and a goal that lets the player ignore the whole
+       mechanic teaches nobody what it is for. */
+    goals.push([GK.MOLE, 0, hills.size]);
+    base = GEN.mole.base + tier * 400;
   } else {
     goals.push([GK.BRAMBLE, 0, Math.round(GEN.bramble.goal(tier) * workMult)]);
     base = GEN.bramble.base + tier * 400;
@@ -1312,7 +1388,8 @@ function dailyLevel(reached, dayNo) {
   const r = mulberry(day * 2654435761 >>> 0);
   /* tier follows progress, so a new player is not handed a level 60 board */
   const tier = clamp(Math.floor((reached || 1) / 14), 0, 4);
-  const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE];
+  const kinds = [GK.COLLECT, GK.MUD, GK.CRATE, GK.RESCUE, GK.SCORE, GK.BRAMBLE]
+    .concat((reached || 1) >= MOLE_FROM ? [GK.MOLE] : []);
   const kind = kinds[Math.floor(r() * kinds.length)];
   const h = 9, w = 8;
   const key = kind === GK.BRAMBLE ? 'bramble' : kind;
@@ -1354,12 +1431,66 @@ function dailyLevel(reached, dayNo) {
     ? shapeMask(SHAPES[Math.floor(r() * SHAPES.length)], w, h, r)
     : null;
 
+  /* Where the hills sit.
+
+     Spread out and never touching, because two hills side by side heal
+     each other's neighbourhood and the level stops being a race and
+     starts being a wall. Kept off the top and bottom rows so tiles can
+     still fall past them. */
+  const hills = new Set();
+  if (kind === GK.MOLE) {
+    /* Two to four.
+
+       Measured, five and six are not hard levels, they are walls: the
+       first generated batch ran three to six hills and came out at
+       nought to three percent cleared, because every hill heals every
+       four moves and a player cannot be in six places at once. Three is
+       where the mechanic is a race rather than a defeat. */
+    /* Three, always.
+
+       The count was two to four, and a hill is a large fraction of a
+       level: three against four moved the clear rate further than the
+       whole move budget did, so the budget could not steer. One number
+       for the mechanic and one lever for the difficulty. */
+    const wantHills = 3;
+    let guard = 0;
+    while (hills.size < wantHills && guard++ < 200) {
+      /* Interior only.
+
+         A hill is closed from beside it, so how hard it is depends
+         entirely on how many sides it has. One against the right-hand
+         wall has three neighbours and one in a corner has two, which
+         made otherwise identical levels measure 34% and 88% — the same
+         lesson the corner cells taught the mud and crate goals. Keeping
+         every hill off the edges takes the variance out at the source
+         instead of pricing it afterwards. */
+      const y = 1 + Math.floor(r() * (h - 2));
+      const x = 1 + Math.floor(r() * (w - 2));
+      let clash = false;
+      hills.forEach(k => {
+        const [hy, hx] = k.split(':').map(Number);
+        if (Math.abs(hy - y) <= 1 && Math.abs(hx - x) <= 1) clash = true;
+      });
+      if (!clash) hills.add(y + ':' + x);
+    }
+  }
+
   const map = [];
   for (let y = 0; y < h; y++) {
     let row = '';
     for (let x = 0; x < w; x++) {
       const v = r();
       if (kind === GK.BRAMBLE) { row += blob.has(y + ':' + x) ? 'v' : '.'; continue; }
+      /* Every hill the same depth.
+
+         Three in ten were being built three layers deep, and a
+         three-layer hill that heals is a different mechanic from a
+         two-layer one: levels on almost the same budget measured 34% and
+         100%. That was the third source of variance to come out of this
+         goal, after the count and the edges, and the rule each time was
+         the same — the mechanic is one thing and the move budget is the
+         only lever, or the budget cannot steer. */
+      if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += 'o'; continue; }
       if (kind === GK.MUD && shaped.has(y + ':' + x)) { row += r() < GEN.mud.deep ? 'M' : 'm'; continue; }
       if (kind === GK.CRATE && shaped.has(y + ':' + x) && y > 0 && y < h - 1) {
         row += r() < GEN.crate.deep ? 'C' : 'c';
@@ -1385,6 +1516,13 @@ function dailyLevel(reached, dayNo) {
     base = GEN.collect.base + tier * 500;
   }
   else if (kind === GK.MUD) { goals.push([GK.MUD, 0, share(stock.mud, (.74 + tier * .05) * goalEase)]); base = GEN.mud.base; }
+  else if (kind === GK.MOLE) {
+    /* every hill on the board, because leaving one open means leaving
+       the board getting worse, and a goal that lets you ignore the
+       mechanic teaches nobody anything */
+    goals.push([GK.MOLE, 0, hills.size]);
+    base = GEN.mole.base;
+  }
   else if (kind === GK.CRATE) { goals.push([GK.CRATE, 0, share(stock.crate, (.68 + tier * .045) * goalEase)]); base = GEN.crate.base; }
   else if (kind === GK.RESCUE) { goals.push([GK.RESCUE, 0, Math.max(1, Math.round(2 * goalEase))]); base = GEN.rescue.base; }
   else { goals.push([GK.BRAMBLE, 0, Math.round(GEN.bramble.goal(tier) * goalEase)]); base = GEN.bramble.base; }

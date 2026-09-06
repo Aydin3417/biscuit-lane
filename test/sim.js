@@ -183,9 +183,37 @@ function auditLevels() {
     });
     auditReachable(d, 'L' + d.n, problems);
     if (d.goals.some(g => g[0] === GK.RESCUE) && d.map) {
-      const joined = d.map.join('');
-      const blockers = (joined.match(/[#i]/g) || []).length;
-      if (blockers) problems.push('L' + d.n + ': rescue level has ' + blockers + ' holes/ice — baskets get trapped');
+      /* This used to count every hole on a rescue level and call each one
+         a trap, which was right for as long as no rescue level had a map
+         at all: the rule was true by vacuity and never tested. Once
+         fifteen levels were given a silhouette it flagged eight boards
+         that the solver clears between 43% and 93% of the time, so it was
+         not describing the mechanic.
+
+         What actually traps a basket is a gap. A pup enters at the top of
+         its column, falls, and is rescued on B.exits[c] — the lowest cell
+         that is neither hole nor crate. So a column's open cells have to
+         be one unbroken run: cut the top off and the pup still falls the
+         whole way, but put a hole in the middle and every pup above it is
+         stranded for the rest of the level with no way down and no way
+         across. That is the thing worth failing a build over, and it is
+         what is checked now.
+
+         Ice stays counted whole. An iced cell can be the exit, a pup
+         cannot land on one, and it only clears if the board happens to
+         offer a match there — which is a trap with a maybe in it. */
+      const h = d.map.length, w = Math.max(...d.map.map(r => r.length));
+      const at = (r, c) => (d.map[r] || '')[c] || '.';
+      for (let c = 0; c < w; c++) {
+        const open = [];
+        for (let r = 0; r < h; r++) if (at(r, c) !== '#') open.push(r);
+        if (!open.length) continue;            /* a fully closed column is fine */
+        const gaps = open[open.length - 1] - open[0] + 1 - open.length;
+        if (gaps) problems.push('L' + d.n + ': rescue level column ' + c +
+          ' is split by ' + gaps + ' hole(s) — baskets above them are trapped');
+      }
+      const iced = (d.map.join('').match(/i/g) || []).length;
+      if (iced) problems.push('L' + d.n + ': rescue level has ' + iced + ' iced cells — a basket cannot land on one');
       let widest = 0;
       d.map.forEach(r => { let run = 0; for (const ch of r) { if (ch === 'c' || ch === 'C') { run++; widest = Math.max(widest, run); } else run = 0; } });
       if (widest >= 4) problems.push('L' + d.n + ': rescue level has a ' + widest + '-wide crate wall');

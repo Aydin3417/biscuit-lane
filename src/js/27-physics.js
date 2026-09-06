@@ -480,11 +480,10 @@ function drawOne(c, p, k) {
       const sp = Math.hypot(p.vx, p.vy);
       const len = clamp(sp * .012, r, r * 5) * 1.4;
       const br = streakBrush(p.col);
-      c.save();
-      c.translate(p.x, p.y);
-      c.rotate(Math.atan2(p.vy, p.vx));
+      const ang = Math.atan2(p.vy, p.vx);
+      c.translate(p.x, p.y); c.rotate(ang);
       c.drawImage(br, -len, -r * .8, len * 1.3, r * 1.6);
-      c.restore();
+      c.rotate(-ang); c.translate(-p.x, -p.y);
       break;
     }
 
@@ -492,23 +491,23 @@ function drawOne(c, p, k) {
       /* a scrap of fur: drawn once into a brush, stamped ever after */
       const br = tuftBrush(p.col);
       const d = r / (TUFT_PX * .42) * TUFT_PX;
-      c.save(); c.translate(p.x, p.y); c.rotate(p.rot);
+      c.translate(p.x, p.y); c.rotate(p.rot);
       c.drawImage(br, -d / 2, -d / 2, d, d);
-      c.restore();
+      c.rotate(-p.rot); c.translate(-p.x, -p.y);
       break;
     }
 
     case K.CRUMB: {
       const br = crumbBrush(p.col, p.col2);
       const d = r / (CRUMB_PX * .40) * CRUMB_PX;
-      c.save(); c.translate(p.x, p.y); c.rotate(p.rot);
+      c.translate(p.x, p.y); c.rotate(p.rot);
       c.drawImage(br, -d / 2, -d / 2, d, d);
-      c.restore();
+      c.rotate(-p.rot); c.translate(-p.x, -p.y);
       break;
     }
 
     case K.SPLINTER: {
-      c.save(); c.translate(p.x, p.y); c.rotate(p.rot);
+      c.translate(p.x, p.y); c.rotate(p.rot);
       const w = r * .34;
       c.fillStyle = p.col;
       c.beginPath();
@@ -516,31 +515,31 @@ function drawOne(c, p, k) {
       c.closePath(); c.fill();
       c.fillStyle = rgba(p.col2, .75);
       c.fillRect(-r, -w * .5, r * 2, w * .5);
-      c.restore();
+      c.rotate(-p.rot); c.translate(-p.x, -p.y);
       break;
     }
 
     case K.SHARD: {
-      c.save(); c.translate(p.x, p.y); c.rotate(p.rot);
+      c.translate(p.x, p.y); c.rotate(p.rot);
       c.fillStyle = rgba(p.col, .62);
       c.beginPath();
       c.moveTo(0, -r); c.lineTo(r * .8, r * .5); c.lineTo(-r * .6, r * .85);
       c.closePath(); c.fill();
       c.strokeStyle = rgba('#FFFFFF', .85); c.lineWidth = Math.max(.6, r * .16);
       c.stroke();
-      c.restore();
+      c.rotate(-p.rot); c.translate(-p.x, -p.y);
       break;
     }
 
     case K.GLOB: {
       /* mud: fat blob that flattens as it slows */
       const squash = clamp(1 - Math.abs(p.vy) / 900, .35, 1);
-      c.save(); c.translate(p.x, p.y); c.rotate(p.rot);
+      c.translate(p.x, p.y); c.rotate(p.rot);
       c.fillStyle = p.col;
       ellipse(c, 0, 0, r / squash, r * squash); c.fill();
       c.fillStyle = rgba('#FFFFFF', .18);
       ellipse(c, -r * .25, -r * .3, r * .3, r * .2, -.4); c.fill();
-      c.restore();
+      c.rotate(-p.rot); c.translate(-p.x, -p.y);
       break;
     }
 

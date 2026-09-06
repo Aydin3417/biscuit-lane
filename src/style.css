@@ -883,6 +883,13 @@ canvas{ max-width:100%; }
 @media (max-width:360px){
   .seg button{ padding:6px 8px; font-size:var(--t-micro); }
   .switchRow{ gap:8px; padding:11px 12px; }
+  /* Breed, age and bond on one line, ellipsised, is right until the row
+     also has to carry the "on the board" pill: in Turkish that pill is a
+     word rather than a paw, and the seven pixels it takes are the seven
+     the bond number needed. Below 360 the line may use two rows instead
+     of hiding a fact — it still sits on one wherever it fits, so nothing
+     changes on the rows without the pill or in English. */
+  .petrow .info .br{ white-space:normal; }
 }
 
 /* The lane is virtualised: the spacer carries the real scroll height and

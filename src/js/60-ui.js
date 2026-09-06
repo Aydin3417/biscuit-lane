@@ -786,6 +786,16 @@ function equipThing(id, kind, quiet) {
 }
 
 /* ---------------- family ---------------- */
+/* Left where it was, on purpose.
+
+   This curve was briefly steepened — cheap at the front, dear at the
+   back — to stretch an adoption arc that was finishing inside a week.
+   That was the right diagnosis of the wrong half: the arc was short
+   because the faucet was wide, and the faucet has since been closed at
+   the source (halved payout, a tenth for a replay, real prices on the
+   treat sinks). test/economy.js is calibrated against these numbers and
+   the tighter faucet together, so changing them here without
+   re-measuring would be trading a verified balance for an opinion. */
 const ADOPT_COST = [0, 350, 700, 1200, 1800, 2600];
 const ADOPT_LEVEL = [0, 5, 12, 20, 28, 36];
 /* Order matters here more than it looks.
@@ -1002,6 +1012,7 @@ function goalLine(g) {
   if (g.kind === GK.CRATE) return T('goal_crate', { n });
   if (g.kind === GK.MUD) return T('goal_mud', { n });
   if (g.kind === GK.BRAMBLE) return T('goal_bramble', { n });
+  if (g.kind === GK.MOLE) return T('goal_mole', { n });
   if (g.kind === GK.RESCUE) return T('goal_rescue', { n });
   return '';
 }
@@ -1317,6 +1328,29 @@ function showWin() {
   if (newBest) SAVE.scores[n] = G.score;
   SAVE.reached = Math.max(SAVE.reached, n + 1);
   SAVE.stats.cleared++;
+
+  /* A heart back for clearing it.
+
+     A heart was spent on every attempt, won or lost, and nothing gave it
+     back. Played out as a first session — five levels, two and a half
+     minutes — that put a new player at zero hearts and a twenty-five
+     minute wait, and it did that whether they were good at the game or
+     not. Somebody who cleared all five was locked out exactly as fast as
+     somebody who failed all five.
+
+     That is not what the meter is for. Hearts are a brake on repeated
+     failure; every game in this genre takes a life for losing and none
+     of them charges for winning. So winning returns it, and the meter
+     only ever counts levels that beat you.
+
+     The clock only restarts from a full purse, so a refund must not move
+     it — otherwise clearing a level while waiting would push the next
+     free heart further away. */
+  if (SAVE.hearts < HEART_MAX) {
+    SAVE.hearts++;
+    if (SAVE.hearts >= HEART_MAX) SAVE.heartAt = now();
+    syncPurse();
+  }
   /* A cleared level paid its full reward every time it was cleared, so
      the fastest coins in the game were on whichever early level you
      could three-star in ninety seconds — and a currency you can farm is
@@ -1694,12 +1728,23 @@ function setLang(code) {
   LANG = (code === 'tr') ? 'tr' : 'en';
   SAVE.settings.lang = LANG;
   persist(true);
-  /* the labels a screen reader reads live in the markup and follow
-     nothing on their own, so changing the language has to move them.
-     Done here rather than at the call site: this is the one place the
-     language changes, and a caller that forgets leaves the game half
-     translated for the people least able to notice. */
+  /* Everything the language touches, moved from here.
+
+     This used to relabel only the aria attributes, with a comment saying
+     it was done here rather than at the call site so that a caller could
+     not forget — which was half true, because the one caller then went
+     on to call relabelEverything() itself and the visible tab bar came
+     from that. Any other caller got a game in Turkish with an English
+     tab bar underneath it, which is exactly what happened the first time
+     a tool drove it.
+
+     A promise a function makes in its own comment should be a promise it
+     keeps. The DOM check is there because the language can be set before
+     the interface exists. */
   relabelControls();
+  if (typeof document !== 'undefined' && document.getElementById('tabbar')) {
+    relabelEverything();
+  }
   return LANG;
 }
 function openSettings() {
@@ -1754,6 +1799,9 @@ function openSettings() {
     if (k === 'marks') { clearSprites(); G.goals && G.goals.forEach(paintGoalIcon); }
     if (k === 'sound' && SAVE.settings.sound) { audioResume(); SFX.select(); }
     if (k === 'haptics') buzz(14);
+    /* Off has to mean gone, not merely "no more from here" — otherwise
+       the switch leaves the last three hundred events sitting there. */
+    if (k === 'telemetry' && !SAVE.settings[k]) TRACK.clear();
   }));
   $$('#segTheme button', m.el).forEach(b => b.addEventListener('click', () => {
     SAVE.settings.theme = b.dataset.th;
@@ -1761,9 +1809,8 @@ function openSettings() {
     persist(true); applyTheme(); SFX.tap();
   }));
   $$('#segLang button', m.el).forEach(b => b.addEventListener('click', () => {
-    setLang(b.dataset.lang);
+    setLang(b.dataset.lang);      /* which relabels everything itself now */
     m.close();
-    relabelEverything();
     SFX.tap();
     setTimeout(openSettings, 60);
   }));
@@ -1779,7 +1826,13 @@ function openSettings() {
         <button class="btn rose" id="rsYes">${T('set_reset_yes')}</button>
       </div>`);
     $('#rsNo', c2.el).addEventListener('click', c2.close);
-    $('#rsYes', c2.el).addEventListener('click', () => { wipeSave(); location.reload(); });
+    /* The event buffer is under its own localStorage key, so wiping the
+       save alone would leave a log of the play somebody just asked to
+       forget. It is cleared here rather than inside wipeSave so that the
+       save layer stays below the telemetry one. */
+    $('#rsYes', c2.el).addEventListener('click', () => {
+      TRACK.clear(); wipeSave(); location.reload();
+    });
   });
 }
 function applyTheme() {
@@ -1835,6 +1888,12 @@ function maybeTutorial(def) {
   if (def.goals.some(g => g[0] === GK.BRAMBLE) && !SAVE.seen.bramble) {
     steps.push({ k: 'bramble', text: T('tut_bramble') });
   }
+  /* Molehills turn up seventy-six levels in, so this is the one
+     explanation a player meets when they already know how to play. It
+     has to say the rule and the counter-move and nothing else. */
+  if (def.goals.some(g => g[0] === GK.MOLE) && !SAVE.seen.mole) {
+    steps.push({ k: 'mole', text: T('tut_mole'), art: 'mole' });
+  }
   if (def.goals.some(g => g[0] === GK.RESCUE) && !SAVE.seen.rescue) {
     steps.push({ k: 'rescue', text: LANG === 'tr' ? 'Sepetteki minikleri en alt sıraya indir; kapıdan çıkıp eve girerler.' : 'Walk the little ones down to the bottom row and they are home.' });
   }
@@ -1864,6 +1923,7 @@ function maybeTutorial(def) {
       c.translate(60, 60);
       if (s.art === 'crate') paintCrate(c, 82, 2);
       else if (s.art === 'mud') paintMud(c, 82, 2);
+      else if (s.art === 'mole') paintMole(c, 82, 2);
       else { paintTile(c, 1, SP.NONE, 78, SAVE.settings.marks); paintIce(c, 82); }
     } else {
       c.translate(60, 18);

@@ -17,9 +17,9 @@ password, a payment method or a Mac, and none of those are mine to have.
 | Android launcher icons, 5 densities, adaptive + legacy + round | `tools/icon.js` → `android/.../mipmap-*` |
 | Store screenshots: Play phone 1080×1920, iPhone 6.7" 1290×2796, iPad 12.9" 2048×2732 | `shots/store/` |
 | Feature graphic 1024×500 | `shots/store/feature-graphic-1024x500.png` |
-| Listing copy, EN + TR, both stores, inside character limits | `store/listing.md` |
-| Privacy policy | `store/privacy-policy.md` |
-| Content-rating answers | `store/listing.md`, bottom |
+| Listing copy, EN + TR, both stores, inside character limits | `store/LISTING.md` |
+| Privacy policy | `privacy.html` |
+| Content-rating answers | `store/LISTING.md`, bottom |
 | Telemetry and crash capture, with an opt-out and no network | `src/js/18-telemetry.js` |
 | Debug APK builds green | `npm run android:apk` |
 
@@ -40,7 +40,7 @@ Either way, **do not sell the Pet Club subscription on "unlimited hearts"** unti
 
 ### 2. Host the privacy policy
 
-Put `store/privacy-policy.md` at a public URL — GitHub Pages is fine and
+Publish `privacy.html` — GitHub Pages is fine and
 free. Before you do:
 
 - Replace `[YOUR CONTACT EMAIL]` with a real address. Both stores check it.

@@ -14,6 +14,14 @@ const steps = [
   /* cheapest first: a missing translation is found by reading two
      tables, and it is the fault most likely to reach a player */
   ['every string, in both languages', 'strings.js', []],
+  /* colour is gameplay: six tiles a player has to tell apart, measured
+     against a recorded baseline and under three kinds of colour
+     blindness. Cheap, and the only check that would notice an art
+     change making the board harder. */
+  ['the colours, as gameplay', 'palette.js', []],
+  /* the economy, played out on paper: it was dead on day 25 and nobody
+     had ever looked. A reward that cannot be spent is not a reward. */
+  ['the economy, ninety days', 'economy.js', ['90', '--plays', '8']],
   ['engine soak + level design audit', 'sim.js', []],
   ['the ice rule', 'ice.js', []],
   ['the care loop', 'care.js', []],

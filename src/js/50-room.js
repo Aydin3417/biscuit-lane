@@ -451,14 +451,14 @@ function drawMap() {
   for (let n = 1; n <= topLevel; n += BLOCK) {
     const node = MAP.nodes.find(x => x.n === n);
     if (!node) continue;
-    stops.push([clamp(node.y / total, 0, 1), chapterGround(n)]);
+    stops.push([clamp(node.y / total, 0, 1), chapterGround(n, PAL.dark)]);
   }
   /* nearest-first down the canvas */
   stops.sort((a2, b2) => a2[0] - b2[0]).forEach(([at, col]) => {
     grad.addColorStop(clamp(at, .02, .98), col);
   });
   if (!stops.length) grad.addColorStop(.14, PAL.dark ? '#20301F' : '#B7CE95');
-  grad.addColorStop(1, chapterGround(1));
+  grad.addColorStop(1, chapterGround(1, PAL.dark));
   c.fillStyle = grad;
   c.fillRect(0, 0, W, total);
 

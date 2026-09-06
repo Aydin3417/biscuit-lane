@@ -1,210 +1,261 @@
-/* Dev-only: the pictures a store listing needs, drawn from the real
-   game rather than mocked up.
+/* The pictures a store asks for.
 
-     node tools/store.js
+   Play wants a 1024x500 feature graphic and between two and eight phone
+   screenshots; the App Store wants the same shots at two sizes of its
+   own, which is a table here rather than a second script.
+   None of that is art direction — it is a spec, and a spec is a thing a
+   script should meet so that nobody is cropping a PNG by hand at
+   midnight the day before a submission.
 
-   Play wants phone shots at 1080x1920 and one 1024x500 feature graphic.
-   App Store wants 6.7" iPhone at 1290x2796, and iPad 12.9" at 2048x2732
-   if the app ships for iPad. All three phone sizes are the same layout
-   at a different device pixel ratio, so they are captured from the same
-   CSS viewport and only the scale changes — which is also why they all
-   agree with each other, and with what a player actually sees.
+   The screenshots are the real game, driven through the real interface,
+   at the size the store asks for. Not mockups and not a phone frame
+   pasted round a crop: what somebody sees on the page is what they get.
 
-   The save is posed, not faked: a real pet, real progress, real boards.
-   A listing screenshot of a state the game cannot reach is the fastest
-   way to have a review rejected and the slowest way to find out. */
+   The feature graphic is drawn in the page, with the game's own tokens
+   and its own tile shapes, because everything else in this project is
+   drawn rather than downloaded and a banner made in an image editor
+   would be the only file here that was not.
+
+     node tools/store.js        ->  store/graphics/
+*/
 const path = require('path');
 const fs = require('fs');
-const PW = require('./_pw.js');
+const { launch, at, serve } = require('./_pw.js');
 
-const OUT = path.join(__dirname, '..', 'shots', 'store');
+const OUT = path.join(__dirname, '..', 'store', 'graphics');
 
-/* [folder, css width, css height, dpr] -> the pixel size a store wants */
-const DEVICES = [
-  ['play-phone', 360, 640, 3],      // 1080 x 1920
-  ['ios-6.7', 430, 932, 3],         // 1290 x 2796
-  ['ios-ipad', 512, 683, 4]         // 2048 x 2732
+/* Play's phone screenshot spec: 16:9 or 9:16, each side 320-3840px.
+   1080x1920 is the size every device mock uses and the one Play's own
+   preview is laid out for. */
+const PHONE = { width: 540, height: 960, scale: 2 };      /* -> 1080x1920 */
+
+/* Apple asks for its own sizes and will not scale one to another, but a
+   screenshot is a screenshot: the same states, the same captions, the
+   same code, at a different viewport. So the sizes are a table rather
+   than a second script that would drift from this one by Tuesday.
+   `dir` is where they land — the Play shots keep the flat filenames the
+   listing already refers to, and the rest get a folder each. */
+const SIZES = [
+  { dir: '', width: 540, height: 960, scale: 2 },          /* Play  1080x1920 */
+  { dir: 'ios-6.7', width: 430, height: 932, scale: 3 },   /* iPhone 1290x2796 */
+  { dir: 'ios-ipad', width: 512, height: 683, scale: 4 }   /* iPad  2048x2732 */
 ];
 
-/* A pet far enough along to have a room worth looking at, and a lane
-   with stars behind it. Nothing here is unreachable. */
-const POSE = `(() => {
-  const S = BL.save;
-  S.pets = [BL.makePet(0, 0, 0, 'Biscuit')];
-  S.activePet = S.pets[0].id;
-  S.coins = 1840; S.treats = 12; S.hearts = 5;
-  S.reached = 28;
-  for (let i = 1; i < 28; i++) S.stars[i] = i % 4 === 0 ? 2 : 3;
-  S.scores[7] = 18240; S.scores[12] = 24980;
-  S.food = { kibble: 4, tuna: 2, stew: 1, cake: 1 };
-  S.toys = { yarn: 1, tennis: 1 };
-  S.boosters = { moves: 3, hammer: 2, swap: 2, shuffle: 1 };
-  S.furniture = { rug: 1, plant: 1, shelf: 1 };
-  S.roomThemes = { oat: 1, sage: 1 };
-  S.room = { theme: 'oat', placed: ['rug', 'plant', 'shelf'] };
-  S.seen = { mud:1, crate:1, rescue:1, bramble:1, swap:1, pet:1, special:1 };
-  S.streak = 4; S.lastGift = Date.now();
-  S.jar = { fill: 96, opened: 0 };
-  BL.BADGES.forEach(b => S.badges[b.id] = 1);   /* no congratulations mid-shot */
-  const p = S.pets[0];
-  p.bond = 14; p.food = 88; p.joy = 92; p.clean = 90; p.energy = 78;
-  p.trait = 'playful'; p.asleep = false;
-  BL.persist(true);
-})()`;
+/* Each shot is a state of the real game and a line saying what it is,
+   because a store listing is read in a scroll and a screenshot with no
+   caption is a screenshot nobody parses. */
+const SHOTS = [
+  {
+    file: '1-board',
+    caption: { en: 'The faces you match are your own animals', tr: 'Eşleştirdiğin yüzler senin hayvanların' },
+    /* A collect level rather than a bramble one: the hero shot should
+       show the animals, and a board webbed with cut brambles shows the
+       webbing. */
+    go: async page => page.evaluate(() => {
+      BL.startLevel(12, { perks: [] }); BL.setScreen('game'); BL.layoutBoard();
+    }),
+    settle: true
+  },
+  {
+    file: '2-room',
+    caption: { en: 'One of them is waiting upstairs', tr: 'Biri üst katta seni bekliyor' },
+    go: async page => page.evaluate(() => { BL.setScreen('home'); BL.renderHome(); })
+  },
+  {
+    file: '3-lane',
+    caption: { en: 'Sixty levels down a country road, then a lane that keeps going',
+               tr: 'Kır yolunda altmış bölüm, sonra devam eden bir sokak' },
+    go: async page => page.evaluate(() => {
+      BL.setScreen('map');
+      const w = document.getElementById('mapWrap');
+      const n = BL.map.nodes.find(x => x.n === 30);
+      if (n && w) w.scrollTop = Math.max(0, n.y - w.clientHeight * 0.55);
+    })
+  },
+  {
+    file: '4-family',
+    caption: { en: 'Six to bring home, each with its own move', tr: 'Eve götürülecek altı can, her birinin kendi hamlesi' },
+    go: async page => page.evaluate(() => { BL.setScreen('family'); BL.renderFamily(); })
+  },
+  {
+    file: '5-dusk',
+    caption: { en: 'Day and Dusk, and it works in flight mode', tr: 'Gündüz ve Akşam, uçak modunda da çalışır' },
+    go: async page => page.evaluate(() => {
+      BL.save.settings.theme = 'dusk'; BL.applyTheme(); BL.persist(true);
+      BL.setScreen('home'); BL.renderHome();
+    })
+  }
+];
+
+/* the caption band, drawn over the frame rather than beside it, so the
+   image is all game and the words sit in the sky above the hedge */
+async function caption(page, text) {
+  await page.evaluate(t => {
+    const el = document.createElement('div');
+    el.id = '_cap';
+    el.textContent = t;
+    Object.assign(el.style, {
+      position: 'fixed', left: '0', right: '0', top: '0', zIndex: '9999',
+      padding: '18px 22px 20px', textAlign: 'center',
+      font: '800 21px/1.25 Grandstander, sans-serif',
+      color: 'var(--text)',
+      /* solid, not a fade: a gradient let the moves counter ghost through
+         it, which reads as a rendering fault rather than as a caption */
+      background: 'var(--bg)',
+      borderBottom: '1px solid var(--line-soft, rgba(0,0,0,.06))',
+      pointerEvents: 'none'
+    });
+    document.body.appendChild(el);
+  }, text);
+}
+
+async function setup(page) {
+  await page.waitForFunction(() => window.BL && window.BL.save, null, { timeout: 20000 });
+  await page.evaluate(() => {
+    BL.save.pets = [BL.makePet(2, 1, 0, 'Marlow'), BL.makePet(0, 0, 0, 'Biscuit')];
+    BL.save.activePet = BL.save.pets[0].id;
+    BL.persist(true);
+  });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.BL && window.BL.save.pets.length);
+  await page.evaluate(() => {
+    const S = BL.save;
+    S.reached = 34; S.coins = 1240; S.treats = 11;
+    BL.BADGES.forEach(b => S.badges[b.id] = 1);
+    for (let i = 1; i < 34; i++) S.stars[i] = 2 + (i % 2);
+    S.toys = { yarn: 1, tennis: 1 }; S.food = { kibble: 5, tuna: 2 };
+    S.furniture = { rug: 1, plant: 1, shelf: 1, lamp: 1 };
+    S.room = { theme: 'oat', placed: ['rug', 'plant', 'shelf', 'lamp'] };
+    S.pets.forEach(p => { p.bond = 9; p.food = 88; p.joy = 84; p.clean = 90; p.energy = 80; p.asleep = false; });
+    BL.persist(true);
+  });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => window.BL && window.BL.save.pets.length);
+}
+
+const clear = page => page.evaluate(() => {
+  const m = document.getElementById('modals');
+  if (m) m.innerHTML = '';
+  document.querySelectorAll('.veil').forEach(v => v.remove());
+  const c = document.getElementById('_cap');
+  if (c) c.remove();
+});
 
 (async () => {
-  const server = await PW.serve();
-  const browser = await PW.launch();
+  fs.mkdirSync(OUT, { recursive: true });
+  const srv = await serve();
+  const browser = await launch();
 
-  for (const [name, w, h, dpr] of DEVICES) {
-    const dir = path.join(OUT, name);
-    fs.mkdirSync(dir, { recursive: true });
+  for (const size of SIZES) {
+   const dir = size.dir ? path.join(OUT, size.dir) : OUT;
+   fs.mkdirSync(dir, { recursive: true });
+   for (const lang of ['en', 'tr']) {
     const page = await browser.newPage({
-      viewport: { width: w, height: h }, deviceScaleFactor: dpr
+      viewport: { width: size.width, height: size.height },
+      deviceScaleFactor: size.scale
     });
-    await page.goto(PW.at('/index.html'), { waitUntil: 'load' });
-    await page.waitForFunction(() => window.BL && window.BL.save, null, { timeout: 20000 });
-    await page.evaluate(POSE);
-    await page.reload({ waitUntil: 'load' });
-    await page.waitForFunction(() => window.BL && window.BL.save.pets.length);
-    await page.waitForTimeout(1400);
-    /* the daily gift is the one sheet that opens itself */
-    await page.evaluate(() => { const b = document.getElementById('dgOk'); if (b) b.click(); });
-    await page.waitForTimeout(700);
-    await page.evaluate(() => document.querySelectorAll('#onb,.veil').forEach(v => v.remove()));
+    await page.goto(at('/biscuit-lane.html'), { waitUntil: 'load' });
+    await setup(page);
+    await page.evaluate(l => { BL.setLang(l); }, lang);
 
-    const shot = async n => {
-      await page.waitForTimeout(500);
-      await page.screenshot({ path: path.join(dir, n + '.png') });
-      console.log('  ' + name + '/' + n + '.png');
-    };
-
-    /* 1 — the room, which is what makes this not a candy game */
-    await page.evaluate(() => BL.setScreen('home'));
-    await page.waitForTimeout(1200);
-    await shot('1-home');
-
-    /* 2 — the board mid-level, the thing being sold */
-    await page.evaluate(() => document.getElementById('goPlay').click());
-    await page.waitForTimeout(1500);
-    await page.evaluate(() => {
-      const b = [...document.querySelectorAll('#modals button')].find(x => /Start/.test(x.innerText));
-      if (b) b.click();
-    });
-    await page.waitForTimeout(2200);
-    await page.evaluate(() => {
-      const b = [...document.querySelectorAll('#modals button')].find(x => /Got it/.test(x.innerText));
-      if (b) b.click();
-    });
-    await page.waitForTimeout(1200);
-    /* a few real moves so the board is not a fresh deal, and the score
-       and the star track have something on them */
-    await page.evaluate(async () => {
-      const g = BL.game;
-      for (let i = 0; i < 6; i++) {
-        const h = BL.bestHint(); if (!h) break;
-        BL.tryMove(h[0], h[1]);
-        for (let k = 0; k < 60 && g.busy; k++) await new Promise(r => setTimeout(r, 50));
+    for (const shot of SHOTS) {
+      await clear(page);
+      await shot.go(page);
+      await page.waitForTimeout(1100);
+      /* A board photographed while it is still filling is half empty
+         tiles and half falling ones, which is what the first attempt at
+         this shipped. Wait for every cell to hold something and for the
+         game to stop resolving. */
+      if (shot.settle) {
+        /* The model fills before the animation does, so waiting on the
+           cells alone still photographs a staircase of tiles in mid-air —
+           which is exactly what the second attempt shipped. BL.fast skips
+           the tweens, which is what it is for. */
+        await page.evaluate(() => { BL.fast = true; });
+        await page.waitForFunction(() => {
+          const G = window.BL && BL.game;
+          if (!G || !G.B || G.busy) return false;
+          for (let r = 0; r < G.B.h; r++) for (let c = 0; c < G.B.w; c++) {
+            const cell = G.B.cell[r][c];
+            if (cell.hole || cell.crate > 0 || cell.mole > 0) continue;
+            if (!cell.tile) return false;
+          }
+          return true;
+        }, null, { timeout: 15000 }).catch(() => {});
+        /* and one more frame with the tweens off, so nothing is caught
+           mid-swell either */
+        await page.waitForTimeout(900);
+        await page.evaluate(() => { BL.fast = false; });
+        await page.waitForTimeout(220);
       }
-    });
-    await shot('2-board');
-
-    /* 3 — the pet's own move, caught mid-leap off the board canvas */
-    const leap = await page.evaluate(async () => {
-      const g = BL.game; g.charge = 100;
-      const cv = document.getElementById('board');
-      let url = null;
-      const watch = () => {
-        if (g.leap && !url && g.leap.t / g.leap.ttl >= 0.5) url = cv.toDataURL('image/png');
-        if (!url) requestAnimationFrame(watch);
-      };
-      requestAnimationFrame(watch);
-      BL.firePetAbility();
-      await new Promise(r => setTimeout(r, 1400));
-      return url;
-    });
-    if (leap) {
-      fs.writeFileSync(path.join(dir, '3-ability.png'),
-        Buffer.from(leap.slice(leap.indexOf(',') + 1), 'base64'));
-      console.log('  ' + name + '/3-ability.png (board canvas)');
+      await clear(page);
+      await caption(page, shot.caption[lang]);
+      await page.waitForTimeout(180);
+      const file = path.join(dir, lang + '-' + shot.file + '.png');
+      await page.screenshot({ path: file });
+      console.log('  ' + (size.dir ? size.dir + '/' : '') + path.basename(file));
     }
-
-    /* 4 — the lane, which is the progression */
-    await page.evaluate(() => { BL.game.over = true; BL.setScreen('map'); });
-    await page.waitForTimeout(1400);
-    await page.evaluate(() => document.querySelectorAll('.veil').forEach(v => v.remove()));
-    await shot('4-lane');
-
-    /* 5 — the family, which is the reason to come back */
-    await page.evaluate(() => BL.setScreen('family'));
-    await page.waitForTimeout(1300);
-    await shot('5-family');
-
     await page.close();
+   }
   }
 
-  /* ---------- the feature graphic ----------
+  /* ---- the feature graphic, 1024x500 ---- */
+  const fg = await browser.newPage({ viewport: { width: 1024, height: 500 }, deviceScaleFactor: 1 });
+  await fg.goto(at('/biscuit-lane.html'), { waitUntil: 'load' });
+  await setup(fg);
+  await fg.evaluate(() => {
+    /* Drawn in the page so it uses the game's own palette, its own tile
+       silhouettes and its own animal drawing code — the banner and the
+       game cannot drift apart, because they are the same functions. */
+    document.body.innerHTML = '<canvas id="fg" width="1024" height="500"></canvas>';
+    document.body.style.margin = '0';
+    const c = document.getElementById('fg').getContext('2d');
+    const P = BL.PAL || {};
+    const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() || '#F6EADA';
 
-     Play asks for 1024x500 and puts text over the top of it in places
-     you cannot predict, so the mark sits left of centre and the right
-     third is left as ground on purpose. */
-  const page = await browser.newPage({ viewport: { width: 1024, height: 500 }, deviceScaleFactor: 1 });
-  await page.goto(PW.at('/index.html'), { waitUntil: 'load' });
-  await page.waitForFunction(() => window.BL && window.BL.save);
-  /* the fonts the game uses have to be there before anything is drawn
-     into a canvas with them, or the first frame falls back to serif */
-  await page.evaluate(() => document.fonts.ready);
-  const feat = await page.evaluate(() => {
-    const W = 1024, H = 500;
-    const cv = document.createElement('canvas');
-    cv.width = W; cv.height = H;
-    const c = cv.getContext('2d');
-    const g = c.createLinearGradient(0, 0, 0, H);
-    g.addColorStop(0, '#FBF0DC'); g.addColorStop(1, '#E7C89A');
-    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    const g = c.createLinearGradient(0, 0, 0, 500);
+    g.addColorStop(0, '#FBF1E2'); g.addColorStop(1, bg);
+    c.fillStyle = g; c.fillRect(0, 0, 1024, 500);
 
-    /* the lane, curving away to the right, so the eye lands on the cast */
-    c.fillStyle = '#8FB878';
-    c.beginPath(); c.moveTo(0, H);
-    for (let x = 0; x <= W; x += 6) c.lineTo(x, H - 150 - Math.sin(x / 140) * 22);
-    c.lineTo(W, H); c.closePath(); c.fill();
-    c.fillStyle = '#79A365';
-    c.beginPath(); c.moveTo(0, H);
-    for (let x = 0; x <= W; x += 6) c.lineTo(x, H - 92 - Math.sin(x / 110 + 1.2) * 14);
-    c.lineTo(W, H); c.closePath(); c.fill();
-    /* the path itself */
-    c.fillStyle = '#D8BE92';
-    c.beginPath();
-    c.moveTo(360, H); c.bezierCurveTo(430, H - 90, 700, H - 110, W, H - 130);
-    c.lineTo(W, H); c.closePath(); c.fill();
+    /* the verge and the hedge, the same shapes the lane is built from */
+    c.fillStyle = '#B7CE95'; c.fillRect(0, 330, 1024, 170);
+    c.fillStyle = '#4E8A5E';
+    for (let x = -20; x < 1060; x += 42) {
+      c.beginPath(); c.ellipse(x, 336, 34, 22, 0, 0, 6.2832); c.fill();
+    }
 
-    /* the mark and the name, left, where Play leaves room */
-    c.save(); c.translate(58, 96); BL.drawLogo(c, 104); c.restore();
-    c.fillStyle = '#3E2A18';
-    c.font = '800 76px Grandstander, sans-serif';
+    /* a row of tiles, each in its own silhouette, each a real breed */
+    const order = [0, 1, 2, 3, 4, 5];
+    order.forEach((t, i) => {
+      const x = 596 + (i % 3) * 132, y = 118 + Math.floor(i / 3) * 132;
+      c.save(); c.translate(x, y);
+      BL.paintTile(c, t, 0, 108, false);
+      c.restore();
+    });
+
+    /* the animal, drawn by the game */
+    const pet = BL.activePet();
+    if (pet) {
+      c.save(); c.translate(300, 330);
+      BL.drawBody(c, BL.specOfPet(pet), 150, { mouth: 'open', breath: .3 });
+      c.restore();
+    }
+
+    c.fillStyle = '#2C2118';
+    c.font = '800 62px Grandstander, sans-serif';
     c.textBaseline = 'alphabetic';
-    c.fillText('Biscuit Lane', 58, 292);
-    c.fillStyle = 'rgba(62,42,24,.72)';
-    c.font = '500 27px Karla, sans-serif';
-    c.fillText('Match three. Raise the animals you match.', 60, 336);
-
-    /* the cast, on the path, right of the text */
-    /* feet on the path, and the far one pulled in from the edge: a
-       clipped animal on a store banner reads as a mistake */
-    [[2, 664, 322, 130], [0, 800, 286, 166], [3, 928, 322, 130]]
-      .forEach(([breed, x, y, s]) => {
-        c.save(); c.translate(x, y);
-        BL.drawBody(c, BL.specOf(breed, undefined, undefined), s, { mouth: 'smile' });
-        c.restore();
-      });
-    return cv.toDataURL('image/png');
+    c.fillText('Biscuit Lane', 62, 118);
+    c.fillStyle = '#6B5949';
+    c.font = '500 26px Karla, sans-serif';
+    c.fillText('The cats and dogs on the board', 64, 162);
+    c.fillText('are the pets you take home.', 64, 196);
   });
-  fs.mkdirSync(OUT, { recursive: true });
-  fs.writeFileSync(path.join(OUT, 'feature-graphic-1024x500.png'),
-    Buffer.from(feat.slice(feat.indexOf(',') + 1), 'base64'));
-  console.log('  feature-graphic-1024x500.png');
+  await fg.waitForTimeout(700);
+  await fg.screenshot({ path: path.join(OUT, 'feature-graphic.png') });
+  console.log('  feature-graphic.png');
+  await fg.close();
 
   await browser.close();
-  if (server.stop) server.stop();
-  console.log('\nwritten to ' + OUT);
-})();
+  if (srv && srv.stop) srv.stop();
+  console.log('\n' + OUT);
+})().catch(e => { console.error(e.message); process.exit(1); });
