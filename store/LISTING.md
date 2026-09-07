@@ -215,6 +215,12 @@ Answer the form like this. Every answer is checked against the code in
 | Is all user data encrypted in transit? | Not applicable — no data leaves the device |
 | Do you provide a way for users to request data deletion? | Not applicable — deleting the app deletes everything; Settings also has "Start over" |
 
+The two reminders do not change any of this. A local notification is
+scheduled and delivered by the phone itself — no push service, no token,
+no server — so nothing about them is collected or shared. Play asks
+separately about the notifications *permission*; declare it, and say it
+is used for gameplay reminders the player opts into.
+
 Privacy policy URL: `https://aydin3417.github.io/biscuit-lane/privacy.html`
 
 ## Content rating
@@ -223,6 +229,25 @@ Privacy policy URL: `https://aydin3417.github.io/biscuit-lane/privacy.html`
   social features, no location, no advertising.
 - Purchases: only if in-app products are enabled before submitting.
 - Expected: **PEGI 3 / ESRB Everyone / USK 0**.
+
+## In-app products
+
+Declare all four as **CONSUMABLE**, including the season book. It is per
+season and the season resets, so a non-consumable would be refused as
+"already owned" the second month. There is no non-consumable in this
+game, deliberately: it is the only product type that needs no account
+behind it.
+
+| Product id | What it is | Suggested |
+|---|---|---|
+| `treats_pocket_40` | 40 treats | $1.99 |
+| `treats_bag_110` | 110 treats | $4.99 |
+| `treat_jar` | the jar, opened — up to 100 treats the player filled by playing | $2.99 |
+| `season_book` | the paid column of the season book, 28 days | $4.99 |
+
+The dollar figures are fallback labels only. The game asks the store for
+the real price in the player's own currency and shows that instead; set
+the prices in the Console, not here.
 
 ## Category
 
@@ -251,12 +276,18 @@ These need an account, a payment or a private key, and are deliberately
 not automated.
 
 1. **Google Play Developer account** — one-off $25.
-2. **Signing key** — `keytool -genkey -v -keystore biscuit-lane.jks
-   -alias biscuit -keyalg RSA -keysize 2048 -validity 10000`. Keep it and
+2. **Signing key** — `keytool -genkey -v -keystore biscuit-lane-upload.jks
+   -alias upload -keyalg RSA -keysize 2048 -validity 10000`. Keep it and
    its password somewhere you will still have them in five years; losing
-   it means never updating this app again. Do not commit it.
-3. **Release build** — `npm run pack && npx cap sync && node tools/gradle.js bundleRelease`,
-   signed with that key, produces the `.aab` Play wants.
+   it means never updating this app again. Do not commit it — `.gitignore`
+   already refuses `*.jks`.
+3. **Release build** — the `signingConfigs` block is already in
+   `android/app/build.gradle`; it reads four properties from
+   `~/.gradle/gradle.properties` (`BL_STORE_FILE`, `BL_STORE_PASSWORD`,
+   `BL_KEY_ALIAS`, `BL_KEY_PASSWORD`). Then
+   `npm run pack && npx cap sync && node tools/gradle.js bundleRelease`
+   produces the signed `.aab` Play wants. Without those four it still
+   builds, unsigned, and says so before it starts.
 4. **Publish `privacy.html`** at the URL above (GitHub Pages already
    serves the repository root, so pushing it is enough).
 5. **In-app products**, if you want them — the code has a billing bridge

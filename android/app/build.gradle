@@ -16,8 +16,55 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    /* ---------- signing ----------
+
+       A release AAB has to be signed with an upload key, and until this
+       block existed `bundleRelease` produced an unsigned bundle that the
+       Play Console rejects on upload — after the four minutes it takes
+       to build one.
+
+       The key itself is never in this repository and must never be: it
+       is the only thing that proves an update comes from the same
+       developer as the install, and losing it means never being able to
+       update this listing again. The four values are read from
+       ~/.gradle/gradle.properties, which is outside the project:
+
+         BL_STORE_FILE=C:/path/to/biscuit-lane-upload.jks
+         BL_STORE_PASSWORD=...
+         BL_KEY_ALIAS=upload
+         BL_KEY_PASSWORD=...
+
+       Absent — which is every machine that has not been set up, and
+       every CI runner — this configures nothing and the release build
+       falls back to unsigned rather than failing. That is deliberate:
+       somebody running a release build to check that it compiles should
+       not be stopped by not having the key, and somebody actually
+       shipping will find out at the upload, which is where the Console
+       tells them plainly. */
+    signingConfigs {
+        release {
+            def props = new Properties()
+            def local = rootProject.file('keystore.properties')
+            if (local.exists()) local.withInputStream { props.load(it) }
+            def get = { k -> props.getProperty(k) ?: (project.hasProperty(k) ? project.property(k) : null) }
+            def store = get('BL_STORE_FILE')
+            if (store != null && file(store).exists()) {
+                storeFile file(store)
+                storePassword get('BL_STORE_PASSWORD')
+                keyAlias get('BL_KEY_ALIAS')
+                keyPassword get('BL_KEY_PASSWORD')
+            }
+        }
+    }
+
     buildTypes {
         release {
+            /* Signed only when there is something to sign with; see the
+               block above for why this is a fallback rather than a
+               failure. */
+            if (signingConfigs.release.storeFile != null) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

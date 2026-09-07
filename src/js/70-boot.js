@@ -215,6 +215,22 @@ function boot() {
      replaces the fallback labels whenever it arrives, and nothing waits
      on it */
   BILLING.refresh();
+  /* And, in the same breath, anything the store still says is owed.
+
+     A purchase that was taken but never granted — the app killed between
+     the sheet closing and the save being written — sits in the store's
+     queue until somebody claims it. Waiting for the player to find the
+     restore button means waiting for a player who has just been charged
+     for nothing to go looking for a button, which is not a plan. Asked
+     on every launch, it resolves before they notice. */
+  BILLING.restore().then(r => {
+    if (!r.ok || !r.skus.length) return;
+    const n = claimOutstanding(r.skus);
+    if (!n) return;
+    syncPurse();
+    track('restore_claimed', { n: n });
+    toast(T('store_restored', { n: n }), 'check');
+  });
   /* before anything else in boot can throw, so that if it does the
      handler is already listening */
   TRACK.init();
@@ -259,6 +275,11 @@ function boot() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       musicStop(); persist(true);
+      /* The moment the queue can still be made right: the player has put
+         the game down, and everything the two notifications are about —
+         whether the hearts are empty, whether today's walk went untaken
+         — is settled and will not change until they come back. */
+      NOTIFY.sync();
       /* the one moment a batch is worth sending: the player has
          stopped, so nothing is competing for the frame */
       TRACK.flush();
@@ -361,7 +382,7 @@ window.BL = {
   levelDef, findMatches, allMoves, hasMove, tryMove, canSwap, firePetAbility, persist, wipeSave,
   perksFor, activePet, makePet, healPet, loadSave, freshSave, BREEDS, LEVELS,
   checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait, addBond,
-  track, TRACK,
+  track, TRACK, ADS, earnTreatsSheet,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
   openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, treatStore, confirmQuit,
@@ -377,5 +398,14 @@ window.BL = {
   set faceScale(v) { TILE_FACE = v; clearSprites(); }
 };
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-else boot();
+/* One question before the save is read, and only one: does the app's own
+   store hold a copy the WebView has lost? On the web there is no plugin
+   and this resolves on the next microtask having done nothing, so the
+   only thing it costs a browser is a tick. Rejection lands on `boot` as
+   well — a vault that cannot be read must never be the reason a game
+   does not start. */
+function bootAfterVault() {
+  VAULT.recover().then(vaultRecover, () => { }).then(boot, boot);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootAfterVault);
+else bootAfterVault();

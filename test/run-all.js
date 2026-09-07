@@ -19,6 +19,9 @@ const steps = [
      blindness. Cheap, and the only check that would notice an art
      change making the board harder. */
   ['the colours, as gameplay', 'palette.js', []],
+  /* the one seam money comes in through, and the one call shape that
+     silently gave a season book away when it was got wrong */
+  ['the till', 'till.js', []],
   /* the economy, played out on paper: it was dead on day 25 and nobody
      had ever looked. A reward that cannot be spent is not a reward. */
   ['the economy, ninety days', 'economy.js', ['90', '--plays', '8']],
@@ -76,7 +79,20 @@ const steps = [
    which pulls the spread in by about a quarter, and the ceiling moves to
    96 — still far below "the pet plays it for you", which is the thing
    this gate exists to catch. */
-const CURVE_GAMES = 9;
+/* `node test/run-all.js quick` drops the four difficulty sweeps to two
+   games a level and skips the two cared-for curves.
+
+   The full run is four sweeps of nine games over sixty to eighty levels
+   — around two thousand solved boards — and takes long enough that it
+   stops being run, which is the only way a suite fails for real. Quick
+   is not a substitute for it: two games a level cannot tell a drifting
+   curve from a run of bad luck, and the band check is skipped rather
+   than loosened, because a gate that passes on noise is worse than no
+   gate. It answers the one question worth asking every few minutes —
+   does every level still build, deal and finish — and leaves the rest
+   to the full run before a release. */
+const QUICK = process.argv[2] === 'quick';
+const CURVE_GAMES = QUICK ? 2 : 9;
 const CURVES = [
   ['the handcrafted lane', 1, 60, 0, 55, 90],
   ['the handcrafted lane, cared-for pet', 1, 60, 1, 60, 96],
@@ -108,7 +124,7 @@ for (const [label, file, args] of steps) {
    Two curves, because there are two: sixty levels somebody wrote, and
    the endless run after them, which is most of what anyone plays and
    was the half nobody was measuring. */
-for (const [label, first, last, perks, lo, hi] of CURVES) {
+for (const [label, first, last, perks, lo, hi] of (QUICK ? CURVES.filter(c => !c[3]) : CURVES)) {
   process.stdout.write('\n=== difficulty: ' + label + ' (' + CURVE_GAMES + ' games per level) ===\n');
   try {
     const raw = execFileSync(process.execPath,
@@ -120,7 +136,12 @@ for (const [label, first, last, perks, lo, hi] of CURVES) {
       .forEach(l => process.stdout.write(l + '\n'));
     const m = raw.match(/overall clear rate\s+(\d+)/);
     const clear = m ? +m[1] : NaN;
-    if (!isFinite(clear) || clear < lo || clear > hi) {
+    if (QUICK) {
+      process.stdout.write(isFinite(clear)
+        ? 'ran (band not checked at ' + CURVE_GAMES + ' games)\n'
+        : 'the sweep produced no clear rate\n');
+      if (!isFinite(clear)) failed++;
+    } else if (!isFinite(clear) || clear < lo || clear > hi) {
       failed++;
       process.stdout.write('the curve has drifted: expected ' + lo + '-' + hi + '% overall\n');
     } else {

@@ -23,3 +23,11 @@ Thumbs.db
 
 # The Gemini key. Never in the repository.
 design/.key
+
+# The Android upload key and its passwords. Losing this key means never
+# being able to update the Play listing again; committing it means
+# anybody who clones this can publish as you. Neither is recoverable.
+*.jks
+*.keystore
+keystore.properties
+android/keystore.properties

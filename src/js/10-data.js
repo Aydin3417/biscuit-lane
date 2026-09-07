@@ -98,6 +98,32 @@ const EYE_COLORS = [
   { id: 'hazel', hex: '#8A6A3A' }, { id: 'grey', hex: '#8E98A6' }
 ];
 
+/* ---------- the coats nobody ever saw ----------
+
+   Every breed above carries three coats and six eye colours, all of them
+   drawn, all of them working. A player meets them once — on the sheet
+   that adopts the animal — picks one, and never sees the other two
+   again. Eighteen coats in the game, six of them ever displayed.
+
+   That is the answer to the thing test/economy.js has been complaining
+   about for two months. The shop runs out of things to want around the
+   fourth week; coins keep arriving and there is nothing left to spend
+   them on, which quietly ends the reason to clear the next level. Every
+   fix for that so far has been more colours of something — four more
+   collars, six more room themes — and they work, but a room theme is not
+   what a player in a pet game is trying to buy.
+
+   Changing the animal is. It costs no new art, because the art has been
+   in the file since the first week, and it is per-animal rather than
+   per-house: six pets is twelve coats a player might want instead of one
+   theme they might. Priced above a hat and below a room, because that is
+   what it is — bigger than a thing they are wearing, smaller than the
+   place they live.
+
+   The coat and eyes an animal was adopted with are theirs, and always
+   were. Nothing anybody already had is behind this. */
+const GROOM = { coat: 220, eye: 120 };
+
 /* ---------- the stretches of the lane ----------
 
    The lane was sixty levels arranged as a corridor. It already had a
@@ -271,6 +297,45 @@ const ECON = {
   continueAt: .70
 };
 
+/* ---------- where this game lives, once it lives anywhere ----------
+
+   Two links, and everything that needs one is switched off until it has
+   one. That is deliberate: a "rate us" button that opens a 404 and a
+   "tell a friend" that shares a dead address are both worse than no
+   button at all, and both are the kind of thing that ships because
+   somebody meant to come back to it.
+
+   The Play address is deterministic — it is the applicationId in
+   android/app/build.gradle and nothing else — so it is filled in here
+   and will start working the day the listing goes live. Apple's is a
+   number App Store Connect assigns when the app record is created, and
+   there is no way to know it in advance, so it is blank and everything
+   that would use it stays hidden on iOS until it is not.
+
+   `storeLink()` is the only reader. Nothing in the game asks which
+   platform it is on to decide whether to offer a share; it asks this,
+   and gets null when there is nowhere to send anybody. */
+const STORE_LINKS = {
+  play: 'https://play.google.com/store/apps/details?id=com.biscuitlane.game',
+  /* paste the App Store URL here — App Store Connect gives it once the
+     app record exists, in the form https://apps.apple.com/app/id0000000000 */
+  apple: ''
+};
+/* Whether this is the app or the web page. Asked here rather than
+   reading 75-native.js's `NATIVE`, because that file is the last one
+   loaded and the interface would then be naming something below it —
+   see test/deps.js, which calls that a cycle and is right to. */
+function nativeShell() {
+  return !!(typeof window !== 'undefined' && window.Capacitor &&
+    window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+function storeLink() {
+  const ios = typeof window !== 'undefined' && window.Capacitor &&
+    window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios';
+  const url = ios ? STORE_LINKS.apple : STORE_LINKS.play;
+  return url || null;
+}
+
 /* ---------- what is for sale ----------
 
    Prices are the sizes the genre has settled on, and they are not the
@@ -287,18 +352,188 @@ const TREAT_PACKS = [
   { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı', best: true }
 ];
 
+/* ---------- the season book ----------
+
+   The one part of this file that sells engagement rather than relief.
+
+   Everything else the game charges for is bought at a moment of wanting
+   something now: nine treats because the level was nearly won, three
+   pounds because the jar is full. Those moments are rare here on purpose
+   — a level is cleared four times in five and hearts never run dry — so
+   there was no third thing, and a shop whose whole stock is "you lost"
+   in a game people mostly win is a shop with nothing to sell.
+
+   The book is that third thing, and it is the format the genre settled
+   on because it is the only one that pays for playing rather than for
+   failing: stamps come from clearing levels, the track pays out either
+   way, and the paid side is bought once and then earned. Nobody is ever
+   sold a way past a board.
+
+   THE NUMBERS, and why each one.
+
+   A season is four weeks because that is how long a habit survives being
+   named. Thirty tiers at nine stamps is 270; ordinary play — six levels
+   a day, most of them cleared, the walk taken — earns about ten a day,
+   so 280 in a season. The player who plays the way this game expects
+   finishes it with a couple of days spare. That is deliberate and it is
+   the difference between a pass and a con: a track nobody reaches is a
+   track sold on a promise it never meant.
+
+   The paid side is 4.99 against a 4.99 pack of 110 treats. It holds a
+   hundred and twenty, plus the cosmetics, and it takes a month of
+   playing to collect. A pass has to beat the pack it sits next to,
+   because the pack only asks for money and the pass asks for the month
+   as well. */
+const SEASON_DAYS = 28;
+const SEASON_EPOCH = 20454;      /* a Monday, so seasons start on one */
+const PASS = {
+  sku: 'season_book', usd: '$4.99',
+  tiers: 30, per: 9,
+  /* what play is worth, before any of it is spent */
+  stamps: { clear: 1, threeStar: 1, walk: 2, gate: 5 }
+};
+
+/* The track. `free` is paid to everybody, `paid` only once the book is
+   bought — and then for every tier already reached, which is the whole
+   reason anybody buys one in the third week rather than the first. */
+const PASS_TRACK = [
+  /* THE FREE COLUMN WAS PAYING FOR THE SHOP.
+
+     Measured once test/economy.js could finally see this table: 2,516
+     coins a season, 7,748 over three months — against a catalogue that
+     costs 12,073 to buy outright. The free side of the book was handing
+     over two thirds of everything the game sells, on top of an income
+     that already outran the shop, and the result was the shop running
+     dry on day twenty-three instead of day twenty-eight. A reward that
+     buys what the player was going to buy anyway is not felt as a
+     reward; it is only felt later, as a shop with nothing in it.
+
+     Rebalanced towards things that get used up rather than banked. A tin
+     of stew is eaten, a hammer is thrown at a level and gone; a hundred
+     coins sits in the purse and quietly shortens the game. Same number
+     of tiers, same rhythm, about half the standing value. */
+  { free: { coins: 60 },                 paid: { treats: 3 } },
+  { free: { food: 'kibble' },            paid: { treats: 3 } },
+  { free: { boost: 'shuffle' },          paid: { boost: 'shuffle' } },
+  { free: { treats: 1 },                 paid: { treats: 4 } },
+  { free: { coins: 70 },                 paid: { collar: 'moss' } },
+  { free: { food: 'tuna' },              paid: { treats: 4 } },
+  { free: { food: 'kibble' },            paid: { treats: 4 } },
+  { free: { boost: 'hammer' },           paid: { treats: 5 } },
+  { free: { coins: 75 },                 paid: { hat: 'beanie' } },
+  { free: { treats: 2 },                 paid: { treats: 5 } },
+  { free: { food: 'kibble' },            paid: { treats: 5 } },
+  { free: { food: 'stew' },              paid: { boost: 'swap' } },
+  { free: { coins: 80 },                 paid: { treats: 5 } },
+  { free: { boost: 'moves' },            paid: { treats: 6 } },
+  { free: { food: 'kibble' },            paid: { collar: 'sky' } },
+  { free: { treats: 1 },                 paid: { treats: 6 } },
+  { free: { coins: 85 },                 paid: { treats: 6 } },
+  { free: { food: 'tuna' },              paid: { keepsake: 'paw' } },
+  { free: { food: 'kibble' },            paid: { treats: 6 } },
+  { free: { coins: 90 },                 paid: { treats: 7 } },
+  { free: { boost: 'hammer' },           paid: { hat: 'chef' } },
+  { free: { treats: 2 },                 paid: { treats: 7 } },
+  { free: { food: 'kibble' },            paid: { treats: 7 } },
+  { free: { coins: 95 },                 paid: { treats: 7 } },
+  { free: { food: 'stew' },              paid: { collar: 'rose' } },
+  { free: { food: 'tuna' },              paid: { treats: 8 } },
+  { free: { coins: 100 },                paid: { treats: 8 } },
+  { free: { treats: 2 },                 paid: { treats: 8 } },
+  { free: { boost: 'shuffle' },          paid: { boost: 'moves' } },
+  { free: { coins: 110 },                paid: { keepsake: 'photo' } }
+];
+
+/* Which season it is, and how far through. Both are worked out from the
+   date rather than stored, so a save that has been shut for two months
+   comes back into the right one instead of resuming a season that
+   ended.
+
+   THE SEASON IS THE PLAYER'S, NOT THE CALENDAR'S, and that took a
+   screenshot to notice. Both of these read from a fixed epoch — a
+   Monday in 2026 — so every player in the world was in the same season
+   at the same time, which is how a game with no leaderboard, no friends
+   list and nothing shared between two people ends up with a synchronised
+   clock nobody can see the point of.
+
+   What it cost: an install lands uniformly across the twenty-eight days,
+   so half of them arrive with under a fortnight left, and the home
+   screen offers those players a thirty-tier book — two hundred and
+   seventy stamps, four weeks of ordinary play — with eleven days to
+   finish it. On the day I looked the game was reading "Tier 6 of 30 · 3
+   days left" and the buy button was live underneath it. Anybody who took
+   that offer would have been right to ask for their money back.
+
+   Anchored to the player's own first day instead, everybody gets
+   twenty-eight of them. The book is worth the same to the person who
+   installed this morning as to the one who installed a fortnight ago,
+   which is the only version of this offer that is not a lottery on
+   install date. `start` is that day, and the epoch below is what these
+   fall back to for anyone asking about the calendar rather than a save —
+   test/economy.js does, and it has no player. */
+function seasonNo(start, dayNo) {
+  const d = dayNo === undefined ? dayNumber() : dayNo;
+  const s = start === undefined ? SEASON_EPOCH : start;
+  return Math.floor((d - s) / SEASON_DAYS);
+}
+function seasonDaysLeft(start, dayNo) {
+  const d = dayNo === undefined ? dayNumber() : dayNo;
+  const s = start === undefined ? SEASON_EPOCH : start;
+  return SEASON_DAYS - (((d - s) % SEASON_DAYS) + SEASON_DAYS) % SEASON_DAYS;
+}
+/* Tier reached, capped: stamps past the end of the track are not lost so
+   much as simply not worth anything, which is what every one of these
+   does and what stops the last week being dead time for anybody ahead. */
+function passTier(stamps) {
+  return Math.min(PASS.tiers, Math.floor((stamps || 0) / PASS.per));
+}
+
+/* What the book would hand over if it were bought right now: everything
+   on the paid side up to the tier already reached, counted in treats.
+
+   The same arithmetic the jar does, for the same reason. The jar refuses
+   to be opened before it holds more than the pack beside it costs,
+   because an offer that is worse than the one next to it is only ever
+   taken by somebody who did not check. The book sits next to a hundred
+   and ten treats for the same money and has the same duty.
+
+   Only treats are counted. The paid track also carries collars, hats and
+   a keepsake, and they are worth something — but they are worth
+   something to a player who wanted them, and this number exists to
+   answer "would this be a bad deal for somebody who did not". Undercounting
+   is the safe direction. */
+function passBanked(stamps) {
+  const tier = passTier(stamps);
+  let treats = 0;
+  for (let i = 0; i < tier && i < PASS_TRACK.length; i++) treats += PASS_TRACK[i].paid.treats || 0;
+  return treats;
+}
+
 /* ---------- the treat jar ----------
 
-   A jar on the shelf that fills while you play and is opened once, for
-   money. It is the friendliest thing in this file by a distance: it
-   cannot be bought before it has been earned, the number in it is the
-   player's own play rather than a price, and nothing is taken away from
-   anyone who never opens it — the jar simply stops filling when full.
+   A jar on the shelf that fills while you play and is opened for money.
+   It is the friendliest thing in this file by a distance: it cannot be
+   bought before it has been earned, the number in it is the player's own
+   play rather than a price, and nothing is taken away from anyone who
+   never opens it — the jar simply stops filling when full.
 
    It is also the only offer here that gets better the longer you have
    been playing, which is the opposite of how a difficulty paywall
-   works, and it is why this is the one I would keep. */
-const JAR = { perLevel: 2, cap: 150, sku: 'treat_jar', usd: '$2.99' };
+   works, and it is why this is the one I would keep.
+
+   It was 2 a level into a jar of 150, which is seventy-five levels —
+   twelve and a half days at the rate this game is actually played, and
+   six moments in three months. That is not a jar on a shelf, it is an
+   offer that turns up twice a season, and for anybody who never opens it
+   the thing fills once and then sits there for good. At 3 into 100 it
+   comes round every thirty-four levels, call it a week, which is the
+   rhythm the mechanic is for: something you notice filling.
+
+   The size is also the price. A hundred treats for the jar's money
+   against a hundred and ten for two-thirds more is deliberately the best
+   rate in the game, because the jar is the offer you earned and the
+   packs are the offer you did not. */
+const JAR = { perLevel: 3, cap: 100, sku: 'treat_jar', usd: '$2.99' };
 
 /* ---------- goods ---------- */
 const FOODS = [
@@ -351,6 +586,34 @@ const FURNITURE = [
   { id: 'basket', en: 'Toy basket', tr: 'Oyuncak sepeti', cost: 100, slot: 'left', enDesc: 'Everything ends up on the floor anyway.', trDesc: 'Nasılsa hepsi yere dökülüyor.' },
   { id: 'poster', en: 'Framed print', tr: 'Çerçeveli baskı', cost: 110, slot: 'wall', enDesc: 'A very good dog, painted badly.', trDesc: 'Çok iyi bir köpek, kötü çizilmiş.' }
 ];
+/* ---------- keepsakes ----------
+
+   The one part of the shop coins cannot reach, and not because a price
+   says so: a keepsake is made out of the save. The photograph is of this
+   animal at the stage it is today, the tag carries the name the player
+   typed, the blanket is woven in its own coat. There is no catalogue
+   entry to earn, because none of these objects exists until a particular
+   player's animal does.
+
+   That is why they are the right thing to price in treats. Everything
+   else in this file is a thing the game has and the player is working
+   towards; these are things only the player has. Priced so that somebody
+   who never pays a penny gets one about every week of ordinary play,
+   which is the shape of the whole economy in one line: money buys the
+   wait, never the thing. */
+const KEEPSAKES = [
+  { id: 'photo', en: 'Photograph', tr: 'Fotoğraf', cost: 40, treat: true, slot: 'wall',
+    enDesc: 'Framed, exactly as they are today.', trDesc: 'Tam bugünkü haliyle, çerçevede.' },
+  { id: 'paw', en: 'Paw print', tr: 'Pati izi', cost: 40, treat: true, slot: 'wall',
+    enDesc: 'Pressed into clay, name and all.', trDesc: 'Kile basılmış, adıyla birlikte.' }
+];
+
+/* Both tables furnish the same room, so anything that places an object
+   has to be able to find it in either. */
+function roomThing(id) {
+  return FURNITURE.find(f => f.id === id) || KEEPSAKES.find(k => k.id === id) || null;
+}
+
 const ROOM_THEMES = [
   { id: 'oat', en: 'Oat', tr: 'Yulaf', cost: 0, wall: '#E4D3B8', wall2: '#D3BE9E', floor: '#C79A6A' },
   { id: 'sage', en: 'Sage', tr: 'Adaçayı', cost: 150, wall: '#BFD3C1', wall2: '#A5BCA8', floor: '#B08A62' },

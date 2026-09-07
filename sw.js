@@ -4,10 +4,16 @@
    job: cache it on install, serve it from cache first, and quietly
    refresh it in the background so the next launch has the new one.
 
-   The Google Fonts stylesheet and its woff2 files are cached the first
-   time they are asked for, because a game that works on the underground
-   should not lose its typeface there. */
-const VERSION = 'biscuit-lane-v1';
+   The typefaces are inside the page now, so nothing is fetched from
+   anywhere but this origin and the worker needs no third-party rule —
+   see the note further down.
+
+   VERSION IS GENERATED. build.js rewrites the line below with a hash of
+   the built page, so do not edit it by hand and do not be surprised to
+   see it in a diff: a cache name that never changes is a cache that
+   `activate` never sweeps, which is how a player ends up on a build that
+   is half yesterday's. */
+const VERSION = 'biscuit-lane-9b8860289a7d';
 const SHELL = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 

@@ -52,12 +52,23 @@ const BILLING = {
     return this.prices[sku] || fallback;
   },
 
+  /* Everything this game can sell, in one list.
+
+     It was written out at the one call site that needed it and left the
+     season book off, so the book's button showed the hardcoded `$4.99`
+     on a live store instead of the price in the player's own currency —
+     which in Turkey is not a rounding error, it is the wrong number in
+     the wrong unit. One list, and every caller reads it. */
+  skus() {
+    return TREAT_PACKS.map(p => p.sku).concat([JAR.sku, PASS.sku]);
+  },
+
   /* Ask the store what these cost where the player is. Safe to call when
      no store exists — it resolves having done nothing. */
   async refresh() {
     if (!this.ready()) return false;
     try {
-      const skus = TREAT_PACKS.map(p => p.sku).concat([JAR.sku]);
+      const skus = this.skus();
       const r = await this.plugin.getProducts({ productIdentifiers: skus, productIds: skus });
       const list = (r && (r.products || r.productList)) || [];
       list.forEach(p => {
@@ -67,6 +78,41 @@ const BILLING = {
       });
       return true;
     } catch (e) { return false; }
+  },
+
+  /* ---------- closing the transaction ----------
+
+     The half of a purchase nobody sees, and the one that decides whether
+     the money is actually yours.
+
+     Google Play holds a purchase open until the app says it has handed
+     the goods over. A purchase left open for three days is REFUNDED
+     AUTOMATICALLY — the player keeps the treats, the money goes back,
+     and nothing anywhere reports an error. Apple's queue is the same
+     shape with a gentler failure: an unfinished transaction is replayed
+     on every launch forever. So this is not tidying up after the sale.
+     Without it there is no sale.
+
+     Everything this game sells is a consumable. The packs and the jar
+     are bought again and again by design; the season book is bought once
+     per season, and a season ends — so all three have to be handed back
+     to the store as used, or the second purchase is refused with
+     "already owned". There is no non-consumable in this game and that is
+     deliberate: it is the only product type that needs no account.
+
+     The four names below are the four ways the plugins in circulation
+     spell the same call. Trying each is not indecision, it is the same
+     bet `ready()` makes: this seam should fit whichever one gets
+     installed without the game learning its name. */
+  async settle(receipt, sku) {
+    if (!this.plugin || !receipt) return;
+    const id = receipt.transactionId || receipt.purchaseToken || receipt.token || sku;
+    const arg = { productIdentifier: sku, productId: sku, transactionId: id, purchaseToken: id };
+    const names = ['consumePurchase', 'finishTransaction', 'consume', 'acknowledgePurchase'];
+    for (const n of names) {
+      if (typeof this.plugin[n] !== 'function') continue;
+      try { await this.plugin[n](arg); return; } catch (e) { /* try the next spelling */ }
+    }
   },
 
   /* The purchase itself.
@@ -88,15 +134,34 @@ const BILLING = {
          a forged receipt cheats is the person holding the phone. It is
          not enough the day this game keeps anything on a server, and
          that is the day this call grows a second half. */
+      await this.settle(r, sku);
       return { ok: true, receipt: r };
     } catch (e) {
       return { ok: false, why: 'failed' };
     }
   },
 
+  /* What the store still says this player owns.
+
+     Consumables do not survive being consumed, so on a healthy device
+     this comes back empty and that is the correct answer — there is
+     nothing to restore because nothing is outstanding. What it does
+     catch is the case that costs a player real money: a purchase that
+     was taken but never granted, because the app was killed between the
+     store saying yes and the save being written. Those sit in the queue
+     until somebody claims them, and this is how they get claimed.
+
+     Returns the product ids, so the caller decides what each one is
+     worth. This file knows about receipts and nothing about treats. */
   async restore() {
-    if (!this.ready()) return { ok: false, why: 'nostore' };
-    try { await this.plugin.restorePurchases(); return { ok: true }; }
-    catch (e) { return { ok: false, why: 'failed' }; }
+    if (!this.ready()) return { ok: false, why: 'nostore', skus: [] };
+    try {
+      const r = await this.plugin.restorePurchases({ productIds: this.skus() });
+      const list = (r && (r.purchases || r.transactions || r.results)) || [];
+      const skus = list
+        .map(p => p && (p.productId || p.productIdentifier || p.identifier || p.id))
+        .filter(Boolean);
+      return { ok: true, skus: skus, receipts: list };
+    } catch (e) { return { ok: false, why: 'failed', skus: [] }; }
   }
 };

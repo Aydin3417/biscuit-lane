@@ -84,6 +84,126 @@ EV.on('won', showWin);
 EV.on('lost', showLose);
 EV.on('lane', openLevelIntro);
 
+
+/* ---------------- the season book ---------------- */
+
+/* One reward as a chip. Everything on the track is one of six things, so
+   this is a switch rather than a system; a seventh kind would be a sign
+   the track had grown a mechanic rather than a reward. */
+function passChip(r) {
+  if (!r) return '';
+  if (r.coins) return `<span class="reward" style="color:var(--accent-strong)">${IC.coin}+${r.coins}</span>`;
+  if (r.treats) return `<span class="reward" style="color:var(--plum)">${IC.treat}+${r.treats}</span>`;
+  const named = r.food ? FOODS.find(x => x.id === r.food)
+    : r.boost ? BOOSTERS.find(x => x.id === r.boost)
+      : r.hat ? HATS.find(x => x.id === r.hat)
+        : r.collar ? COLLARS.find(x => x.id === r.collar)
+          : r.keepsake ? KEEPSAKES.find(x => x.id === r.keepsake) : null;
+  return `<span class="reward">${goodName(named || {})}</span>`;
+}
+
+/* How many rewards are sitting there unclaimed, which is the only number
+   the home card needs and the reason it is worth a badge. */
+function passWaiting() {
+  let n = 0;
+  for (let i = 0; i < PASS_TRACK.length; i++) {
+    if (passClaimable(i, false)) n++;
+    if (passClaimable(i, true)) n++;
+  }
+  return n;
+}
+
+function passSheet() {
+  const draw = () => {
+    const p = passState();
+    const tier = passTier(p.stamps);
+    const into = p.stamps - tier * PASS.per;
+    return `
+    <span style="color:var(--accent-strong);width:48px;height:48px;align-self:center">${IC.star}</span>
+    <h2>${T('pass_t')}</h2>
+    <p style="color:var(--text-dim)">${T('pass_sub', { n: tier, c: PASS.tiers, d: seasonDaysLeft(seasonStart()) })}</p>
+    <div class="goalItem" style="align-items:center">
+      <span class="t"><b>${T('pass_stamps', { n: p.stamps, c: PASS.tiers * PASS.per })}</b>
+        <span style="display:block;height:6px;border-radius:3px;background:var(--surface-3);overflow:hidden;margin-top:6px">
+          <span style="display:block;height:100%;width:${Math.round(Math.min(1, tier >= PASS.tiers ? 1 : into / PASS.per) * 100)}%;background:var(--accent)"></span>
+        </span></span>
+    </div>
+    ${p.paid ? `<p style="color:var(--sage-ink,var(--text-dim))">${T('pass_have')}</p>`
+      /* No button when the book could not return what the pack beside it
+         costs. The track is still drawn — a season you cannot finish is
+         still a season worth seeing the shape of, and the free column
+         pays out either way — but there is nothing to tap, and the line
+         underneath says why rather than leaving a gap. */
+      : !passWorthBuying() ? `<p style="color:var(--text-faint);font-size:var(--t-micro);line-height:1.5">${T('pass_late')}</p>`
+      : `<button class="btn primary wide" id="pBuy">${T('pass_buy')} · ${BILLING.price(PASS.sku, PASS.usd)}</button>`}
+    <div class="passTrack">
+      <div class="passHead"><span></span><span>${T('pass_free')}</span><span>${T('pass_paid')}</span></div>
+      ${PASS_TRACK.map((row, i) => {
+        const reached = tier > i;
+        const cell = (paid) => {
+          const can = passClaimable(i, paid);
+          const took = p.claimed[(paid ? 'p' : 'f') + i];
+          /* The book's column has to look shut until it is bought.
+             Drawn the same as the free one it reads as a reward being
+             withheld for no stated reason, which is the one way a track
+             like this feels like a swindle rather than an offer. */
+          const shut = paid && !p.paid;
+          return `<span class="pc ${took ? 'took' : can ? 'can' : shut ? 'shut' : ''}">
+            ${passChip(row[paid ? 'paid' : 'free'])}
+            ${can ? `<button class="btn sm" data-take="${i}" data-paid="${paid ? 1 : 0}">${T('pass_take')}</button>` : ''}
+          </span>`;
+        };
+        return `<div class="passRow ${reached ? 'on' : ''}">
+          <span class="pn">${i + 1}</span>${cell(false)}${cell(true)}
+        </div>`;
+      }).join('')}
+    </div>
+    <p style="font-size:var(--t-micro);color:var(--text-faint);line-height:1.5">${T('pass_why')}</p>
+    <button class="btn ghost wide" id="pOk">${T('close')}</button>`;
+  };
+
+  const m = modal(draw());
+  const wire = () => {
+    $$('[data-take]', m.el).forEach(b => b.addEventListener('click', () => {
+      const got = passClaim(+b.dataset.take, b.dataset.paid === '1');
+      if (!got) return;
+      SFX.coin(); buzz(10); syncPurse();
+      m.el.innerHTML = draw(); wire();
+    }));
+    const buy = $('#pBuy', m.el);
+    if (buy) buy.addEventListener('click', async () => {
+      /* Same rule as everything else that costs money: if there is no
+         store behind this build, say so plainly rather than leaving a
+         button that does nothing. */
+      if (!BILLING.ready()) { storeShut(); return; }
+      buy.disabled = true;
+      track('buy_try', { sku: PASS.sku });
+      /* `buy` resolves to an object whichever way it went, so the test
+         has to be on `r.ok` and not on `r`. It was on `r`, and every
+         refusal the store can produce — a cancelled sheet most of all —
+         is an object, so this button handed over a four-pound season
+         book to anybody who opened the payment sheet and changed their
+         mind. Granting goes through grantPurchase now, which is the one
+         function that writes a purchase into a save. */
+      const r = await BILLING.buy(PASS.sku);
+      if (!r.ok) {
+        buy.disabled = false;
+        track('buy_fail', { why: r.why || 'unknown' });
+        if (r.why === 'nostore') { storeShut(); return; }
+        if (r.why !== 'cancelled') { SFX.bad(); toast(T('store_failed'), 'treat'); }
+        return;
+      }
+      track('buy_ok', { sku: PASS.sku });
+      grantPurchase('pass', 'pass');
+      SFX.win();
+      toast(T('pass_bought'), 'check');
+      m.el.innerHTML = draw(); wire();
+    });
+    $('#pOk', m.el).addEventListener('click', m.close);
+  };
+  wire();
+}
+
 /* ---------------- home ---------------- */
 function heroGift() {
   return `
@@ -158,6 +278,21 @@ function renderHome() {
         <span class="btn sm">${d.done ? T('daily_walk_again') : T('daily_walk_go')}</span>
       </button>`;
     })()}
+    ${(() => {
+      const p = passState();
+      const tier = passTier(p.stamps);
+      const waiting = passWaiting();
+      return `
+      <button class="card todayTile passCard" id="passCard">
+        <span class="di" style="color:var(--accent-strong)">${IC.star}</span>
+        <span class="dt">
+          <b>${T('pass_t')}</b>
+          <small>${T('pass_sub', { n: tier, c: PASS.tiers, d: seasonDaysLeft(seasonStart()) })}</small>
+          ${waiting ? `<span class="pill warn" style="margin-top:5px">${T('pass_ready', { n: waiting })}</span>` : ''}
+        </span>
+        <span class="btn sm">${T('pass_take')}</span>
+      </button>`;
+    })()}
     </div>
 
     <div class="card pad16" style="display:flex;flex-direction:column;gap:13px">
@@ -212,6 +347,7 @@ function renderHome() {
 
   const gc = $('#giftCard'); if (gc) gc.addEventListener('click', openDailyGift);
   const dc = $('#dailyCard'); if (dc) dc.addEventListener('click', startDailyWalk);
+  const pc = $('#passCard'); if (pc) pc.addEventListener('click', passSheet);
   $('#careFeed').addEventListener('click', openFeed);
   $('#carePlay').addEventListener('click', carePlay);
   $('#careWash').addEventListener('click', careWash);
@@ -544,6 +680,15 @@ function drawFurniturePreview(c, id, px) {
     case 'tower': drawTower(c, cx, base, px * .5, px * .62); break;
     case 'window': drawFeeder(c, cx, px * .42, px * .42, 0); break;
     case 'basket': drawBasket(c, cx, px * .66, px * .5); break;
+    /* the three keepsakes preview against the animal you have now, which
+       is the honest preview: it is what you would be buying a picture of */
+    case 'photo': drawPhoto(c, cx, px * .46, px * .46,
+      (SAVE.keepsakes && SAVE.keepsakes.photo) || activePet()); break;
+    case 'paw': {
+      const pk = activePet();
+      drawPawPlaque(c, cx, px * .52, px * .42, pk && pk.name, pk && specOfPet(pk));
+      break;
+    }
   }
   c.restore();
 }
@@ -720,6 +865,20 @@ function shopRoom() {
         : `<button class="btn sm price" data-buy="${f.id}" data-kind="furniture">${T('shop_buy')} ${priceTag(f.cost)}</button>`}
     </div>`;
   }).join('')}</div>
+  <div class="sectitle"><h3>${LANG === 'tr' ? 'Hatıra' : 'Keepsakes'}</h3>
+    <span class="hint">${LANG === 'tr' ? 'senin hayvanından yapılmış' : 'made from your own animal'}</span></div>
+  <div class="grid2">${KEEPSAKES.map(k => {
+    const owned = !!SAVE.keepsakes[k.id];
+    const placed = SAVE.room.placed.indexOf(k.id) >= 0;
+    return `<div class="good ${placed ? 'owned' : ''}">
+      <div class="art"><canvas data-room="${k.id}" width="82" height="74"></canvas></div>
+      <div class="nm">${goodName(k)}</div>
+      <div class="ds">${goodDesc(k)}</div>
+      ${owned
+        ? `<button class="btn sm ${placed ? 'ghost' : ''}" data-equip="${k.id}" data-kind="furniture">${placed ? T('shop_placed') : T('shop_place')}</button>`
+        : `<button class="btn sm price" data-buy="${k.id}" data-kind="keepsake">${T('shop_buy')} ${priceTag(k.cost, true)}</button>`}
+    </div>`;
+  }).join('')}</div>
   <div class="sectitle"><h3>${LANG === 'tr' ? 'Duvar' : 'Walls'}</h3></div>
   <div class="grid2">${ROOM_THEMES.map(t => {
     const owned = !!SAVE.roomThemes[t.id];
@@ -735,12 +894,14 @@ function shopRoom() {
 }
 function buyThing(id, kind) {
   audioResume();
-  const table = { food: FOODS, toy: TOYS, boost: BOOSTERS, hat: HATS, collar: COLLARS, furniture: FURNITURE, theme: ROOM_THEMES };
+  const table = { food: FOODS, toy: TOYS, boost: BOOSTERS, hat: HATS, collar: COLLARS,
+                  furniture: FURNITURE, theme: ROOM_THEMES, keepsake: KEEPSAKES };
   const item = table[kind].find(x => x.id === id);
   if (!item) return;
   /* one of a kind: taking the coins twice for a single hat is theft */
   const once = { toy: SAVE.toys, hat: SAVE.hats, collar: SAVE.collars,
-                 furniture: SAVE.furniture, theme: SAVE.roomThemes }[kind];
+                 furniture: SAVE.furniture, theme: SAVE.roomThemes,
+                 keepsake: SAVE.keepsakes }[kind];
   if (once && once[id]) return;
   if (item.treat) {
     if (SAVE.treats < item.cost) { SFX.bad(); toast(LANG === 'tr' ? 'Ödül yetmiyor' : 'Not enough treats', 'treat'); return; }
@@ -756,6 +917,7 @@ function buyThing(id, kind) {
   else if (kind === 'collar') { SAVE.collars[id] = 1; equipThing(id, 'collar', true); }
   else if (kind === 'furniture') { SAVE.furniture[id] = 1; equipThing(id, 'furniture', true); }
   else if (kind === 'theme') { SAVE.roomThemes[id] = 1; equipThing(id, 'theme', true); }
+  else if (kind === 'keepsake') { SAVE.keepsakes[id] = keepsakeOf(id); equipThing(id, 'furniture', true); }
   SFX.coin();
   buzz(10);
   toast(T('shop_bought', { item: goodName(item) }), 'check');
@@ -771,9 +933,9 @@ function equipThing(id, kind, quiet) {
     const i = SAVE.room.placed.indexOf(id);
     if (i >= 0) SAVE.room.placed.splice(i, 1);
     else {
-      const slot = FURNITURE.find(f => f.id === id).slot;
+      const slot = roomThing(id).slot;
       SAVE.room.placed = SAVE.room.placed.filter(x => {
-        const o = FURNITURE.find(f => f.id === x);
+        const o = roomThing(x);
         return !o || o.slot !== slot || slot === 'wall';
       });
       SAVE.room.placed.push(id);
@@ -852,10 +1014,18 @@ function renderFamily() {
     </div>` : ''}
 
     ${shelfHtml()}
+
+    ${storeLink() ? `<button class="btn ghost wide" id="famShare">${T('share_btn')}</button>` : ''}
   `;
   paintArtCanvases(pad);
   $$('[data-pet]', pad).forEach(b => b.addEventListener('click', () => openPetSheet(b.dataset.pet)));
   $$('[data-adopt]', pad).forEach(b => b.addEventListener('click', () => tryAdopt(+b.dataset.adopt, cost, need)));
+  /* On the family page rather than in settings: what somebody wants to
+     show a friend is the animals, and this is the page they are on when
+     they are looking at them. Absent entirely until there is a listing
+     to link to. */
+  const sh = $('#famShare', pad);
+  if (sh) sh.addEventListener('click', () => { SFX.tap(); sharePets(); });
 }
 function openPetSheet(id) {
   const p = SAVE.pets.find(x => x.id === id);
@@ -884,12 +1054,14 @@ function openPetSheet(id) {
       ${isActive ? '' : `<button class="btn primary" id="psActive">${T('fam_setactive')}</button>`}
       <button class="btn" id="psRename">${T('fam_rename')}</button>
     </div>
+    <button class="btn wide" id="psGroom">${T('fam_groom')}</button>
     <button class="btn ghost wide" id="psClose">${T('close')}</button>
   `);
   const c = fitCanvas($('#psArt', m.el), 150, 150);
   c.translate(75, 20);
   drawBody(c, specOfPet(p), 68, { mouth: 'smile' });
   paintArtCanvases(m.el);
+  $('#psGroom', m.el).addEventListener('click', () => { m.close(); groomSheet(p.id); });
   const act = $('#psActive', m.el);
   if (act) act.addEventListener('click', () => {
     SAVE.activePet = p.id; castChanged(); persist(true); m.close();
@@ -931,6 +1103,9 @@ function tryAdopt(breedIdx, cost, need) {
     SAVE.coins -= cost;
     track('adopt', { breed: breedIdx, owned: SAVE.pets.length });
     const p = makePet(breedIdx, coat, eye, name);
+    /* what they arrived in is theirs, and the grooming shelf has to know
+       it before it draws a price on the coat they are wearing */
+    lookUnlock(breedIdx, coat, eye);
     SAVE.pets.push(p);
     /* the lane fills with your own: one fewer stranger on every board
        from here on, and this one wearing the coat you just picked */
@@ -994,6 +1169,214 @@ function customiseSheet(breedIdx, done) {
     done(coat, eye, nm);
   });
 }
+/* ---------------- being asked what you think ----------------
+
+   A store listing with no ratings on it does not get installed, and a
+   game that never asks does not get rated: the people who bother
+   unprompted are overwhelmingly the ones who came to complain. This game
+   had no prompt at all, which is not neutrality — it is a listing that
+   scores worse than the game does.
+
+   Three rules, and they are the whole difference between this and the
+   thing everybody hates:
+
+     ASK ONCE. Ever. Not once a version, not once a month. `rated.asked`
+     is written the first time and never cleared, and there is no path
+     through here that asks a second time.
+
+     ASK AFTER A GOOD MOMENT, NOT DURING ONE. Three stars on a level they
+     had not cleared before, fifteen levels in, on a save that has
+     already seen a dozen clears. Somebody who has just lost is not being
+     asked what they think of the game.
+
+     ASK THE QUESTION FIRST. The two-step is not a trick to filter out
+     bad reviews — anybody who wants to leave one can, from the listing,
+     without this. It is that "would you rate us" and "how are you
+     finding it" are different questions, and sending somebody who is not
+     enjoying it to a five-star form is how you get a one-star answer to
+     a question you did not ask.
+
+   And it is switched off entirely until there is a listing to send
+   anybody to. See STORE_LINKS. */
+function maybeAskForAReview() {
+  /* The app only. On the web this would be asking somebody playing in a
+     browser to go and rate an Android app they have not installed, which
+     is not a favour, it is a non sequitur. The share button below is
+     different and stays: a link to the listing is a useful thing for a
+     web player to send somebody. */
+  if (!nativeShell() || !storeLink()) return;
+  if (!SAVE.rated) SAVE.rated = { asked: 0, said: 0 };
+  if (SAVE.rated.asked) return;
+  if (SAVE.reached < 15 || SAVE.stats.cleared < 12) return;
+  SAVE.rated.asked = now();
+  persist(true);
+  track('review_ask', { n: SAVE.reached });
+  /* behind the win card and its confetti, not on top of them */
+  setTimeout(() => {
+    const m = modal(`
+      <span style="color:var(--accent-strong);width:48px;height:48px;align-self:center">${IC.star}</span>
+      <h2>${T('rate_t')}</h2>
+      <p style="color:var(--text-dim)">${T('rate_s')}</p>
+      <button class="btn primary wide" id="rvYes">${T('rate_yes')}</button>
+      <button class="btn ghost wide" id="rvNo">${T('rate_no')}</button>
+    `);
+    $('#rvYes', m.el).addEventListener('click', () => {
+      SAVE.rated.said = 1; persist(true);
+      track('review_yes');
+      m.close();
+      openStorePage();
+    });
+    $('#rvNo', m.el).addEventListener('click', () => {
+      SAVE.rated.said = -1; persist(true);
+      track('review_no');
+      m.close();
+      /* No form, no email, no "tell us more". Somebody who has just said
+         they are not enjoying it has answered the question; asking them
+         to write it down as well is asking for a favour immediately
+         after being told no. */
+      toast(T('rate_thanks'), 'heart');
+    });
+  }, 900);
+}
+
+/* The listing itself. A native in-app review sheet is better than this
+   in every way — it never leaves the game — but it needs a plugin that
+   is not installed, so it is tried by name first and this is what
+   happens when it is not there. */
+function openStorePage() {
+  const url = storeLink();
+  if (!url) return;
+  const P = (window.Capacitor && window.Capacitor.Plugins) || {};
+  const R = P.InAppReview || P.RateApp || null;
+  if (R && R.requestReview) { try { R.requestReview(); return; } catch (e) { } }
+  try { window.open(url, '_blank', 'noopener'); } catch (e) { location.href = url; }
+}
+
+/* ---------------- telling somebody about it ----------------
+
+   The room is the screenshot this game would be shared as — it is the
+   one screen that is nobody else's, and a match-3 board is a match-3
+   board. Sharing an image needs a filesystem plugin as well as a share
+   one, and neither is installed; what is here is the sentence and the
+   link, through whichever of the two share mechanisms the device has.
+
+   Hidden, like the review prompt, until there is a link. */
+function sharePets() {
+  const url = storeLink();
+  if (!url) return;
+  const pet = activePet();
+  const text = T('share_text', { name: (pet && pet.name) || T('brandSub') });
+  track('share');
+  const P = (window.Capacitor && window.Capacitor.Plugins) || {};
+  if (P.Share && P.Share.share) {
+    try { P.Share.share({ title: 'Biscuit Lane', text: text, url: url }); return; } catch (e) { }
+  }
+  if (navigator.share) {
+    navigator.share({ title: 'Biscuit Lane', text: text, url: url }).catch(() => { });
+    return;
+  }
+  /* Neither, which is most desktop browsers: put it on the clipboard and
+     say so, rather than opening a sheet that is not there. */
+  const line = text + ' ' + url;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(line).then(() => toast(T('share_copied'), 'check'), () => { });
+  }
+}
+
+/* ---------------- grooming ----------------
+
+   The picker above, minus the name and plus a price.
+
+   It exists because eighteen coats and six eye colours have been in this
+   game since the first week and a player sees three of the coats once,
+   on the sheet that adopts the animal, and then never again. The room
+   ran out of things to want in the fourth week; the animal never had
+   any. This is the same art, sold.
+
+   A locked colour is drawn, not hidden. Half the point of a shelf is
+   seeing what is on it — and the preview is the animal you actually
+   have, wearing the thing you are deciding about, which is the only
+   honest way to sell a colour. */
+function groomSheet(id) {
+  const p = SAVE.pets.find(x => x.id === id);
+  if (!p) return;
+  SFX.tap();
+  let coat = p.coat, eye = p.eye;
+  const draw = () => `
+    <h2>${T('groom_t')}</h2>
+    <canvas id="grArt" width="150" height="150" style="width:150px;height:150px;align-self:center"></canvas>
+    <p style="color:var(--text-dim)">${T('groom_s', { name: p.name })}</p>
+    <div class="eyebrow">${T('onb_coat')}</div>
+    <div class="choiceGrid" id="grCoats" style="grid-template-columns:repeat(3,1fr)">
+      ${BREEDS[p.breed].coats.map((co, i) => {
+        const own = coatOwned(p.breed, i);
+        return `<button class="choice ${i === coat ? 'on' : ''}" data-coat="${i}" style="padding:9px 4px">
+          <canvas data-face="${p.breed}" data-coat="${i}" width="46" height="46"></canvas>
+          <span class="nm" style="font-size:var(--t-micro)">${LANG === 'tr' ? co.tr : co.en}</span>
+          ${own ? '' : `<span class="pill warn" style="margin-top:3px">${T('fam_cost', { n: GROOM.coat })}</span>`}
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="eyebrow">${T('onb_eyes')}</div>
+    <div class="swatches" id="grEyes">
+      ${EYE_COLORS.map((e, i) => `<button class="sw ${i === eye ? 'on' : ''} ${eyeOwned(i) ? '' : 'locked'}"
+        data-eye="${i}" aria-label="${T('eye_' + e.id)}" title="${eyeOwned(i) ? T('eye_' + e.id) : T('eye_' + e.id) + ' · ' + T('fam_cost', { n: GROOM.eye })}"
+        style="background:${e.hex}">${eyeOwned(i) ? '' : IC.lock}</button>`).join('')}
+    </div>
+    <button class="btn ghost wide" id="grClose">${T('close')}</button>`;
+
+  const m = modal(draw());
+  const wire = () => {
+    const c = fitCanvas($('#grArt', m.el), 150, 150);
+    c.translate(75, 20);
+    /* the pet's own spec with the candidate colours dropped in, so the
+       hat, the collar and the fact that they are still a kitten all
+       survive the preview — this is the animal you have, not a stock one
+       in the colour you are looking at */
+    drawBody(c, Object.assign(
+      specOf(p.breed, BREEDS[p.breed].coats[coat], EYE_COLORS[eye].hex),
+      { hat: p.hat, collar: p.collar, stage: petStageIdx(p) }), 68, { mouth: 'smile' });
+    paintArtCanvases(m.el);
+    /* One handler for both rows: a colour is either already theirs, in
+       which case it is worn now, or it is not, in which case it is
+       bought and then worn. Nothing here has a separate buy button —
+       tapping the thing you want is the whole interaction, and the price
+       is on it before you tap. */
+    const choose = (own, cost, set) => {
+      if (!own) {
+        if (SAVE.coins < cost) { SFX.bad(); toast(T('shop_poor'), 'coin'); return; }
+        SAVE.coins -= cost;
+        SFX.coin();
+      } else SFX.tap();
+      set();
+      p.coat = coat; p.eye = eye;
+      lookUnlock(p.breed, coat, eye);
+      /* the animal on the board wears what the animal upstairs wears */
+      castChanged();
+      persist(true); syncPurse();
+      m.el.innerHTML = draw(); wire();
+    };
+    /* `button[data-coat]` and not `[data-coat]`: the swatch canvas inside
+       each button carries the same attribute so paintArtCanvases can
+       find it, and a bare attribute selector hands a click handler to
+       both. On this sheet a click spends coins, so a listener that can
+       fire twice for one tap is not a tidiness question. */
+    $$('button[data-coat]', m.el).forEach(b => b.addEventListener('click', () => {
+      const i = +b.dataset.coat;
+      choose(coatOwned(p.breed, i), GROOM.coat, () => { coat = i; });
+    }));
+    $$('button[data-eye]', m.el).forEach(b => b.addEventListener('click', () => {
+      const i = +b.dataset.eye;
+      choose(eyeOwned(i), GROOM.eye, () => { eye = i; });
+    }));
+    $('#grClose', m.el).addEventListener('click', () => {
+      m.close();
+      renderFamily(); renderHome();
+    });
+  };
+  wire();
+}
+
 const NAME_POOL = {
   cat: ['Biscuit', 'Olive', 'Pepper', 'Mochi', 'Saffron', 'Juniper', 'Tuna', 'Clove'],
   dog: ['Barley', 'Rusty', 'Maple', 'Otto', 'Pickle', 'Hazel', 'Bramble', 'Nugget']
@@ -1231,8 +1614,21 @@ function treatStore(why) {
     m.close();
     toast(T('store_thanks', { n: got }), 'treat');
   }));
+  /* The button called restore and then threw the answer away, which made
+     it a button that did nothing at all — the store handed back a list
+     of what it still held and nobody read it. It grants now, and it says
+     which of the two things happened, because "nothing came back" is a
+     result and a silent button is not. */
   const rs = $('#stRestore', m.el);
-  if (rs) rs.addEventListener('click', async () => { await BILLING.restore(); syncPurse(); });
+  if (rs) rs.addEventListener('click', async () => {
+    rs.disabled = true;
+    const r = await BILLING.restore();
+    rs.disabled = false;
+    const n = r.ok ? claimOutstanding(r.skus) : 0;
+    syncPurse();
+    if (n) { SFX.coin(); m.close(); toast(T('store_restored', { n: n }), 'check'); }
+    else toast(T('store_restore_none'), 'treat');
+  });
   $('#stOk', m.el).addEventListener('click', m.close);
 }
 /* What the treat sheet becomes while there is no till.
@@ -1257,8 +1653,22 @@ function earnTreatsSheet(why) {
     ${line(IC.star, T('earn_star'))}
     ${line(IC.gift, T('earn_gift'))}
     ${j.fill ? line(IC.treat, T('earn_jar', { n: j.fill, c: JAR.cap })) : ''}
+    ${ADS.available('treat') ? `<button class="btn wide" id="etAd">${T('ad_daily', { n: ADS.treatReward })}</button>` : ''}
     <button class="btn primary wide" id="etOk">${T('ok')}</button>
   `);
+  /* Listed under the ways to earn rather than above them, because it is
+     one: the difference is that it costs half a minute instead of a
+     level. Only drawn when a video could actually be shown, which today
+     is never — see 19-ads.js. */
+  const etAd = $('#etAd', m.el);
+  if (etAd) etAd.addEventListener('click', async () => {
+    etAd.disabled = true;
+    if (!await ADS.show('treat')) { etAd.disabled = false; SFX.bad(); return; }
+    SAVE.treats += ADS.treatReward;
+    persist(true); syncPurse(); SFX.coin();
+    m.close();
+    toast(T('shop_bought', { item: T('earn_t') }), 'check');
+  });
   $('#etOk', m.el).addEventListener('click', m.close);
 }
 /* Said plainly, in its own card, rather than as a disabled button with
@@ -1273,6 +1683,13 @@ function storeShut() {
 
 function noHeartsSheet() {
   track('hearts_empty', { n: SAVE.reached });
+  /* The one place in this game that asks to send a notification, and the
+     only moment the answer is obviously yes: the player has just been
+     told they cannot play for two hours. Asked here rather than at boot
+     because a decline is close to permanent on both platforms, so the
+     cheapest moment to ask is also the one that wastes the ask. Nothing
+     waits on the answer — the sheet draws either way. */
+  NOTIFY.ask().then(() => NOTIFY.sync());
   const line = () => T('lvl_no_hearts_sub', { m: HEART_REFILL / MIN, t: fmtTime(heartsIn()) });
   let tick = null;
   const m = modal(`
@@ -1328,6 +1745,17 @@ function showWin() {
   if (newBest) SAVE.scores[n] = G.score;
   SAVE.reached = Math.max(SAVE.reached, n + 1);
   SAVE.stats.cleared++;
+  /* Stamps for the season book. Only a level that had not been cleared
+     before pays the gate bonus, and a replay pays nothing at all — the
+     book is for getting further, and a track farmable on level three
+     would be a track finished on the first evening. */
+  if (first) {
+    passStamp('clear');
+    if (stars >= 3) passStamp('threeStar');
+    if (isGate(n)) passStamp('gate');
+    /* and the one good moment in the game worth asking a favour after */
+    if (stars >= 3) maybeAskForAReview();
+  }
 
   /* A heart back for clearing it.
 
@@ -1489,7 +1917,14 @@ function showLose() {
         <small>${T('lose_extra_sub', { n: ECON.continueTreats })}</small>
       </span>
       <button class="btn sm" id="lExtra">${T('shop_buy')}</button>
-    </div>`}
+    </div>` + (ADS.available('carry') ? `
+    <div class="offer">
+      <span class="ot">
+        <b>${T('ad_watch', { n: ECON.continueMoves })}</b>
+        <small>${T('ad_watch_sub', { t: ECON.continueTreats })}</small>
+      </span>
+      <button class="btn sm" id="lAd">${T('ad_go')}</button>
+    </div>` : '')}
   `, { dismissable: false });
   paintGoalIcons(m.el);
   paintArtCanvases(m.el);
@@ -1499,6 +1934,22 @@ function showLose() {
        jar, so it opens there rather than being told no by a toast */
     if (SAVE.treats < ECON.continueTreats) { SFX.bad(); treatStore('continue'); return; }
     SAVE.treats -= ECON.continueTreats; persist(true); syncPurse();
+    m.close();
+    G.usedExtra = true;
+    G.over = false; G.busy = false;
+    G.moves = ECON.continueMoves;
+    syncHud();
+    SFX.coin();
+  });
+  /* The same five moves, paid for with thirty seconds instead of nine
+     treats. It is deliberately the second row rather than the first: a
+     player holding treats should see the thing they already own before
+     the thing that costs them their attention. */
+  const ad = $('#lAd', m.el);
+  if (ad) ad.addEventListener('click', async () => {
+    ad.disabled = true;
+    const won = await ADS.show('carry');
+    if (!won) { ad.disabled = false; SFX.bad(); return; }
     m.close();
     G.usedExtra = true;
     G.over = false; G.busy = false;
@@ -1634,6 +2085,8 @@ function showDailyResult(won) {
   const d = dailyState();
   let reward = { first: false };
   if (won) reward = dailyDone(G.score);
+  /* the walk stamps the book once a day, on the day it is first walked */
+  if (reward.first) passStamp('walk');
   const stars = won ? Math.max(1, G.starsEarned) : 0;
   const pet = activePet();
   if (won) { SFX.win(); } else { SFX.lose(); }
@@ -1762,6 +2215,7 @@ function openSettings() {
       ${row('haptics', T('set_haptics'), T('set_haptics_s'), SAVE.settings.haptics)}
       ${row('marks', T('set_marks'), T('set_marks_s'), SAVE.settings.marks)}
       ${row('telemetry', T('set_data'), T('set_data_s'), SAVE.settings.telemetry !== false)}
+      ${NOTIFY.ready() ? row('notify', T('set_notify'), T('set_notify_s'), SAVE.settings.notify) : ''}
       <div class="switchRow themeRow">
         <span class="lb">${T('set_theme')}<small>${T('set_theme_s')}</small></span>
         <span class="seg" id="segTheme">
@@ -1799,6 +2253,18 @@ function openSettings() {
     if (k === 'marks') { clearSprites(); G.goals && G.goals.forEach(paintGoalIcon); }
     if (k === 'sound' && SAVE.settings.sound) { audioResume(); SFX.select(); }
     if (k === 'haptics') buzz(14);
+    /* Turning it on here is not the same as having permission: a player
+       who declined the system dialog and then finds this switch would
+       otherwise get a switch that says yes and delivers nothing. Ask
+       first; the queue is rebuilt either way, which is also how turning
+       it off cancels what is already scheduled. */
+    if (k === 'notify') {
+      if (SAVE.settings.notify) NOTIFY.ask().then(ok => {
+        $('.sw2', b).classList.toggle('on', ok);
+        NOTIFY.sync();
+      });
+      else NOTIFY.sync();
+    }
     /* Off has to mean gone, not merely "no more from here" — otherwise
        the switch leaves the last three hundred events sitting there. */
     if (k === 'telemetry' && !SAVE.settings[k]) TRACK.clear();
@@ -2040,6 +2506,7 @@ function runOnboarding() {
     adopted = true;
     const nm = cleanName(name) || pick(NAME_POOL[BREEDS[breedIdx].species]);
     const p = makePet(breedIdx, coat, eye, nm);
+    lookUnlock(breedIdx, coat, eye);
     SAVE.pets = [p];
     SAVE.activePet = p.id;
     castChanged();

@@ -165,6 +165,15 @@ function drawRoom(c, W, H, o) {
   const has = id => placed.indexOf(id) >= 0;
   if (has('shelf')) drawShelf(c, W * .84, floorY - H * .30, W * .24);
   if (has('poster')) drawPoster(c, W * .16, floorY - H * .34, W * .16, o.pet);
+  /* the keepsakes hang between the print and the shelf, and the blanket
+     takes the rug's place on the floor because they share a slot */
+  if (has('photo')) drawPhoto(c, W * .31, floorY - H * .24, W * .15,
+    (SAVE.keepsakes && SAVE.keepsakes.photo) || o.pet);
+  /* small, and on the strip of wall between the window and the shelf:
+     at the size the print is, a brass disc stops reading as a tag on a
+     hook and starts reading as a medal on a wall */
+  if (has('paw')) drawPawPlaque(c, W * .775, floorY - H * .155, W * .085,
+    o.pet && o.pet.name, o.pet && specOfPet(o.pet));
   /* the feeder hangs against the window frame, not in mid-air */
   if (has('window')) drawFeeder(c, winX + winW * .04, winY + winH * .62, winW * .28, t);
   if (has('rug')) drawRug(c, W * .5, floorY + (H - floorY) * .55, W * .58, (H - floorY) * .52, { wall2: wallB });
@@ -412,6 +421,112 @@ function drawShelf(c, cx, y, w) {
   ellipse(c, cx + w * .28, y - w * .07, w * .08, w * .07); c.fill();
   c.fillStyle = '#5E9B80';
   rr(c, cx + w * .21, y - w * .01, w * .14, w * .02, w * .01); c.fill();
+  c.restore();
+}
+
+/* ---------- keepsakes ----------
+
+   These three are drawn from the save rather than from a catalogue, so
+   each one takes the animal (or the record of it) instead of an id. */
+
+/* The photograph. The frame and mount are the object; what is inside it
+   is the game's own drawFace, run against a spec built from the record
+   taken when it was bought — so it really is the animal as it was, right
+   down to the collar it had on, and it does not follow the animal as it
+   grows. The warm wash over the top is what makes it read as a print of
+   a face rather than a face in a hole in the wall. */
+function drawPhoto(c, cx, cy, w, snap) {
+  const h = w * 1.18;
+  c.save();
+  /* frame, mount, print — three rectangles, back to front */
+  c.fillStyle = rgba('#000000', .16);
+  rr(c, cx - w / 2 + 2, cy - h / 2 + 3, w, h, w * .05); c.fill();
+  c.fillStyle = PAL.dark ? '#4A3A26' : '#6E4E2C';
+  rr(c, cx - w / 2, cy - h / 2, w, h, w * .05); c.fill();
+  c.fillStyle = PAL.dark ? '#EFE6D2' : '#FDF8EC';
+  rr(c, cx - w / 2 + w * .08, cy - h / 2 + w * .08, w * .84, h - w * .16, w * .02); c.fill();
+  const iw = w * .68, ih = h - w * .40;
+  const ix = cx - iw / 2, iy = cy - ih / 2 - w * .03;
+  c.fillStyle = PAL.dark ? '#C9B79A' : '#E8D9BE';
+  rr(c, ix, iy, iw, ih, w * .015); c.fill();
+  /* the animal, clipped to the print */
+  c.save();
+  rr(c, ix, iy, iw, ih, w * .015); c.clip();
+  if (snap && typeof snap === 'object') {
+    c.save();
+    c.translate(cx, iy + ih * .56);
+    drawFace(c, specOfPet(snap), iw * .58, {});
+    c.restore();
+  }
+  /* the wash, and a corner of light off the glass */
+  c.fillStyle = rgba('#8A5A22', .16);
+  c.fillRect(ix, iy, iw, ih);
+  const gl = c.createLinearGradient(ix, iy, ix + iw * .8, iy + ih);
+  gl.addColorStop(0, rgba('#FFFFFF', .22));
+  gl.addColorStop(.45, rgba('#FFFFFF', 0));
+  c.fillStyle = gl;
+  c.fillRect(ix, iy, iw, ih);
+  c.restore();
+  c.restore();
+}
+
+/* The paw print. Clay rather than brass, because the first version of
+   this was a gold disc on a wall and a gold disc on a wall is a medal.
+   Matte, a little off-round, the print pressed into it rather than drawn
+   on it, and the name scratched underneath while it was still wet. The
+   pad shape comes from the breed's own foot, so a dog's is not a cat's. */
+function drawPawPlaque(c, cx, cy, w, name, spec) {
+  const r = w * .46;
+  c.save();
+  /* the nail it hangs on, and the cord */
+  c.strokeStyle = rgba('#6B5949', .55);
+  c.lineWidth = Math.max(1, w * .022);
+  c.beginPath();
+  c.moveTo(cx - r * .30, cy - r * .86); c.lineTo(cx, cy - r * 1.30);
+  c.lineTo(cx + r * .30, cy - r * .86); c.stroke();
+  /* the disc: clay, so a soft gradient and no specular anything */
+  c.fillStyle = rgba('#2A1E12', .20);
+  ellipse(c, cx + 1.5, cy + 2.5, r, r * .98); c.fill();
+  const g = c.createLinearGradient(cx, cy - r, cx, cy + r);
+  g.addColorStop(0, PAL.dark ? '#C9B79A' : '#EFE2CB');
+  g.addColorStop(1, PAL.dark ? '#A8967A' : '#D8C6A8');
+  c.fillStyle = g;
+  ellipse(c, cx, cy, r, r * .98); c.fill();
+  c.strokeStyle = rgba('#6B5949', .28); c.lineWidth = Math.max(1, w * .018);
+  ellipse(c, cx, cy, r, r * .98); c.stroke();
+  /* the print, pressed in: darker fill with a light lower lip, which is
+     what an impression looks like from above */
+  const pc = rgba('#6B5949', .42);
+  const pad = spec && spec.breed && spec.breed.species === 'dog' ? 1.06 : .94;
+  c.save();
+  c.translate(cx, cy - r * .10);
+  c.fillStyle = rgba('#FFFFFF', .45);
+  ellipse(c, 0, r * .26 + 1.2, r * .34 * pad, r * .27 * pad); c.fill();
+  c.fillStyle = pc;
+  ellipse(c, 0, r * .26, r * .34 * pad, r * .27 * pad); c.fill();
+  [[-.34, -.16], [-.13, -.32], [.13, -.32], [.34, -.16]].forEach(t => {
+    c.fillStyle = rgba('#FFFFFF', .45);
+    ellipse(c, t[0] * r, t[1] * r + 1.2, r * .115, r * .145); c.fill();
+    c.fillStyle = pc;
+    ellipse(c, t[0] * r, t[1] * r, r * .115, r * .145); c.fill();
+  });
+  c.restore();
+  /* the name, scratched in while it was wet: small, and never wider
+     than the disc however long the player made it */
+  const txt = String(name || '').trim();
+  if (txt) {
+    let fs = r * .30;
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (let i = 0; i < 8; i++) {
+      c.font = '700 ' + fs.toFixed(1) + 'px Grandstander, sans-serif';
+      if (c.measureText(txt).width <= r * 1.44) break;
+      fs *= .86;
+    }
+    c.fillStyle = rgba('#FFFFFF', .40);
+    c.fillText(txt, cx, cy + r * .60 + 1);
+    c.fillStyle = rgba('#5C4413', .68);
+    c.fillText(txt, cx, cy + r * .60);
+  }
   c.restore();
 }
 

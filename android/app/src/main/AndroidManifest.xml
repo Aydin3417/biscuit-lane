@@ -53,4 +53,20 @@
          Nothing else is asked for. A match-3 game has no business
          wanting a camera, a location or a contact list. -->
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Two reminders and nothing else: the hearts have come back, and
+         the daily walk went untaken. See src/js/16-notify.js, which is
+         also where the reasoning for asking at the out-of-hearts sheet
+         rather than at first launch lives.
+
+         POST_NOTIFICATIONS is Android 13's runtime permission; without
+         it declared the request never shows and schedule() silently
+         delivers nothing on any recent phone. SCHEDULE_EXACT_ALARM is
+         deliberately NOT here — these two are "some time around then"
+         reminders, not alarms, and Google asks for a justification for
+         exact alarms that a puzzle game does not have. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- so a reminder scheduled before the phone was restarted still
+         arrives after it -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 </manifest>

@@ -95,6 +95,43 @@ const wrapper = path.join(dir, process.platform === 'win32' ? 'gradlew.bat' : 'g
 const args = process.argv.slice(2);
 if (!args.length) args.push('assembleDebug');
 
+/* ---------- said before the build, not after it ----------
+
+   A release build without a key produces `app-release-unsigned.apk`,
+   successfully, in a minute and a half, and says nothing about it. The
+   Play Console then refuses the upload, which is the first anybody hears
+   — and by then the useful sentence ("you have not made an upload key
+   yet") has to be reconstructed from a console error about signature
+   schemes.
+
+   Not an error here. Building a release to check that it compiles is a
+   perfectly ordinary thing to do without a key, and android/app/build.
+   gradle falls back to unsigned deliberately. This is only the warning
+   that comes with it. */
+if (args.some(a => /[Rr]elease/.test(a))) {
+  const props = [path.join(ROOT, 'android', 'keystore.properties'),
+                 path.join(os.homedir(), '.gradle', 'gradle.properties')];
+  const has = props.some(f => {
+    try { return /BL_STORE_FILE\s*=/.test(fs.readFileSync(f, 'utf8')); } catch (e) { return false; }
+  });
+  if (!has) {
+    console.error('');
+    console.error('  note: no upload key configured, so this release build will be UNSIGNED');
+    console.error('  and the Play Console will refuse it. To make one, once, ever:');
+    console.error('');
+    console.error('    keytool -genkey -v -keystore biscuit-lane-upload.jks' +
+      ' -keyalg RSA -keysize 2048 -validity 10000 -alias upload');
+    console.error('');
+    console.error('  then put four lines in ~/.gradle/gradle.properties:');
+    console.error('    BL_STORE_FILE=<absolute path to the .jks>');
+    console.error('    BL_STORE_PASSWORD=...   BL_KEY_ALIAS=upload   BL_KEY_PASSWORD=...');
+    console.error('');
+    console.error('  Keep the .jks and its passwords in a password manager. Losing them');
+    console.error('  means never being able to update this listing again.');
+    console.error('');
+  }
+}
+
 const r = spawnSync(wrapper, args, { cwd: dir, stdio: 'inherit', shell: process.platform === 'win32' });
 if (r.error) {
   console.error('could not run the gradle wrapper in android/.');

@@ -782,6 +782,13 @@ canvas{ max-width:100%; }
 .swatches{ display:flex; gap:9px; justify-content:center; flex-wrap:wrap; }
 .sw{ width:44px; height:44px; border-radius:50%; border:3px solid transparent; box-shadow:var(--shadow-1); transition:transform .14s; }
 .sw.on{ border-color:var(--text); transform:scale(1.1); }
+/* A colour that has not been bought yet is still shown — a shelf you
+   cannot see is not a shelf. Dimmed, with the padlock the rest of the
+   game uses for the same thing, and the price in the tooltip rather than
+   printed across a 44px circle. */
+.sw.locked{ position:relative; opacity:.5; }
+.sw.locked svg{ position:absolute; inset:0; margin:auto; width:18px; height:18px; color:#fff;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.55)); }
 .field{
   width:100%; padding:13px 15px; border-radius:16px; background:var(--surface);
   border:1px solid var(--line); color:var(--text); font-family:"Grandstander",sans-serif;
@@ -1029,4 +1036,53 @@ canvas{ max-width:100%; }
 .gateNote{
   background:color-mix(in srgb,var(--rose) 11%, var(--surface-2));
   border:1px solid color-mix(in srgb,var(--rose) 30%, transparent);
+}
+
+/* ---------- the season book ---------- */
+/* Three columns: which tier, what everybody gets, what the book adds.
+   It scrolls inside its own box rather than making the sheet thirty
+   rows tall, and the reached rows are lit so the eye finds the edge
+   between what is earned and what is still ahead without reading. */
+.passTrack{
+  display:flex; flex-direction:column; gap:6px;
+  max-height:46vh; overflow-y:auto; overflow-x:hidden;
+  padding:4px; margin:2px 0;
+  border:1px solid var(--line); border-radius:14px; background:var(--surface-2,var(--surface));
+}
+.passHead{
+  display:grid; grid-template-columns:30px 1fr 1fr; gap:6px; align-items:center;
+  position:sticky; top:0; z-index:1; padding:6px 4px;
+  background:var(--surface-2,var(--surface));
+  font-size:var(--t-nano); letter-spacing:.06em; text-transform:uppercase;
+  color:var(--text-faint); font-weight:700;
+}
+.passRow{
+  display:grid; grid-template-columns:30px 1fr 1fr; gap:6px; align-items:stretch;
+  padding:5px 4px; border-radius:10px;
+}
+.passRow.on{ background:color-mix(in srgb,var(--accent) 9%, transparent); }
+.passRow .pn{
+  display:grid; place-items:center; font-weight:800; font-size:var(--t-micro);
+  color:var(--text-faint); font-variant-numeric:tabular-nums;
+}
+.passRow.on .pn{ color:var(--accent-strong); }
+.passRow .pc{
+  display:flex; flex-direction:column; gap:5px; align-items:flex-start; justify-content:center;
+  min-width:0; padding:6px 8px; border-radius:9px; background:var(--surface);
+  border:1px solid var(--line); font-size:var(--t-micro);
+}
+.passRow .pc.can{ border-color:var(--accent-strong); }
+.passRow .pc.took{ opacity:.45; }
+/* not yet bought: legible, so the player can see what is in it, but
+   plainly not theirs yet */
+.passRow .pc.shut{
+  opacity:.6; border-style:dashed;
+  background:repeating-linear-gradient(135deg,
+    var(--surface) 0 6px, var(--surface-3,var(--surface-2,var(--surface))) 6px 12px);
+}
+.passRow .pc .reward{ white-space:nowrap; }
+.passRow .pc .btn{ align-self:stretch; }
+@media (max-width:360px){
+  .passRow, .passHead{ grid-template-columns:24px 1fr 1fr; gap:4px; }
+  .passRow .pc{ padding:5px 6px; }
 }

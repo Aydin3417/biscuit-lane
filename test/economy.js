@@ -45,8 +45,9 @@ require('./_modules.js').WITH_SAVE.forEach(f =>
   vm.runInContext(fs.readFileSync(path.join(jsDir, f), 'utf8'), ctx, { filename: f }));
 
 const X = vm.runInContext(
-  '({ FOODS, TOYS, BOOSTERS, HATS, COLLARS, FURNITURE, ROOM_THEMES, BADGES, giftFor,' +
-  '   HEART_MAX, ECON, JAR, TREAT_PACKS })', ctx);
+  '({ FOODS, TOYS, BOOSTERS, HATS, COLLARS, FURNITURE, ROOM_THEMES, KEEPSAKES, BADGES, giftFor,' +
+  '   HEART_MAX, ECON, JAR, TREAT_PACKS, PASS, PASS_TRACK, passTier, SEASON_DAYS, isGate,' +
+  '   BREEDS, EYE_COLORS, GROOM })', ctx);
 const E = X.ECON;
 
 /* the one number that still lives somewhere this cannot import, because
@@ -103,6 +104,13 @@ function catalogue() {
   add('collars', X.COLLARS);
   add('furniture', X.FURNITURE);
   add('room themes', X.ROOM_THEMES);
+  /* The grooming shelf. Every breed carries three coats and the animal
+     arrives wearing one, so a full house of six leaves twelve to buy;
+     eye colours are shared across the house like collars are, and one of
+     the six comes with the first pet. */
+  const coats = X.BREEDS.length * (X.BREEDS[0].coats.length - 1);
+  rows.push({ label: 'coats (' + coats + ', all six pets)', coins: coats * X.GROOM.coat, treats: 0, n: coats });
+  rows.push({ label: 'eye colours', coins: (X.EYE_COLORS.length - 1) * X.GROOM.eye, treats: 0, n: X.EYE_COLORS.length - 1 });
   rows.push({ label: 'adopting all six pets', coins: ADOPT_COST.reduce((a, b) => a + b, 0), treats: 0, n: 6 });
   return rows;
 }
@@ -142,8 +150,60 @@ function run(days, farm, seed) {
   const badgesPaid = {};
   let cleared = 0, threeStars = 0, replays = 0, satDay = 0;
   let bought = 0, boosters = 0;
+  /* Keepsakes are the only thing in the shop priced in the currency that
+     also pays to carry on, so they are the first real competition treats
+     have ever had. The rule modelled here is the one a player actually
+     applies: buy one when it still leaves the carry-on price behind.
+     Spending down to nothing and then losing a level at 90% of the goal
+     is a mistake somebody makes once. */
+  let keeps = 0, keepsSpent = 0;
+  const keepShelf = (X.KEEPSAKES || []).map(k => ({ key: k.id, cost: k.cost }))
+    .sort((a, b) => a.cost - b.cost);
+  /* ---------- the season book ----------
+
+     This file proved the two columns balanced and then a whole third
+     column was added above it without ever coming through here: the
+     book's FREE side pays out to everybody who plays, and it was not in
+     the arithmetic at all. Modelled the same way as everything else —
+     stamps earned at the rate the game grants them, the free rewards
+     claimed the moment a tier is reached, and the paid side counted but
+     not spent, because the player this file walks does not buy anything.
+
+     Seasons run from the player's own first day, twenty-eight at a
+     time. */
+  let stamps = 0, seasons = 0, passTierEnd = 0;
+  let passCoins = 0, passTreats = 0, passGoods = 0;
+  let passClaimed = {};
+  /* What the paid column would have handed over at the furthest tier
+     this player ever reached — not at the tier they are standing on
+     today, which after a season boundary is zero and would have this
+     file reporting that the book is worthless every twenty-ninth day. */
+  const passPaidWorth = tier => {
+    let t = 0;
+    for (let i = 0; i < tier && i < X.PASS_TRACK.length; i++)
+      t += X.PASS_TRACK[i].paid.treats || 0;
+    return t;
+  };
+  const goodCost = r => {
+    const f = r.food && X.FOODS.find(x => x.id === r.food);
+    if (f) return f.cost;
+    const b = r.boost && X.BOOSTERS.find(x => x.id === r.boost);
+    if (b) return b.cost;
+    return 0;
+  };
   /* everything ownable, once each, cheapest first */
   const owned = {};
+  /* Grooming goes on the same shelf as everything else, gated on owning
+     the animal it is for: twelve coats become buyable one adoption at a
+     time, which is exactly the shape that keeps coins worth something
+     into the second month. */
+  const groomShelf = [];
+  X.BREEDS.forEach((b, bi) => {
+    for (let ci = 1; ci < b.coats.length; ci++)
+      groomShelf.push({ key: 'coat:' + b.id + ':' + ci, cost: X.GROOM.coat, needPets: bi + 1 });
+  });
+  for (let ei = 1; ei < X.EYE_COLORS.length; ei++)
+    groomShelf.push({ key: 'eye:' + X.EYE_COLORS[ei].id, cost: X.GROOM.eye, needPets: 1 });
   const shelf = []
     .concat(X.TOYS.map(x => ({ key: 'toy:' + x.id, cost: x.cost })))
     .concat(X.HATS.map(x => ({ key: 'hat:' + x.id, cost: x.cost })))
@@ -166,6 +226,7 @@ function run(days, farm, seed) {
 
     coins += E.dailyWalkCoins; earned += E.dailyWalkCoins;
     take(E.dailyWalkTreats);
+    stamps += X.PASS.stamps.walk;
 
     /* hearts regenerate on the clock between sittings, capped at the
        pool — you cannot bank more than HEART_MAX however long you stay
@@ -217,8 +278,23 @@ function run(days, farm, seed) {
       if (!farm) level++;
       if (three) take(E.threeStarTreats);
       if (!farm && level % E.milestoneEvery === 0) take(E.milestoneTreats);
+      /* stamps, on a first clear only — a replay pays none, which is
+         what stops the track being finished on level three */
+      if (!farm) {
+        stamps += X.PASS.stamps.clear;
+        if (three) stamps += X.PASS.stamps.threeStar;
+        if (X.isGate(level)) stamps += X.PASS.stamps.gate;
+      }
       /* the jar takes its couple either way */
       if (jar < JARCAP) { jar = Math.min(JARCAP, jar + E.jarPerLevel); if (jar >= JARCAP) jarFills++; }
+      /* and the shelf of keepsakes, cheapest first, once the carry-on is
+         still covered afterwards */
+      for (const k of keepShelf) {
+        if (owned['keep:' + k.key]) continue;
+        if (treats - k.cost < E.continueTreats) break;
+        owned['keep:' + k.key] = 1;
+        treats -= k.cost; treatsOut += k.cost; keeps++; keepsSpent += k.cost;
+      }
       }
     }
 
@@ -259,7 +335,8 @@ function run(days, farm, seed) {
        player spends them on exactly this. Cheapest first, one a day: it
        is how the shop is actually shopped, and it is the difference
        between measuring a surplus and inventing one. */
-    const next = shelf.find(x => !owned[x.key] && coins >= x.cost);
+    const next = shelf.find(x => !owned[x.key] && coins >= x.cost) ||
+      groomShelf.find(x => !owned[x.key] && coins >= x.cost && pets >= x.needPets);
     if (next) { owned[next.key] = 1; coins -= next.cost; spent += next.cost; bought += next.cost; }
 
     /* boosters are the one thing bought more than once — a hard level
@@ -269,12 +346,36 @@ function run(days, farm, seed) {
       if (coins >= b.cost) { coins -= b.cost; spent += b.cost; boosters++; }
     }
 
+    /* the free column, claimed the moment a tier is reached — which is
+       what a player does, because the badge on the home card says so */
+    const tier = X.passTier(stamps);
+    for (let i = 0; i < tier && i < X.PASS_TRACK.length; i++) {
+      if (passClaimed['f' + i]) continue;
+      passClaimed['f' + i] = 1;
+      const r = X.PASS_TRACK[i].free;
+      if (r.coins) { coins += r.coins; earned += r.coins; passCoins += r.coins; }
+      if (r.treats) { take(r.treats); passTreats += r.treats; }
+      /* a free tin of stew is a tin nobody has to buy, so it lands in
+         the coin column at what it would have cost */
+      const worth = goodCost(r);
+      if (worth) { coins += worth; earned += worth; passGoods += worth; }
+    }
+    /* a season ends and the book starts again, stamps and all */
+    if (day % X.SEASON_DAYS === 0) {
+      passTierEnd = Math.max(passTierEnd, tier);
+      seasons++; stamps = 0; passClaimed = {};
+    }
+
     if (!satDay && pets >= 6 && coins > sinkTotal - bought) satDay = day;
     if (day % 7 === 0) weeks.push({ day, coins, treats, level, pets, earned, spent });
   }
   return {
     satDay, bought, boosters, coins, treats, level, pets, earned, spent, weeks, cleared, replays,
-    treatsIn, treatsOut, continues, refills, jar, jarFills, dry, lost, wanted, short
+    treatsIn, treatsOut, continues, refills, jar, jarFills, dry, lost, wanted, short,
+    keeps, keepsSpent, keepShelfN: keepShelf.length,
+    stamps, seasons, passTierEnd: Math.max(passTierEnd, X.passTier(stamps)),
+    passCoins, passTreats, passGoods,
+    passPaid: passPaidWorth(Math.max(passTierEnd, X.passTier(stamps)))
   };
 }
 const JARCAP = X.JAR.cap;
@@ -325,6 +426,41 @@ console.log('  carry-on: offered ' + r.wanted + ', taken ' + r.continues + ', ' 
   r.short + ' turned down for want of treats (' +
   (r.wanted ? Math.round(r.short / r.wanted * 100) : 0) + '%)');
 console.log('  jar:    ' + r.jar + ' of ' + JARCAP + ', filled ' + r.jarFills + ' time(s)');
+/* The jar is the only offer in the game that a player earns rather than
+   is shown, so the number worth knowing about it is not how much it
+   holds but how often it comes round. This run never opens it — the
+   simulated player pays nothing — so the cadence is worked out rather
+   than observed: how many levels it takes to fill, and therefore how
+   many times somebody who opened it every time would have been asked. */
+const jarLevels = Math.ceil(JARCAP / E.jarPerLevel);
+console.log('  jar:    fills every ' + jarLevels + ' levels (' +
+  (jarLevels / SESSION_LEVELS).toFixed(1) + " days at " + SESSION_LEVELS + " a day) — " +
+  Math.floor(r.cleared / jarLevels) + ' offers in ' + days + ' days');
+console.log('  keepsakes: ' + r.keeps + ' of ' + r.keepShelfN +
+  ' bought, ' + r.keepsSpent + ' treats');
+
+/* ---------- the season book ----------
+
+   Two questions, and the second is the one that matters.
+
+   Can the track be finished? A book sold on thirty tiers and reachable
+   at nineteen is a book sold on a promise, and the tier reached at the
+   end of a season is the whole answer.
+
+   And what does the FREE side hand a player who never pays a penny?
+   That column is income like any other and it was outside the arithmetic
+   entirely — which means the balance this file certifies was certifying
+   a game that no longer existed. It goes in the totals above now; this
+   is it broken out, so a change to the track shows up here as a number
+   rather than three weeks later as a shop with nothing left in it. */
+console.log('  book:   ' + r.stamps + ' stamps this season, tier ' +
+  r.passTierEnd + ' of ' + X.PASS.tiers + ' reached' +
+  (r.passTierEnd >= X.PASS.tiers ? '' : '  — the track does not finish'));
+console.log('  book:   free column paid ' + (r.passCoins + r.passGoods) + ' coins and ' +
+  r.passTreats + ' treats over ' + Math.max(1, r.seasons) + ' season(s)');
+console.log('  book:   the paid column would have held ' + r.passPaid +
+  ' treats, against ' + X.TREAT_PACKS.reduce((m, x) => Math.max(m, x.treats), 0) +
+  ' in the pack beside it');
 
 /* ---------- the same month at three appetites ----------
 
@@ -348,6 +484,36 @@ SWEEP.forEach(([lv, si]) => {
     String(w ? Math.round(sh / w * 100) + '%' : '-').padStart(14));
 });
 SESSION_LEVELS = wasLevels; SESSIONS = wasSessions;
+
+/* ---------- and what that table means, so nobody "fixes" it ----------
+
+   The first row says zero. Zero dry moments, zero levels lost, zero
+   heart refills, across a whole month. Read on its own that looks like a
+   lives system doing nothing, and it has been read that way before.
+
+   It is the design. Hearts only ever go down on a loss — winning returns
+   the one it took, and quitting returns it too — so the drain is the
+   loss rate, and somebody playing six levels a day across two sittings
+   loses about one. Five hearts and a twenty-five minute refill cannot
+   bind against that and are not meant to: a casual player meeting a wall
+   twice a week is a casual player who stops.
+
+   The rows below it are where the meter lives, and they are not zero.
+   Somebody playing twelve levels a day meets it sixty times a month and
+   pays to get past it seven; at twenty-four it is ninety and nine. That
+   is the shape a lives system is supposed to have — invisible to
+   somebody dipping in, real to somebody who has found the game — and it
+   is also, not coincidentally, the shape of who ever pays for anything.
+
+   The same argument governs the treat column. Free treat income is
+   deliberately enough to cover an ordinary player's carry-ons and
+   deliberately not enough to cover an engaged one's: the carry-on
+   shortfall runs 21% in the first row and 45 to 59% in the others.
+   Cutting income until the first row went short as well would raise the
+   pressure on precisely the players least likely to pay and most likely
+   to leave. It has been considered twice now and refused twice; this
+   paragraph is here so it does not have to be considered a third time
+   from scratch. */
 
 let bad = 0;
 /* The two thresholds are judged on the medians, not on this one run:

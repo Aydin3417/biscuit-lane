@@ -1,4 +1,5 @@
-# Every suite the README names, on every push.
+# Every suite the README names: the fast ones on every push, the slow
+# ones every night.
 #
 # The browser layer is the reason this file exists. Its thirty-nine
 # checks are the only ones that run against a real document, and they
@@ -6,15 +7,30 @@
 # suite nobody is made to run is a suite that quietly stops being true.
 name: tests
 
+# WHY THERE ARE TWO JOBS NOW. The four difficulty sweeps are nine games
+# a level over a hundred and forty levels, twice each for a bare and a
+# cared-for pet — the best part of an hour, and growing. A suite that
+# takes an hour on every push is a suite that starts getting cancelled,
+# which is the same failure this file was written to prevent, arriving
+# by a different road.
+#
+# So: everything except the sweeps runs on every push, in minutes. The
+# sweeps run nightly and on demand, where an hour costs nobody anything.
+# The curve is a slow-moving thing; a drift that appears at 3am and is
+# caught at 3am the next day has cost a day, and the alternative was
+# catching it never.
+
 on:
   push:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * *'
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -29,8 +45,13 @@ jobs:
       # The built file is committed, and postinstall rebuilds it. If the
       # two disagree, src/ and the artifact have drifted apart and the
       # single-file build is no longer what the source says it is.
+      #
+      # sw.js is in this list because build.js stamps its cache name with
+      # a hash of the built page. A stale stamp means the service worker
+      # would keep serving a build the source no longer describes, which
+      # is precisely the drift this step exists to catch.
       - name: The committed build matches src/
-        run: git diff --exit-code -- index.html biscuit-lane.html
+        run: git diff --exit-code -- index.html biscuit-lane.html sw.js
 
       - name: Integrity — names, calls, tables, string parity
         run: npm run test:check
@@ -41,8 +62,13 @@ jobs:
       - name: Installable — manifest, worker, icons
         run: npm run test:mobile
 
-      - name: Engine soak, difficulty curves, level-design audit
-        run: npm run test:node
+      # The one seam money comes in through, and a source check that no
+      # buy call site forgets to test its receipt.
+      - name: The till
+        run: npm run test:till
+
+      - name: Engine soak, level-design audit, the economy over ninety days
+        run: npm run test:fast
 
       - uses: actions/cache@v4
         id: pw-cache
@@ -58,3 +84,22 @@ jobs:
 
       - name: Wide net — every screen, every sheet, real moves
         run: npm run hunt
+
+  # The full difficulty sweeps: nine games a level, bare and cared-for,
+  # across the handcrafted lane and the endless run. This is the job that
+  # would notice a curve sliding, and the only reason it is not on every
+  # push is that it takes an hour.
+  curves:
+    if: github.event_name != 'push' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - name: Install
+        run: npm ci
+      - name: Every suite, and the four difficulty curves in full
+        run: npm run test:node

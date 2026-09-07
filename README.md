@@ -30,11 +30,19 @@ src/
     00-util.js     helpers, easings, icons, modal + toast, wait()
     05-i18n.js     every string, English and Turkish, at parity
     10-data.js     breeds, abilities, traits, badges, goods, LEVELS, generator
-    15-save.js     persistence, migration, pets, care, traits, badges, daily
-    17-billing.js  the till: the one seam where money would enter
+    15-save.js     persistence, migration, pets, care, traits, badges,
+                   daily, and a mirror of the save in native Preferences
+                   so the operating system cannot evict it
+    16-notify.js   two local reminders and nothing else, asked for at the
+                   out-of-hearts moment rather than at first launch
+    17-billing.js  the till: the one seam where money enters, and the
+                   consume call without which Play refunds every sale
+                   after three days
     18-telemetry.js counters and crash capture, on-device, with a sink
                    nobody has attached and an opt-out that stops the
                    writing rather than only the sending
+    19-ads.js      the shape a rewarded video would take. No SDK, no
+                   plugin, available() answers false for every slot
     20-audio.js    synthesised sound: mallets, noise, a small room reverb
     25-art.js      the animals and objects, all path-drawn
     26-scene.js    the room, the lane, the board tray, time of day
@@ -85,6 +93,13 @@ node test/chains.js 400    # how deep cascades actually go
 node test/ice.js           # the frost rule, all five claims
 node test/care.js          # can a player actually hold the pet perks
 node test/mobile.js        # manifest, worker, icons: is it installable
+node test/till.js          # the money seam, and a source check that no
+                           # buy call site forgets to test its receipt
+node test/economy.js 90    # both currencies over three months, with the
+                           # season book's free column in the totals
+npm run test:fast          # the whole suite with the difficulty sweeps
+                           # cut to two games a level: minutes rather
+                           # than the best part of an hour
 node tools/icon.js         # redraw the app icons from the game's logo,
                            # for the web, the Android launcher and Xcode
 node tools/store.js        # store screenshots at Play and App Store
@@ -3339,3 +3354,172 @@ the skip path still calls it — but the check drove the card's Start
 button and had no other way in. The assertion was right and its
 mechanism had gone stale, which is a much better failure than the
 alternative.
+
+## A shop that could not have taken money
+
+The game had a till, a treat jar, two packs and a thirty-tier season
+book, and none of it could have taken a pound. Not because the plugin was
+missing — that is deliberate and documented — but because of three things
+underneath it that would each have been found by a real customer.
+
+**The book gave itself away.** `BILLING.buy` resolves to an object
+whichever way it went: `{ ok: true, receipt }` or `{ ok: false, why:
+'cancelled' }`. The treat store had always tested `r.ok`. The season
+book, added later and reviewed by nobody, tested `r`:
+
+```js
+const ok = await BILLING.buy(PASS.sku);
+if (!ok) { ... return; }
+passState().paid = true;
+```
+
+Every refusal the store can produce is truthy, so anybody who opened the
+payment sheet and changed their mind got the book. It is the classic
+shape of this bug: the pattern was right in the place that had been read,
+and wrong in the newest place that had not.
+
+**Nothing was ever consumed.** Google Play holds a purchase open until
+the app confirms it handed the goods over, and a purchase left open for
+three days is refunded automatically — the player keeps the treats, the
+money goes back, and nothing anywhere reports an error. There was no
+`consumePurchase`, `finishTransaction`, `consume` or `acknowledgePurchase`
+call anywhere in the repository. Every sale this game ever made would
+have reversed itself over a weekend.
+
+**Restore restored nothing.** The button called `BILLING.restore()` and
+threw the answer away. It returns the product ids now, `claimOutstanding`
+turns them into goods, and the same call runs at every launch — because
+the case that costs a player real money is the app being killed between
+the store saying yes and the save being written, and waiting for somebody
+who has just been charged for nothing to go and find a button is not a
+plan.
+
+`test/till.js` is the guard. Half of it is ordinary unit testing — a
+refusal is an object, an unknown product grants nothing, granting the
+book twice is not two books — and half of it reads the source: it finds
+every `BILLING.buy(` call site and fails if the lines after it never
+mention `.ok`. Reintroducing the original bug fails it on the right line,
+which is the only way to know a test is worth having.
+
+## The season nobody could finish
+
+`seasonNo()` counted from a fixed Monday in 2026, so every player in the
+world was in the same season at the same time — in a game with no
+leaderboard, no friends list and nothing at all shared between any two
+people.
+
+Installs land uniformly across twenty-eight days, so half of them arrive
+with under a fortnight left. On the day I looked, the home screen was
+reading **"Tier 6 of 30 · 3 days left"** with the buy button live
+underneath it: a thirty-tier book, two hundred and seventy stamps, four
+weeks of ordinary play, offered to somebody with three days. Anybody who
+took that would have been right to ask for their money back.
+
+Anchored to the player's own first day, everybody gets twenty-eight of
+them. And the book now refuses to be sold at all when the paid column,
+projected at that player's own pace, could not return more treats than
+the pack sitting next to it for the same money — which is the rule the
+jar has always followed, applied to the thing beside it.
+
+## Where the money was going instead
+
+`test/economy.js` had proved the two currency columns balanced, and then
+a whole third column was added above it without ever coming through the
+file. The season book's **free** side pays out to everybody who plays,
+and it was outside the arithmetic entirely.
+
+Measured, once the simulation could see it: **2,516 coins a season, 7,748
+over three months** — against a catalogue that costs 12,073 to buy
+outright. The free half of the book was handing over two thirds of
+everything the game sells, on top of an income that already outran the
+shop. That is why the shop was emptying on day twenty-three instead of
+day twenty-eight, and it is why nobody had noticed: the file that would
+have said so did not know the table existed.
+
+Rebalanced towards things that are used up rather than banked — a tin of
+stew is eaten, a hammer is thrown at a level and gone, a hundred coins
+sits in the purse and quietly shortens the game. Same thirty tiers, same
+rhythm, 765 coins instead of 1,950.
+
+## Eighteen coats, six of them ever seen
+
+Every breed carries three coats and there are six eye colours, all drawn,
+all working, since the first week. A player meets them once — on the
+sheet that adopts the animal — picks one, and never sees the other two
+again.
+
+That is the answer to the thing the economy file had been complaining
+about for two months. The shop runs out of things to want in the fourth
+week, coins keep arriving, and there is nothing left to spend them on,
+which quietly removes the reason to clear the next level. Every fix for
+it so far had been more colours of something — four more collars, six
+more room themes — and they work, but a room theme is not what somebody
+playing a pet game is trying to buy.
+
+Changing the animal is. It costs no new art. It is per-animal rather than
+per-house, so six pets is twelve coats somebody might want instead of one
+theme they might. What an animal was adopted in is always theirs,
+including on every save that predates the shelf — otherwise the game
+opens by telling a player that the cat they have had for a month is
+wearing something they do not own.
+
+Coins outrun the catalogue on **day 41** now, against day 23 before.
+
+## The two things worth interrupting somebody for
+
+The game shipped with no way of ever reaching a player who had put it
+down. Not a thin one — none.
+
+Two notifications, and only ever two: the hearts have come back, and the
+day's walk went untaken. Both are the game finishing a sentence it
+already started. No streak threats, no "we miss you", nothing timed to a
+sale — a notification that sells something is the reason people switch
+them off for a whole category of app. The walk reminder is not sent to
+anybody who walked today, which means a daily player never sees it at
+all; that is correct, and it is the difference between a reminder and a
+nag.
+
+It asks at the one moment the answer is obviously yes: the player has
+just run out of hearts and been shown a two-hour countdown. Not at boot.
+A permission dialog on first launch, before anybody knows what the game
+is, gets declined — and a decline is close to permanent on both
+platforms, so the cheapest moment to ask is also the one that wastes it.
+
+The heart reminder fires at a full pool rather than at the first heart.
+The first one lands twenty-five minutes later and buys a single level,
+which at a four-in-five clear rate is one session in five that ends
+exactly where it started.
+
+## The save the operating system is allowed to delete
+
+Everything lived in `localStorage`, which inside a native shell is the
+wrong last answer: a WebView's local storage is *website data* as far as
+iOS is concerned, and the system is entitled to evict it under storage
+pressure. It does not ask and it does not warn, and the app that comes
+back has never been played.
+
+For a game that has taken money, "your save is gone" is not a bug report.
+It is a refund, and a fair one-star review.
+
+`localStorage` stays the working copy — synchronous, universal, free.
+Behind it, every save is mirrored into Preferences, which is
+NSUserDefaults on iOS and SharedPreferences on Android: backed up, not
+evicted, and the app's own. The vault is asked once before the save is
+read and the newer of the two wins on `lastSeen`, so a stale mirror
+cannot take a fortnight off somebody. On the web there is no plugin, the
+recovery resolves having done nothing, and the shipped file still has no
+dependency in it.
+
+## A cache name that never changed
+
+`sw.js` held `biscuit-lane-v1`, hardcoded, and the `activate` handler
+deletes every cache whose name is not the current one — so a name that
+never changes means that sweep never sweeps. Yesterday's copy of the game
+sits in the same cache as today's, and the only thing replacing it is the
+fetch handler repairing entries one at a time.
+
+I met this one from the other side: an afternoon of a change not
+appearing in the browser, because the worker was still handing out the
+morning's file. `build.js` stamps the name with a hash of the built page
+now. The same build produces the same name and does not churn the cache;
+any change at all produces a new one and drops the old cache whole.

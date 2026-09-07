@@ -1,6 +1,7 @@
 /* Concatenates src/ into a single self-contained artifact page. */
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const root = __dirname;
 const src = p => fs.readFileSync(path.join(root, 'src', p), 'utf8');
@@ -28,4 +29,28 @@ const out = parts.join('\n\n') + '\n';
 const dest = path.join(root, 'biscuit-lane.html');
 fs.writeFileSync(dest, out, 'utf8');
 fs.writeFileSync(path.join(root, 'index.html'), out, 'utf8');
-console.log('built ' + dest + '  ' + (out.length / 1024).toFixed(1) + ' KB  (' + jsFiles.length + ' modules)');
+/* ---------- stamp the service worker ----------
+
+   sw.js held a cache called `biscuit-lane-v1`, hardcoded, and nobody was
+   ever going to remember to change it. The `activate` handler deletes
+   every cache whose name is not the current one, so a name that never
+   changes means that sweep never sweeps: yesterday's copy of the game
+   sits in the same cache as today's, and the only thing replacing it is
+   the fetch handler quietly repairing entries one at a time. It gets
+   there in the end, and while it is getting there the player is on a
+   build that is part old and part new. I met this one from the other
+   side — an afternoon of a change not appearing in the browser because
+   the worker was still handing out the morning's file.
+
+   Derived from the bytes rather than from a version number, so it is
+   right by construction: the same build produces the same name and does
+   not churn the cache, and any change at all produces a new one and
+   drops the old cache whole. */
+const stamp = crypto.createHash('sha1').update(out).digest('hex').slice(0, 12);
+const swPath = path.join(root, 'sw.js');
+const sw = fs.readFileSync(swPath, 'utf8');
+const stamped = sw.replace(/const VERSION = '[^']*';/, "const VERSION = 'biscuit-lane-" + stamp + "';");
+if (stamped !== sw) fs.writeFileSync(swPath, stamped, 'utf8');
+
+console.log('built ' + dest + '  ' + (out.length / 1024).toFixed(1) + ' KB  (' +
+  jsFiles.length + ' modules)  cache ' + stamp);

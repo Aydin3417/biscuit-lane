@@ -33,16 +33,34 @@ function freshSave() {
     boosters: { moves: 1, hammer: 2, swap: 1, shuffle: 1 },
     hats: { none: 1 },
     collars: { none: 1 },
+    /* coats and eye colours unlocked, beyond the ones each animal was
+       adopted wearing — see GROOM in 10-data.js. Keyed 'breedId:coatId'
+       and by eye id, because both outlive any particular pet: sell a
+       colour once and every animal in the house can wear it. */
+    coats: {},
+    eyes: {},
     furniture: {},
     roomThemes: { oat: 1 },
     room: { theme: 'oat', placed: [] },
     streak: 0,
     lastGift: 0,
     seen: {},                  // tutorial flags
-    settings: { sound: true, music: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true },
+    /* `notify` starts false and is only ever set by the player answering
+       the system's own dialog — see 16-notify.js. Defaulting it true
+       would have the settings screen showing a switch that is on while
+       nothing can actually be delivered. */
+    settings: { sound: true, music: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true, notify: false },
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
     jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing
+    /* id -> 1, except the photograph, which keeps the animal it is of */
+    keepsakes: {},
+    /* rewarded video, one a day each; rolls over with the gift ladder */
+    ads: { day: 0, used: {} },
+    /* the season book: stamps this season, and what has been taken */
+    pass: { season: -1, stamps: 0, paid: false, claimed: {} },
+    /* asked once, ever — see maybeAskForAReview in 60-ui.js */
+    rated: { asked: 0, said: 0 },
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
   };
 }
@@ -124,6 +142,100 @@ function canStore() {
   return storageWorks;
 }
 
+/* ============================================================
+   the copy the operating system will not throw away
+   ============================================================
+
+   Everything above this keeps the save in localStorage, which is the
+   right first answer: it is synchronous, it works in every browser, and
+   it costs nothing. It is also, inside a native shell, the wrong last
+   answer.
+
+   A Capacitor app is a WebView, and a WebView's localStorage is website
+   data as far as the operating system is concerned. iOS treats it that
+   way: WKWebView's store lives under Library/WebKit and the system is
+   entitled to evict it when the device is short of space. It does not
+   ask, it does not warn, and the app that comes back has never been
+   played. On Android it is steadier, but "clear cache" in some cleaner
+   apps takes it, and an uninstall certainly does.
+
+   For a game that has taken money, "your save is gone" is not a bug
+   report, it is a refund and a one-star review that is entirely fair.
+
+   So: localStorage stays the working copy, and a second copy goes
+   somewhere the OS treats as the app's own — Preferences, which is
+   NSUserDefaults on iOS and SharedPreferences on Android, both of which
+   are backed up and neither of which is evicted. Nothing here is on the
+   critical path. The vault is asked once at boot, written behind the
+   working copy, and on the web it does not exist at all: no plugin, no
+   bridge, `recover()` resolves having done nothing, and the shipped
+   file still has no dependency in it. */
+const VAULT = {
+  plugin: null,
+  last: 0,
+  /* A native round trip per keystroke-frequency save is waste. The
+     working copy is already written on every persist; this one only has
+     to be no more than a minute behind it, and an immediate persist —
+     which is what a purchase, a level ending and the app being put in a
+     pocket all do — pushes it through regardless. */
+  every: 60000,
+
+  ready() {
+    if (this.plugin) return true;
+    const P = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || null;
+    if (!P) return false;
+    this.plugin = P.Preferences || P.Storage || null;
+    return !!this.plugin;
+  },
+
+  /* Called once, before the save is read. Resolves to the vault's copy
+     if it holds one, and to null in every other case — no plugin, no
+     copy, unreadable copy. The caller decides what to do with it, which
+     is the only reason this does not just write into SAVE itself. */
+  async recover() {
+    if (!this.ready()) return null;
+    try {
+      const r = await this.plugin.get({ key: SAVE_KEY });
+      const raw = r && r.value;
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      return d && typeof d === 'object' ? d : null;
+    } catch (e) { return null; }
+  },
+
+  write(json, force) {
+    if (!this.ready()) return;
+    const t = now();
+    if (!force && t - this.last < this.every) return;
+    this.last = t;
+    try { this.plugin.set({ key: SAVE_KEY, value: json }); } catch (e) { }
+  },
+
+  clear() {
+    if (!this.ready()) return;
+    try { this.plugin.remove({ key: SAVE_KEY }); } catch (e) { }
+  }
+};
+
+/* Which of the two copies is the one to play from.
+
+   `lastSeen` is stamped on every write, so it is the honest comparison,
+   and the vault only wins when it is genuinely ahead. That matters more
+   than it sounds: a player who reinstalls onto a device whose vault
+   survived should get their save back, and a player whose vault is a
+   fortnight stale because they have been playing the web version on the
+   same phone should not have a fortnight taken off them. Equal goes to
+   the working copy, which is the one the game has been writing to. */
+function vaultRecover(mirror) {
+  if (!mirror) return;
+  let here = null;
+  try { here = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { here = null; }
+  const theirs = +mirror.lastSeen || 0;
+  const ours = here ? (+here.lastSeen || 0) : -1;
+  if (theirs <= ours) return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(mirror)); } catch (e) { }
+}
+
 function loadSave() {
   let raw = null;
   try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { raw = null; }
@@ -139,8 +251,22 @@ function loadSave() {
     SAVE.daily = Object.assign({ day: 0, done: false, best: 0, streak: 0 }, d.daily || {});
     SAVE.jar = Object.assign({ fill: 0, opened: 0 }, d.jar || {});
     SAVE.jar.fill = clamp(Math.round(+SAVE.jar.fill || 0), 0, JAR.cap);
+    SAVE.keepsakes = Object.assign({}, d.keepsakes || {});
+    SAVE.rated = Object.assign({ asked: 0, said: 0 }, d.rated || {});
+    SAVE.coats = Object.assign({}, d.coats || {});
+    SAVE.eyes = Object.assign({}, d.eyes || {});
+    SAVE.ads = Object.assign({ day: 0, used: {} }, d.ads || {});
+    SAVE.pass = Object.assign({ season: -1, stamps: 0, paid: false, claimed: {} }, d.pass || {});
+    SAVE.pass.stamps = Math.max(0, Math.round(+SAVE.pass.stamps || 0));
 
     SAVE.pets = (Array.isArray(d.pets) ? d.pets : []).map(healPet).filter(Boolean);
+    /* Whatever every animal in the house is already wearing is owned,
+       whether or not it was ever paid for. A save from before the
+       grooming shelf existed has six pets in six coats and an empty
+       table, and the alternative is a game that opens by telling a
+       player the animal they have had for a month is wearing something
+       they do not own. */
+    SAVE.pets.forEach(p => lookUnlock(p.breed, p.coat, p.eye));
     if (!SAVE.pets.some(p => p.id === SAVE.activePet)) {
       SAVE.activePet = SAVE.pets.length ? SAVE.pets[0].id : null;
       CAST = null;   /* the walker leads the cast, so a repaired one rebuilds it */
@@ -181,7 +307,13 @@ function persist(immediate) {
   const doIt = () => {
     saveTimer = null;
     SAVE.lastSeen = now();
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); } catch (e) { /* private mode */ }
+    const json = JSON.stringify(SAVE);
+    try { localStorage.setItem(SAVE_KEY, json); } catch (e) { /* private mode */ }
+    /* and behind it, the copy the system will not evict. An immediate
+       persist is the game saying this one matters — a purchase, a level
+       ending, the app going into a pocket — so those go through the
+       throttle rather than waiting behind it. */
+    VAULT.write(json, !!immediate);
   };
   if (immediate) doIt(); else saveTimer = setTimeout(doIt, 400);
 }
@@ -189,6 +321,9 @@ function wipeSave() {
   SAVE_WIPED = true;
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   try { localStorage.removeItem(SAVE_KEY); } catch (e) { }
+  /* Both copies, or the next boot recovers the save the player just
+     asked the game to forget. */
+  VAULT.clear();
 }
 
 /* ---------- hearts ---------- */
@@ -270,6 +405,33 @@ function makePet(breedIdx, coatIdx, eyeIdx, name) {
     lastPet: 0
   };
 }
+/* ---------- what an animal is allowed to look like ----------
+
+   Two tables, both keyed by the thing rather than by the pet, because a
+   colour outlives the animal wearing it: pay for Russian blue once and
+   every Sable in the house can wear it, the same way a gold collar
+   works. The coat key carries the breed because "cream" means a
+   different colour on a Marmalade than on a Retriever.
+
+   What an animal was adopted in is always theirs. That is not a
+   generosity, it is the only way this can be added to a game people are
+   already playing without taking something off them. */
+function coatKey(breedIdx, coatIdx) { return BREEDS[breedIdx].id + ':' + coatIdx; }
+function coatOwned(breedIdx, coatIdx) {
+  return !!(SAVE.coats && SAVE.coats[coatKey(breedIdx, coatIdx)]);
+}
+function eyeOwned(eyeIdx) {
+  const e = EYE_COLORS[eyeIdx];
+  return !!(e && SAVE.eyes && SAVE.eyes[e.id]);
+}
+function lookUnlock(breedIdx, coatIdx, eyeIdx) {
+  if (!SAVE.coats) SAVE.coats = {};
+  if (!SAVE.eyes) SAVE.eyes = {};
+  SAVE.coats[coatKey(breedIdx, coatIdx)] = 1;
+  const e = EYE_COLORS[eyeIdx];
+  if (e) SAVE.eyes[e.id] = 1;
+}
+
 function activePet() {
   if (!SAVE.pets.length) return null;
   return SAVE.pets.find(p => p.id === SAVE.activePet) || SAVE.pets[0];
@@ -643,10 +805,132 @@ function jarAdd(n) {
 }
 function jarFull() { return jarState().fill >= JAR.cap; }
 
+/* What the object is made of, recorded at the moment it is bought.
+
+   The photograph is the only one that has to be: a tag reads the name
+   off the pet every time it is drawn and a blanket reads the coat, so
+   those two follow the animal as it changes. A photograph that quietly
+   updated itself to the animal's current stage would not be a
+   photograph — the whole point is that it is of the kitten, after the
+   kitten has grown up. */
+function keepsakeOf(id) {
+  const p = activePet();
+  if (id !== 'photo' || !p) return 1;
+  return { breed: p.breed, coat: p.coat, eye: p.eye, hat: p.hat,
+           collar: p.collar, stage: petStageIdx(p), name: p.name, bond: p.bond };
+}
+/* ---------- the season book ----------
+
+   Stamps are earned in one function so that there is one place to look
+   when the rate is wrong, and the season rolls over here rather than at
+   boot: a save opened after a two-month gap has to land in the season it
+   is actually in, not resume the one it left. Unclaimed tiers go with
+   the old season, which is what a season is. */
+/* The day this player's seasons are counted from: their first.
+
+   A save older than the change has no `created` worth trusting to the
+   day — it does, but a save restored from a backup can carry a date the
+   phone has since disagreed with — so it is clamped to today. A start in
+   the future would put the player in season -1 and hand them a book that
+   never ends. */
+function seasonStart() {
+  const today = dayNumber();
+  return Math.min(today, dayNumber(SAVE.created || Date.now()));
+}
+function passState() {
+  if (!SAVE.pass) SAVE.pass = { season: -1, stamps: 0, paid: false, claimed: {} };
+  const now = seasonNo(seasonStart());
+  if (SAVE.pass.season !== now) {
+    SAVE.pass = { season: now, stamps: 0, paid: false, claimed: {} };
+  }
+  return SAVE.pass;
+}
+function passStamp(kind, n) {
+  const p = passState();
+  const worth = PASS.stamps[kind] || 0;
+  if (!worth) return 0;
+  const got = worth * (n || 1);
+  p.stamps += got;
+  return got;
+}
+/* Whether the book is worth what it costs, from where this player is
+   standing today.
+
+   The rule is the jar's rule: nothing in this game is offered for money
+   when the thing next to it, for the same money, is better. The jar
+   refuses to open until it holds more than a pack; the book refuses to
+   be sold until the paid side would return more treats than the pack it
+   sits beside. Everything else the book carries — the collars, the hats,
+   the keepsake, the month of having something to come back to — is on
+   top of a number that already stands on its own.
+
+   Projected at the player's own pace rather than at the designer's,
+   because the designer's pace is an average of people who are not this
+   one. Before there is enough of a week to have a pace, the track's own
+   design rate stands in: it is drawn to be finished in a season, and a
+   player on their second day should be taken at the game's word rather
+   than judged on two days of stamps. */
+function passWorthBuying() {
+  const p = passState();
+  const left = seasonDaysLeft(seasonStart());
+  const gone = SEASON_DAYS - left;
+  const designed = PASS.tiers * PASS.per / SEASON_DAYS;
+  const rate = gone >= 5 ? p.stamps / gone : designed;
+  const projected = p.stamps + rate * left;
+  const pack = TREAT_PACKS.reduce((m, x) => Math.max(m, x.treats), 0);
+  return passBanked(projected) >= pack;
+}
+
+/* Whether a reward is there to be taken: the tier has been reached, it
+   has not been taken already, and — for the paid column — the book has
+   been bought. Buying it in the last week hands over every paid reward
+   back to tier one, which is the only reason anybody buys one late. */
+function passClaimable(i, paid) {
+  const p = passState();
+  if (i >= PASS_TRACK.length || passTier(p.stamps) <= i) return false;
+  if (paid && !p.paid) return false;
+  return !p.claimed[(paid ? 'p' : 'f') + i];
+}
+function passClaim(i, paid) {
+  if (!passClaimable(i, paid)) return null;
+  const p = passState();
+  const r = PASS_TRACK[i][paid ? 'paid' : 'free'];
+  p.claimed[(paid ? 'p' : 'f') + i] = 1;
+  grantReward(r);
+  persist(true);
+  return r;
+}
+/* One reward, whatever kind it is. A cosmetic somebody already owns is
+   paid as treats instead: a track that hands a player their own hat back
+   is worse than one that hands them nothing, because it looks like the
+   game lost count. */
+function grantReward(r) {
+  if (!r) return;
+  if (r.coins) SAVE.coins += r.coins;
+  if (r.treats) SAVE.treats += r.treats;
+  if (r.food) SAVE.food[r.food] = (SAVE.food[r.food] || 0) + 1;
+  if (r.boost) SAVE.boosters[r.boost] = (SAVE.boosters[r.boost] || 0) + 1;
+  if (r.hat) { if (SAVE.hats[r.hat]) SAVE.treats += 4; else SAVE.hats[r.hat] = 1; }
+  if (r.collar) { if (SAVE.collars[r.collar]) SAVE.treats += 4; else SAVE.collars[r.collar] = 1; }
+  if (r.keepsake) {
+    if (SAVE.keepsakes[r.keepsake]) SAVE.treats += 20;
+    else SAVE.keepsakes[r.keepsake] = keepsakeOf(r.keepsake);
+  }
+}
+
 /* ---------- granting ----------
 
    Kept apart from BILLING.buy so there is one function that adds treats
-   to a save and it is called from one place, after a receipt. */
+   to a save and it is called from one place, after a receipt.
+
+   The season book used to be the exception: it was granted inline in the
+   sheet that sold it, three lines that set a flag. Being the exception
+   is how it came to be the one purchase in the game that paid out on a
+   cancelled sheet — the store's `buy` returns an object and the sheet
+   tested it for truthiness, so `{ ok: false, why: 'cancelled' }` read as
+   a sale. The treat store next to it had always tested `r.ok` and was
+   never wrong. That is the argument for one door rather than two, and
+   the book comes through this one now. */
 function grantPurchase(kind, id) {
   if (kind === 'pack') {
     const p = TREAT_PACKS.find(x => x.id === id);
@@ -664,8 +948,42 @@ function grantPurchase(kind, id) {
     persist(true);
     return got;
   }
+  if (kind === 'pass') {
+    const p = passState();
+    if (p.paid) return 0;              /* already theirs; a restore said so twice */
+    p.paid = true;
+    persist(true);
+    return 1;
+  }
 
   return 0;
+}
+
+/* ---------- a purchase that was paid for and never arrived ----------
+
+   The app can be killed between the store saying yes and the save being
+   written — a low-memory kill, a battery that ran out, a player who
+   swiped the app away while the sheet was closing. The money is gone and
+   the treats never came, and the player has no way to tell that story to
+   anybody.
+
+   The store still knows. Consumables sit in its queue until the app
+   claims them, so the fix is to ask on every launch and grant whatever
+   is outstanding. Nothing here can double-pay: a pack that has been
+   granted was consumed in the same breath and is no longer in the queue,
+   and the book checks `paid` before it sets it.
+
+   This is also the whole of what the "restore a purchase" button does,
+   which is why the button and the boot call the same function. */
+function claimOutstanding(skus) {
+  let n = 0;
+  (skus || []).forEach(sku => {
+    const pack = TREAT_PACKS.find(p => p.sku === sku);
+    if (pack) { n += grantPurchase('pack', pack.id) ? 1 : 0; return; }
+    if (sku === JAR.sku) { n += grantPurchase('jar', 'jar') ? 1 : 0; return; }
+    if (sku === PASS.sku) { n += grantPurchase('pass', 'pass') ? 1 : 0; }
+  });
+  return n;
 }
 
 /* ---------- the daily walk ---------- */

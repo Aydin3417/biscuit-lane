@@ -840,6 +840,13 @@ canvas{ max-width:100%; }
 .swatches{ display:flex; gap:9px; justify-content:center; flex-wrap:wrap; }
 .sw{ width:44px; height:44px; border-radius:50%; border:3px solid transparent; box-shadow:var(--shadow-1); transition:transform .14s; }
 .sw.on{ border-color:var(--text); transform:scale(1.1); }
+/* A colour that has not been bought yet is still shown — a shelf you
+   cannot see is not a shelf. Dimmed, with the padlock the rest of the
+   game uses for the same thing, and the price in the tooltip rather than
+   printed across a 44px circle. */
+.sw.locked{ position:relative; opacity:.5; }
+.sw.locked svg{ position:absolute; inset:0; margin:auto; width:18px; height:18px; color:#fff;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.55)); }
 .field{
   width:100%; padding:13px 15px; border-radius:16px; background:var(--surface);
   border:1px solid var(--line); color:var(--text); font-family:"Grandstander",sans-serif;
@@ -1087,6 +1094,55 @@ canvas{ max-width:100%; }
 .gateNote{
   background:color-mix(in srgb,var(--rose) 11%, var(--surface-2));
   border:1px solid color-mix(in srgb,var(--rose) 30%, transparent);
+}
+
+/* ---------- the season book ---------- */
+/* Three columns: which tier, what everybody gets, what the book adds.
+   It scrolls inside its own box rather than making the sheet thirty
+   rows tall, and the reached rows are lit so the eye finds the edge
+   between what is earned and what is still ahead without reading. */
+.passTrack{
+  display:flex; flex-direction:column; gap:6px;
+  max-height:46vh; overflow-y:auto; overflow-x:hidden;
+  padding:4px; margin:2px 0;
+  border:1px solid var(--line); border-radius:14px; background:var(--surface-2,var(--surface));
+}
+.passHead{
+  display:grid; grid-template-columns:30px 1fr 1fr; gap:6px; align-items:center;
+  position:sticky; top:0; z-index:1; padding:6px 4px;
+  background:var(--surface-2,var(--surface));
+  font-size:var(--t-nano); letter-spacing:.06em; text-transform:uppercase;
+  color:var(--text-faint); font-weight:700;
+}
+.passRow{
+  display:grid; grid-template-columns:30px 1fr 1fr; gap:6px; align-items:stretch;
+  padding:5px 4px; border-radius:10px;
+}
+.passRow.on{ background:color-mix(in srgb,var(--accent) 9%, transparent); }
+.passRow .pn{
+  display:grid; place-items:center; font-weight:800; font-size:var(--t-micro);
+  color:var(--text-faint); font-variant-numeric:tabular-nums;
+}
+.passRow.on .pn{ color:var(--accent-strong); }
+.passRow .pc{
+  display:flex; flex-direction:column; gap:5px; align-items:flex-start; justify-content:center;
+  min-width:0; padding:6px 8px; border-radius:9px; background:var(--surface);
+  border:1px solid var(--line); font-size:var(--t-micro);
+}
+.passRow .pc.can{ border-color:var(--accent-strong); }
+.passRow .pc.took{ opacity:.45; }
+/* not yet bought: legible, so the player can see what is in it, but
+   plainly not theirs yet */
+.passRow .pc.shut{
+  opacity:.6; border-style:dashed;
+  background:repeating-linear-gradient(135deg,
+    var(--surface) 0 6px, var(--surface-3,var(--surface-2,var(--surface))) 6px 12px);
+}
+.passRow .pc .reward{ white-space:nowrap; }
+.passRow .pc .btn{ align-self:stretch; }
+@media (max-width:360px){
+  .passRow, .passHead{ grid-template-columns:24px 1fr 1fr; gap:4px; }
+  .passRow .pc{ padding:5px 6px; }
 }
 </style>
 
@@ -1860,6 +1916,8 @@ const STRINGS = {
     win_replay: 'A level pays in full the first time through.',
     store_thanks: '{n} treats in the tin',
     store_failed: 'That did not go through. Nothing was charged.',
+    store_restored: 'Restored. {n} back in your purse.',
+    store_restore_none: 'Nothing outstanding — everything you have paid for is already here.',
 
     /* shop */
     shop_food: 'Food', shop_toys: 'Toys', shop_boost: 'Boosters',
@@ -1883,11 +1941,28 @@ const STRINGS = {
     fam_locked: 'Reach level {n}',
     fam_fav: 'Charges on',
     fam_adopted: 'Welcome, {name}',
+    fam_groom: 'Change their coat',
+    rate_t: 'How are you finding it?',
+    rate_s: 'A minute of your time on the store page does more for a small game than anything else anybody can do for it.',
+    rate_yes: 'I am enjoying it',
+    rate_no: 'Not really',
+    rate_thanks: 'Fair enough. Thank you for saying.',
+    share_btn: 'Tell somebody about them',
+    share_text: '{name} lives in Biscuit Lane. Come and meet the rest of them.',
+    share_copied: 'Copied — paste it wherever you like.',
+    groom_t: 'At the grooming table',
+    groom_s: 'Every coat and every eye colour {name} could have. The ones they came home in are already theirs; tap any other to try it on and buy it.',
 
     /* settings */
     set_t: 'Settings',
     set_sound: 'Sound effects', set_sound_s: 'Pops, blasts and small victories.',
     set_music: 'Music', set_music_s: 'A quiet loop behind the game.',
+    set_notify: 'Reminders',
+    set_notify_s: 'Two only: when your hearts have come back, and when the daily walk has gone untaken. Nothing else, ever.',
+    note_hearts_t: 'Your hearts are back',
+    note_hearts_s: 'A full set, waiting on the doormat.',
+    note_walk_t: 'Nobody has been out today',
+    note_walk_s: 'The walk is still there, and it pays.',
     set_data: 'Share play data', set_data_s: 'Anonymous counts of levels played and errors hit. Never your pet, never your name.',
     set_haptics: 'Vibration', set_haptics_s: 'Only on phones that support it.',
     set_theme: 'Light', set_theme_s: 'Morning or evening on the lane.',
@@ -1955,6 +2030,22 @@ const STRINGS = {
     eye_copper: 'Copper eyes', eye_hazel: 'Hazel eyes', eye_grey: 'Grey eyes',
     trait_none: 'Still working out who they are.',
     trait_pending: 'A trait settles past bond {n}, once you have looked after them the same way {c} times.',
+    ad_watch: '{n} more moves',
+    ad_watch_sub: 'A short video instead of {t} treats, once a day.',
+    ad_go: 'Watch',
+    pass_t: 'The season book',
+    pass_sub: 'Tier {n} of {c} · {d} days left',
+    pass_ready: '{n} to collect',
+    pass_stamps: '{n} of {c} stamps',
+    pass_free: 'Everyone',
+    pass_paid: 'The book',
+    pass_buy: 'Get the book',
+    pass_have: 'Yours',
+    pass_take: 'Take',
+    pass_why: 'Stamps come from clearing a level for the first time, three-starring it, walking the lane and coming through a gate. Buying the book hands over everything you have already reached.',
+    pass_bought: 'The book is yours. Everything you had already reached is in your purse.',
+    pass_late: 'Not enough of the season left for the book to be worth its price — it comes back round with the next one. The free column still pays out.',
+    ad_daily: 'A video for {n} treats',
     goal_mole: 'Fill in {n} molehills',
     a11y_mole: 'a molehill, {n} moves until it pushes earth up',
     a11y_mole_pushed: 'earth pushed up on {n} squares',
@@ -2122,6 +2213,8 @@ const STRINGS = {
     win_replay: 'Bölüm tam ödemesini ilk geçişte yapar.',
     store_thanks: 'Kutuya {n} ödül girdi',
     store_failed: 'İşlem geçmedi. Hiçbir ücret alınmadı.',
+    store_restored: 'Geri yüklendi. {n} şey kesene döndü.',
+    store_restore_none: 'Bekleyen bir şey yok — ödediğin her şey zaten burada.',
 
     shop_food: 'Yiyecek', shop_toys: 'Oyuncak', shop_boost: 'Destek',
     shop_care: 'Bakım', shop_look: 'Görünüm',
@@ -2143,10 +2236,27 @@ const STRINGS = {
     fam_locked: '{n}. bölüme ulaş',
     fam_fav: 'Şununla dolar',
     fam_adopted: 'Hoş geldin {name}',
+    fam_groom: 'Postunu değiştir',
+    rate_t: 'Nasıl buldun?',
+    rate_s: 'Mağaza sayfasına ayıracağın bir dakika, küçük bir oyun için yapılabilecek her şeyden daha faydalı.',
+    rate_yes: 'Beğeniyorum',
+    rate_no: 'Pek değil',
+    rate_thanks: 'Anlaşıldı. Söylediğin için teşekkürler.',
+    share_btn: 'Birine onlardan bahset',
+    share_text: '{name} Biscuit Lane\'de yaşıyor. Gel, diğerleriyle de tanış.',
+    share_copied: 'Kopyalandı — istediğin yere yapıştır.',
+    groom_t: 'Tımar masasında',
+    groom_s: '{name} için bütün post ve göz renkleri. Eve geldiği renkler zaten onun; başka birine dokunup deneyebilir ve alabilirsin.',
 
     set_t: 'Ayarlar',
     set_sound: 'Ses efektleri', set_sound_s: 'Patlamalar, çıtırtılar, küçük zaferler.',
     set_music: 'Müzik', set_music_s: 'Oyunun arkasında sakin bir döngü.',
+    set_notify: 'Hatırlatmalar',
+    set_notify_s: 'Yalnız iki tane: canların geri geldiğinde, ve günlük yürüyüş yapılmadan geçtiğinde. Başka hiçbir şey.',
+    note_hearts_t: 'Canların geri geldi',
+    note_hearts_s: 'Tam takım, kapının önünde bekliyor.',
+    note_walk_t: 'Bugün kimse dışarı çıkmadı',
+    note_walk_s: 'Yürüyüş hâlâ orada, ve ödemesi var.',
     set_data: 'Oyun verisi paylaş', set_data_s: 'Oynanan bölümlerin ve karşılaşılan hataların anonim sayıları. Ne evcil hayvanın, ne adın.',
     set_haptics: 'Titreşim', set_haptics_s: 'Sadece destekleyen telefonlarda.',
     set_theme: 'Işık', set_theme_s: 'Sokakta sabah mı, akşam mı?',
@@ -2211,6 +2321,22 @@ const STRINGS = {
     eye_copper: 'Bakır gözler', eye_hazel: 'Ela gözler', eye_grey: 'Gri gözler',
     trait_none: 'Kim olduğunu henüz bulmaya çalışıyor.',
     trait_pending: 'Karakteri {n}. bağ seviyesinden sonra, ona {c} kez aynı şekilde baktığında belli olur.',
+    ad_watch: '{n} hamle daha',
+    ad_watch_sub: '{t} ödül yerine kısa bir video, günde bir kez.',
+    ad_go: 'İzle',
+    pass_t: 'Sezon defteri',
+    pass_sub: '{c} kademeden {n}. · {d} gün kaldı',
+    pass_ready: '{n} ödül hazır',
+    pass_stamps: '{c} damganın {n} tanesi',
+    pass_free: 'Herkese',
+    pass_paid: 'Defter',
+    pass_buy: 'Defteri al',
+    pass_have: 'Senin',
+    pass_take: 'Al',
+    pass_why: 'Damga; bir bölümü ilk kez geçmekten, üç yıldız almaktan, günlük yürüyüşten ve bir kapıdan geçmekten gelir. Defteri aldığında o ana kadar ulaştığın her şey birden hesabına geçer.',
+    pass_bought: 'Defter senin. O ana kadar ulaştığın her şey kesene geçti.',
+    pass_late: 'Defterin parasını çıkarmasına yetecek kadar sezon kalmadı — bir sonrakinde yine karşına çıkar. Ücretsiz sütun yine de ödemeye devam ediyor.',
+    ad_daily: '{n} ödül için video',
     goal_mole: '{n} köstebek yuvasını kapat',
     a11y_mole: 'köstebek yuvası, toprak çıkarmasına {n} hamle',
     a11y_mole_pushed: '{n} kareye toprak çıktı',
@@ -2399,6 +2525,32 @@ const EYE_COLORS = [
   { id: 'hazel', hex: '#8A6A3A' }, { id: 'grey', hex: '#8E98A6' }
 ];
 
+/* ---------- the coats nobody ever saw ----------
+
+   Every breed above carries three coats and six eye colours, all of them
+   drawn, all of them working. A player meets them once — on the sheet
+   that adopts the animal — picks one, and never sees the other two
+   again. Eighteen coats in the game, six of them ever displayed.
+
+   That is the answer to the thing test/economy.js has been complaining
+   about for two months. The shop runs out of things to want around the
+   fourth week; coins keep arriving and there is nothing left to spend
+   them on, which quietly ends the reason to clear the next level. Every
+   fix for that so far has been more colours of something — four more
+   collars, six more room themes — and they work, but a room theme is not
+   what a player in a pet game is trying to buy.
+
+   Changing the animal is. It costs no new art, because the art has been
+   in the file since the first week, and it is per-animal rather than
+   per-house: six pets is twelve coats a player might want instead of one
+   theme they might. Priced above a hat and below a room, because that is
+   what it is — bigger than a thing they are wearing, smaller than the
+   place they live.
+
+   The coat and eyes an animal was adopted with are theirs, and always
+   were. Nothing anybody already had is behind this. */
+const GROOM = { coat: 220, eye: 120 };
+
 /* ---------- the stretches of the lane ----------
 
    The lane was sixty levels arranged as a corridor. It already had a
@@ -2572,6 +2724,45 @@ const ECON = {
   continueAt: .70
 };
 
+/* ---------- where this game lives, once it lives anywhere ----------
+
+   Two links, and everything that needs one is switched off until it has
+   one. That is deliberate: a "rate us" button that opens a 404 and a
+   "tell a friend" that shares a dead address are both worse than no
+   button at all, and both are the kind of thing that ships because
+   somebody meant to come back to it.
+
+   The Play address is deterministic — it is the applicationId in
+   android/app/build.gradle and nothing else — so it is filled in here
+   and will start working the day the listing goes live. Apple's is a
+   number App Store Connect assigns when the app record is created, and
+   there is no way to know it in advance, so it is blank and everything
+   that would use it stays hidden on iOS until it is not.
+
+   `storeLink()` is the only reader. Nothing in the game asks which
+   platform it is on to decide whether to offer a share; it asks this,
+   and gets null when there is nowhere to send anybody. */
+const STORE_LINKS = {
+  play: 'https://play.google.com/store/apps/details?id=com.biscuitlane.game',
+  /* paste the App Store URL here — App Store Connect gives it once the
+     app record exists, in the form https://apps.apple.com/app/id0000000000 */
+  apple: ''
+};
+/* Whether this is the app or the web page. Asked here rather than
+   reading 75-native.js's `NATIVE`, because that file is the last one
+   loaded and the interface would then be naming something below it —
+   see test/deps.js, which calls that a cycle and is right to. */
+function nativeShell() {
+  return !!(typeof window !== 'undefined' && window.Capacitor &&
+    window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+function storeLink() {
+  const ios = typeof window !== 'undefined' && window.Capacitor &&
+    window.Capacitor.getPlatform && window.Capacitor.getPlatform() === 'ios';
+  const url = ios ? STORE_LINKS.apple : STORE_LINKS.play;
+  return url || null;
+}
+
 /* ---------- what is for sale ----------
 
    Prices are the sizes the genre has settled on, and they are not the
@@ -2588,18 +2779,188 @@ const TREAT_PACKS = [
   { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı', best: true }
 ];
 
+/* ---------- the season book ----------
+
+   The one part of this file that sells engagement rather than relief.
+
+   Everything else the game charges for is bought at a moment of wanting
+   something now: nine treats because the level was nearly won, three
+   pounds because the jar is full. Those moments are rare here on purpose
+   — a level is cleared four times in five and hearts never run dry — so
+   there was no third thing, and a shop whose whole stock is "you lost"
+   in a game people mostly win is a shop with nothing to sell.
+
+   The book is that third thing, and it is the format the genre settled
+   on because it is the only one that pays for playing rather than for
+   failing: stamps come from clearing levels, the track pays out either
+   way, and the paid side is bought once and then earned. Nobody is ever
+   sold a way past a board.
+
+   THE NUMBERS, and why each one.
+
+   A season is four weeks because that is how long a habit survives being
+   named. Thirty tiers at nine stamps is 270; ordinary play — six levels
+   a day, most of them cleared, the walk taken — earns about ten a day,
+   so 280 in a season. The player who plays the way this game expects
+   finishes it with a couple of days spare. That is deliberate and it is
+   the difference between a pass and a con: a track nobody reaches is a
+   track sold on a promise it never meant.
+
+   The paid side is 4.99 against a 4.99 pack of 110 treats. It holds a
+   hundred and twenty, plus the cosmetics, and it takes a month of
+   playing to collect. A pass has to beat the pack it sits next to,
+   because the pack only asks for money and the pass asks for the month
+   as well. */
+const SEASON_DAYS = 28;
+const SEASON_EPOCH = 20454;      /* a Monday, so seasons start on one */
+const PASS = {
+  sku: 'season_book', usd: '$4.99',
+  tiers: 30, per: 9,
+  /* what play is worth, before any of it is spent */
+  stamps: { clear: 1, threeStar: 1, walk: 2, gate: 5 }
+};
+
+/* The track. `free` is paid to everybody, `paid` only once the book is
+   bought — and then for every tier already reached, which is the whole
+   reason anybody buys one in the third week rather than the first. */
+const PASS_TRACK = [
+  /* THE FREE COLUMN WAS PAYING FOR THE SHOP.
+
+     Measured once test/economy.js could finally see this table: 2,516
+     coins a season, 7,748 over three months — against a catalogue that
+     costs 12,073 to buy outright. The free side of the book was handing
+     over two thirds of everything the game sells, on top of an income
+     that already outran the shop, and the result was the shop running
+     dry on day twenty-three instead of day twenty-eight. A reward that
+     buys what the player was going to buy anyway is not felt as a
+     reward; it is only felt later, as a shop with nothing in it.
+
+     Rebalanced towards things that get used up rather than banked. A tin
+     of stew is eaten, a hammer is thrown at a level and gone; a hundred
+     coins sits in the purse and quietly shortens the game. Same number
+     of tiers, same rhythm, about half the standing value. */
+  { free: { coins: 60 },                 paid: { treats: 3 } },
+  { free: { food: 'kibble' },            paid: { treats: 3 } },
+  { free: { boost: 'shuffle' },          paid: { boost: 'shuffle' } },
+  { free: { treats: 1 },                 paid: { treats: 4 } },
+  { free: { coins: 70 },                 paid: { collar: 'moss' } },
+  { free: { food: 'tuna' },              paid: { treats: 4 } },
+  { free: { food: 'kibble' },            paid: { treats: 4 } },
+  { free: { boost: 'hammer' },           paid: { treats: 5 } },
+  { free: { coins: 75 },                 paid: { hat: 'beanie' } },
+  { free: { treats: 2 },                 paid: { treats: 5 } },
+  { free: { food: 'kibble' },            paid: { treats: 5 } },
+  { free: { food: 'stew' },              paid: { boost: 'swap' } },
+  { free: { coins: 80 },                 paid: { treats: 5 } },
+  { free: { boost: 'moves' },            paid: { treats: 6 } },
+  { free: { food: 'kibble' },            paid: { collar: 'sky' } },
+  { free: { treats: 1 },                 paid: { treats: 6 } },
+  { free: { coins: 85 },                 paid: { treats: 6 } },
+  { free: { food: 'tuna' },              paid: { keepsake: 'paw' } },
+  { free: { food: 'kibble' },            paid: { treats: 6 } },
+  { free: { coins: 90 },                 paid: { treats: 7 } },
+  { free: { boost: 'hammer' },           paid: { hat: 'chef' } },
+  { free: { treats: 2 },                 paid: { treats: 7 } },
+  { free: { food: 'kibble' },            paid: { treats: 7 } },
+  { free: { coins: 95 },                 paid: { treats: 7 } },
+  { free: { food: 'stew' },              paid: { collar: 'rose' } },
+  { free: { food: 'tuna' },              paid: { treats: 8 } },
+  { free: { coins: 100 },                paid: { treats: 8 } },
+  { free: { treats: 2 },                 paid: { treats: 8 } },
+  { free: { boost: 'shuffle' },          paid: { boost: 'moves' } },
+  { free: { coins: 110 },                paid: { keepsake: 'photo' } }
+];
+
+/* Which season it is, and how far through. Both are worked out from the
+   date rather than stored, so a save that has been shut for two months
+   comes back into the right one instead of resuming a season that
+   ended.
+
+   THE SEASON IS THE PLAYER'S, NOT THE CALENDAR'S, and that took a
+   screenshot to notice. Both of these read from a fixed epoch — a
+   Monday in 2026 — so every player in the world was in the same season
+   at the same time, which is how a game with no leaderboard, no friends
+   list and nothing shared between two people ends up with a synchronised
+   clock nobody can see the point of.
+
+   What it cost: an install lands uniformly across the twenty-eight days,
+   so half of them arrive with under a fortnight left, and the home
+   screen offers those players a thirty-tier book — two hundred and
+   seventy stamps, four weeks of ordinary play — with eleven days to
+   finish it. On the day I looked the game was reading "Tier 6 of 30 · 3
+   days left" and the buy button was live underneath it. Anybody who took
+   that offer would have been right to ask for their money back.
+
+   Anchored to the player's own first day instead, everybody gets
+   twenty-eight of them. The book is worth the same to the person who
+   installed this morning as to the one who installed a fortnight ago,
+   which is the only version of this offer that is not a lottery on
+   install date. `start` is that day, and the epoch below is what these
+   fall back to for anyone asking about the calendar rather than a save —
+   test/economy.js does, and it has no player. */
+function seasonNo(start, dayNo) {
+  const d = dayNo === undefined ? dayNumber() : dayNo;
+  const s = start === undefined ? SEASON_EPOCH : start;
+  return Math.floor((d - s) / SEASON_DAYS);
+}
+function seasonDaysLeft(start, dayNo) {
+  const d = dayNo === undefined ? dayNumber() : dayNo;
+  const s = start === undefined ? SEASON_EPOCH : start;
+  return SEASON_DAYS - (((d - s) % SEASON_DAYS) + SEASON_DAYS) % SEASON_DAYS;
+}
+/* Tier reached, capped: stamps past the end of the track are not lost so
+   much as simply not worth anything, which is what every one of these
+   does and what stops the last week being dead time for anybody ahead. */
+function passTier(stamps) {
+  return Math.min(PASS.tiers, Math.floor((stamps || 0) / PASS.per));
+}
+
+/* What the book would hand over if it were bought right now: everything
+   on the paid side up to the tier already reached, counted in treats.
+
+   The same arithmetic the jar does, for the same reason. The jar refuses
+   to be opened before it holds more than the pack beside it costs,
+   because an offer that is worse than the one next to it is only ever
+   taken by somebody who did not check. The book sits next to a hundred
+   and ten treats for the same money and has the same duty.
+
+   Only treats are counted. The paid track also carries collars, hats and
+   a keepsake, and they are worth something — but they are worth
+   something to a player who wanted them, and this number exists to
+   answer "would this be a bad deal for somebody who did not". Undercounting
+   is the safe direction. */
+function passBanked(stamps) {
+  const tier = passTier(stamps);
+  let treats = 0;
+  for (let i = 0; i < tier && i < PASS_TRACK.length; i++) treats += PASS_TRACK[i].paid.treats || 0;
+  return treats;
+}
+
 /* ---------- the treat jar ----------
 
-   A jar on the shelf that fills while you play and is opened once, for
-   money. It is the friendliest thing in this file by a distance: it
-   cannot be bought before it has been earned, the number in it is the
-   player's own play rather than a price, and nothing is taken away from
-   anyone who never opens it — the jar simply stops filling when full.
+   A jar on the shelf that fills while you play and is opened for money.
+   It is the friendliest thing in this file by a distance: it cannot be
+   bought before it has been earned, the number in it is the player's own
+   play rather than a price, and nothing is taken away from anyone who
+   never opens it — the jar simply stops filling when full.
 
    It is also the only offer here that gets better the longer you have
    been playing, which is the opposite of how a difficulty paywall
-   works, and it is why this is the one I would keep. */
-const JAR = { perLevel: 2, cap: 150, sku: 'treat_jar', usd: '$2.99' };
+   works, and it is why this is the one I would keep.
+
+   It was 2 a level into a jar of 150, which is seventy-five levels —
+   twelve and a half days at the rate this game is actually played, and
+   six moments in three months. That is not a jar on a shelf, it is an
+   offer that turns up twice a season, and for anybody who never opens it
+   the thing fills once and then sits there for good. At 3 into 100 it
+   comes round every thirty-four levels, call it a week, which is the
+   rhythm the mechanic is for: something you notice filling.
+
+   The size is also the price. A hundred treats for the jar's money
+   against a hundred and ten for two-thirds more is deliberately the best
+   rate in the game, because the jar is the offer you earned and the
+   packs are the offer you did not. */
+const JAR = { perLevel: 3, cap: 100, sku: 'treat_jar', usd: '$2.99' };
 
 /* ---------- goods ---------- */
 const FOODS = [
@@ -2652,6 +3013,34 @@ const FURNITURE = [
   { id: 'basket', en: 'Toy basket', tr: 'Oyuncak sepeti', cost: 100, slot: 'left', enDesc: 'Everything ends up on the floor anyway.', trDesc: 'Nasılsa hepsi yere dökülüyor.' },
   { id: 'poster', en: 'Framed print', tr: 'Çerçeveli baskı', cost: 110, slot: 'wall', enDesc: 'A very good dog, painted badly.', trDesc: 'Çok iyi bir köpek, kötü çizilmiş.' }
 ];
+/* ---------- keepsakes ----------
+
+   The one part of the shop coins cannot reach, and not because a price
+   says so: a keepsake is made out of the save. The photograph is of this
+   animal at the stage it is today, the tag carries the name the player
+   typed, the blanket is woven in its own coat. There is no catalogue
+   entry to earn, because none of these objects exists until a particular
+   player's animal does.
+
+   That is why they are the right thing to price in treats. Everything
+   else in this file is a thing the game has and the player is working
+   towards; these are things only the player has. Priced so that somebody
+   who never pays a penny gets one about every week of ordinary play,
+   which is the shape of the whole economy in one line: money buys the
+   wait, never the thing. */
+const KEEPSAKES = [
+  { id: 'photo', en: 'Photograph', tr: 'Fotoğraf', cost: 40, treat: true, slot: 'wall',
+    enDesc: 'Framed, exactly as they are today.', trDesc: 'Tam bugünkü haliyle, çerçevede.' },
+  { id: 'paw', en: 'Paw print', tr: 'Pati izi', cost: 40, treat: true, slot: 'wall',
+    enDesc: 'Pressed into clay, name and all.', trDesc: 'Kile basılmış, adıyla birlikte.' }
+];
+
+/* Both tables furnish the same room, so anything that places an object
+   has to be able to find it in either. */
+function roomThing(id) {
+  return FURNITURE.find(f => f.id === id) || KEEPSAKES.find(k => k.id === id) || null;
+}
+
 const ROOM_THEMES = [
   { id: 'oat', en: 'Oat', tr: 'Yulaf', cost: 0, wall: '#E4D3B8', wall2: '#D3BE9E', floor: '#C79A6A' },
   { id: 'sage', en: 'Sage', tr: 'Adaçayı', cost: 150, wall: '#BFD3C1', wall2: '#A5BCA8', floor: '#B08A62' },
@@ -4143,16 +4532,34 @@ function freshSave() {
     boosters: { moves: 1, hammer: 2, swap: 1, shuffle: 1 },
     hats: { none: 1 },
     collars: { none: 1 },
+    /* coats and eye colours unlocked, beyond the ones each animal was
+       adopted wearing — see GROOM in 10-data.js. Keyed 'breedId:coatId'
+       and by eye id, because both outlive any particular pet: sell a
+       colour once and every animal in the house can wear it. */
+    coats: {},
+    eyes: {},
     furniture: {},
     roomThemes: { oat: 1 },
     room: { theme: 'oat', placed: [] },
     streak: 0,
     lastGift: 0,
     seen: {},                  // tutorial flags
-    settings: { sound: true, music: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true },
+    /* `notify` starts false and is only ever set by the player answering
+       the system's own dialog — see 16-notify.js. Defaulting it true
+       would have the settings screen showing a switch that is on while
+       nothing can actually be delivered. */
+    settings: { sound: true, music: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true, notify: false },
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
     jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing
+    /* id -> 1, except the photograph, which keeps the animal it is of */
+    keepsakes: {},
+    /* rewarded video, one a day each; rolls over with the gift ladder */
+    ads: { day: 0, used: {} },
+    /* the season book: stamps this season, and what has been taken */
+    pass: { season: -1, stamps: 0, paid: false, claimed: {} },
+    /* asked once, ever — see maybeAskForAReview in 60-ui.js */
+    rated: { asked: 0, said: 0 },
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
   };
 }
@@ -4234,6 +4641,100 @@ function canStore() {
   return storageWorks;
 }
 
+/* ============================================================
+   the copy the operating system will not throw away
+   ============================================================
+
+   Everything above this keeps the save in localStorage, which is the
+   right first answer: it is synchronous, it works in every browser, and
+   it costs nothing. It is also, inside a native shell, the wrong last
+   answer.
+
+   A Capacitor app is a WebView, and a WebView's localStorage is website
+   data as far as the operating system is concerned. iOS treats it that
+   way: WKWebView's store lives under Library/WebKit and the system is
+   entitled to evict it when the device is short of space. It does not
+   ask, it does not warn, and the app that comes back has never been
+   played. On Android it is steadier, but "clear cache" in some cleaner
+   apps takes it, and an uninstall certainly does.
+
+   For a game that has taken money, "your save is gone" is not a bug
+   report, it is a refund and a one-star review that is entirely fair.
+
+   So: localStorage stays the working copy, and a second copy goes
+   somewhere the OS treats as the app's own — Preferences, which is
+   NSUserDefaults on iOS and SharedPreferences on Android, both of which
+   are backed up and neither of which is evicted. Nothing here is on the
+   critical path. The vault is asked once at boot, written behind the
+   working copy, and on the web it does not exist at all: no plugin, no
+   bridge, `recover()` resolves having done nothing, and the shipped
+   file still has no dependency in it. */
+const VAULT = {
+  plugin: null,
+  last: 0,
+  /* A native round trip per keystroke-frequency save is waste. The
+     working copy is already written on every persist; this one only has
+     to be no more than a minute behind it, and an immediate persist —
+     which is what a purchase, a level ending and the app being put in a
+     pocket all do — pushes it through regardless. */
+  every: 60000,
+
+  ready() {
+    if (this.plugin) return true;
+    const P = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || null;
+    if (!P) return false;
+    this.plugin = P.Preferences || P.Storage || null;
+    return !!this.plugin;
+  },
+
+  /* Called once, before the save is read. Resolves to the vault's copy
+     if it holds one, and to null in every other case — no plugin, no
+     copy, unreadable copy. The caller decides what to do with it, which
+     is the only reason this does not just write into SAVE itself. */
+  async recover() {
+    if (!this.ready()) return null;
+    try {
+      const r = await this.plugin.get({ key: SAVE_KEY });
+      const raw = r && r.value;
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      return d && typeof d === 'object' ? d : null;
+    } catch (e) { return null; }
+  },
+
+  write(json, force) {
+    if (!this.ready()) return;
+    const t = now();
+    if (!force && t - this.last < this.every) return;
+    this.last = t;
+    try { this.plugin.set({ key: SAVE_KEY, value: json }); } catch (e) { }
+  },
+
+  clear() {
+    if (!this.ready()) return;
+    try { this.plugin.remove({ key: SAVE_KEY }); } catch (e) { }
+  }
+};
+
+/* Which of the two copies is the one to play from.
+
+   `lastSeen` is stamped on every write, so it is the honest comparison,
+   and the vault only wins when it is genuinely ahead. That matters more
+   than it sounds: a player who reinstalls onto a device whose vault
+   survived should get their save back, and a player whose vault is a
+   fortnight stale because they have been playing the web version on the
+   same phone should not have a fortnight taken off them. Equal goes to
+   the working copy, which is the one the game has been writing to. */
+function vaultRecover(mirror) {
+  if (!mirror) return;
+  let here = null;
+  try { here = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { here = null; }
+  const theirs = +mirror.lastSeen || 0;
+  const ours = here ? (+here.lastSeen || 0) : -1;
+  if (theirs <= ours) return;
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(mirror)); } catch (e) { }
+}
+
 function loadSave() {
   let raw = null;
   try { raw = localStorage.getItem(SAVE_KEY); } catch (e) { raw = null; }
@@ -4249,8 +4750,22 @@ function loadSave() {
     SAVE.daily = Object.assign({ day: 0, done: false, best: 0, streak: 0 }, d.daily || {});
     SAVE.jar = Object.assign({ fill: 0, opened: 0 }, d.jar || {});
     SAVE.jar.fill = clamp(Math.round(+SAVE.jar.fill || 0), 0, JAR.cap);
+    SAVE.keepsakes = Object.assign({}, d.keepsakes || {});
+    SAVE.rated = Object.assign({ asked: 0, said: 0 }, d.rated || {});
+    SAVE.coats = Object.assign({}, d.coats || {});
+    SAVE.eyes = Object.assign({}, d.eyes || {});
+    SAVE.ads = Object.assign({ day: 0, used: {} }, d.ads || {});
+    SAVE.pass = Object.assign({ season: -1, stamps: 0, paid: false, claimed: {} }, d.pass || {});
+    SAVE.pass.stamps = Math.max(0, Math.round(+SAVE.pass.stamps || 0));
 
     SAVE.pets = (Array.isArray(d.pets) ? d.pets : []).map(healPet).filter(Boolean);
+    /* Whatever every animal in the house is already wearing is owned,
+       whether or not it was ever paid for. A save from before the
+       grooming shelf existed has six pets in six coats and an empty
+       table, and the alternative is a game that opens by telling a
+       player the animal they have had for a month is wearing something
+       they do not own. */
+    SAVE.pets.forEach(p => lookUnlock(p.breed, p.coat, p.eye));
     if (!SAVE.pets.some(p => p.id === SAVE.activePet)) {
       SAVE.activePet = SAVE.pets.length ? SAVE.pets[0].id : null;
       CAST = null;   /* the walker leads the cast, so a repaired one rebuilds it */
@@ -4291,7 +4806,13 @@ function persist(immediate) {
   const doIt = () => {
     saveTimer = null;
     SAVE.lastSeen = now();
-    try { localStorage.setItem(SAVE_KEY, JSON.stringify(SAVE)); } catch (e) { /* private mode */ }
+    const json = JSON.stringify(SAVE);
+    try { localStorage.setItem(SAVE_KEY, json); } catch (e) { /* private mode */ }
+    /* and behind it, the copy the system will not evict. An immediate
+       persist is the game saying this one matters — a purchase, a level
+       ending, the app going into a pocket — so those go through the
+       throttle rather than waiting behind it. */
+    VAULT.write(json, !!immediate);
   };
   if (immediate) doIt(); else saveTimer = setTimeout(doIt, 400);
 }
@@ -4299,6 +4820,9 @@ function wipeSave() {
   SAVE_WIPED = true;
   if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
   try { localStorage.removeItem(SAVE_KEY); } catch (e) { }
+  /* Both copies, or the next boot recovers the save the player just
+     asked the game to forget. */
+  VAULT.clear();
 }
 
 /* ---------- hearts ---------- */
@@ -4380,6 +4904,33 @@ function makePet(breedIdx, coatIdx, eyeIdx, name) {
     lastPet: 0
   };
 }
+/* ---------- what an animal is allowed to look like ----------
+
+   Two tables, both keyed by the thing rather than by the pet, because a
+   colour outlives the animal wearing it: pay for Russian blue once and
+   every Sable in the house can wear it, the same way a gold collar
+   works. The coat key carries the breed because "cream" means a
+   different colour on a Marmalade than on a Retriever.
+
+   What an animal was adopted in is always theirs. That is not a
+   generosity, it is the only way this can be added to a game people are
+   already playing without taking something off them. */
+function coatKey(breedIdx, coatIdx) { return BREEDS[breedIdx].id + ':' + coatIdx; }
+function coatOwned(breedIdx, coatIdx) {
+  return !!(SAVE.coats && SAVE.coats[coatKey(breedIdx, coatIdx)]);
+}
+function eyeOwned(eyeIdx) {
+  const e = EYE_COLORS[eyeIdx];
+  return !!(e && SAVE.eyes && SAVE.eyes[e.id]);
+}
+function lookUnlock(breedIdx, coatIdx, eyeIdx) {
+  if (!SAVE.coats) SAVE.coats = {};
+  if (!SAVE.eyes) SAVE.eyes = {};
+  SAVE.coats[coatKey(breedIdx, coatIdx)] = 1;
+  const e = EYE_COLORS[eyeIdx];
+  if (e) SAVE.eyes[e.id] = 1;
+}
+
 function activePet() {
   if (!SAVE.pets.length) return null;
   return SAVE.pets.find(p => p.id === SAVE.activePet) || SAVE.pets[0];
@@ -4753,10 +5304,132 @@ function jarAdd(n) {
 }
 function jarFull() { return jarState().fill >= JAR.cap; }
 
+/* What the object is made of, recorded at the moment it is bought.
+
+   The photograph is the only one that has to be: a tag reads the name
+   off the pet every time it is drawn and a blanket reads the coat, so
+   those two follow the animal as it changes. A photograph that quietly
+   updated itself to the animal's current stage would not be a
+   photograph — the whole point is that it is of the kitten, after the
+   kitten has grown up. */
+function keepsakeOf(id) {
+  const p = activePet();
+  if (id !== 'photo' || !p) return 1;
+  return { breed: p.breed, coat: p.coat, eye: p.eye, hat: p.hat,
+           collar: p.collar, stage: petStageIdx(p), name: p.name, bond: p.bond };
+}
+/* ---------- the season book ----------
+
+   Stamps are earned in one function so that there is one place to look
+   when the rate is wrong, and the season rolls over here rather than at
+   boot: a save opened after a two-month gap has to land in the season it
+   is actually in, not resume the one it left. Unclaimed tiers go with
+   the old season, which is what a season is. */
+/* The day this player's seasons are counted from: their first.
+
+   A save older than the change has no `created` worth trusting to the
+   day — it does, but a save restored from a backup can carry a date the
+   phone has since disagreed with — so it is clamped to today. A start in
+   the future would put the player in season -1 and hand them a book that
+   never ends. */
+function seasonStart() {
+  const today = dayNumber();
+  return Math.min(today, dayNumber(SAVE.created || Date.now()));
+}
+function passState() {
+  if (!SAVE.pass) SAVE.pass = { season: -1, stamps: 0, paid: false, claimed: {} };
+  const now = seasonNo(seasonStart());
+  if (SAVE.pass.season !== now) {
+    SAVE.pass = { season: now, stamps: 0, paid: false, claimed: {} };
+  }
+  return SAVE.pass;
+}
+function passStamp(kind, n) {
+  const p = passState();
+  const worth = PASS.stamps[kind] || 0;
+  if (!worth) return 0;
+  const got = worth * (n || 1);
+  p.stamps += got;
+  return got;
+}
+/* Whether the book is worth what it costs, from where this player is
+   standing today.
+
+   The rule is the jar's rule: nothing in this game is offered for money
+   when the thing next to it, for the same money, is better. The jar
+   refuses to open until it holds more than a pack; the book refuses to
+   be sold until the paid side would return more treats than the pack it
+   sits beside. Everything else the book carries — the collars, the hats,
+   the keepsake, the month of having something to come back to — is on
+   top of a number that already stands on its own.
+
+   Projected at the player's own pace rather than at the designer's,
+   because the designer's pace is an average of people who are not this
+   one. Before there is enough of a week to have a pace, the track's own
+   design rate stands in: it is drawn to be finished in a season, and a
+   player on their second day should be taken at the game's word rather
+   than judged on two days of stamps. */
+function passWorthBuying() {
+  const p = passState();
+  const left = seasonDaysLeft(seasonStart());
+  const gone = SEASON_DAYS - left;
+  const designed = PASS.tiers * PASS.per / SEASON_DAYS;
+  const rate = gone >= 5 ? p.stamps / gone : designed;
+  const projected = p.stamps + rate * left;
+  const pack = TREAT_PACKS.reduce((m, x) => Math.max(m, x.treats), 0);
+  return passBanked(projected) >= pack;
+}
+
+/* Whether a reward is there to be taken: the tier has been reached, it
+   has not been taken already, and — for the paid column — the book has
+   been bought. Buying it in the last week hands over every paid reward
+   back to tier one, which is the only reason anybody buys one late. */
+function passClaimable(i, paid) {
+  const p = passState();
+  if (i >= PASS_TRACK.length || passTier(p.stamps) <= i) return false;
+  if (paid && !p.paid) return false;
+  return !p.claimed[(paid ? 'p' : 'f') + i];
+}
+function passClaim(i, paid) {
+  if (!passClaimable(i, paid)) return null;
+  const p = passState();
+  const r = PASS_TRACK[i][paid ? 'paid' : 'free'];
+  p.claimed[(paid ? 'p' : 'f') + i] = 1;
+  grantReward(r);
+  persist(true);
+  return r;
+}
+/* One reward, whatever kind it is. A cosmetic somebody already owns is
+   paid as treats instead: a track that hands a player their own hat back
+   is worse than one that hands them nothing, because it looks like the
+   game lost count. */
+function grantReward(r) {
+  if (!r) return;
+  if (r.coins) SAVE.coins += r.coins;
+  if (r.treats) SAVE.treats += r.treats;
+  if (r.food) SAVE.food[r.food] = (SAVE.food[r.food] || 0) + 1;
+  if (r.boost) SAVE.boosters[r.boost] = (SAVE.boosters[r.boost] || 0) + 1;
+  if (r.hat) { if (SAVE.hats[r.hat]) SAVE.treats += 4; else SAVE.hats[r.hat] = 1; }
+  if (r.collar) { if (SAVE.collars[r.collar]) SAVE.treats += 4; else SAVE.collars[r.collar] = 1; }
+  if (r.keepsake) {
+    if (SAVE.keepsakes[r.keepsake]) SAVE.treats += 20;
+    else SAVE.keepsakes[r.keepsake] = keepsakeOf(r.keepsake);
+  }
+}
+
 /* ---------- granting ----------
 
    Kept apart from BILLING.buy so there is one function that adds treats
-   to a save and it is called from one place, after a receipt. */
+   to a save and it is called from one place, after a receipt.
+
+   The season book used to be the exception: it was granted inline in the
+   sheet that sold it, three lines that set a flag. Being the exception
+   is how it came to be the one purchase in the game that paid out on a
+   cancelled sheet — the store's `buy` returns an object and the sheet
+   tested it for truthiness, so `{ ok: false, why: 'cancelled' }` read as
+   a sale. The treat store next to it had always tested `r.ok` and was
+   never wrong. That is the argument for one door rather than two, and
+   the book comes through this one now. */
 function grantPurchase(kind, id) {
   if (kind === 'pack') {
     const p = TREAT_PACKS.find(x => x.id === id);
@@ -4774,8 +5447,42 @@ function grantPurchase(kind, id) {
     persist(true);
     return got;
   }
+  if (kind === 'pass') {
+    const p = passState();
+    if (p.paid) return 0;              /* already theirs; a restore said so twice */
+    p.paid = true;
+    persist(true);
+    return 1;
+  }
 
   return 0;
+}
+
+/* ---------- a purchase that was paid for and never arrived ----------
+
+   The app can be killed between the store saying yes and the save being
+   written — a low-memory kill, a battery that ran out, a player who
+   swiped the app away while the sheet was closing. The money is gone and
+   the treats never came, and the player has no way to tell that story to
+   anybody.
+
+   The store still knows. Consumables sit in its queue until the app
+   claims them, so the fix is to ask on every launch and grant whatever
+   is outstanding. Nothing here can double-pay: a pack that has been
+   granted was consumed in the same breath and is no longer in the queue,
+   and the book checks `paid` before it sets it.
+
+   This is also the whole of what the "restore a purchase" button does,
+   which is why the button and the boot call the same function. */
+function claimOutstanding(skus) {
+  let n = 0;
+  (skus || []).forEach(sku => {
+    const pack = TREAT_PACKS.find(p => p.sku === sku);
+    if (pack) { n += grantPurchase('pack', pack.id) ? 1 : 0; return; }
+    if (sku === JAR.sku) { n += grantPurchase('jar', 'jar') ? 1 : 0; return; }
+    if (sku === PASS.sku) { n += grantPurchase('pass', 'pass') ? 1 : 0; }
+  });
+  return n;
 }
 
 /* ---------- the daily walk ---------- */
@@ -4850,6 +5557,174 @@ function claimGift() {
   return { reward, day };
 }
 
+/* ===== 16-notify.js ===== */
+/* ============================================================
+   16 — the two things worth interrupting somebody for
+   ============================================================
+
+   This game shipped with no way of ever reaching a player who had put it
+   down. Not a thin one — none. A phone game with no notification is a
+   phone game that is played until the day somebody forgets it exists,
+   and then never again, and nothing anywhere records which day that was.
+
+   That is a retention problem and it is also, indirectly, the whole
+   revenue problem: purchases, the season book and the jar all scale with
+   days played, and days played is exactly what a forgotten app stops
+   accumulating.
+
+   WHAT THIS WILL AND WILL NOT SEND.
+
+   Two, and only ever two, and both are the game finishing a sentence it
+   already started:
+
+     the hearts came back    — sent only to somebody who was actually
+                               stopped by the wall and told they would
+                               have to wait. It is the end of a wait they
+                               were shown a countdown for.
+
+     the walk is waiting     — the daily walk, once, the morning after a
+                               day it went untaken. Not every morning:
+                               the moment it is sent twice to somebody
+                               who did not come back the first time, it
+                               is a game nagging, and a nagging game gets
+                               its notifications turned off at the system
+                               level, which takes the useful one with it.
+
+   No streak-loss threats, no "we miss you", no offers, nothing timed to
+   a sale. A notification that sells something is the reason people
+   switch them off for a whole category of app.
+
+   WHEN IT ASKS. Not at boot. A permission dialog on first launch, before
+   the player knows what the game is, is a dialog that gets declined —
+   and on both platforms a decline is close to permanent, so the cheapest
+   possible moment to ask is also the worst. It asks at the one moment
+   the answer is obviously yes: the player has just run out of hearts and
+   been shown a two-hour countdown. That is the sentence a notification
+   finishes, and it is the only place in the game this is raised.
+
+   Nothing here reaches a network. A local notification is scheduled by
+   the operating system on the device and delivered by it; there is no
+   server, no push token, no identifier, and the Play data-safety answer
+   and privacy.html are both unchanged by this file. Guarded on the
+   bridge, so in a browser it registers nothing, schedules nothing and
+   costs nothing. */
+
+const NOTIFY = {
+  plugin: null,
+  /* Fixed ids rather than generated ones: scheduling the same id twice
+     replaces rather than stacks, which is what makes "cancel and
+     reschedule on every heart tick" safe to call as often as it likes. */
+  ids: { hearts: 1001, walk: 1002 },
+  asked: false,
+
+  ready() {
+    if (this.plugin) return true;
+    const P = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || null;
+    if (!P) return false;
+    this.plugin = P.LocalNotifications || null;
+    return !!this.plugin;
+  },
+
+  /* The player's own switch, which is a different question from the
+     system's. Somebody who said yes to the operating system and then
+     turned these off in settings has said no, and the system permission
+     is not a licence to ignore that. */
+  on() {
+    return !!(SAVE && SAVE.settings && SAVE.settings.notify);
+  },
+
+  /* Ask, once, and never again in this install — a second dialog after a
+     decline is not allowed to show on either platform anyway, so asking
+     again only produces a silent no that the code then has to guess at.
+     Resolves true if there is permission afterwards, however it got
+     there. */
+  async ask() {
+    if (!this.ready() || this.asked) return this.on();
+    this.asked = true;
+    try {
+      let s = await this.plugin.checkPermissions();
+      if (!s || s.display !== 'granted') s = await this.plugin.requestPermissions();
+      const ok = !!(s && s.display === 'granted');
+      SAVE.settings.notify = ok;
+      persist(true);
+      track('notify_ask', { ok: ok });
+      return ok;
+    } catch (e) { return false; }
+  },
+
+  async cancel(which) {
+    if (!this.ready()) return;
+    try { await this.plugin.cancel({ notifications: [{ id: this.ids[which] }] }); } catch (e) { }
+  },
+
+  /* One notification, at a wall-clock moment. Anything already at that
+     id is replaced, and a time already past is simply not scheduled —
+     the operating systems disagree about what to do with one of those
+     and none of the answers is "nothing", which is the only acceptable
+     one here. */
+  async at(which, when, title, body) {
+    if (!this.ready() || !this.on()) return;
+    if (!(when > Date.now() + 30000)) return;
+    try {
+      await this.plugin.schedule({
+        notifications: [{
+          id: this.ids[which],
+          title: title,
+          body: body,
+          schedule: { at: new Date(when), allowWhileIdle: true }
+        }]
+      });
+    } catch (e) { }
+  },
+
+  /* ---------- the two ----------
+
+     Both are recomputed rather than remembered, and both are cancelled
+     before they are set, so the state of the queue is a function of the
+     save rather than a history of what this function has done. Called
+     whenever the game is put down, which is the only moment either
+     answer can still be wrong.
+
+     The heart one is scheduled from the same arithmetic the countdown on
+     screen uses, so the notification and the number the player was
+     looking at cannot disagree. */
+  async sync() {
+    if (!this.ready()) return;
+    if (!this.on()) { this.cancel('hearts'); this.cancel('walk'); return; }
+
+    this.cancel('hearts');
+    if (SAVE.hearts <= 0) {
+      /* At a full pool rather than at the first heart, and that is a
+         choice rather than an oversight. The first one lands twenty-five
+         minutes later and buys a single level — which, at a clear rate
+         of four in five, is one level in five a session that ends
+         exactly where it started, stopped again with nothing to do about
+         it. A full set is about two hours, which is a sitting, and two
+         hours is also the difference between a game that reminds you and
+         a game that pesters you. */
+      const full = now() + heartsIn() + (HEART_MAX - 1) * HEART_REFILL;
+      this.at('hearts', full, T('note_hearts_t'), T('note_hearts_s'));
+    }
+
+    /* Ten in the morning, and ONLY for somebody who let today's walk go
+       — early enough to be the day's first idle moment, late enough not
+       to be an alarm clock.
+
+       The condition is the whole of the difference between a reminder
+       and a nag. A player who walks every day never sees this at all,
+       which is correct: they have the habit, and telling somebody about
+       a thing they have already done is how an app teaches its user that
+       its notifications are not worth reading. */
+    this.cancel('walk');
+    if (!dailyState().done) {
+      const d = new Date();
+      d.setHours(10, 0, 0, 0);
+      if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+      this.at('walk', d.getTime(), T('note_walk_t'), T('note_walk_s'));
+    }
+  }
+};
+
 /* ===== 17-billing.js ===== */
 /* ============================================================
    17 — the till
@@ -4905,12 +5780,23 @@ const BILLING = {
     return this.prices[sku] || fallback;
   },
 
+  /* Everything this game can sell, in one list.
+
+     It was written out at the one call site that needed it and left the
+     season book off, so the book's button showed the hardcoded `$4.99`
+     on a live store instead of the price in the player's own currency —
+     which in Turkey is not a rounding error, it is the wrong number in
+     the wrong unit. One list, and every caller reads it. */
+  skus() {
+    return TREAT_PACKS.map(p => p.sku).concat([JAR.sku, PASS.sku]);
+  },
+
   /* Ask the store what these cost where the player is. Safe to call when
      no store exists — it resolves having done nothing. */
   async refresh() {
     if (!this.ready()) return false;
     try {
-      const skus = TREAT_PACKS.map(p => p.sku).concat([JAR.sku]);
+      const skus = this.skus();
       const r = await this.plugin.getProducts({ productIdentifiers: skus, productIds: skus });
       const list = (r && (r.products || r.productList)) || [];
       list.forEach(p => {
@@ -4920,6 +5806,41 @@ const BILLING = {
       });
       return true;
     } catch (e) { return false; }
+  },
+
+  /* ---------- closing the transaction ----------
+
+     The half of a purchase nobody sees, and the one that decides whether
+     the money is actually yours.
+
+     Google Play holds a purchase open until the app says it has handed
+     the goods over. A purchase left open for three days is REFUNDED
+     AUTOMATICALLY — the player keeps the treats, the money goes back,
+     and nothing anywhere reports an error. Apple's queue is the same
+     shape with a gentler failure: an unfinished transaction is replayed
+     on every launch forever. So this is not tidying up after the sale.
+     Without it there is no sale.
+
+     Everything this game sells is a consumable. The packs and the jar
+     are bought again and again by design; the season book is bought once
+     per season, and a season ends — so all three have to be handed back
+     to the store as used, or the second purchase is refused with
+     "already owned". There is no non-consumable in this game and that is
+     deliberate: it is the only product type that needs no account.
+
+     The four names below are the four ways the plugins in circulation
+     spell the same call. Trying each is not indecision, it is the same
+     bet `ready()` makes: this seam should fit whichever one gets
+     installed without the game learning its name. */
+  async settle(receipt, sku) {
+    if (!this.plugin || !receipt) return;
+    const id = receipt.transactionId || receipt.purchaseToken || receipt.token || sku;
+    const arg = { productIdentifier: sku, productId: sku, transactionId: id, purchaseToken: id };
+    const names = ['consumePurchase', 'finishTransaction', 'consume', 'acknowledgePurchase'];
+    for (const n of names) {
+      if (typeof this.plugin[n] !== 'function') continue;
+      try { await this.plugin[n](arg); return; } catch (e) { /* try the next spelling */ }
+    }
   },
 
   /* The purchase itself.
@@ -4941,16 +5862,35 @@ const BILLING = {
          a forged receipt cheats is the person holding the phone. It is
          not enough the day this game keeps anything on a server, and
          that is the day this call grows a second half. */
+      await this.settle(r, sku);
       return { ok: true, receipt: r };
     } catch (e) {
       return { ok: false, why: 'failed' };
     }
   },
 
+  /* What the store still says this player owns.
+
+     Consumables do not survive being consumed, so on a healthy device
+     this comes back empty and that is the correct answer — there is
+     nothing to restore because nothing is outstanding. What it does
+     catch is the case that costs a player real money: a purchase that
+     was taken but never granted, because the app was killed between the
+     store saying yes and the save being written. Those sit in the queue
+     until somebody claims them, and this is how they get claimed.
+
+     Returns the product ids, so the caller decides what each one is
+     worth. This file knows about receipts and nothing about treats. */
   async restore() {
-    if (!this.ready()) return { ok: false, why: 'nostore' };
-    try { await this.plugin.restorePurchases(); return { ok: true }; }
-    catch (e) { return { ok: false, why: 'failed' }; }
+    if (!this.ready()) return { ok: false, why: 'nostore', skus: [] };
+    try {
+      const r = await this.plugin.restorePurchases({ productIds: this.skus() });
+      const list = (r && (r.purchases || r.transactions || r.results)) || [];
+      const skus = list
+        .map(p => p && (p.productId || p.productIdentifier || p.identifier || p.id))
+        .filter(Boolean);
+      return { ok: true, skus: skus, receipts: list };
+    } catch (e) { return { ok: false, why: 'failed', skus: [] }; }
   }
 };
 
@@ -5108,6 +6048,109 @@ const TRACK = {
    `TRACK.track(...)` at two hundred call sites reads like bookkeeping,
    and this is meant to disappear into the line it sits on. */
 function track(name, props) { TRACK.track(name, props); }
+
+/* ===== 19-ads.js ===== */
+/* ---------- rewarded video, if there is ever any ----------
+
+   There is no advertising in this game and there is no ad SDK in this
+   bundle. This file is the shape one would take, built the same way as
+   17-billing.js and 18-telemetry.js and for the same reason: so that the
+   day somebody decides to wire a network up, it is a change to one
+   function rather than a change to the game.
+
+   `plugin` is null. Nothing here opens a socket, loads a script or reads
+   an identifier, `available()` answers false for every slot, and every
+   button that would offer a video is therefore never drawn. The game
+   still works in flight mode and still ships with no runtime dependency.
+
+   WHAT CHANGES THE DAY A PLUGIN IS INSTALLED, and none of it is code:
+
+     - store/LISTING.md says "No advertising" in two languages, twice,
+       and the Play Data safety answers below it are all "No".
+     - privacy.html says there is no advertising and no third-party SDK,
+       in two languages. Every rewarded network collects an advertising
+       id; that sentence stops being true the moment one is linked.
+     - the content rating declares Ads: none.
+     - the listing sells this game on "drawn, not downloaded" and "works
+       in flight mode from the first launch". An ad SDK is a network
+       dependency and takes both.
+
+   That is not a reason never to do it. It is the reason the decision
+   belongs to a person rather than to a merge, and the reason this file
+   stops short of making it.
+
+   WHY REWARDED AND NOT INTERSTITIAL. Measured in tools/revenue.js: a
+   break between levels costs retention, and retention carries purchases
+   and rewarded views as well as its own format, so a forced break pays
+   for its lost days three times over. At Turkish eCPMs the whole thing
+   comes out negative. A rewarded video is the opposite trade — the
+   player asks for it, at a moment they already wanted something. */
+const ADS = {
+  plugin: null,
+
+  /* One a day, each. A rewarded video is a favour while it is rare and a
+     grind the moment it is not, and a player who can watch four in a row
+     to skip a wall is a player the difficulty curve no longer describes.
+     The cap is also what keeps the offer honest against the shop: it can
+     rescue an evening, it cannot replace the jar. */
+  caps: { carry: 1, treat: 1 },
+
+  /* What the daily one hands over. Two is a fifth of a carry-on and
+     about half a day of ordinary treat income — enough to be worth the
+     thirty seconds, nowhere near enough to make the rest of the economy
+     a formality. */
+  treatReward: 2,
+
+  /* Whether a video could actually be shown. Checked at call time, not
+     cached at load: a plugin arrives with the native bridge, which is
+     not up yet when this file is read. */
+  ready() {
+    if (this.plugin) return true;
+    const P = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || null;
+    if (!P) return false;
+    this.plugin = P.AdMob || P.RewardedVideo || P.Ads || null;
+    return !!this.plugin;
+  },
+
+  /* The daily counters live in the save so that closing the game is not
+     a way around them, and they roll over on the same day boundary the
+     gift ladder uses rather than on a timer of their own. */
+  state() {
+    if (!SAVE.ads) SAVE.ads = { day: 0, used: {} };
+    const today = dayNumber();
+    if (SAVE.ads.day !== today) { SAVE.ads.day = today; SAVE.ads.used = {}; }
+    return SAVE.ads;
+  },
+  left(slot) {
+    const cap = this.caps[slot] || 0;
+    return Math.max(0, cap - (this.state().used[slot] || 0));
+  },
+  available(slot) {
+    return this.ready() && this.left(slot) > 0;
+  },
+
+  /* Show one, and resolve true only if it was actually watched through.
+     A network reports "dismissed" and "no fill" as ordinary outcomes
+     rather than as errors, so both land here as false and the caller
+     leaves the player exactly where they were — never charged, never
+     told off. The counter moves on the reward, not on the attempt,
+     because a video that failed to load is not one the player used. */
+  async show(slot) {
+    if (!this.available(slot)) return false;
+    try {
+      const r = await this.plugin.showRewardVideoAd({ slot });
+      const won = !!(r && (r.rewarded || r.type || r.amount));
+      if (!won) return false;
+      const st = this.state();
+      st.used[slot] = (st.used[slot] || 0) + 1;
+      persist(true);
+      track('ad_reward', { slot });
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+};
 
 /* ===== 20-audio.js ===== */
 /* ============================================================
@@ -8225,6 +9268,15 @@ function drawRoom(c, W, H, o) {
   const has = id => placed.indexOf(id) >= 0;
   if (has('shelf')) drawShelf(c, W * .84, floorY - H * .30, W * .24);
   if (has('poster')) drawPoster(c, W * .16, floorY - H * .34, W * .16, o.pet);
+  /* the keepsakes hang between the print and the shelf, and the blanket
+     takes the rug's place on the floor because they share a slot */
+  if (has('photo')) drawPhoto(c, W * .31, floorY - H * .24, W * .15,
+    (SAVE.keepsakes && SAVE.keepsakes.photo) || o.pet);
+  /* small, and on the strip of wall between the window and the shelf:
+     at the size the print is, a brass disc stops reading as a tag on a
+     hook and starts reading as a medal on a wall */
+  if (has('paw')) drawPawPlaque(c, W * .775, floorY - H * .155, W * .085,
+    o.pet && o.pet.name, o.pet && specOfPet(o.pet));
   /* the feeder hangs against the window frame, not in mid-air */
   if (has('window')) drawFeeder(c, winX + winW * .04, winY + winH * .62, winW * .28, t);
   if (has('rug')) drawRug(c, W * .5, floorY + (H - floorY) * .55, W * .58, (H - floorY) * .52, { wall2: wallB });
@@ -8472,6 +9524,112 @@ function drawShelf(c, cx, y, w) {
   ellipse(c, cx + w * .28, y - w * .07, w * .08, w * .07); c.fill();
   c.fillStyle = '#5E9B80';
   rr(c, cx + w * .21, y - w * .01, w * .14, w * .02, w * .01); c.fill();
+  c.restore();
+}
+
+/* ---------- keepsakes ----------
+
+   These three are drawn from the save rather than from a catalogue, so
+   each one takes the animal (or the record of it) instead of an id. */
+
+/* The photograph. The frame and mount are the object; what is inside it
+   is the game's own drawFace, run against a spec built from the record
+   taken when it was bought — so it really is the animal as it was, right
+   down to the collar it had on, and it does not follow the animal as it
+   grows. The warm wash over the top is what makes it read as a print of
+   a face rather than a face in a hole in the wall. */
+function drawPhoto(c, cx, cy, w, snap) {
+  const h = w * 1.18;
+  c.save();
+  /* frame, mount, print — three rectangles, back to front */
+  c.fillStyle = rgba('#000000', .16);
+  rr(c, cx - w / 2 + 2, cy - h / 2 + 3, w, h, w * .05); c.fill();
+  c.fillStyle = PAL.dark ? '#4A3A26' : '#6E4E2C';
+  rr(c, cx - w / 2, cy - h / 2, w, h, w * .05); c.fill();
+  c.fillStyle = PAL.dark ? '#EFE6D2' : '#FDF8EC';
+  rr(c, cx - w / 2 + w * .08, cy - h / 2 + w * .08, w * .84, h - w * .16, w * .02); c.fill();
+  const iw = w * .68, ih = h - w * .40;
+  const ix = cx - iw / 2, iy = cy - ih / 2 - w * .03;
+  c.fillStyle = PAL.dark ? '#C9B79A' : '#E8D9BE';
+  rr(c, ix, iy, iw, ih, w * .015); c.fill();
+  /* the animal, clipped to the print */
+  c.save();
+  rr(c, ix, iy, iw, ih, w * .015); c.clip();
+  if (snap && typeof snap === 'object') {
+    c.save();
+    c.translate(cx, iy + ih * .56);
+    drawFace(c, specOfPet(snap), iw * .58, {});
+    c.restore();
+  }
+  /* the wash, and a corner of light off the glass */
+  c.fillStyle = rgba('#8A5A22', .16);
+  c.fillRect(ix, iy, iw, ih);
+  const gl = c.createLinearGradient(ix, iy, ix + iw * .8, iy + ih);
+  gl.addColorStop(0, rgba('#FFFFFF', .22));
+  gl.addColorStop(.45, rgba('#FFFFFF', 0));
+  c.fillStyle = gl;
+  c.fillRect(ix, iy, iw, ih);
+  c.restore();
+  c.restore();
+}
+
+/* The paw print. Clay rather than brass, because the first version of
+   this was a gold disc on a wall and a gold disc on a wall is a medal.
+   Matte, a little off-round, the print pressed into it rather than drawn
+   on it, and the name scratched underneath while it was still wet. The
+   pad shape comes from the breed's own foot, so a dog's is not a cat's. */
+function drawPawPlaque(c, cx, cy, w, name, spec) {
+  const r = w * .46;
+  c.save();
+  /* the nail it hangs on, and the cord */
+  c.strokeStyle = rgba('#6B5949', .55);
+  c.lineWidth = Math.max(1, w * .022);
+  c.beginPath();
+  c.moveTo(cx - r * .30, cy - r * .86); c.lineTo(cx, cy - r * 1.30);
+  c.lineTo(cx + r * .30, cy - r * .86); c.stroke();
+  /* the disc: clay, so a soft gradient and no specular anything */
+  c.fillStyle = rgba('#2A1E12', .20);
+  ellipse(c, cx + 1.5, cy + 2.5, r, r * .98); c.fill();
+  const g = c.createLinearGradient(cx, cy - r, cx, cy + r);
+  g.addColorStop(0, PAL.dark ? '#C9B79A' : '#EFE2CB');
+  g.addColorStop(1, PAL.dark ? '#A8967A' : '#D8C6A8');
+  c.fillStyle = g;
+  ellipse(c, cx, cy, r, r * .98); c.fill();
+  c.strokeStyle = rgba('#6B5949', .28); c.lineWidth = Math.max(1, w * .018);
+  ellipse(c, cx, cy, r, r * .98); c.stroke();
+  /* the print, pressed in: darker fill with a light lower lip, which is
+     what an impression looks like from above */
+  const pc = rgba('#6B5949', .42);
+  const pad = spec && spec.breed && spec.breed.species === 'dog' ? 1.06 : .94;
+  c.save();
+  c.translate(cx, cy - r * .10);
+  c.fillStyle = rgba('#FFFFFF', .45);
+  ellipse(c, 0, r * .26 + 1.2, r * .34 * pad, r * .27 * pad); c.fill();
+  c.fillStyle = pc;
+  ellipse(c, 0, r * .26, r * .34 * pad, r * .27 * pad); c.fill();
+  [[-.34, -.16], [-.13, -.32], [.13, -.32], [.34, -.16]].forEach(t => {
+    c.fillStyle = rgba('#FFFFFF', .45);
+    ellipse(c, t[0] * r, t[1] * r + 1.2, r * .115, r * .145); c.fill();
+    c.fillStyle = pc;
+    ellipse(c, t[0] * r, t[1] * r, r * .115, r * .145); c.fill();
+  });
+  c.restore();
+  /* the name, scratched in while it was wet: small, and never wider
+     than the disc however long the player made it */
+  const txt = String(name || '').trim();
+  if (txt) {
+    let fs = r * .30;
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (let i = 0; i < 8; i++) {
+      c.font = '700 ' + fs.toFixed(1) + 'px Grandstander, sans-serif';
+      if (c.measureText(txt).width <= r * 1.44) break;
+      fs *= .86;
+    }
+    c.fillStyle = rgba('#FFFFFF', .40);
+    c.fillText(txt, cx, cy + r * .60 + 1);
+    c.fillStyle = rgba('#5C4413', .68);
+    c.fillText(txt, cx, cy + r * .60);
+  }
   c.restore();
 }
 
@@ -14084,6 +15242,126 @@ EV.on('won', showWin);
 EV.on('lost', showLose);
 EV.on('lane', openLevelIntro);
 
+
+/* ---------------- the season book ---------------- */
+
+/* One reward as a chip. Everything on the track is one of six things, so
+   this is a switch rather than a system; a seventh kind would be a sign
+   the track had grown a mechanic rather than a reward. */
+function passChip(r) {
+  if (!r) return '';
+  if (r.coins) return `<span class="reward" style="color:var(--accent-strong)">${IC.coin}+${r.coins}</span>`;
+  if (r.treats) return `<span class="reward" style="color:var(--plum)">${IC.treat}+${r.treats}</span>`;
+  const named = r.food ? FOODS.find(x => x.id === r.food)
+    : r.boost ? BOOSTERS.find(x => x.id === r.boost)
+      : r.hat ? HATS.find(x => x.id === r.hat)
+        : r.collar ? COLLARS.find(x => x.id === r.collar)
+          : r.keepsake ? KEEPSAKES.find(x => x.id === r.keepsake) : null;
+  return `<span class="reward">${goodName(named || {})}</span>`;
+}
+
+/* How many rewards are sitting there unclaimed, which is the only number
+   the home card needs and the reason it is worth a badge. */
+function passWaiting() {
+  let n = 0;
+  for (let i = 0; i < PASS_TRACK.length; i++) {
+    if (passClaimable(i, false)) n++;
+    if (passClaimable(i, true)) n++;
+  }
+  return n;
+}
+
+function passSheet() {
+  const draw = () => {
+    const p = passState();
+    const tier = passTier(p.stamps);
+    const into = p.stamps - tier * PASS.per;
+    return `
+    <span style="color:var(--accent-strong);width:48px;height:48px;align-self:center">${IC.star}</span>
+    <h2>${T('pass_t')}</h2>
+    <p style="color:var(--text-dim)">${T('pass_sub', { n: tier, c: PASS.tiers, d: seasonDaysLeft(seasonStart()) })}</p>
+    <div class="goalItem" style="align-items:center">
+      <span class="t"><b>${T('pass_stamps', { n: p.stamps, c: PASS.tiers * PASS.per })}</b>
+        <span style="display:block;height:6px;border-radius:3px;background:var(--surface-3);overflow:hidden;margin-top:6px">
+          <span style="display:block;height:100%;width:${Math.round(Math.min(1, tier >= PASS.tiers ? 1 : into / PASS.per) * 100)}%;background:var(--accent)"></span>
+        </span></span>
+    </div>
+    ${p.paid ? `<p style="color:var(--sage-ink,var(--text-dim))">${T('pass_have')}</p>`
+      /* No button when the book could not return what the pack beside it
+         costs. The track is still drawn — a season you cannot finish is
+         still a season worth seeing the shape of, and the free column
+         pays out either way — but there is nothing to tap, and the line
+         underneath says why rather than leaving a gap. */
+      : !passWorthBuying() ? `<p style="color:var(--text-faint);font-size:var(--t-micro);line-height:1.5">${T('pass_late')}</p>`
+      : `<button class="btn primary wide" id="pBuy">${T('pass_buy')} · ${BILLING.price(PASS.sku, PASS.usd)}</button>`}
+    <div class="passTrack">
+      <div class="passHead"><span></span><span>${T('pass_free')}</span><span>${T('pass_paid')}</span></div>
+      ${PASS_TRACK.map((row, i) => {
+        const reached = tier > i;
+        const cell = (paid) => {
+          const can = passClaimable(i, paid);
+          const took = p.claimed[(paid ? 'p' : 'f') + i];
+          /* The book's column has to look shut until it is bought.
+             Drawn the same as the free one it reads as a reward being
+             withheld for no stated reason, which is the one way a track
+             like this feels like a swindle rather than an offer. */
+          const shut = paid && !p.paid;
+          return `<span class="pc ${took ? 'took' : can ? 'can' : shut ? 'shut' : ''}">
+            ${passChip(row[paid ? 'paid' : 'free'])}
+            ${can ? `<button class="btn sm" data-take="${i}" data-paid="${paid ? 1 : 0}">${T('pass_take')}</button>` : ''}
+          </span>`;
+        };
+        return `<div class="passRow ${reached ? 'on' : ''}">
+          <span class="pn">${i + 1}</span>${cell(false)}${cell(true)}
+        </div>`;
+      }).join('')}
+    </div>
+    <p style="font-size:var(--t-micro);color:var(--text-faint);line-height:1.5">${T('pass_why')}</p>
+    <button class="btn ghost wide" id="pOk">${T('close')}</button>`;
+  };
+
+  const m = modal(draw());
+  const wire = () => {
+    $$('[data-take]', m.el).forEach(b => b.addEventListener('click', () => {
+      const got = passClaim(+b.dataset.take, b.dataset.paid === '1');
+      if (!got) return;
+      SFX.coin(); buzz(10); syncPurse();
+      m.el.innerHTML = draw(); wire();
+    }));
+    const buy = $('#pBuy', m.el);
+    if (buy) buy.addEventListener('click', async () => {
+      /* Same rule as everything else that costs money: if there is no
+         store behind this build, say so plainly rather than leaving a
+         button that does nothing. */
+      if (!BILLING.ready()) { storeShut(); return; }
+      buy.disabled = true;
+      track('buy_try', { sku: PASS.sku });
+      /* `buy` resolves to an object whichever way it went, so the test
+         has to be on `r.ok` and not on `r`. It was on `r`, and every
+         refusal the store can produce — a cancelled sheet most of all —
+         is an object, so this button handed over a four-pound season
+         book to anybody who opened the payment sheet and changed their
+         mind. Granting goes through grantPurchase now, which is the one
+         function that writes a purchase into a save. */
+      const r = await BILLING.buy(PASS.sku);
+      if (!r.ok) {
+        buy.disabled = false;
+        track('buy_fail', { why: r.why || 'unknown' });
+        if (r.why === 'nostore') { storeShut(); return; }
+        if (r.why !== 'cancelled') { SFX.bad(); toast(T('store_failed'), 'treat'); }
+        return;
+      }
+      track('buy_ok', { sku: PASS.sku });
+      grantPurchase('pass', 'pass');
+      SFX.win();
+      toast(T('pass_bought'), 'check');
+      m.el.innerHTML = draw(); wire();
+    });
+    $('#pOk', m.el).addEventListener('click', m.close);
+  };
+  wire();
+}
+
 /* ---------------- home ---------------- */
 function heroGift() {
   return `
@@ -14158,6 +15436,21 @@ function renderHome() {
         <span class="btn sm">${d.done ? T('daily_walk_again') : T('daily_walk_go')}</span>
       </button>`;
     })()}
+    ${(() => {
+      const p = passState();
+      const tier = passTier(p.stamps);
+      const waiting = passWaiting();
+      return `
+      <button class="card todayTile passCard" id="passCard">
+        <span class="di" style="color:var(--accent-strong)">${IC.star}</span>
+        <span class="dt">
+          <b>${T('pass_t')}</b>
+          <small>${T('pass_sub', { n: tier, c: PASS.tiers, d: seasonDaysLeft(seasonStart()) })}</small>
+          ${waiting ? `<span class="pill warn" style="margin-top:5px">${T('pass_ready', { n: waiting })}</span>` : ''}
+        </span>
+        <span class="btn sm">${T('pass_take')}</span>
+      </button>`;
+    })()}
     </div>
 
     <div class="card pad16" style="display:flex;flex-direction:column;gap:13px">
@@ -14212,6 +15505,7 @@ function renderHome() {
 
   const gc = $('#giftCard'); if (gc) gc.addEventListener('click', openDailyGift);
   const dc = $('#dailyCard'); if (dc) dc.addEventListener('click', startDailyWalk);
+  const pc = $('#passCard'); if (pc) pc.addEventListener('click', passSheet);
   $('#careFeed').addEventListener('click', openFeed);
   $('#carePlay').addEventListener('click', carePlay);
   $('#careWash').addEventListener('click', careWash);
@@ -14544,6 +15838,15 @@ function drawFurniturePreview(c, id, px) {
     case 'tower': drawTower(c, cx, base, px * .5, px * .62); break;
     case 'window': drawFeeder(c, cx, px * .42, px * .42, 0); break;
     case 'basket': drawBasket(c, cx, px * .66, px * .5); break;
+    /* the three keepsakes preview against the animal you have now, which
+       is the honest preview: it is what you would be buying a picture of */
+    case 'photo': drawPhoto(c, cx, px * .46, px * .46,
+      (SAVE.keepsakes && SAVE.keepsakes.photo) || activePet()); break;
+    case 'paw': {
+      const pk = activePet();
+      drawPawPlaque(c, cx, px * .52, px * .42, pk && pk.name, pk && specOfPet(pk));
+      break;
+    }
   }
   c.restore();
 }
@@ -14720,6 +16023,20 @@ function shopRoom() {
         : `<button class="btn sm price" data-buy="${f.id}" data-kind="furniture">${T('shop_buy')} ${priceTag(f.cost)}</button>`}
     </div>`;
   }).join('')}</div>
+  <div class="sectitle"><h3>${LANG === 'tr' ? 'Hatıra' : 'Keepsakes'}</h3>
+    <span class="hint">${LANG === 'tr' ? 'senin hayvanından yapılmış' : 'made from your own animal'}</span></div>
+  <div class="grid2">${KEEPSAKES.map(k => {
+    const owned = !!SAVE.keepsakes[k.id];
+    const placed = SAVE.room.placed.indexOf(k.id) >= 0;
+    return `<div class="good ${placed ? 'owned' : ''}">
+      <div class="art"><canvas data-room="${k.id}" width="82" height="74"></canvas></div>
+      <div class="nm">${goodName(k)}</div>
+      <div class="ds">${goodDesc(k)}</div>
+      ${owned
+        ? `<button class="btn sm ${placed ? 'ghost' : ''}" data-equip="${k.id}" data-kind="furniture">${placed ? T('shop_placed') : T('shop_place')}</button>`
+        : `<button class="btn sm price" data-buy="${k.id}" data-kind="keepsake">${T('shop_buy')} ${priceTag(k.cost, true)}</button>`}
+    </div>`;
+  }).join('')}</div>
   <div class="sectitle"><h3>${LANG === 'tr' ? 'Duvar' : 'Walls'}</h3></div>
   <div class="grid2">${ROOM_THEMES.map(t => {
     const owned = !!SAVE.roomThemes[t.id];
@@ -14735,12 +16052,14 @@ function shopRoom() {
 }
 function buyThing(id, kind) {
   audioResume();
-  const table = { food: FOODS, toy: TOYS, boost: BOOSTERS, hat: HATS, collar: COLLARS, furniture: FURNITURE, theme: ROOM_THEMES };
+  const table = { food: FOODS, toy: TOYS, boost: BOOSTERS, hat: HATS, collar: COLLARS,
+                  furniture: FURNITURE, theme: ROOM_THEMES, keepsake: KEEPSAKES };
   const item = table[kind].find(x => x.id === id);
   if (!item) return;
   /* one of a kind: taking the coins twice for a single hat is theft */
   const once = { toy: SAVE.toys, hat: SAVE.hats, collar: SAVE.collars,
-                 furniture: SAVE.furniture, theme: SAVE.roomThemes }[kind];
+                 furniture: SAVE.furniture, theme: SAVE.roomThemes,
+                 keepsake: SAVE.keepsakes }[kind];
   if (once && once[id]) return;
   if (item.treat) {
     if (SAVE.treats < item.cost) { SFX.bad(); toast(LANG === 'tr' ? 'Ödül yetmiyor' : 'Not enough treats', 'treat'); return; }
@@ -14756,6 +16075,7 @@ function buyThing(id, kind) {
   else if (kind === 'collar') { SAVE.collars[id] = 1; equipThing(id, 'collar', true); }
   else if (kind === 'furniture') { SAVE.furniture[id] = 1; equipThing(id, 'furniture', true); }
   else if (kind === 'theme') { SAVE.roomThemes[id] = 1; equipThing(id, 'theme', true); }
+  else if (kind === 'keepsake') { SAVE.keepsakes[id] = keepsakeOf(id); equipThing(id, 'furniture', true); }
   SFX.coin();
   buzz(10);
   toast(T('shop_bought', { item: goodName(item) }), 'check');
@@ -14771,9 +16091,9 @@ function equipThing(id, kind, quiet) {
     const i = SAVE.room.placed.indexOf(id);
     if (i >= 0) SAVE.room.placed.splice(i, 1);
     else {
-      const slot = FURNITURE.find(f => f.id === id).slot;
+      const slot = roomThing(id).slot;
       SAVE.room.placed = SAVE.room.placed.filter(x => {
-        const o = FURNITURE.find(f => f.id === x);
+        const o = roomThing(x);
         return !o || o.slot !== slot || slot === 'wall';
       });
       SAVE.room.placed.push(id);
@@ -14852,10 +16172,18 @@ function renderFamily() {
     </div>` : ''}
 
     ${shelfHtml()}
+
+    ${storeLink() ? `<button class="btn ghost wide" id="famShare">${T('share_btn')}</button>` : ''}
   `;
   paintArtCanvases(pad);
   $$('[data-pet]', pad).forEach(b => b.addEventListener('click', () => openPetSheet(b.dataset.pet)));
   $$('[data-adopt]', pad).forEach(b => b.addEventListener('click', () => tryAdopt(+b.dataset.adopt, cost, need)));
+  /* On the family page rather than in settings: what somebody wants to
+     show a friend is the animals, and this is the page they are on when
+     they are looking at them. Absent entirely until there is a listing
+     to link to. */
+  const sh = $('#famShare', pad);
+  if (sh) sh.addEventListener('click', () => { SFX.tap(); sharePets(); });
 }
 function openPetSheet(id) {
   const p = SAVE.pets.find(x => x.id === id);
@@ -14884,12 +16212,14 @@ function openPetSheet(id) {
       ${isActive ? '' : `<button class="btn primary" id="psActive">${T('fam_setactive')}</button>`}
       <button class="btn" id="psRename">${T('fam_rename')}</button>
     </div>
+    <button class="btn wide" id="psGroom">${T('fam_groom')}</button>
     <button class="btn ghost wide" id="psClose">${T('close')}</button>
   `);
   const c = fitCanvas($('#psArt', m.el), 150, 150);
   c.translate(75, 20);
   drawBody(c, specOfPet(p), 68, { mouth: 'smile' });
   paintArtCanvases(m.el);
+  $('#psGroom', m.el).addEventListener('click', () => { m.close(); groomSheet(p.id); });
   const act = $('#psActive', m.el);
   if (act) act.addEventListener('click', () => {
     SAVE.activePet = p.id; castChanged(); persist(true); m.close();
@@ -14931,6 +16261,9 @@ function tryAdopt(breedIdx, cost, need) {
     SAVE.coins -= cost;
     track('adopt', { breed: breedIdx, owned: SAVE.pets.length });
     const p = makePet(breedIdx, coat, eye, name);
+    /* what they arrived in is theirs, and the grooming shelf has to know
+       it before it draws a price on the coat they are wearing */
+    lookUnlock(breedIdx, coat, eye);
     SAVE.pets.push(p);
     /* the lane fills with your own: one fewer stranger on every board
        from here on, and this one wearing the coat you just picked */
@@ -14994,6 +16327,214 @@ function customiseSheet(breedIdx, done) {
     done(coat, eye, nm);
   });
 }
+/* ---------------- being asked what you think ----------------
+
+   A store listing with no ratings on it does not get installed, and a
+   game that never asks does not get rated: the people who bother
+   unprompted are overwhelmingly the ones who came to complain. This game
+   had no prompt at all, which is not neutrality — it is a listing that
+   scores worse than the game does.
+
+   Three rules, and they are the whole difference between this and the
+   thing everybody hates:
+
+     ASK ONCE. Ever. Not once a version, not once a month. `rated.asked`
+     is written the first time and never cleared, and there is no path
+     through here that asks a second time.
+
+     ASK AFTER A GOOD MOMENT, NOT DURING ONE. Three stars on a level they
+     had not cleared before, fifteen levels in, on a save that has
+     already seen a dozen clears. Somebody who has just lost is not being
+     asked what they think of the game.
+
+     ASK THE QUESTION FIRST. The two-step is not a trick to filter out
+     bad reviews — anybody who wants to leave one can, from the listing,
+     without this. It is that "would you rate us" and "how are you
+     finding it" are different questions, and sending somebody who is not
+     enjoying it to a five-star form is how you get a one-star answer to
+     a question you did not ask.
+
+   And it is switched off entirely until there is a listing to send
+   anybody to. See STORE_LINKS. */
+function maybeAskForAReview() {
+  /* The app only. On the web this would be asking somebody playing in a
+     browser to go and rate an Android app they have not installed, which
+     is not a favour, it is a non sequitur. The share button below is
+     different and stays: a link to the listing is a useful thing for a
+     web player to send somebody. */
+  if (!nativeShell() || !storeLink()) return;
+  if (!SAVE.rated) SAVE.rated = { asked: 0, said: 0 };
+  if (SAVE.rated.asked) return;
+  if (SAVE.reached < 15 || SAVE.stats.cleared < 12) return;
+  SAVE.rated.asked = now();
+  persist(true);
+  track('review_ask', { n: SAVE.reached });
+  /* behind the win card and its confetti, not on top of them */
+  setTimeout(() => {
+    const m = modal(`
+      <span style="color:var(--accent-strong);width:48px;height:48px;align-self:center">${IC.star}</span>
+      <h2>${T('rate_t')}</h2>
+      <p style="color:var(--text-dim)">${T('rate_s')}</p>
+      <button class="btn primary wide" id="rvYes">${T('rate_yes')}</button>
+      <button class="btn ghost wide" id="rvNo">${T('rate_no')}</button>
+    `);
+    $('#rvYes', m.el).addEventListener('click', () => {
+      SAVE.rated.said = 1; persist(true);
+      track('review_yes');
+      m.close();
+      openStorePage();
+    });
+    $('#rvNo', m.el).addEventListener('click', () => {
+      SAVE.rated.said = -1; persist(true);
+      track('review_no');
+      m.close();
+      /* No form, no email, no "tell us more". Somebody who has just said
+         they are not enjoying it has answered the question; asking them
+         to write it down as well is asking for a favour immediately
+         after being told no. */
+      toast(T('rate_thanks'), 'heart');
+    });
+  }, 900);
+}
+
+/* The listing itself. A native in-app review sheet is better than this
+   in every way — it never leaves the game — but it needs a plugin that
+   is not installed, so it is tried by name first and this is what
+   happens when it is not there. */
+function openStorePage() {
+  const url = storeLink();
+  if (!url) return;
+  const P = (window.Capacitor && window.Capacitor.Plugins) || {};
+  const R = P.InAppReview || P.RateApp || null;
+  if (R && R.requestReview) { try { R.requestReview(); return; } catch (e) { } }
+  try { window.open(url, '_blank', 'noopener'); } catch (e) { location.href = url; }
+}
+
+/* ---------------- telling somebody about it ----------------
+
+   The room is the screenshot this game would be shared as — it is the
+   one screen that is nobody else's, and a match-3 board is a match-3
+   board. Sharing an image needs a filesystem plugin as well as a share
+   one, and neither is installed; what is here is the sentence and the
+   link, through whichever of the two share mechanisms the device has.
+
+   Hidden, like the review prompt, until there is a link. */
+function sharePets() {
+  const url = storeLink();
+  if (!url) return;
+  const pet = activePet();
+  const text = T('share_text', { name: (pet && pet.name) || T('brandSub') });
+  track('share');
+  const P = (window.Capacitor && window.Capacitor.Plugins) || {};
+  if (P.Share && P.Share.share) {
+    try { P.Share.share({ title: 'Biscuit Lane', text: text, url: url }); return; } catch (e) { }
+  }
+  if (navigator.share) {
+    navigator.share({ title: 'Biscuit Lane', text: text, url: url }).catch(() => { });
+    return;
+  }
+  /* Neither, which is most desktop browsers: put it on the clipboard and
+     say so, rather than opening a sheet that is not there. */
+  const line = text + ' ' + url;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(line).then(() => toast(T('share_copied'), 'check'), () => { });
+  }
+}
+
+/* ---------------- grooming ----------------
+
+   The picker above, minus the name and plus a price.
+
+   It exists because eighteen coats and six eye colours have been in this
+   game since the first week and a player sees three of the coats once,
+   on the sheet that adopts the animal, and then never again. The room
+   ran out of things to want in the fourth week; the animal never had
+   any. This is the same art, sold.
+
+   A locked colour is drawn, not hidden. Half the point of a shelf is
+   seeing what is on it — and the preview is the animal you actually
+   have, wearing the thing you are deciding about, which is the only
+   honest way to sell a colour. */
+function groomSheet(id) {
+  const p = SAVE.pets.find(x => x.id === id);
+  if (!p) return;
+  SFX.tap();
+  let coat = p.coat, eye = p.eye;
+  const draw = () => `
+    <h2>${T('groom_t')}</h2>
+    <canvas id="grArt" width="150" height="150" style="width:150px;height:150px;align-self:center"></canvas>
+    <p style="color:var(--text-dim)">${T('groom_s', { name: p.name })}</p>
+    <div class="eyebrow">${T('onb_coat')}</div>
+    <div class="choiceGrid" id="grCoats" style="grid-template-columns:repeat(3,1fr)">
+      ${BREEDS[p.breed].coats.map((co, i) => {
+        const own = coatOwned(p.breed, i);
+        return `<button class="choice ${i === coat ? 'on' : ''}" data-coat="${i}" style="padding:9px 4px">
+          <canvas data-face="${p.breed}" data-coat="${i}" width="46" height="46"></canvas>
+          <span class="nm" style="font-size:var(--t-micro)">${LANG === 'tr' ? co.tr : co.en}</span>
+          ${own ? '' : `<span class="pill warn" style="margin-top:3px">${T('fam_cost', { n: GROOM.coat })}</span>`}
+        </button>`;
+      }).join('')}
+    </div>
+    <div class="eyebrow">${T('onb_eyes')}</div>
+    <div class="swatches" id="grEyes">
+      ${EYE_COLORS.map((e, i) => `<button class="sw ${i === eye ? 'on' : ''} ${eyeOwned(i) ? '' : 'locked'}"
+        data-eye="${i}" aria-label="${T('eye_' + e.id)}" title="${eyeOwned(i) ? T('eye_' + e.id) : T('eye_' + e.id) + ' · ' + T('fam_cost', { n: GROOM.eye })}"
+        style="background:${e.hex}">${eyeOwned(i) ? '' : IC.lock}</button>`).join('')}
+    </div>
+    <button class="btn ghost wide" id="grClose">${T('close')}</button>`;
+
+  const m = modal(draw());
+  const wire = () => {
+    const c = fitCanvas($('#grArt', m.el), 150, 150);
+    c.translate(75, 20);
+    /* the pet's own spec with the candidate colours dropped in, so the
+       hat, the collar and the fact that they are still a kitten all
+       survive the preview — this is the animal you have, not a stock one
+       in the colour you are looking at */
+    drawBody(c, Object.assign(
+      specOf(p.breed, BREEDS[p.breed].coats[coat], EYE_COLORS[eye].hex),
+      { hat: p.hat, collar: p.collar, stage: petStageIdx(p) }), 68, { mouth: 'smile' });
+    paintArtCanvases(m.el);
+    /* One handler for both rows: a colour is either already theirs, in
+       which case it is worn now, or it is not, in which case it is
+       bought and then worn. Nothing here has a separate buy button —
+       tapping the thing you want is the whole interaction, and the price
+       is on it before you tap. */
+    const choose = (own, cost, set) => {
+      if (!own) {
+        if (SAVE.coins < cost) { SFX.bad(); toast(T('shop_poor'), 'coin'); return; }
+        SAVE.coins -= cost;
+        SFX.coin();
+      } else SFX.tap();
+      set();
+      p.coat = coat; p.eye = eye;
+      lookUnlock(p.breed, coat, eye);
+      /* the animal on the board wears what the animal upstairs wears */
+      castChanged();
+      persist(true); syncPurse();
+      m.el.innerHTML = draw(); wire();
+    };
+    /* `button[data-coat]` and not `[data-coat]`: the swatch canvas inside
+       each button carries the same attribute so paintArtCanvases can
+       find it, and a bare attribute selector hands a click handler to
+       both. On this sheet a click spends coins, so a listener that can
+       fire twice for one tap is not a tidiness question. */
+    $$('button[data-coat]', m.el).forEach(b => b.addEventListener('click', () => {
+      const i = +b.dataset.coat;
+      choose(coatOwned(p.breed, i), GROOM.coat, () => { coat = i; });
+    }));
+    $$('button[data-eye]', m.el).forEach(b => b.addEventListener('click', () => {
+      const i = +b.dataset.eye;
+      choose(eyeOwned(i), GROOM.eye, () => { eye = i; });
+    }));
+    $('#grClose', m.el).addEventListener('click', () => {
+      m.close();
+      renderFamily(); renderHome();
+    });
+  };
+  wire();
+}
+
 const NAME_POOL = {
   cat: ['Biscuit', 'Olive', 'Pepper', 'Mochi', 'Saffron', 'Juniper', 'Tuna', 'Clove'],
   dog: ['Barley', 'Rusty', 'Maple', 'Otto', 'Pickle', 'Hazel', 'Bramble', 'Nugget']
@@ -15231,8 +16772,21 @@ function treatStore(why) {
     m.close();
     toast(T('store_thanks', { n: got }), 'treat');
   }));
+  /* The button called restore and then threw the answer away, which made
+     it a button that did nothing at all — the store handed back a list
+     of what it still held and nobody read it. It grants now, and it says
+     which of the two things happened, because "nothing came back" is a
+     result and a silent button is not. */
   const rs = $('#stRestore', m.el);
-  if (rs) rs.addEventListener('click', async () => { await BILLING.restore(); syncPurse(); });
+  if (rs) rs.addEventListener('click', async () => {
+    rs.disabled = true;
+    const r = await BILLING.restore();
+    rs.disabled = false;
+    const n = r.ok ? claimOutstanding(r.skus) : 0;
+    syncPurse();
+    if (n) { SFX.coin(); m.close(); toast(T('store_restored', { n: n }), 'check'); }
+    else toast(T('store_restore_none'), 'treat');
+  });
   $('#stOk', m.el).addEventListener('click', m.close);
 }
 /* What the treat sheet becomes while there is no till.
@@ -15257,8 +16811,22 @@ function earnTreatsSheet(why) {
     ${line(IC.star, T('earn_star'))}
     ${line(IC.gift, T('earn_gift'))}
     ${j.fill ? line(IC.treat, T('earn_jar', { n: j.fill, c: JAR.cap })) : ''}
+    ${ADS.available('treat') ? `<button class="btn wide" id="etAd">${T('ad_daily', { n: ADS.treatReward })}</button>` : ''}
     <button class="btn primary wide" id="etOk">${T('ok')}</button>
   `);
+  /* Listed under the ways to earn rather than above them, because it is
+     one: the difference is that it costs half a minute instead of a
+     level. Only drawn when a video could actually be shown, which today
+     is never — see 19-ads.js. */
+  const etAd = $('#etAd', m.el);
+  if (etAd) etAd.addEventListener('click', async () => {
+    etAd.disabled = true;
+    if (!await ADS.show('treat')) { etAd.disabled = false; SFX.bad(); return; }
+    SAVE.treats += ADS.treatReward;
+    persist(true); syncPurse(); SFX.coin();
+    m.close();
+    toast(T('shop_bought', { item: T('earn_t') }), 'check');
+  });
   $('#etOk', m.el).addEventListener('click', m.close);
 }
 /* Said plainly, in its own card, rather than as a disabled button with
@@ -15273,6 +16841,13 @@ function storeShut() {
 
 function noHeartsSheet() {
   track('hearts_empty', { n: SAVE.reached });
+  /* The one place in this game that asks to send a notification, and the
+     only moment the answer is obviously yes: the player has just been
+     told they cannot play for two hours. Asked here rather than at boot
+     because a decline is close to permanent on both platforms, so the
+     cheapest moment to ask is also the one that wastes the ask. Nothing
+     waits on the answer — the sheet draws either way. */
+  NOTIFY.ask().then(() => NOTIFY.sync());
   const line = () => T('lvl_no_hearts_sub', { m: HEART_REFILL / MIN, t: fmtTime(heartsIn()) });
   let tick = null;
   const m = modal(`
@@ -15328,6 +16903,17 @@ function showWin() {
   if (newBest) SAVE.scores[n] = G.score;
   SAVE.reached = Math.max(SAVE.reached, n + 1);
   SAVE.stats.cleared++;
+  /* Stamps for the season book. Only a level that had not been cleared
+     before pays the gate bonus, and a replay pays nothing at all — the
+     book is for getting further, and a track farmable on level three
+     would be a track finished on the first evening. */
+  if (first) {
+    passStamp('clear');
+    if (stars >= 3) passStamp('threeStar');
+    if (isGate(n)) passStamp('gate');
+    /* and the one good moment in the game worth asking a favour after */
+    if (stars >= 3) maybeAskForAReview();
+  }
 
   /* A heart back for clearing it.
 
@@ -15489,7 +17075,14 @@ function showLose() {
         <small>${T('lose_extra_sub', { n: ECON.continueTreats })}</small>
       </span>
       <button class="btn sm" id="lExtra">${T('shop_buy')}</button>
-    </div>`}
+    </div>` + (ADS.available('carry') ? `
+    <div class="offer">
+      <span class="ot">
+        <b>${T('ad_watch', { n: ECON.continueMoves })}</b>
+        <small>${T('ad_watch_sub', { t: ECON.continueTreats })}</small>
+      </span>
+      <button class="btn sm" id="lAd">${T('ad_go')}</button>
+    </div>` : '')}
   `, { dismissable: false });
   paintGoalIcons(m.el);
   paintArtCanvases(m.el);
@@ -15499,6 +17092,22 @@ function showLose() {
        jar, so it opens there rather than being told no by a toast */
     if (SAVE.treats < ECON.continueTreats) { SFX.bad(); treatStore('continue'); return; }
     SAVE.treats -= ECON.continueTreats; persist(true); syncPurse();
+    m.close();
+    G.usedExtra = true;
+    G.over = false; G.busy = false;
+    G.moves = ECON.continueMoves;
+    syncHud();
+    SFX.coin();
+  });
+  /* The same five moves, paid for with thirty seconds instead of nine
+     treats. It is deliberately the second row rather than the first: a
+     player holding treats should see the thing they already own before
+     the thing that costs them their attention. */
+  const ad = $('#lAd', m.el);
+  if (ad) ad.addEventListener('click', async () => {
+    ad.disabled = true;
+    const won = await ADS.show('carry');
+    if (!won) { ad.disabled = false; SFX.bad(); return; }
     m.close();
     G.usedExtra = true;
     G.over = false; G.busy = false;
@@ -15634,6 +17243,8 @@ function showDailyResult(won) {
   const d = dailyState();
   let reward = { first: false };
   if (won) reward = dailyDone(G.score);
+  /* the walk stamps the book once a day, on the day it is first walked */
+  if (reward.first) passStamp('walk');
   const stars = won ? Math.max(1, G.starsEarned) : 0;
   const pet = activePet();
   if (won) { SFX.win(); } else { SFX.lose(); }
@@ -15762,6 +17373,7 @@ function openSettings() {
       ${row('haptics', T('set_haptics'), T('set_haptics_s'), SAVE.settings.haptics)}
       ${row('marks', T('set_marks'), T('set_marks_s'), SAVE.settings.marks)}
       ${row('telemetry', T('set_data'), T('set_data_s'), SAVE.settings.telemetry !== false)}
+      ${NOTIFY.ready() ? row('notify', T('set_notify'), T('set_notify_s'), SAVE.settings.notify) : ''}
       <div class="switchRow themeRow">
         <span class="lb">${T('set_theme')}<small>${T('set_theme_s')}</small></span>
         <span class="seg" id="segTheme">
@@ -15799,6 +17411,18 @@ function openSettings() {
     if (k === 'marks') { clearSprites(); G.goals && G.goals.forEach(paintGoalIcon); }
     if (k === 'sound' && SAVE.settings.sound) { audioResume(); SFX.select(); }
     if (k === 'haptics') buzz(14);
+    /* Turning it on here is not the same as having permission: a player
+       who declined the system dialog and then finds this switch would
+       otherwise get a switch that says yes and delivers nothing. Ask
+       first; the queue is rebuilt either way, which is also how turning
+       it off cancels what is already scheduled. */
+    if (k === 'notify') {
+      if (SAVE.settings.notify) NOTIFY.ask().then(ok => {
+        $('.sw2', b).classList.toggle('on', ok);
+        NOTIFY.sync();
+      });
+      else NOTIFY.sync();
+    }
     /* Off has to mean gone, not merely "no more from here" — otherwise
        the switch leaves the last three hundred events sitting there. */
     if (k === 'telemetry' && !SAVE.settings[k]) TRACK.clear();
@@ -16040,6 +17664,7 @@ function runOnboarding() {
     adopted = true;
     const nm = cleanName(name) || pick(NAME_POOL[BREEDS[breedIdx].species]);
     const p = makePet(breedIdx, coat, eye, nm);
+    lookUnlock(breedIdx, coat, eye);
     SAVE.pets = [p];
     SAVE.activePet = p.id;
     castChanged();
@@ -16287,6 +17912,22 @@ function boot() {
      replaces the fallback labels whenever it arrives, and nothing waits
      on it */
   BILLING.refresh();
+  /* And, in the same breath, anything the store still says is owed.
+
+     A purchase that was taken but never granted — the app killed between
+     the sheet closing and the save being written — sits in the store's
+     queue until somebody claims it. Waiting for the player to find the
+     restore button means waiting for a player who has just been charged
+     for nothing to go looking for a button, which is not a plan. Asked
+     on every launch, it resolves before they notice. */
+  BILLING.restore().then(r => {
+    if (!r.ok || !r.skus.length) return;
+    const n = claimOutstanding(r.skus);
+    if (!n) return;
+    syncPurse();
+    track('restore_claimed', { n: n });
+    toast(T('store_restored', { n: n }), 'check');
+  });
   /* before anything else in boot can throw, so that if it does the
      handler is already listening */
   TRACK.init();
@@ -16331,6 +17972,11 @@ function boot() {
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       musicStop(); persist(true);
+      /* The moment the queue can still be made right: the player has put
+         the game down, and everything the two notifications are about —
+         whether the hearts are empty, whether today's walk went untaken
+         — is settled and will not change until they come back. */
+      NOTIFY.sync();
       /* the one moment a batch is worth sending: the player has
          stopped, so nothing is competing for the frame */
       TRACK.flush();
@@ -16433,7 +18079,7 @@ window.BL = {
   levelDef, findMatches, allMoves, hasMove, tryMove, canSwap, firePetAbility, persist, wipeSave,
   perksFor, activePet, makePet, healPet, loadSave, freshSave, BREEDS, LEVELS,
   checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait, addBond,
-  track, TRACK,
+  track, TRACK, ADS, earnTreatsSheet,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
   openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, treatStore, confirmQuit,
@@ -16449,8 +18095,17 @@ window.BL = {
   set faceScale(v) { TILE_FACE = v; clearSprites(); }
 };
 
-if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-else boot();
+/* One question before the save is read, and only one: does the app's own
+   store hold a copy the WebView has lost? On the web there is no plugin
+   and this resolves on the next microtask having done nothing, so the
+   only thing it costs a browser is a tick. Rejection lands on `boot` as
+   well — a vault that cannot be read must never be the reason a game
+   does not start. */
+function bootAfterVault() {
+  VAULT.recover().then(vaultRecover, () => { }).then(boot, boot);
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootAfterVault);
+else bootAfterVault();
 
 /* ===== 75-native.js ===== */
 /* ============================================================
@@ -16467,8 +18122,7 @@ else boot();
    import statement and no dependency in it. The npm package exists for
    the native half, which registers the Java side at build time. */
 
-const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform &&
-                  window.Capacitor.isNativePlatform());
+const NATIVE = nativeShell();
 
 /* ---------------- the hardware back button ----------------
 

@@ -12,8 +12,7 @@
    import statement and no dependency in it. The npm package exists for
    the native half, which registers the Java side at build time. */
 
-const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform &&
-                  window.Capacitor.isNativePlatform());
+const NATIVE = nativeShell();
 
 /* ---------------- the hardware back button ----------------
 

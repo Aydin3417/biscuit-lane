@@ -37,7 +37,10 @@
     "audit": "node tools/audit.js",
     "frame": "node tools/frame.js",
     "icons": "node tools/icon.js",
-    "postinstall": "node build.js"
+    "postinstall": "node build.js",
+    "test:till": "node test/till.js",
+    "test:quick": "node test/check.js && node test/deps.js && node test/till.js && node test/economy.js",
+    "test:fast": "node test/run-all.js quick"
   },
   "devDependencies": {
     "playwright": "^1.62.1"
@@ -47,6 +50,9 @@
     "@capacitor/app": "^8.1.1",
     "@capacitor/cli": "^8.5.0",
     "@capacitor/core": "^8.5.0",
-    "@capacitor/ios": "^8.5.0"
+    "@capacitor/ios": "^8.5.0",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/preferences": "^8.0.1",
+    "@capacitor/share": "^8.0.1"
   }
 }
