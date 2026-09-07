@@ -70,6 +70,7 @@ const STRINGS = {
 
     /* map */
     map_locked: 'Finish level {n} first',
+    map_onward: 'THE LANE KEEPS GOING',
     map_best: 'Best {n}',
     win_new_best: 'A new best on this one.',
 
@@ -371,6 +372,7 @@ const STRINGS = {
     mood_washed: 'Derin bir hakarete uğradı. Mis gibi kokuyor.',
 
     map_locked: 'Önce {n}. bölümü bitir',
+    map_onward: 'SOKAK DEVAM EDİYOR',
     map_best: 'En iyi {n}',
     win_new_best: 'Burada yeni bir rekor.',
 

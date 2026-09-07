@@ -1864,6 +1864,7 @@ const STRINGS = {
 
     /* map */
     map_locked: 'Finish level {n} first',
+    map_onward: 'THE LANE KEEPS GOING',
     map_best: 'Best {n}',
     win_new_best: 'A new best on this one.',
 
@@ -2165,6 +2166,7 @@ const STRINGS = {
     mood_washed: 'Derin bir hakarete uğradı. Mis gibi kokuyor.',
 
     map_locked: 'Önce {n}. bölümü bitir',
+    map_onward: 'SOKAK DEVAM EDİYOR',
     map_best: 'En iyi {n}',
     win_new_best: 'Burada yeni bir rekor.',
 
@@ -14883,6 +14885,11 @@ function bestOwnedToy() {
    The lane — a level map you scroll
    ============================================================ */
 const MAP = { ctx: null, w: 0, h: 0, nodes: [], scrolled: false };
+/* Space above the first level circle. The stretch chip pins itself to
+   the top 38px of the view and the "keeps going" line sits between the
+   two, so this is the number that keeps three things from being drawn on
+   top of each other. */
+const MAP_TOP_PAD = 116;
 
 function mapLayout() {
   const cv = $('#mapCanvas');
@@ -14892,7 +14899,13 @@ function mapLayout() {
   if (!w) return;
   const top = Math.max(SAVE.reached + 5, 12);
   const rowH = 94;
-  const total = top * rowH + 120;
+  /* Headroom above the first node, so the "the lane keeps going" line
+     at the far end has somewhere to sit. It used to be 70, which put the
+     topmost level circle directly under a label pinned near the top of
+     the view — the two were printed over each other and the word in the
+     middle was unreadable. 116 leaves a clean band between the stretch
+     chip and the first node. */
+  const total = top * rowH + 166;
   MAP.w = w;
   MAP.total = total;                      /* the whole lane, in css px */
   MAP.view = Math.max(1, wrap.clientHeight);
@@ -14902,7 +14915,7 @@ function mapLayout() {
   MAP.nodes = [];
   for (let i = 1; i <= top; i++) {
     const idx = top - i;                   /* level 1 at the bottom */
-    const y = 70 + idx * rowH;
+    const y = MAP_TOP_PAD + idx * rowH;
     const x = w / 2 + Math.sin(i * .82) * (w * .26);
     MAP.nodes.push({ n: i, x, y });
   }
@@ -15089,17 +15102,63 @@ function drawMap() {
   }
   c.restore();
 
+  /* ---- the far end, dissolved rather than cut ----
+
+     The road is drawn seventy pixels past the last level and then stops,
+     with a round cap, in the middle of a field. Whatever the label above
+     it says, a road that ends in a visible stub reads as one that has
+     not been built — which is exactly what somebody looking at this
+     screen said to me.
+
+     A wash of the field's own colour over the top of the content takes
+     the end away. The road leaves the frame instead of stopping in it,
+     and the levels beyond are somewhere the lane is going rather than
+     somewhere it failed to reach. Painted after the road and its paw
+     prints and before the level circles, so it only ever eats the road. */
+  /* The node highest up the screen, which is NOT nodes[0]: level 1 sits
+     at the bottom, so the array runs bottom to top and index zero is the
+     first level. Taking the wrong end put the gradient's far edge below
+     the whole lane and washed the entire map out. */
+  const topNode = MAP.nodes.length
+    ? MAP.nodes.reduce((a, b) => (b.y < a.y ? b : a)) : null;
+  if (topNode) {
+    const ground = chapterGround(topNode.n, PAL.dark);
+    const fadeTo = topNode.y - 26;
+    const fade = c.createLinearGradient(0, 0, 0, fadeTo);
+    fade.addColorStop(0, ground);
+    fade.addColorStop(.55, rgba(ground, .92));
+    fade.addColorStop(1, rgba(ground, 0));
+    c.save();
+    c.fillStyle = fade;
+    c.fillRect(0, 0, W, fadeTo);
+    c.restore();
+  }
+
   MAP.nodes.forEach(n => {
     if (n.y < off - 90 || n.y > off + H + 90) return;   /* off screen */
     drawMapNode(c, n);
   });
 
-  /* header at the top of the scroll */
+  /* ---- the far end of the drawn lane ----
+
+     Two things were wrong with this line and both came from the same
+     cause: it was a `LANG === 'tr' ?` written straight into the drawing
+     code instead of a key in STRINGS. Nothing compares two languages
+     that never reach the table, so they drifted until they said opposite
+     things — the English promised the lane keeps going and the Turkish
+     announced that the part above had not been built yet. The second is
+     not a translation of the first, it is a different claim, and it is
+     false: the run is generated and does not end. It was only ever the
+     edge of what the map draws.
+
+     And it sat at y 34, which is inside the band the stretch chip pins
+     itself to, so at the top of the scroll the two labels were printed
+     on top of each other. 78 clears it. */
   c.save();
   c.textAlign = 'center';
   c.fillStyle = PAL.textDim;
   c.font = '700 12px Karla, sans-serif';
-  c.fillText(LANG === 'tr' ? 'YUKARISI HENÜZ İNŞA EDİLMEDİ' : 'THE LANE KEEPS GOING', W / 2, 34);
+  c.fillText(T('map_onward'), W / 2, MAP_TOP_PAD - 40);
   c.restore();
 
   /* ---- where you are, and what you are walking toward ----
