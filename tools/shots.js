@@ -11,7 +11,7 @@ const PW = require('./_pw.js');
 
 const out = path.join(__dirname, '..', 'shots', process.argv[2] || 'look');
 fs.mkdirSync(out, { recursive: true });
-const URL = PW.at('/biscuit-lane.html');
+const URL = PW.at('/pawtika.html');
 
 (async () => {
   /* puts its own server up, like tools/browser.js */

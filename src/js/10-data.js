@@ -316,7 +316,7 @@ const ECON = {
    platform it is on to decide whether to offer a share; it asks this,
    and gets null when there is nowhere to send anybody. */
 const STORE_LINKS = {
-  play: 'https://play.google.com/store/apps/details?id=com.biscuitlane.game',
+  play: 'https://play.google.com/store/apps/details?id=com.pawtika.game',
   /* paste the App Store URL here — App Store Connect gives it once the
      app record exists, in the form https://apps.apple.com/app/id0000000000 */
   apple: ''

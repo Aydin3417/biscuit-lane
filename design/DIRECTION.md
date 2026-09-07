@@ -1,4 +1,4 @@
-# Biscuit Lane — visual direction
+# Pawtika — visual direction
 
 This file is the contract between the art direction and the build. It is
 sent to Gemini with every critique, and Gemini's job is to hold the game

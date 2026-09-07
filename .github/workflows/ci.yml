@@ -51,7 +51,7 @@ jobs:
       # would keep serving a build the source no longer describes, which
       # is precisely the drift this step exists to catch.
       - name: The committed build matches src/
-        run: git diff --exit-code -- index.html biscuit-lane.html sw.js
+        run: git diff --exit-code -- index.html pawtika.html sw.js
 
       - name: Integrity — names, calls, tables, string parity
         run: npm run test:check

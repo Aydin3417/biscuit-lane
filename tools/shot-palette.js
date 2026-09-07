@@ -17,7 +17,7 @@ const { chromium } = require(PW_PATH);
 
 const tag = process.argv[2] || 'shot';
 const OUT = path.join(__dirname, '..', 'shots', 'palette');
-const URL = 'http://localhost:5173/biscuit-lane.html?v=' + Date.now();
+const URL = 'http://localhost:5173/pawtika.html?v=' + Date.now();
 
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });

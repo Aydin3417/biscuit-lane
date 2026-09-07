@@ -119,7 +119,7 @@ if (args.some(a => /[Rr]elease/.test(a))) {
     console.error('  note: no upload key configured, so this release build will be UNSIGNED');
     console.error('  and the Play Console will refuse it. To make one, once, ever:');
     console.error('');
-    console.error('    keytool -genkey -v -keystore biscuit-lane-upload.jks' +
+    console.error('    keytool -genkey -v -keystore pawtika-upload.jks' +
       ' -keyalg RSA -keysize 2048 -validity 10000 -alias upload');
     console.error('');
     console.error('  then put four lines in ~/.gradle/gradle.properties:');

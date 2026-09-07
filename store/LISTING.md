@@ -12,11 +12,16 @@ The graphics are generated: `node tools/store.js`.
 Google Play allows 30 characters, the App Store 30.
 
 ```
-Biscuit Lane
+Pawtika
 ```
 
-Turkish stores take the same name. It is a place in the game, not a
-phrase to translate.
+Turkish stores take the same name. It is a coined word rather than a
+phrase, so there is nothing in it to translate.
+
+One thing for whoever writes the Turkish copy: the name takes back-vowel
+suffixes. *Pawtika'da*, *Pawtika'yı*, *Pawtika'nın* — never *Pawtika'de*.
+The old name ended in a front vowel and took the other set, so anything
+carried over from it is wrong.
 
 ---
 
@@ -43,7 +48,7 @@ Tahtadaki kediler ve köpekler, eve götürüp büyüttüğün hayvanların ta k
 ```
 Somebody has left a basket on the step.
 
-Biscuit Lane is a match-3 puzzle about the animal you choose on the first
+Pawtika is a match-3 puzzle about the animal you choose on the first
 screen. Pick a cat or a dog, pick its coat, give it a name — and from
 then on it is the face you match on every board, and the one waiting in
 the room upstairs when you stop playing.
@@ -91,7 +96,7 @@ who would rather not tell them apart by colour.
 ```
 Kapının önüne bir sepet bırakmışlar.
 
-Biscuit Lane, ilk ekranda seçtiğin hayvanın etrafında dönen bir eşleştirme
+Pawtika, ilk ekranda seçtiğin hayvanın etrafında dönen bir eşleştirme
 oyunu. Bir kedi ya da köpek seç, tüyünü seç, adını koy — o günden sonra
 her tahtada eşleştirdiğin yüz o olur, sen oynamayı bıraktığında üst
 kattaki odada seni bekleyen de.
@@ -146,7 +151,7 @@ unchanged — it is inside Apple's 4000 and says nothing Android-specific.
 **Name** (30 max)
 
 ```
-Biscuit Lane
+Pawtika
 ```
 
 **Subtitle** (30 max)
@@ -221,7 +226,7 @@ no server — so nothing about them is collected or shared. Play asks
 separately about the notifications *permission*; declare it, and say it
 is used for gameplay reminders the player opts into.
 
-Privacy policy URL: `https://aydin3417.github.io/biscuit-lane/privacy.html`
+Privacy policy URL: `https://aydin3417.github.io/pawtika/privacy.html`
 
 ## Content rating
 
@@ -276,7 +281,7 @@ These need an account, a payment or a private key, and are deliberately
 not automated.
 
 1. **Google Play Developer account** — one-off $25.
-2. **Signing key** — `keytool -genkey -v -keystore biscuit-lane-upload.jks
+2. **Signing key** — `keytool -genkey -v -keystore pawtika-upload.jks
    -alias upload -keyalg RSA -keysize 2048 -validity 10000`. Keep it and
    its password somewhere you will still have them in five years; losing
    it means never updating this app again. Do not commit it — `.gitignore`

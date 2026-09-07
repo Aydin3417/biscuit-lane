@@ -1,8 +1,8 @@
 {
-  "name": "Biscuit Lane",
-  "short_name": "Biscuit Lane",
+  "name": "Pawtika",
+  "short_name": "Pawtika",
   "description": "A match-3 puzzle where the cats and dogs on the board are the pets you adopt, feed and raise in the room upstairs.",
-  "id": "/biscuit-lane/",
+  "id": "/pawtika/",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

@@ -154,7 +154,7 @@ const clear = page => page.evaluate(() => {
       viewport: { width: size.width, height: size.height },
       deviceScaleFactor: size.scale
     });
-    await page.goto(at('/biscuit-lane.html'), { waitUntil: 'load' });
+    await page.goto(at('/pawtika.html'), { waitUntil: 'load' });
     await setup(page);
     await page.evaluate(l => { BL.setLang(l); }, lang);
 
@@ -201,7 +201,7 @@ const clear = page => page.evaluate(() => {
 
   /* ---- the feature graphic, 1024x500 ---- */
   const fg = await browser.newPage({ viewport: { width: 1024, height: 500 }, deviceScaleFactor: 1 });
-  await fg.goto(at('/biscuit-lane.html'), { waitUntil: 'load' });
+  await fg.goto(at('/pawtika.html'), { waitUntil: 'load' });
   await setup(fg);
   await fg.evaluate(() => {
     /* Drawn in the page so it uses the game's own palette, its own tile
@@ -244,7 +244,7 @@ const clear = page => page.evaluate(() => {
     c.fillStyle = '#2C2118';
     c.font = '800 62px Grandstander, sans-serif';
     c.textBaseline = 'alphabetic';
-    c.fillText('Biscuit Lane', 62, 118);
+    c.fillText('Pawtika', 62, 118);
     c.fillStyle = '#6B5949';
     c.font = '500 26px Karla, sans-serif';
     c.fillText('The cats and dogs on the board', 64, 162);

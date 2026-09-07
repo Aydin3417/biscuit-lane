@@ -40,7 +40,7 @@ ${script}
 /* ---------- the game ---------- */
 fs.writeFileSync(
   path.join(__dirname, 'game.html'),
-  page('Biscuit Lane', null, '', bodyHtml, bundle(allJs)),
+  page('Pawtika', null, '', bodyHtml, bundle(allJs)),
   'utf8'
 );
 
@@ -70,7 +70,7 @@ const labCss = `
 const labBody = `
 <div class="wrap">
   <div class="labhead">
-    <h1>Biscuit Lane — bench</h1>
+    <h1>Pawtika — bench</h1>
     <button class="lb" id="themeBtn">Day</button>
     <button class="lb" id="musicBtn">Music: off</button>
     <span class="meta" id="pcount"></span>

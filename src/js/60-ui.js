@@ -1269,10 +1269,10 @@ function sharePets() {
   track('share');
   const P = (window.Capacitor && window.Capacitor.Plugins) || {};
   if (P.Share && P.Share.share) {
-    try { P.Share.share({ title: 'Biscuit Lane', text: text, url: url }); return; } catch (e) { }
+    try { P.Share.share({ title: 'Pawtika', text: text, url: url }); return; } catch (e) { }
   }
   if (navigator.share) {
-    navigator.share({ title: 'Biscuit Lane', text: text, url: url }).catch(() => { });
+    navigator.share({ title: 'Pawtika', text: text, url: url }).catch(() => { });
     return;
   }
   /* Neither, which is most desktop browsers: put it on the clipboard and

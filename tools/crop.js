@@ -12,7 +12,7 @@ fs.mkdirSync(out, { recursive: true });
   const server = await PW.serve();
   const browser = await PW.launch();
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 4 });
-  await page.goto(PW.at('/biscuit-lane.html'), { waitUntil: 'load' });
+  await page.goto(PW.at('/pawtika.html'), { waitUntil: 'load' });
   await page.waitForFunction(() => window.BL && window.BL.save);
   await page.evaluate(() => {
     BL.save.pets = [BL.makePet(2, 1, 0, 'Marlow')];

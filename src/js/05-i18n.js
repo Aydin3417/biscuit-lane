@@ -7,14 +7,14 @@ const STRINGS = {
     gate_t: 'The end of the block',
     gate_s: 'Harder than the nine before it. Take your time.',
     rot_t: 'Turn your phone back',
-    rot_s: 'Biscuit Lane is played the tall way up.',
+    rot_s: 'Pawtika is played the tall way up.',
     /* the installed app only; a browser tab has its own back */
     leave_again: 'Press back again to leave',
     tab_home: 'Home', tab_play: 'Play', tab_shop: 'Shop', tab_family: 'Family',
 
     /* onboarding */
     onb_hi: 'Someone left a basket on the step',
-    onb_hi_sub: 'Biscuit Lane has a spare room upstairs and nobody to fill it. Pick who comes home with you.',
+    onb_hi_sub: 'There is a spare room upstairs and nobody to fill it. Pick who comes home with you.',
     onb_start: 'Open the basket',
     onb_pick: 'Who is in there?',
     onb_pick_sub: 'You will see them on the board every time you play. Choose the face you want to keep meeting.',
@@ -164,7 +164,7 @@ const STRINGS = {
     rate_no: 'Not really',
     rate_thanks: 'Fair enough. Thank you for saying.',
     share_btn: 'Tell somebody about them',
-    share_text: '{name} lives in Biscuit Lane. Come and meet the rest of them.',
+    share_text: 'I am bringing {name} up in Pawtika. Come and meet the rest of them.',
     share_copied: 'Copied — paste it wherever you like.',
     groom_t: 'At the grooming table',
     groom_s: 'Every coat and every eye colour {name} could have. The ones they came home in are already theirs; tap any other to try it on and buy it.',
@@ -313,7 +313,7 @@ const STRINGS = {
     gate_t: 'Bölümün kapısı',
     gate_s: 'Öncesindeki dokuzdan zor. Acele etme.',
     rot_t: 'Telefonu geri çevir',
-    rot_s: 'Biscuit Lane dikey oynanıyor.',
+    rot_s: 'Pawtika dikey oynanıyor.',
     leave_again: 'Çıkmak için tekrar bas',
     tab_home: 'Ev', tab_play: 'Oyna', tab_shop: 'Dükkan', tab_family: 'Aile',
 
@@ -459,7 +459,7 @@ const STRINGS = {
     rate_no: 'Pek değil',
     rate_thanks: 'Anlaşıldı. Söylediğin için teşekkürler.',
     share_btn: 'Birine onlardan bahset',
-    share_text: '{name} Biscuit Lane\'de yaşıyor. Gel, diğerleriyle de tanış.',
+    share_text: '{name} Pawtika\'da yaşıyor. Gel, diğerleriyle de tanış.',
     share_copied: 'Kopyalandı — istediğin yere yapıştır.',
     groom_t: 'Tımar masasında',
     groom_s: '{name} için bütün post ve göz renkleri. Eve geldiği renkler zaten onun; başka birine dokunup deneyebilir ve alabilirsin.',

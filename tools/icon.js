@@ -34,7 +34,7 @@ const SAFE = 72 / 108;
   const server = await PW.serve();
   const browser = await PW.launch();
   const page = await browser.newPage({ viewport: { width: 600, height: 600 } });
-  await page.goto(PW.at('/biscuit-lane.html'), { waitUntil: 'load' });
+  await page.goto(PW.at('/pawtika.html'), { waitUntil: 'load' });
   await page.waitForFunction(() => window.BL && window.BL.save);
   const out = {};
   for (const [px, kind] of SIZES) {

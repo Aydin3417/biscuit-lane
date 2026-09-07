@@ -10,7 +10,7 @@ password, a payment method or a Mac, and none of those are mine to have.
 
 | | Where |
 | --- | --- |
-| iOS platform added, portrait-locked, arm64, bundle `com.biscuitlane.game` | `ios/` |
+| iOS platform added, portrait-locked, arm64, bundle `com.pawtika.game` | `ios/` |
 | Android platform, portrait-locked, hardware back button handled | `android/` |
 | Version aligned at **1.0.0 (build 1)** across Android, iOS and the crash reports | `build.gradle`, `project.pbxproj`, `15-save.js` |
 | App icon and launch image for iOS, drawn from the game's own logo | `tools/icon.js` → `ios/App/App/Assets.xcassets/` |
@@ -96,7 +96,7 @@ You need an upload key and it must never be lost — losing it means you
 can never update the app under the same listing.
 
 ```bash
-keytool -genkey -v -keystore biscuit-lane-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+keytool -genkey -v -keystore pawtika-upload.jks -keyalg RSA -keysize 2048 -validity 10000 -alias upload
 ```
 
 The `signingConfigs` block is already in `android/app/build.gradle` and
@@ -105,7 +105,7 @@ needs is four lines in `~/.gradle/gradle.properties`, which is outside
 this repository:
 
 ```
-BL_STORE_FILE=C:/somewhere/safe/biscuit-lane-upload.jks
+BL_STORE_FILE=C:/somewhere/safe/pawtika-upload.jks
 BL_STORE_PASSWORD=...
 BL_KEY_ALIAS=upload
 BL_KEY_PASSWORD=...

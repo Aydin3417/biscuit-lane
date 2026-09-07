@@ -6,7 +6,7 @@
      in the console once the vibrate noise was filtered out, and a
      harness whose own output has to be ignored is worth less. -->
 <link rel="icon" href="data:,">
-<title>Biscuit Lane — integration tests</title>
+<title>Pawtika — integration tests</title>
 <style>
   body { font: 14px/1.5 ui-monospace, Menlo, Consolas, monospace; margin: 0; background: #131A26; color: #F6EDE0; }
   header { padding: 14px 18px; border-bottom: 1px solid #2B3745; display: flex; gap: 14px; align-items: baseline; }
@@ -21,7 +21,7 @@
   iframe { position: fixed; right: 8px; bottom: 8px; width: 375px; height: 640px; border: 1px solid #2B3745; border-radius: 8px; opacity: .25; }
 </style>
 <header>
-  <h1>Biscuit Lane — integration tests</h1>
+  <h1>Pawtika — integration tests</h1>
   <span id="status">booting the game…</span>
   <span id="summary"></span>
 </header>
@@ -166,7 +166,7 @@ async function run() {
     return 'coins ' + f.coins + ', hearts ' + f.hearts;
   });
   await test('a v1 save migrates without loss', () => {
-    W.localStorage.setItem('biscuit-lane-v1', JSON.stringify({
+    W.localStorage.setItem('pawtika-v1', JSON.stringify({
       v: 1, coins: 500, reached: 9, stars: { 1: 3, 2: 2 },
       pets: [{ id: 'a', breed: 2, coat: 1, name: 'Old', bond: 3, hat: 'crown' }], activePet: 'a'
     }));
@@ -180,7 +180,7 @@ async function run() {
     return 'v1 → v' + BL.save.v;
   });
   await test('corrupt values are clamped, not trusted', () => {
-    W.localStorage.setItem('biscuit-lane-v1', JSON.stringify({
+    W.localStorage.setItem('pawtika-v1', JSON.stringify({
       v: 1, coins: 'lots', treats: -5, hearts: 99, reached: -3,
       pets: [null, [], { id: 'b', breed: 99, coat: 7, food: null, bond: -4 }],
       activePet: 'nope', stars: { 3: 9, 4: 'x' }, room: { theme: 'gone', placed: ['nope', 'rug'] }
@@ -196,7 +196,7 @@ async function run() {
     /* a wall clock that has moved backwards leaves timestamps in the
        future; the hearts used to freeze until real time caught up, and
        the chip would say the next one was a day away */
-    W.localStorage.setItem('biscuit-lane-v1', JSON.stringify({
+    W.localStorage.setItem('pawtika-v1', JSON.stringify({
       v: 2, coins: 50, hearts: 2, reached: 3, pets: [],
       heartAt: Date.now() + 24 * 3600 * 1000,
       lastSeen: Date.now() + 24 * 3600 * 1000
@@ -208,7 +208,7 @@ async function run() {
     return 'all values inside range, no timestamp in the future';
   });
   await test('unreadable save falls back instead of throwing', () => {
-    W.localStorage.setItem('biscuit-lane-v1', 'definitely not json');
+    W.localStorage.setItem('pawtika-v1', 'definitely not json');
     BL.loadSave();
     assert(BL.save && BL.save.coins > 0, 'no fresh save');
     return 'recovered';

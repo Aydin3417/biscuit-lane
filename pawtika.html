@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>Biscuit Lane</title>
+<title>Pawtika</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 
 <!-- A game you keep on your phone, not a page you visit.
@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Biscuit Lane">
+<meta name="apple-mobile-web-app-title" content="Pawtika">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon-192.png" sizes="192x192">
 
@@ -57,7 +57,7 @@
 
 <style>
 /* ============================================================
-   BISCUIT LANE — design tokens
+   PAWTIKA — design tokens
    Two worlds: Day (morning shop) and Dusk (lamp-lit evening).
    Bare :root = Day. Dark preference and explicit stamps swap it.
    ============================================================ */
@@ -1154,7 +1154,7 @@ canvas{ max-width:100%; }
     <header class="topbar" id="topbar">
       <div class="brandmark">
         <canvas id="logo" width="60" height="60" aria-hidden="true"></canvas>
-        <div class="bn">Biscuit Lane<small id="brandSub">Pet Home</small></div>
+        <div class="bn">Pawtika<small id="brandSub">Pet Home</small></div>
       </div>
       <div class="purse">
         <div class="chip hearts" id="chipHearts" title="Hearts"></div>
@@ -1253,7 +1253,7 @@ canvas{ max-width:100%; }
             stroke-linecap="round" stroke-linejoin="round"/>
     </svg>
     <b id="rotT">Turn your phone back</b>
-    <small id="rotS">Biscuit Lane is played the tall way up.</small>
+    <small id="rotS">Pawtika is played the tall way up.</small>
   </div>
 </div>
 
@@ -1751,7 +1751,7 @@ function fmt(n) {
 /* The purse, which has a width budget the score does not.
 
    Three chips and a wordmark share one bar. At six figures the coins
-   chip alone took enough of it that "Biscuit Lane" clipped to "Bisc…"
+   chip alone took enough of it that "Pawtika" clipped to "Bisc…"
    on every phone from 320 up, and on the smallest the wordmark vanished
    and the logo squashed to a sliver. The exact number matters in the
    shop, where there is room for it; up here only the size does. */
@@ -1791,14 +1791,14 @@ const STRINGS = {
     gate_t: 'The end of the block',
     gate_s: 'Harder than the nine before it. Take your time.',
     rot_t: 'Turn your phone back',
-    rot_s: 'Biscuit Lane is played the tall way up.',
+    rot_s: 'Pawtika is played the tall way up.',
     /* the installed app only; a browser tab has its own back */
     leave_again: 'Press back again to leave',
     tab_home: 'Home', tab_play: 'Play', tab_shop: 'Shop', tab_family: 'Family',
 
     /* onboarding */
     onb_hi: 'Someone left a basket on the step',
-    onb_hi_sub: 'Biscuit Lane has a spare room upstairs and nobody to fill it. Pick who comes home with you.',
+    onb_hi_sub: 'There is a spare room upstairs and nobody to fill it. Pick who comes home with you.',
     onb_start: 'Open the basket',
     onb_pick: 'Who is in there?',
     onb_pick_sub: 'You will see them on the board every time you play. Choose the face you want to keep meeting.',
@@ -1948,7 +1948,7 @@ const STRINGS = {
     rate_no: 'Not really',
     rate_thanks: 'Fair enough. Thank you for saying.',
     share_btn: 'Tell somebody about them',
-    share_text: '{name} lives in Biscuit Lane. Come and meet the rest of them.',
+    share_text: 'I am bringing {name} up in Pawtika. Come and meet the rest of them.',
     share_copied: 'Copied — paste it wherever you like.',
     groom_t: 'At the grooming table',
     groom_s: 'Every coat and every eye colour {name} could have. The ones they came home in are already theirs; tap any other to try it on and buy it.',
@@ -2097,7 +2097,7 @@ const STRINGS = {
     gate_t: 'Bölümün kapısı',
     gate_s: 'Öncesindeki dokuzdan zor. Acele etme.',
     rot_t: 'Telefonu geri çevir',
-    rot_s: 'Biscuit Lane dikey oynanıyor.',
+    rot_s: 'Pawtika dikey oynanıyor.',
     leave_again: 'Çıkmak için tekrar bas',
     tab_home: 'Ev', tab_play: 'Oyna', tab_shop: 'Dükkan', tab_family: 'Aile',
 
@@ -2243,7 +2243,7 @@ const STRINGS = {
     rate_no: 'Pek değil',
     rate_thanks: 'Anlaşıldı. Söylediğin için teşekkürler.',
     share_btn: 'Birine onlardan bahset',
-    share_text: '{name} Biscuit Lane\'de yaşıyor. Gel, diğerleriyle de tanış.',
+    share_text: '{name} Pawtika\'da yaşıyor. Gel, diğerleriyle de tanış.',
     share_copied: 'Kopyalandı — istediğin yere yapıştır.',
     groom_t: 'Tımar masasında',
     groom_s: '{name} için bütün post ve göz renkleri. Eve geldiği renkler zaten onun; başka birine dokunup deneyebilir ve alabilirsin.',
@@ -2743,7 +2743,7 @@ const ECON = {
    platform it is on to decide whether to offer a share; it asks this,
    and gets null when there is nowhere to send anybody. */
 const STORE_LINKS = {
-  play: 'https://play.google.com/store/apps/details?id=com.biscuitlane.game',
+  play: 'https://play.google.com/store/apps/details?id=com.pawtika.game',
   /* paste the App Store URL here — App Store Connect gives it once the
      app record exists, in the form https://apps.apple.com/app/id0000000000 */
   apple: ''
@@ -4500,7 +4500,7 @@ function budgetFor(kind, wantClear) {
 /* ============================================================
    15 — persistence
    ============================================================ */
-const SAVE_KEY = 'biscuit-lane-v1';
+const SAVE_KEY = 'pawtika-v1';
 const HEART_MAX = 5;
 /* Twelve minutes meant a full set came back in an hour, which is short
    enough that nobody ever met the wall: you lost a heart, wandered to
@@ -4623,6 +4623,38 @@ function healPet(p) {
   if (!COLLARS.some(c => c.id === out.collar)) out.collar = 'none';
   if (!out.id) out.id = 'p' + (now() % 1000000) + '_' + (petIdSeq++);
   return out;
+}
+
+/* ---------- the game used to be called something else ----------
+
+   Renaming a game renames its storage keys, and a storage key is where
+   the save lives. Nobody outside this machine has ever run the old build,
+   so this rescues exactly one person's progress — but it costs four lines
+   and the alternative is a game that opens on an empty room and cannot
+   say why.
+
+   Once only, and only into an empty slot: if there is already a save
+   under the new name, the old one is the stale copy and is dropped
+   rather than allowed to overwrite anything. The old keys are removed
+   either way, so this does not leave a second copy of somebody's save
+   sitting in the browser forever.
+
+   Safe to delete in a version or two — but not before the first store
+   release, because until then the only installs that exist are the ones
+   that predate the name.
+
+   Each module carries its own old key rather than one table carrying
+   them all: the event buffer's is in 18-telemetry.js, because a table
+   here naming a constant declared three files further down is how a save
+   layer comes to depend on the telemetry layer. */
+const OLD_SAVE_KEY = 'biscuit-lane-v1';
+function adoptOldName() {
+  try {
+    const old = localStorage.getItem(OLD_SAVE_KEY);
+    if (!old) return;
+    if (!localStorage.getItem(SAVE_KEY)) localStorage.setItem(SAVE_KEY, old);
+    localStorage.removeItem(OLD_SAVE_KEY);
+  } catch (e) { /* private mode: there was nothing to carry over anyway */ }
 }
 
 /* Can this window keep anything? Written once at boot, because the
@@ -5925,7 +5957,8 @@ const BILLING = {
 */
 
 const TELEMETRY_MAX = 300;        /* events held before the oldest drop */
-const TELEMETRY_KEY = 'biscuit-lane-events';
+const TELEMETRY_KEY = 'pawtika-events';
+const OLD_TELEMETRY_KEY = 'biscuit-lane-events';   /* before the rename */
 
 const TRACK = {
   /* ---------- the seam ----------
@@ -5968,6 +6001,17 @@ const TRACK = {
     if (!SAVE.install) SAVE.install = Math.floor(Math.random() * 1e12);
     this.install = SAVE.install;
     try {
+      /* The buffer carried the old name until this build. Adopted the
+         same way the save is, and for the same reason — a crash report
+         from before the rename is still a crash report. See
+         adoptOldName() in 15-save.js; this is the half that belongs to
+         this file, so the save layer does not have to name a constant
+         declared below it. */
+      const stale = localStorage.getItem(OLD_TELEMETRY_KEY);
+      if (stale) {
+        if (!localStorage.getItem(TELEMETRY_KEY)) localStorage.setItem(TELEMETRY_KEY, stale);
+        localStorage.removeItem(OLD_TELEMETRY_KEY);
+      }
       const held = localStorage.getItem(TELEMETRY_KEY);
       if (held) this.buf = JSON.parse(held) || [];
     } catch (e) { this.buf = []; }
@@ -16427,10 +16471,10 @@ function sharePets() {
   track('share');
   const P = (window.Capacitor && window.Capacitor.Plugins) || {};
   if (P.Share && P.Share.share) {
-    try { P.Share.share({ title: 'Biscuit Lane', text: text, url: url }); return; } catch (e) { }
+    try { P.Share.share({ title: 'Pawtika', text: text, url: url }); return; } catch (e) { }
   }
   if (navigator.share) {
-    navigator.share({ title: 'Biscuit Lane', text: text, url: url }).catch(() => { });
+    navigator.share({ title: 'Pawtika', text: text, url: url }).catch(() => { });
     return;
   }
   /* Neither, which is most desktop browsers: put it on the clipboard and
@@ -17840,7 +17884,7 @@ function standInApp() {
   if (!man || !big) return;
   try {
     const body = {
-      name: 'Biscuit Lane', short_name: 'Biscuit Lane',
+      name: 'Pawtika', short_name: 'Pawtika',
       start_url: location.href, scope: './', display: 'standalone',
       orientation: 'portrait', background_color: '#F6EADA', theme_color: '#F6EADA',
       icons: [{ src: big, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }]
@@ -18102,6 +18146,9 @@ window.BL = {
    well — a vault that cannot be read must never be the reason a game
    does not start. */
 function bootAfterVault() {
+  /* Before anything reads a save: carry over one written under the name
+     the game used to have. */
+  adoptOldName();
   VAULT.recover().then(vaultRecover, () => { }).then(boot, boot);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootAfterVault);

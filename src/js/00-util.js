@@ -481,7 +481,7 @@ function fmt(n) {
 /* The purse, which has a width budget the score does not.
 
    Three chips and a wordmark share one bar. At six figures the coins
-   chip alone took enough of it that "Biscuit Lane" clipped to "Bisc…"
+   chip alone took enough of it that "Pawtika" clipped to "Bisc…"
    on every phone from 320 up, and on the smallest the wordmark vanished
    and the logo squashed to a sliver. The exact number matters in the
    shop, where there is room for it; up here only the size does. */

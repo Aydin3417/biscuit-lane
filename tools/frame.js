@@ -6,7 +6,7 @@ const PW = require('./_pw.js');
   const server = await PW.serve();
   const b = await PW.launch();
   const p = await b.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
-  await p.goto(PW.at('/biscuit-lane.html'), { waitUntil: 'load' });
+  await p.goto(PW.at('/pawtika.html'), { waitUntil: 'load' });
   await p.waitForFunction(() => window.BL && window.BL.save);
   await p.evaluate(() => { BL.save.pets = [BL.makePet(2, 1, 0, 'M')]; BL.save.activePet = BL.save.pets[0].id; BL.persist(true); });
   await p.reload({ waitUntil: 'load' });

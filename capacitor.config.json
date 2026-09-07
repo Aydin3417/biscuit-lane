@@ -1,6 +1,6 @@
 {
-  "appId": "com.biscuitlane.game",
-  "appName": "Biscuit Lane",
+  "appId": "com.pawtika.game",
+  "appName": "Pawtika",
   "webDir": "www",
   "backgroundColor": "#F6EADAFF",
   "android": {

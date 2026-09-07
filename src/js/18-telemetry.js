@@ -28,7 +28,8 @@
 */
 
 const TELEMETRY_MAX = 300;        /* events held before the oldest drop */
-const TELEMETRY_KEY = 'biscuit-lane-events';
+const TELEMETRY_KEY = 'pawtika-events';
+const OLD_TELEMETRY_KEY = 'biscuit-lane-events';   /* before the rename */
 
 const TRACK = {
   /* ---------- the seam ----------
@@ -71,6 +72,17 @@ const TRACK = {
     if (!SAVE.install) SAVE.install = Math.floor(Math.random() * 1e12);
     this.install = SAVE.install;
     try {
+      /* The buffer carried the old name until this build. Adopted the
+         same way the save is, and for the same reason — a crash report
+         from before the rename is still a crash report. See
+         adoptOldName() in 15-save.js; this is the half that belongs to
+         this file, so the save layer does not have to name a constant
+         declared below it. */
+      const stale = localStorage.getItem(OLD_TELEMETRY_KEY);
+      if (stale) {
+        if (!localStorage.getItem(TELEMETRY_KEY)) localStorage.setItem(TELEMETRY_KEY, stale);
+        localStorage.removeItem(OLD_TELEMETRY_KEY);
+      }
       const held = localStorage.getItem(TELEMETRY_KEY);
       if (held) this.buf = JSON.parse(held) || [];
     } catch (e) { this.buf = []; }

@@ -26,12 +26,12 @@ parts.push('<script>\n(function(){\n' + jsFiles.map(f => {
 }).join('\n\n') + '\n})();\n<\/script>');
 
 const out = parts.join('\n\n') + '\n';
-const dest = path.join(root, 'biscuit-lane.html');
+const dest = path.join(root, 'pawtika.html');
 fs.writeFileSync(dest, out, 'utf8');
 fs.writeFileSync(path.join(root, 'index.html'), out, 'utf8');
 /* ---------- stamp the service worker ----------
 
-   sw.js held a cache called `biscuit-lane-v1`, hardcoded, and nobody was
+   sw.js held a cache called `pawtika-v1`, hardcoded, and nobody was
    ever going to remember to change it. The `activate` handler deletes
    every cache whose name is not the current one, so a name that never
    changes means that sweep never sweeps: yesterday's copy of the game
@@ -49,7 +49,7 @@ fs.writeFileSync(path.join(root, 'index.html'), out, 'utf8');
 const stamp = crypto.createHash('sha1').update(out).digest('hex').slice(0, 12);
 const swPath = path.join(root, 'sw.js');
 const sw = fs.readFileSync(swPath, 'utf8');
-const stamped = sw.replace(/const VERSION = '[^']*';/, "const VERSION = 'biscuit-lane-" + stamp + "';");
+const stamped = sw.replace(/const VERSION = '[^']*';/, "const VERSION = 'pawtika-" + stamp + "';");
 if (stamped !== sw) fs.writeFileSync(swPath, stamped, 'utf8');
 
 console.log('built ' + dest + '  ' + (out.length / 1024).toFixed(1) + ' KB  (' +

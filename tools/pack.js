@@ -3,7 +3,7 @@
      node tools/pack.js        ->  www/
 
    build.js is left alone deliberately. It turns src/ into
-   biscuit-lane.html and index.html, those two files are byte-checked in
+   pawtika.html and index.html, those two files are byte-checked in
    CI, and the whole point of them is that they do not move. This is the
    separate, later job: take what the build produced and lay out the
    directory Capacitor copies into the app.

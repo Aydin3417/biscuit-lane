@@ -1,4 +1,4 @@
-package com.biscuitlane.game;
+package com.pawtika.game;
 
 import android.content.res.Configuration;
 import android.os.Build;

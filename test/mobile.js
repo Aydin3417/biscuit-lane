@@ -30,7 +30,7 @@ try { man = JSON.parse(read('manifest.webmanifest')); ok.push('the manifest pars
 catch (e) { problems.push('the manifest does not parse: ' + e.message); }
 
 if (man) {
-  [['name', 'Biscuit Lane'], ['display', 'standalone'], ['orientation', 'portrait']]
+  [['name', 'Pawtika'], ['display', 'standalone'], ['orientation', 'portrait']]
     .forEach(([k, want]) => {
       if (man[k] !== want) problems.push('manifest ' + k + ' is "' + man[k] + '", wanted "' + want + '"');
     });

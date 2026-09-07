@@ -143,7 +143,7 @@ function standInApp() {
   if (!man || !big) return;
   try {
     const body = {
-      name: 'Biscuit Lane', short_name: 'Biscuit Lane',
+      name: 'Pawtika', short_name: 'Pawtika',
       start_url: location.href, scope: './', display: 'standalone',
       orientation: 'portrait', background_color: '#F6EADA', theme_color: '#F6EADA',
       icons: [{ src: big, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }]
@@ -405,6 +405,9 @@ window.BL = {
    well — a vault that cannot be read must never be the reason a game
    does not start. */
 function bootAfterVault() {
+  /* Before anything reads a save: carry over one written under the name
+     the game used to have. */
+  adoptOldName();
   VAULT.recover().then(vaultRecover, () => { }).then(boot, boot);
 }
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootAfterVault);

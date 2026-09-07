@@ -1,4 +1,4 @@
-/* Biscuit Lane — offline.
+/* Pawtika — offline.
 
    The whole game is one HTML file, so the shell is almost the whole
    job: cache it on install, serve it from cache first, and quietly
@@ -13,7 +13,7 @@
    see it in a diff: a cache name that never changes is a cache that
    `activate` never sweeps, which is how a player ends up on a build that
    is half yesterday's. */
-const VERSION = 'biscuit-lane-9b8860289a7d';
+const VERSION = 'pawtika-3459d18da4db';
 const SHELL = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 

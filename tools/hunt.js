@@ -30,7 +30,7 @@ const note = (where, what) => { const line = where + ': ' + what; if (found.inde
   });
   page.on('response', r => { if (r.status() >= 400 && !/manifest|icons\//.test(r.url())) note(step, r.status() + ' ' + r.url().split('/').pop()); });
 
-  await page.goto(PW.at('/biscuit-lane.html'), { waitUntil: 'load' });
+  await page.goto(PW.at('/pawtika.html'), { waitUntil: 'load' });
   await page.waitForFunction(() => window.BL && window.BL.save, null, { timeout: 20000 });
 
   /* an invariant sweep run after every step */

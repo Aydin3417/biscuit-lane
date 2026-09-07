@@ -1,7 +1,7 @@
 /* ============================================================
    15 — persistence
    ============================================================ */
-const SAVE_KEY = 'biscuit-lane-v1';
+const SAVE_KEY = 'pawtika-v1';
 const HEART_MAX = 5;
 /* Twelve minutes meant a full set came back in an hour, which is short
    enough that nobody ever met the wall: you lost a heart, wandered to
@@ -124,6 +124,38 @@ function healPet(p) {
   if (!COLLARS.some(c => c.id === out.collar)) out.collar = 'none';
   if (!out.id) out.id = 'p' + (now() % 1000000) + '_' + (petIdSeq++);
   return out;
+}
+
+/* ---------- the game used to be called something else ----------
+
+   Renaming a game renames its storage keys, and a storage key is where
+   the save lives. Nobody outside this machine has ever run the old build,
+   so this rescues exactly one person's progress — but it costs four lines
+   and the alternative is a game that opens on an empty room and cannot
+   say why.
+
+   Once only, and only into an empty slot: if there is already a save
+   under the new name, the old one is the stale copy and is dropped
+   rather than allowed to overwrite anything. The old keys are removed
+   either way, so this does not leave a second copy of somebody's save
+   sitting in the browser forever.
+
+   Safe to delete in a version or two — but not before the first store
+   release, because until then the only installs that exist are the ones
+   that predate the name.
+
+   Each module carries its own old key rather than one table carrying
+   them all: the event buffer's is in 18-telemetry.js, because a table
+   here naming a constant declared three files further down is how a save
+   layer comes to depend on the telemetry layer. */
+const OLD_SAVE_KEY = 'biscuit-lane-v1';
+function adoptOldName() {
+  try {
+    const old = localStorage.getItem(OLD_SAVE_KEY);
+    if (!old) return;
+    if (!localStorage.getItem(SAVE_KEY)) localStorage.setItem(SAVE_KEY, old);
+    localStorage.removeItem(OLD_SAVE_KEY);
+  } catch (e) { /* private mode: there was nothing to carry over anyway */ }
 }
 
 /* Can this window keep anything? Written once at boot, because the

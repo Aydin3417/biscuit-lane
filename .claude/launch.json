@@ -2,7 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "biscuit",
+      "name": "pawtika",
       "runtimeExecutable": "node",
       "runtimeArgs": ["tools/serve.js"],
       "port": 8181,

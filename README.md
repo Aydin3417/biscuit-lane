@@ -1,4 +1,4 @@
-# Biscuit Lane
+# Pawtika
 
 A match-3 puzzle with a pet-raising layer. The cats and dogs on the board
 are the same breeds you adopt, feed and raise in the room upstairs, and
@@ -10,13 +10,13 @@ drawn or synthesised at runtime.
 
 ```bash
 npm install            # playwright, for the dev tools and the browser suite
-npm run build          # src/ -> biscuit-lane.html (and index.html)
+npm run build          # src/ -> pawtika.html (and index.html)
 npm test               # integrity, the node suites, the browser layer
 ```
 
 The game still has no runtime dependencies and never will. What
 `npm install` fetches belongs to the harness and the native shell, and
-none of it reaches the shipped file — `biscuit-lane.html` is the same
+none of it reaches the shipped file — `pawtika.html` is the same
 one-file artifact it has always been, byte for byte.
 
 ## Layout
@@ -2246,7 +2246,7 @@ purchase API for web apps and no App Store presence for them, so a
 browser game can be finished and still have nowhere to go.
 
 It is wrapped with Capacitor now. The web build is untouched — `build.js`
-still writes the same `biscuit-lane.html`, still byte for byte, and the
+still writes the same `pawtika.html`, still byte for byte, and the
 PWA still installs from a browser exactly as it did. `tools/pack.js` is
 the separate, later step: it takes what the build produced and lays out
 the `www/` directory the native shell copies in.
@@ -3512,7 +3512,7 @@ dependency in it.
 
 ## A cache name that never changed
 
-`sw.js` held `biscuit-lane-v1`, hardcoded, and the `activate` handler
+`sw.js` held `pawtika-v1`, hardcoded, and the `activate` handler
 deletes every cache whose name is not the current one — so a name that
 never changes means that sweep never sweeps. Yesterday's copy of the game
 sits in the same cache as today's, and the only thing replacing it is the

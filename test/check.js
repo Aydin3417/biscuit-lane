@@ -105,7 +105,7 @@ else console.log('no duplicate top-level names');
 if (missing.size) { bad = 1; console.log('\nUNDECLARED FUNCTIONS CALLED:'); missing.forEach((f, n) => console.log(`  ${n}()  in ${f}`)); }
 else console.log('every called function resolves');
 
-const bundle = path.join(__dirname, '..', 'biscuit-lane.html');
+const bundle = path.join(__dirname, '..', 'pawtika.html');
 if (fs.existsSync(bundle)) {
   const html = fs.readFileSync(bundle, 'utf8');
   const js = html.slice(html.indexOf('<script>') + 8, html.lastIndexOf('</' + 'script>'));

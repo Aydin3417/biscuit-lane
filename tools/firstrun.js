@@ -56,7 +56,7 @@ const t0 = Date.now();
   };
 
   /* a genuinely empty save: no pets, no progress, nothing seen */
-  await page.goto(at('/biscuit-lane.html'), { waitUntil: 'load' });
+  await page.goto(at('/pawtika.html'), { waitUntil: 'load' });
   await page.evaluate(() => { try { localStorage.clear(); } catch (e) {} });
   await page.reload({ waitUntil: 'load' });
   await page.waitForFunction(() => window.BL, null, { timeout: 20000 });

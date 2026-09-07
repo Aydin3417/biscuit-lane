@@ -10,7 +10,7 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
-        <!-- Biscuit Lane is played the tall way up: the web build puts a
+        <!-- Pawtika is played the tall way up: the web build puts a
              rotate gate over the screen when it is not. On a device the
              gate should never be reachable, so the activity is locked
              rather than the player being told off for turning a phone. -->

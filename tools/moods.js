@@ -13,7 +13,7 @@ const PW = require('./_pw.js');
 
 const out = path.join(__dirname, '..', 'shots', 'moods');
 fs.mkdirSync(out, { recursive: true });
-const URL = PW.at('/biscuit-lane.html');
+const URL = PW.at('/pawtika.html');
 
 /* the stat sets that land on each branch of moodOf() */
 const MOODS = [
