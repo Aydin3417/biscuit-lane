@@ -192,6 +192,10 @@ function boot() {
   if (!reduceMotion()) AMB.raf = requestAnimationFrame(motesLoop);
 
   paintLogo();
+  /* The mark is a picture now and a picture takes a frame to decode, so
+     the first paint above uses the drawn paw. One repaint when it lands,
+     and the top bar is the mark for the rest of the session. */
+  if (LOGO_IMG && !logoReady()) LOGO_IMG.addEventListener('load', paintLogo, { once: true });
   $('#brandSub').textContent = T('brandSub');
   { const rt = $('#rotT'), rs = $('#rotS');
     if (rt) rt.textContent = T('rot_t');

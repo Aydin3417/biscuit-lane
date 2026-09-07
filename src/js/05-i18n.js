@@ -189,7 +189,7 @@ const STRINGS = {
     set_reset_confirm: 'Delete everything?',
     set_reset_confirm_s: 'Your pets, coins and every level you cleared. This cannot be undone.',
     set_reset_yes: 'Delete it all', set_reset_no: 'Keep my pets',
-    set_credits: 'Everything here — every cat, dog, sound and biscuit — is drawn and synthesised in code. No images, no audio files.',
+    set_credits: 'Everything here — every cat, dog, sound and biscuit — is drawn and synthesised in code. No audio files, and no pictures but the logo.',
 
     /* daily */
     daily_t: 'Left on the step',
@@ -483,7 +483,7 @@ const STRINGS = {
     set_reset_confirm: 'Her şey silinsin mi?',
     set_reset_confirm_s: 'Hayvanların, altının ve geçtiğin bölümler. Geri dönüşü yok.',
     set_reset_yes: 'Hepsini sil', set_reset_no: 'Vazgeçtim',
-    set_credits: 'Buradaki her şey — her kedi, her köpek, her ses — kodla çiziliyor ve sentezleniyor. Tek bir görsel ya da ses dosyası yok.',
+    set_credits: 'Buradaki her şey — her kedi, her köpek, her ses — kodla çiziliyor ve sentezleniyor. Ses dosyası yok; logo dışında görsel de yok.',
 
     daily_t: 'Kapıya bırakılmış',
     daily_s: 'Serinin {n}. günü.',

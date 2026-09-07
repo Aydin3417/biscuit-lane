@@ -77,10 +77,10 @@ are matching is one of yours.
 
 DRAWN, NOT DOWNLOADED
 Every cat, every dog, every crate, every room and every sound in this
-game is drawn and synthesised in code as it runs. There is not one image
-file or audio file in it. That is why it is small, why it opens instantly
-and why it works with the phone in flight mode from the very first
-launch.
+game is drawn and synthesised in code as it runs — no audio files at all,
+and no artwork except the one small picture of the logo. That is why it
+is small, why it opens instantly and why it works with the phone in
+flight mode from the very first launch.
 
 QUIET ABOUT YOU
 No accounts. No advertising. No analytics. Nothing is collected and
@@ -124,9 +124,10 @@ sonunda eşleştirdiğin her yüz senin olur.
 
 ÇİZİLİYOR, İNDİRİLMİYOR
 Bu oyundaki her kedi, her köpek, her kasa, her oda ve her ses, oyun
-çalışırken kodla çiziliyor ve sentezleniyor. İçinde tek bir görsel ya da
-ses dosyası yok. Küçük olmasının, anında açılmasının ve daha ilk
-açılıştan itibaren telefon uçak modundayken çalışmasının sebebi bu.
+çalışırken kodla çiziliyor ve sentezleniyor — tek bir ses dosyası yok,
+logonun küçük görseli dışında tek bir çizim dosyası da yok. Küçük
+olmasının, anında açılmasının ve daha ilk açılıştan itibaren telefon
+uçak modundayken çalışmasının sebebi bu.
 
 SENİN HAKKINDA SESSİZ
 Hesap yok. Reklam yok. Analitik yok. Hiçbir şey toplanmıyor ve hiçbir yere
