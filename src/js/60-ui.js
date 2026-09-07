@@ -129,11 +129,25 @@ function passSheet() {
         </span></span>
     </div>
     ${p.paid ? `<p style="color:var(--sage-ink,var(--text-dim))">${T('pass_have')}</p>`
+      /* NO PRICED BUTTON WITHOUT A STORE BEHIND IT.
+
+         The treat sheet has refused to do this from the beginning, and
+         says why in its own comment: three priced rows that all answer
+         "the shop is shut" is worse than no rows, because the player
+         taps one, is told no, and stops trusting the next thing the game
+         offers. The book was added later and did not get the rule. It
+         drew a live-looking "Get the book · $4.99" in a build with no
+         till, and tapping it did nothing at all — worse than being told
+         no, because storeShut() opens a modal, a modal opened over a
+         sheet waits in a queue, and the queue is invisible. Found on a
+         phone by pressing the only button on the screen.
+
+         Same shape as the too-late case below it: the track is still
+         drawn, because a season is worth seeing whether or not it can be
+         bought, and the free column pays out either way. */
+      : !BILLING.ready() ? `<p style="color:var(--text-faint);font-size:var(--t-micro);line-height:1.5">${T('pass_noshop')}</p>`
       /* No button when the book could not return what the pack beside it
-         costs. The track is still drawn — a season you cannot finish is
-         still a season worth seeing the shape of, and the free column
-         pays out either way — but there is nothing to tap, and the line
-         underneath says why rather than leaving a gap. */
+         costs. */
       : !passWorthBuying() ? `<p style="color:var(--text-faint);font-size:var(--t-micro);line-height:1.5">${T('pass_late')}</p>`
       : `<button class="btn primary wide" id="pBuy">${T('pass_buy')} · ${BILLING.price(PASS.sku, PASS.usd)}</button>`}
     <div class="passTrack">
@@ -1680,7 +1694,17 @@ function earnTreatsSheet(why) {
 }
 /* Said plainly, in its own card, rather than as a disabled button with
    no explanation — which reads as a bug rather than as a fact. */
+/* A modal opened while a sheet is already up joins a queue and waits its
+   turn — which is right for a badge or a level-up, and wrong for an
+   answer to something the player just tapped. This one is always an
+   answer. Called from inside a sheet it was appearing behind that sheet,
+   silently, and the player saw a button do nothing.
+
+   So: a toast when there is something in front, and the full card when
+   there is not. The toast layers above sheets, which is why the store
+   already uses one to say a purchase failed. */
 function storeShut() {
+  if (sheetIsOpen()) { toast(T('store_shut_t'), 'lock'); return; }
   const m = modal(`
     <h2>${T('store_shut_t')}</h2>
     <p>${T('store_shut_s')}</p>

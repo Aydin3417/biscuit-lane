@@ -2055,6 +2055,7 @@ const STRINGS = {
     pass_why: 'Stamps come from clearing a level for the first time, three-starring it, walking the lane and coming through a gate. Buying the book hands over everything you have already reached.',
     pass_bought: 'The book is yours. Everything you had already reached is in your purse.',
     pass_late: 'Not enough of the season left for the book to be worth its price — it comes back round with the next one. The free column still pays out.',
+    pass_noshop: 'The book cannot be bought in this build — there is no store account behind it yet. The free column pays out either way, as you go.',
     ad_daily: 'A video for {n} treats',
     goal_mole: 'Fill in {n} molehills',
     a11y_mole: 'a molehill, {n} moves until it pushes earth up',
@@ -2346,6 +2347,7 @@ const STRINGS = {
     pass_why: 'Damga; bir bölümü ilk kez geçmekten, üç yıldız almaktan, günlük yürüyüşten ve bir kapıdan geçmekten gelir. Defteri aldığında o ana kadar ulaştığın her şey birden hesabına geçer.',
     pass_bought: 'Defter senin. O ana kadar ulaştığın her şey kesene geçti.',
     pass_late: 'Defterin parasını çıkarmasına yetecek kadar sezon kalmadı — bir sonrakinde yine karşına çıkar. Ücretsiz sütun yine de ödemeye devam ediyor.',
+    pass_noshop: 'Bu sürümde defter satın alınamıyor — arkasında henüz mağaza hesabı yok. Ücretsiz sütun ilerledikçe zaten ödemeye devam ediyor.',
     ad_daily: '{n} ödül için video',
     goal_mole: '{n} köstebek yuvasını kapat',
     a11y_mole: 'köstebek yuvası, toprak çıkarmasına {n} hamle',
@@ -15396,11 +15398,25 @@ function passSheet() {
         </span></span>
     </div>
     ${p.paid ? `<p style="color:var(--sage-ink,var(--text-dim))">${T('pass_have')}</p>`
+      /* NO PRICED BUTTON WITHOUT A STORE BEHIND IT.
+
+         The treat sheet has refused to do this from the beginning, and
+         says why in its own comment: three priced rows that all answer
+         "the shop is shut" is worse than no rows, because the player
+         taps one, is told no, and stops trusting the next thing the game
+         offers. The book was added later and did not get the rule. It
+         drew a live-looking "Get the book · $4.99" in a build with no
+         till, and tapping it did nothing at all — worse than being told
+         no, because storeShut() opens a modal, a modal opened over a
+         sheet waits in a queue, and the queue is invisible. Found on a
+         phone by pressing the only button on the screen.
+
+         Same shape as the too-late case below it: the track is still
+         drawn, because a season is worth seeing whether or not it can be
+         bought, and the free column pays out either way. */
+      : !BILLING.ready() ? `<p style="color:var(--text-faint);font-size:var(--t-micro);line-height:1.5">${T('pass_noshop')}</p>`
       /* No button when the book could not return what the pack beside it
-         costs. The track is still drawn — a season you cannot finish is
-         still a season worth seeing the shape of, and the free column
-         pays out either way — but there is nothing to tap, and the line
-         underneath says why rather than leaving a gap. */
+         costs. */
       : !passWorthBuying() ? `<p style="color:var(--text-faint);font-size:var(--t-micro);line-height:1.5">${T('pass_late')}</p>`
       : `<button class="btn primary wide" id="pBuy">${T('pass_buy')} · ${BILLING.price(PASS.sku, PASS.usd)}</button>`}
     <div class="passTrack">
@@ -16947,7 +16963,17 @@ function earnTreatsSheet(why) {
 }
 /* Said plainly, in its own card, rather than as a disabled button with
    no explanation — which reads as a bug rather than as a fact. */
+/* A modal opened while a sheet is already up joins a queue and waits its
+   turn — which is right for a badge or a level-up, and wrong for an
+   answer to something the player just tapped. This one is always an
+   answer. Called from inside a sheet it was appearing behind that sheet,
+   silently, and the player saw a button do nothing.
+
+   So: a toast when there is something in front, and the full card when
+   there is not. The toast layers above sheets, which is why the store
+   already uses one to say a purchase failed. */
 function storeShut() {
+  if (sheetIsOpen()) { toast(T('store_shut_t'), 'lock'); return; }
   const m = modal(`
     <h2>${T('store_shut_t')}</h2>
     <p>${T('store_shut_s')}</p>
