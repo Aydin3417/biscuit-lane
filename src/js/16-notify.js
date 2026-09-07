@@ -101,7 +101,30 @@ const NOTIFY = {
      id is replaced, and a time already past is simply not scheduled —
      the operating systems disagree about what to do with one of those
      and none of the answers is "nothing", which is the only acceptable
-     one here. */
+     one here.
+
+     `isExactNotification: false` IS THE WHOLE OF THIS COMMENT.
+
+     Without it, on any phone running Android 12 or newer, turning
+     Reminders on threw the player out of the game and into Android's
+     "Alarms & reminders" settings screen — a page about battery use —
+     for agreeing to be told their hearts had come back. Twice, because
+     the sheet asks and then the resume re-syncs.
+
+     The flag defaults to true, and true means "this is an alarm": the
+     plugin asks for SCHEDULE_EXACT_ALARM, finds the app has not declared
+     it, and opens the settings page to beg for it. Declaring the
+     permission is not the fix — Play restricts it to alarm clocks and
+     calendars and a puzzle game would not get it past review.
+
+     False is not a workaround, it is the correct description. Nothing
+     here is time-critical: "some time around ten" is the entire
+     requirement, and an inexact alarm delivered on the phone's next wake
+     is exactly right for a reminder that a walk is waiting.
+
+     Found on an emulator in four minutes. No browser and no test in this
+     repository could have found it, because none of them has a plugin
+     behind the seam. */
   async at(which, when, title, body) {
     if (!this.ready() || !this.on()) return;
     if (!(when > Date.now() + 30000)) return;
@@ -111,7 +134,8 @@ const NOTIFY = {
           id: this.ids[which],
           title: title,
           body: body,
-          schedule: { at: new Date(when), allowWhileIdle: true }
+          isExactNotification: false,
+          schedule: { at: new Date(when) }
         }]
       });
     } catch (e) { }

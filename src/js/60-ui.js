@@ -1037,7 +1037,14 @@ function openPetSheet(id) {
     <h2>${p.name}</h2>
     <p>${breedName(p.breed)} · ${stageName(p)}</p>
     <div class="goalItem">
-      <canvas data-tile="${p.breed}" width="34" height="34"></canvas>
+      <!-- A slot, not a breed index. paintTile takes the board position
+           and asks the cast which animal rides it, and the cast puts the
+           player's own first — so once you own anything, breed 2 is not
+           slot 2. This card said "Charges on Sable" beside a Beagle tile
+           for every player with a pet, which is every player. favType()
+           in 40-game.js carries the same warning in a comment; this is
+           the place that had not read it. -->
+      <canvas data-tile="${castSlot(p.breed)}" width="34" height="34"></canvas>
       <span class="t"><b>${T('fam_fav')}</b>${breedName(p.breed)}</span>
     </div>
     <div class="goalItem">

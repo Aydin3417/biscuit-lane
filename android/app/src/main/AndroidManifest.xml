@@ -61,10 +61,16 @@
 
          POST_NOTIFICATIONS is Android 13's runtime permission; without
          it declared the request never shows and schedule() silently
-         delivers nothing on any recent phone. SCHEDULE_EXACT_ALARM is
-         deliberately NOT here — these two are "some time around then"
-         reminders, not alarms, and Google asks for a justification for
-         exact alarms that a puzzle game does not have. -->
+         delivers nothing on any recent phone.
+
+         SCHEDULE_EXACT_ALARM is deliberately NOT here. These two are
+         "some time around then" reminders, not alarms, and Google asks
+         for a justification for exact alarms that a puzzle game does not
+         have. That decision has a matching one in the code: 16-notify.js
+         must not pass allowWhileIdle, because the plugin reads that flag
+         as "this is an alarm" and, finding no permission for one, throws
+         the player out of the game and into the system settings page for
+         it. Found on a device; nothing else could have found it. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- so a reminder scheduled before the phone was restarted still
          arrives after it -->
