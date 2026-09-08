@@ -79,7 +79,7 @@ KINDS.forEach(kind => {
   if (!levels.length) { console.log(kind + ': no generated levels found'); return; }
   const row = SCALES.map(() => 0);
   levels.forEach(n => {
-    const base = levelDef(n, true);   /* the fixed point, not the generator's answer */
+    const base = levelDef(n, true, kind);   /* the fixed point, not the generator's answer, and the kind under test */
     SCALES.forEach((s, i) => {
       const def = Object.assign({}, base, { moves: Math.max(6, Math.round(base.moves * s)) });
       row[i] += clearRate(n, def, GAMES);

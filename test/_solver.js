@@ -462,4 +462,7 @@ function playLevel(n, seed, defOverride) {
 }
 
 
-module.exports = { playLevel, X, mkGoals, cloneBoard, POLICY, humanMove, bestMove, resolve, blankTally, applyTally, met, remaining };
+/* ctx is the game's own global scope. test/fit-run.js reaches in to blank
+   fittedMoves() and fittedWork() while it measures, so a level is fitted
+   from the model's own build and not from the last fit's. */
+module.exports = { playLevel, X, ctx, mkGoals, cloneBoard, POLICY, humanMove, bestMove, resolve, blankTally, applyTally, met, remaining };

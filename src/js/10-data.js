@@ -1422,7 +1422,15 @@ function levelDef(n, ref, forceKind) {
   const keyOf = k => (k === GK.BRAMBLE ? 'bramble' : k);
   const fits = kinds.filter(k => {
     const rng = budgetRange(keyOf(k));
-    return want >= rng[0] - .05 && want <= rng[1] + .05;
+    /* Wider below than above. Measured with the player who cannot see
+       cascades, a mud level clears 93% at half its budget and a hill
+       level 93% at the same, so neither could fit any target under .88
+       and the run had two mud levels and no hills in three hundred —
+       the seventh mechanic, held back until level 76 on purpose, never
+       arrived. A kind that lands up to twelve points easier than the
+       target is a relief level that is a little kinder than drawn; a
+       kind that cannot reach the target from above is a wall. */
+    return want >= rng[0] - .12 && want <= rng[1] + .05;
   });
   const pool = fits.length ? fits : kinds;
   /* a kind may be forced: test/calibrate.js measures how each kind answers
@@ -1450,17 +1458,40 @@ function levelDef(n, ref, forceKind) {
      whatever the budget could not reach is carried into the work: more
      mud, more crates, a wider patch. */
   const reach = budgetRange(key);
-  /* aim below the target by the model's measured error, or every level
-     arrives about nine points easier than it was drawn */
+  /* aim off the target by the model's measured error — see MODEL_BIAS,
+     which is re-measured whenever the player the curves were drawn
+     with changes */
   const byMoves = clamp(want - MODEL_BIAS, reach[0], reach[1]);
   const mult = ref ? 1 : budgetFor(key, byMoves);
   /* what the budget could not do, the work has to. Positive means the
      level needs to be harder than the moves alone can make it. */
   const shortfall = byMoves - want;
-  const workMult = ref ? 1 : clamp(1 + shortfall * 1.6, .78, 1.34);
+  /* A fitted level may carry a work multiplier of its own as well, from
+     13-run-fit.js: fourteen crate levels in three hundred still cleared
+     nine times in ten at six tenths of their budget, because of where
+     the crates lay, and with the budget at its floor the only lever
+     left was more crates. */
+  const workMult = (ref ? 1 : clamp(1 + shortfall * 1.6, .78, 1.34)) * ((!ref && fittedWork(n)) || 1);
 
   const baseMoves = (GEN[key] && GEN[key].moves ? GEN[key].moves : 28) + (tier % 2);
-  const moves = Math.max(8, Math.round(baseMoves * mult));
+  /* The model's answer, unless the level has been measured directly.
+
+     The response curves are one curve per kind, drawn through five
+     levels of that kind; the level in front of the player is one map
+     with one blob, one arrangement, one tier's score demand, and it
+     answers its budget in its own way. Played out, the model missed the
+     drawn target by twenty points on the average level and by fifty on
+     the worst, in both directions. So the run is fitted the way the
+     lane is — each level played at several budgets until it lands on
+     its own target, the budget written down (13-run-fit.js) — and the
+     model is what a level gets before it has been measured. The
+     reference build never reads the fit: it is the fixed point the
+     curves are measured against. */
+  const fit = ref ? undefined : fittedMoves(n);
+  const modelMoves = Math.max(8, Math.round(baseMoves * mult));
+  const moves = fit || modelMoves;
+  /* the stars are priced off the budget the level actually has */
+  const budgetMult = fit ? fit / baseMoves : mult;
 
   /* a bramble patch is a blob, not a sprinkle: scattered single cells
      read as noise and give the spread nothing to work with */
@@ -1635,7 +1666,11 @@ function levelDef(n, ref, forceKind) {
     const a = Math.floor(r() * types);
     let b = Math.floor(r() * types);
     if (b === a) b = (b + 1) % types;          /* two different colours */
-    const pair = collectPair(moves, types, tier);
+    /* Sized to the model's budget, not the fitted one. The fit varies
+       the budget against a fixed goal; a goal that grew with the budget
+       would chase it — level 63 was fitted to 48 moves and 80%, then
+       built with a 48-move goal on those 48 moves, and cleared 13%. */
+    const pair = collectPair(modelMoves, types, tier);
     goals.push([GK.COLLECT, a, Math.round(pair[0] * workMult)]);
     goals.push([GK.COLLECT, b, Math.round(pair[1] * workMult)]);
     base = GEN.collect.base + tier * 500;
@@ -1663,7 +1698,7 @@ function levelDef(n, ref, forceKind) {
   /* The star targets are a score, and score is earned per move — a level
      given fifteen percent fewer moves cannot reach the same number, and
      three stars would quietly become unreachable. */
-  if (!ref) base = Math.round(base * (.35 + .65 * mult));
+  if (!ref) base = Math.round(base * (.35 + .65 * budgetMult));
 
   return normaliseGoals({ n, w, h, types, moves, goals, base, map, gate: isGate(n) });
 }

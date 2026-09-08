@@ -108,7 +108,12 @@ function easeAt(n) {
    The lane needs no such correction. Its levels are not modelled, they
    are measured one at a time and solved for directly, so there is
    nothing between the intent and the number. */
-const MODEL_BIAS = .09;
+/* Re-measured after the curves were remade for the player who cannot
+   see cascades: aiming nine points low, the run came out eight points
+   *harder* than drawn (levels 61-120, twelve games each, bias -8%,
+   gates 8-33% against 58-62%). The old offset belonged to the old
+   player. Near zero now; the gates are watched separately below. */
+const MODEL_BIAS = .01;
 
 /* The daily walk sits outside the curve on purpose. It is the same
    promise every day — the one level that carries a streak, so the one

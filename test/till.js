@@ -53,7 +53,7 @@ const ctx = {
 };
 vm.createContext(ctx);
 vm.runInContext('var LANG = "en";', ctx);
-['00-util.js', '10-data.js', '11-design.js', '12-curve.js', '15-save.js', '17-billing.js']
+['00-util.js', '10-data.js', '11-design.js', '12-curve.js', '13-run-fit.js', '15-save.js', '17-billing.js']
   .forEach(f => vm.runInContext(read(f), ctx, { filename: f }));
 const X = vm.runInContext(
   '({ BILLING, TREAT_PACKS, JAR, PASS, grantPurchase, claimOutstanding,' +

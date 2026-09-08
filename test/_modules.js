@@ -7,7 +7,7 @@
 
    CORE is everything the level data and the engine need and nothing that
    touches a document. */
-const CORE = ['00-util.js', '10-data.js', '11-design.js', '12-curve.js', '30-engine.js'];
+const CORE = ['00-util.js', '10-data.js', '11-design.js', '12-curve.js', '13-run-fit.js', '30-engine.js'];
 /* the save layer as well, for anything asking about pets */
-const WITH_SAVE = ['00-util.js', '10-data.js', '11-design.js', '12-curve.js', '15-save.js'];
+const WITH_SAVE = ['00-util.js', '10-data.js', '11-design.js', '12-curve.js', '13-run-fit.js', '15-save.js'];
 module.exports = { CORE, WITH_SAVE };
