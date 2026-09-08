@@ -193,11 +193,11 @@ const FACE_LOOK = {
      Doubling them is most of the difference. `x` has to open up with
      `r` or they meet in the middle, and `y` goes positive: below
      centre, with forehead above. */
-  marmalade: { r: .156, x: .190, y: .045, tilt: -.09, almond: true, lid: .34, brow: 0 },
+  marmalade: { r: .160, x: .200, y: .040, tilt: 0, almond: false, lid: .34, brow: 0 },
   beagle: { r: .158, x: .186, y: .030, tilt: .06, almond: false, lid: .20, brow: .8 },
-  void: { r: .164, x: .194, y: .040, tilt: 0, almond: false, lid: .10, brow: 0 },
+  void: { r: .166, x: .200, y: .036, tilt: 0, almond: false, lid: .10, brow: 0 },
   retriever: { r: .154, x: .182, y: .022, tilt: .05, almond: false, lid: .34, brow: 0 },
-  siamese: { r: .154, x: .188, y: .046, tilt: -.16, almond: true, lid: .28, brow: 0 },
+  siamese: { r: .158, x: .198, y: .042, tilt: 0, almond: false, lid: .28, brow: 0 },
   pug: { r: .170, x: .198, y: .012, tilt: 0, almond: false, lid: .06, brow: .7 }
 };
 function lookOf(spec) { return FACE_LOOK[spec.breed.id] || FACE_LOOK.marmalade; }
@@ -212,7 +212,7 @@ const BLUSH_BY_MOOD = {
 };
 function drawBlush(c, spec, s, o) {
   const k = BLUSH_BY_MOOD[(o && o.mood) || 'content'];
-  const a = (PAL.dark ? .30 : .36) * (k === undefined ? 1 : k);
+  const a = (PAL.dark ? .20 : .24) * (k === undefined ? 1 : k);
   if (a < .02) return;
   const w = .10 * s * (k > 1 ? 1.12 : 1);
   c.fillStyle = rgba('#E88494', a);
@@ -418,8 +418,68 @@ function headPath(c, spec, s) {
   c.closePath();
 }
 
+/* A cat's head with its ears in the same line.
+
+   Drawn as two triangles on a head, each with its own outline, the
+   ears were stickers stuck on a sticker, and the seams showed at every
+   size. The silhouette is one path now — cheek, ear, skull, ear, cheek,
+   chin — filled once and lined once, and the pose the mood gives the
+   ears moves the tips rather than rotating a separate shape. */
+function catSilhouette(c, spec, s, o) {
+  const k = spec.breed.ear;
+  const pose = EAR_POSE[(o && o.mood) || 'content'] || EAR_POSE.content;
+  const tall = k === 'tall';
+  /* the ear: outer base on the cheek line, inner base on the skull, tip */
+  const outer = [.47, -.26], inner = [.17, -.40];
+  const tip0 = tall ? [.34, -.94] : [.38, -.80];
+  const mid = [(outer[0] + inner[0]) / 2, (outer[1] + inner[1]) / 2];
+  const vx = tip0[0] - mid[0], vy = tip0[1] - mid[1];
+  const sc = 1 - pose.droop * .9, a = pose.rot;
+  const tip = [mid[0] + (vx * Math.cos(a) - vy * Math.sin(a)) * sc + pose.out, mid[1] + (vx * Math.sin(a) + vy * Math.cos(a)) * sc];
+  const earTips = { l: [-tip[0] * s, tip[1] * s], r: [tip[0] * s, tip[1] * s] };
+  c.beginPath();
+  c.moveTo(-.50 * s, .00 * s);
+  c.bezierCurveTo(-.51 * s, -.16 * s, -.50 * s, -.24 * s, -outer[0] * s, outer[1] * s);
+  if (k === 'round') {
+    c.quadraticCurveTo(earTips.l[0] - .04 * s, earTips.l[1] + .02 * s, earTips.l[0] + .04 * s, earTips.l[1] + .04 * s);
+    c.quadraticCurveTo(earTips.l[0] + .10 * s, earTips.l[1] + .08 * s, -inner[0] * s, inner[1] * s);
+  } else {
+    c.lineTo(earTips.l[0], earTips.l[1]);
+    c.lineTo(-inner[0] * s, inner[1] * s);
+  }
+  c.quadraticCurveTo(0, -.47 * s, inner[0] * s, inner[1] * s);
+  if (k === 'round') {
+    c.quadraticCurveTo(earTips.r[0] - .10 * s, earTips.r[1] + .08 * s, earTips.r[0] - .04 * s, earTips.r[1] + .04 * s);
+    c.quadraticCurveTo(earTips.r[0] + .04 * s, earTips.r[1] + .02 * s, outer[0] * s, outer[1] * s);
+  } else {
+    c.lineTo(earTips.r[0], earTips.r[1]);
+    c.lineTo(outer[0] * s, outer[1] * s);
+  }
+  c.bezierCurveTo(.50 * s, -.24 * s, .51 * s, -.16 * s, .50 * s, .00 * s);
+  c.bezierCurveTo(.50 * s, .26 * s, .28 * s, .42 * s, 0, .42 * s);
+  c.bezierCurveTo(-.28 * s, .42 * s, -.50 * s, .26 * s, -.50 * s, .00 * s);
+  c.closePath();
+  return { tips: earTips, outer, inner };
+}
+/* the pink inside each ear, inset from the line */
+function catInnerEars(c, spec, s, geo) {
+  const inner = spec.inner || '#F2B7B0';
+  const col = spec.breed.ear === 'tall' ? mix(inner, spec.point || spec.fur2, .35) : inner;
+  c.fillStyle = col;
+  [['l', -1], ['r', 1]].forEach(([side, sx]) => {
+    const tip = geo.tips[side];
+    const o = [sx * geo.outer[0] * s, geo.outer[1] * s], i = [sx * geo.inner[0] * s, geo.inner[1] * s];
+    const cx = (tip[0] + o[0] + i[0]) / 3, cy = (tip[1] + o[1] + i[1]) / 3;
+    const in_ = p => [cx + (p[0] - cx) * .62, cy + (p[1] - cy) * .62];
+    const a = in_(tip), b = in_(o), d = in_(i);
+    c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.lineTo(d[0], d[1]); c.closePath(); c.fill();
+  });
+}
+
 /* ---------------- ears ---------------- */
 function drawEars(c, spec, s, back, o) {
+  /* a cat's are part of its silhouette — see catSilhouette */
+  if (spec.breed.species === 'cat') return;
   const b = spec.breed, fur = spec.fur, fur2 = spec.fur2, inner = spec.inner || '#F2B7B0';
   const k = b.ear;
   const front = k === 'droop' || k === 'flop' || k === 'button';
@@ -500,14 +560,15 @@ function drawMarkings(c, spec, s) {
   headPath(c, spec, s); c.clip();
   c.lineCap = 'round';
   if (b.mark === 'tabby') {
-    /* the forehead M and the cheek bars, as flat strokes */
-    c.strokeStyle = spec.fur2; c.lineWidth = .05 * s;
-    [[-.16, -.22, -.21, -.42], [0, -.25, 0, -.45], [.16, -.22, .21, -.42]].forEach(([x0, y0, x1, y1]) => {
-      c.beginPath(); c.moveTo(x0 * s, y0 * s); c.lineTo(x1 * s, y1 * s); c.stroke();
-    });
+    /* the forehead M as three strokes that fan out and thin, and two
+       bars back along each cheek: brush marks, not scratches */
+    c.fillStyle = spec.fur2;
+    taperMark(c, -.06 * s, -.20 * s, -.15 * s, -.32 * s, -.21 * s, -.44 * s, s * .075, s * .014); c.fill();
+    taperMark(c, 0, -.22 * s, 0, -.34 * s, 0, -.46 * s, s * .07, s * .012); c.fill();
+    taperMark(c, .06 * s, -.20 * s, .15 * s, -.32 * s, .21 * s, -.44 * s, s * .075, s * .014); c.fill();
     [-1, 1].forEach(sx => {
-      c.beginPath(); c.moveTo(sx * .36 * s, -.10 * s); c.lineTo(sx * .50 * s, -.14 * s);
-      c.moveTo(sx * .37 * s, .05 * s); c.lineTo(sx * .50 * s, .03 * s); c.stroke();
+      taperMark(c, sx * .30 * s, -.10 * s, sx * .40 * s, -.12 * s, sx * .50 * s, -.08 * s, s * .065, s * .014); c.fill();
+      taperMark(c, sx * .31 * s, .06 * s, sx * .41 * s, .06 * s, sx * .50 * s, .10 * s, s * .06, s * .012); c.fill();
     });
   } else if (b.mark === 'patch') {
     /* a beagle: the blaze, from the crown down over the muzzle */
@@ -538,10 +599,16 @@ function drawMarkings(c, spec, s) {
     c.moveTo(-.11 * s, -.16 * s); c.quadraticCurveTo(0, -.25 * s, .11 * s, -.16 * s);
     c.stroke();
   }
-  /* every dog but the pug has a lighter muzzle */
+  /* every dog but the pug has a lighter muzzle, and so does a cat
+     that is not wearing a mask: two pads and a chin in the belly colour */
   if (b.face === 'dog' && b.mark !== 'patch') {
     c.fillStyle = rgba(spec.belly, .85);
     ellipse(c, 0, .24 * s, .22 * s, .17 * s); c.fill();
+  } else if (b.species === 'cat' && b.mark !== 'points') {
+    c.fillStyle = rgba(spec.belly, darkCoat(spec) ? .55 : .9);
+    ellipse(c, -.10 * s, .25 * s, .14 * s, .11 * s); c.fill();
+    ellipse(c, .10 * s, .25 * s, .14 * s, .11 * s); c.fill();
+    ellipse(c, 0, .34 * s, .13 * s, .09 * s); c.fill();
   }
   c.restore();
 }
@@ -618,10 +685,12 @@ function drawNoseMouth(c, spec, s, o) {
   let my;                                   /* where the mouth starts */
   if (cat) {
     /* a small pink triangle, point down */
-    const nw = .065 * s, ny = .19 * s;
+    const nw = .07 * s, ny = .19 * s;
     c.fillStyle = spec.nose || '#E8828F';
     c.beginPath();
-    c.moveTo(-nw, ny); c.lineTo(nw, ny); c.lineTo(0, ny + nw * 1.15); c.closePath();
+    c.moveTo(-nw, ny); c.quadraticCurveTo(0, ny - nw * .3, nw, ny);
+    c.quadraticCurveTo(nw * .3, ny + nw * .9, 0, ny + nw * 1.15);
+    c.quadraticCurveTo(-nw * .3, ny + nw * .9, -nw, ny); c.closePath();
     c.fill();
     c.strokeStyle = ink; c.lineWidth = W * .55; c.lineJoin = 'round'; c.stroke();
     my = ny + nw * 1.15;
@@ -685,26 +754,19 @@ function drawNoseMouth(c, spec, s, o) {
       c.strokeStyle = ink; c.lineWidth = W * .45; c.stroke();
     }
   }
-  /* whiskers, when there is room for them to be lines and not noise */
-  if (cat && s > 60) {
-    c.strokeStyle = rgba(mouthInk, .5); c.lineWidth = W * .35; c.lineCap = 'round';
-    [-1, 1].forEach(sx => {
-      c.beginPath();
-      c.moveTo(sx * .20 * s, .20 * s); c.lineTo(sx * .46 * s, .14 * s);
-      c.moveTo(sx * .20 * s, .26 * s); c.lineTo(sx * .46 * s, .28 * s);
-      c.stroke();
-    });
-  }
 }
 
 /* ---------------- the face ---------------- */
 function drawFace(c, spec, s, o) {
   o = o || {};
+  const cat = spec.breed.species === 'cat';
   c.save();
   if (o.squash) c.scale(1 + o.squash, 1 - o.squash);
   drawEars(c, spec, s, true, o);
+  let geo = null;
   c.fillStyle = spec.fur;
-  headPath(c, spec, s); c.fill();
+  if (cat) geo = catSilhouette(c, spec, s, o); else headPath(c, spec, s);
+  c.fill();
   /* one flat shadow tone under the chin */
   c.save();
   headPath(c, spec, s); c.clip();
@@ -712,7 +774,9 @@ function drawFace(c, spec, s, o) {
   c.fillRect(-.6 * s, .30 * s, 1.2 * s, .3 * s);
   c.restore();
   drawMarkings(c, spec, s);
-  headPath(c, spec, s); inkStroke(c, spec, s);
+  if (cat) catSilhouette(c, spec, s, o); else headPath(c, spec, s);
+  inkStroke(c, spec, s);
+  if (cat) catInnerEars(c, spec, s, geo);
   drawEars(c, spec, s, false, o);
   drawBlush(c, spec, s, o);
   const look = lookOf(spec);
@@ -794,9 +858,9 @@ function drawBody(c, spec, s, o) {
     ellipse(c, -.36 * s, .54 * s, .16 * s, .20 * s, .3); c.fill();
     ellipse(c, .36 * s, .54 * s, .16 * s, .20 * s, -.3); c.fill();
   } else if (b.mark === 'tabby') {
-    c.strokeStyle = spec.fur2; c.lineWidth = .045 * s; c.lineCap = 'round';
+    c.fillStyle = spec.fur2;
     [-1, 1].forEach(sx => [.46, .60, .74].forEach(y => {
-      c.beginPath(); c.moveTo(sx * .48 * s, y * s); c.quadraticCurveTo(sx * .34 * s, (y - .03) * s, sx * .24 * s, (y + .02) * s); c.stroke();
+      taperMark(c, sx * .50 * s, y * s, sx * .36 * s, (y - .03) * s, sx * .24 * s, (y + .02) * s, s * .07, s * .014); c.fill();
     }));
   }
   /* the chest, lighter, on every coat that has a lighter belly */
