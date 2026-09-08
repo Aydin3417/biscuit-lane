@@ -25,7 +25,12 @@ const { run, ticker } = require('./_pool.js');
 const { X } = require('./_solver.js');
 
 const GAMES = +process.argv[2] || 24;
-const SCALES = [.8, 1, 1.18, 1.35];
+/* Wider than the four budgets the solver was measured at. The human
+   player needs more room than the solver did to reach the same clear
+   rate — level one at the authored budget is 63% for one and 92% for the
+   other — and a lane fitted inside a band that stops at 1.35x would be
+   fitted to the lower edge of what the level can be, not to the intent. */
+const SCALES = [.8, 1, 1.2, 1.45, 1.75];
 const FIRST = 1, LAST = 60;
 
 (async () => {

@@ -135,6 +135,9 @@ if (process.env.STARS) {
 }
 const A = +(process.argv[2] || 1), Bn = +(process.argv[3] || 40), N = +(process.argv[4] || 12);
 const rows = [];
+/* which player these numbers belong to is the first thing to know
+   about them; see the note above humanMove in _solver.js */
+console.log('player: ' + require('./_solver.js').POLICY + (process.env.SOLVER ? '' : '  (SOLVER=solver for the cascade-seeing one)'));
 console.log('lvl  goal                   mv  want  clear%  avgScore  star3%  medLeft  verdict');
 console.log('---  ---------------------  --  ----  ------  --------  ------  -------  -------');
 for (let n = A; n <= Bn; n++) {

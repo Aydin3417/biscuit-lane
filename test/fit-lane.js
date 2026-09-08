@@ -131,7 +131,10 @@ const N_VERIFY = 64;
       const rise = Math.max(.012, pts[pts.length - 1].p - pts[0].p);
       const perMove = rise / span;
       const delta = (want[n] - rateAt(n)) / perMove;
-      const lo = Math.round(rowOf[n].m0 * .7), hi = Math.round(rowOf[n].m0 * 1.5);
+      /* the envelope is measured out to 1.75x now, so the correction may
+         go that far too — a level whose intent sits past 1.5x was being
+         pinned short of it and reported as a miss */
+      const lo = Math.round(rowOf[n].m0 * .7), hi = Math.round(rowOf[n].m0 * 1.9);
       guess[n] = Math.max(6, Math.min(hi, Math.max(lo, Math.round(guess[n] + Math.max(-8, Math.min(8, delta))))));
       at2[n] = jobs2.length;
       for (let g = 0; g < N_VERIFY; g++) jobs2.push([n, n * 7919 + g * 104729 + 77, guess[n]]);

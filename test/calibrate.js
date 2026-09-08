@@ -41,10 +41,12 @@ const KINDS = ONLY ? ALL_KINDS.filter(k => k === ONLY) : ALL_KINDS;
 /* find generated levels of each kind to measure */
 function levelsOfKind(kind, want) {
   const out = [];
-  for (let n = 61; n < 700 && out.length < want; n += 1) {
-    const def = levelDef(n, true);
-    if (def.goals.some(g => g[0] === kind)) out.push(n);
-  }
+  /* The kind is forced rather than found. Finding it read the curve this
+     run is about to replace: with the solver's curve saying a mud level
+     clears 98% at half its budget, mud fitted no target in the run and
+     there was no mud level to measure — so the next curve had no mud
+     row, so mud never fitted. Forcing it breaks the circle. */
+  for (let n = 61; n < 61 + want * 7; n += 7) out.push(n);
   return out;
 }
 

@@ -123,7 +123,9 @@ function hitCell(B, r, c, out, touched) {
   if (cell.ice > 0) { cell.ice--; return; }
   const t = cell.tile;
   if (!t || t.type === PUP) return;
-  if (t.sp !== SP.NONE) out.chain.push({ r, c, sp: t.sp, type: t.type });
+  /* as the game does it: a rainbow set off indirectly clears the
+     board's most common colour, not the colour it was born from */
+  if (t.sp !== SP.NONE) out.chain.push({ r, c, sp: t.sp, type: t.sp === SP.RAIN ? -1 : t.type });
   cell.tile = null;
   out.count++;
   out.collect[t.type] = (out.collect[t.type] || 0) + 1;
@@ -258,6 +260,136 @@ function bestMove(B, goals) {
   return best;
 }
 
+/* ---------------- the player who cannot see the future ----------------
+
+   Two players live here now, and the difference between them is the
+   difference between a level that was tuned and a level that is fair.
+
+   `solver`, above, is the one every number in this project was measured
+   with. It tries every legal swap on a copy of the board, resolves the
+   whole cascade including the tiles that fall in afterwards, and keeps
+   the swap that moved the goals furthest. 11-design.js calls it "about as
+   well as an attentive human who is not trying very hard", and measured
+   against an actual person it is nothing of the kind: it sees the
+   cascade before it happens, and on a five-colour board the cascade is
+   most of what a move delivers.
+
+   Played through the real interface, the game's own hint — which scores
+   only what a match visibly does — lost level one twice at 26 and 27 of
+   34. A policy that scores the visible match and nothing else clears
+   level one 63% of the time where the solver clears it 92%; level three
+   30% against 100%; level six 20% against 92%; level nine 3% against
+   92%; the first gate 7% against 75%. Thirty seeds a level. Every move
+   budget in the lane and every response curve behind the generator had
+   been fitted to the 92, and a player handed the 63 does not read that
+   as difficulty, they read it as the game cheating.
+
+   `human` is that second player. Every legal swap, scored by what the
+   match itself would deliver to the goals: the tiles in the run, the
+   mud under them, the crates and hills beside them, the row or column
+   or colour a special inside the run would visibly fire along, and the
+   ordinary preference for a longer run and for making a special. No
+   cascade and no refill, because nobody sees those. It is the default,
+   because the question the numbers answer is "will a person clear this";
+   SOLVER=solver brings the old player back for comparison. */
+const POLICY = process.env.SOLVER === 'solver' ? 'solver' : 'human';
+
+function visibleKeys(B, r, c, sp, type) {
+  if (sp === SP.RAIN) return specialKeys(B, r, c, sp, type < 0 ? undefined : type);
+  return specialKeys(B, r, c, sp, type);
+}
+function humanMove(B, goals) {
+  const moves = allMoves(B);
+  if (!moves.length) return null;
+  const wanted = {};
+  goals.forEach(g => { if (g.have < g.need) wanted[g.kind === GK.COLLECT ? 'c' + g.arg : g.kind] = g.need - g.have; });
+  const left = k => wanted[k] || 0;
+  let best = null, bestV = -1;
+  for (const m of moves) {
+    const [a, b] = m;
+    let v = 0;
+    /* Two specials swapped together are a legal move and the biggest
+       one on the board, and this harness cannot play it: resolve()
+       knows lines, not combos, so the swap lands as a no-op. The first
+       draft valued that swap at 120 the way the game's hint does, chose
+       it, watched nothing happen, and chose it again until the budget
+       was gone — level one measured 20%. So a combo is scored here by
+       the lines it makes, which is usually none, and the policy simply
+       does not take it. That undersells a person by a little, and it is
+       the honest reading of what the harness can see. */
+    {
+      swapTiles(B, a, b);
+      const groups = findMatches(B);
+      const seen = new Set();
+      const got = { count: 0, mud: 0, crate: 0, bram: 0, mole: 0, rescue: 0, made: 0, collect: {} };
+      const hit = (r, c) => {
+        const key = r + ':' + c;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const cell = B.cell[r] && B.cell[r][c];
+        if (!cell || cell.hole) return;
+        if (cell.crate > 0) { if (cell.crate === 1) got.crate++; return; }
+        if (cell.ice > 0) return;
+        const t = cell.tile;
+        if (!t || t.type === PUP) return;
+        got.count++;
+        got.collect[t.type] = (got.collect[t.type] || 0) + 1;
+        if (cell.mud > 0) got.mud++;
+        if (cell.bram > 0) got.bram++;
+        [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].forEach(([r2, c2]) => {
+          const nb = B.cell[r2] && B.cell[r2][c2];
+          if (!nb) return;
+          if (nb.crate === 1) got.crate++;
+          if (nb.mole > 0) got.mole++;
+          /* a basket sits on what is under it; clearing that is the only
+             visible way of walking it home */
+          if (r2 === r - 1 && nb.tile && nb.tile.type === PUP) got.rescue++;
+        });
+      };
+      groups.forEach(g => {
+        if (specialFor(g) !== SP.NONE) got.made++;
+        g.cells.forEach(([r, c]) => {
+          hit(r, c);
+          const t = B.cell[r][c].tile;
+          if (t && t.sp !== SP.NONE) visibleKeys(B, r, c, t.sp, t.type).forEach(k => { const [r2, c2] = k.split(':').map(Number); hit(r2, c2); });
+        });
+      });
+      swapTiles(B, a, b);
+      goals.forEach(g => {
+        const l = g.kind === GK.COLLECT ? left('c' + g.arg) : left(g.kind);
+        if (l <= 0) return;
+        let d = 0;
+        if (g.kind === GK.COLLECT) d = got.collect[g.arg] || 0;
+        else if (g.kind === GK.MUD) d = got.mud;
+        else if (g.kind === GK.CRATE) d = got.crate;
+        else if (g.kind === GK.BRAMBLE) d = got.bram * 2;
+        else if (g.kind === GK.MOLE) d = got.mole * 2;
+        else if (g.kind === GK.RESCUE) d = got.rescue * 3;
+        else if (g.kind === GK.SCORE) d = got.count * 62 / 260;
+        v += Math.min(d, l) * 10;
+      });
+      /* Ties are the common case — most swaps on most boards touch no
+         goal at all — and which tie wins matters more than it looks.
+         Measured on level one over thirty seeds: taken in scan order
+         this policy cleared 30%; breaking ties at random cleared 63%;
+         breaking them toward the lower match cleared 73%. A match at
+         the top of the board drops nothing through it and a match at
+         the bottom drops everything, and matching low is the first
+         thing a person learns at this game. So the row is the
+         tie-breaker, ahead of how many tiles the match itself holds —
+         when the tile count was allowed to decide first, the row never
+         got a say and the policy sat back at 30%. */
+      let rows = 0, cells = 0, longest = 0;
+      groups.forEach(g => { longest = Math.max(longest, g.maxH || 0, g.maxV || 0); g.cells.forEach(([r]) => { rows += r; cells++; }); });
+      v += got.made * 6 + (longest >= 4 ? 2 : 0) + got.count * .1;
+      if (cells) v += 1.5 * (rows / cells) / Math.max(1, B.h - 1);
+    }
+    if (v > bestV) { bestV = v; best = m; }
+  }
+  return best;
+}
+const pickMove = POLICY === 'human' ? humanMove : bestMove;
+
 /* ---------------- play one game ---------------- */
 function playLevel(n, seed, defOverride) {
   const def = defOverride || levelDef(n);
@@ -312,7 +444,7 @@ function playLevel(n, seed, defOverride) {
       score += Math.round(t.count * 62 * scoreMul); applyTally(goals, t, score, B);
       continue;
     }
-    const m = bestMove(B, goals);
+    const m = pickMove(B, goals);
     if (!m) break;
     swapTiles(B, m[0], m[1]);
     moves--; used++;
@@ -330,4 +462,4 @@ function playLevel(n, seed, defOverride) {
 }
 
 
-module.exports = { playLevel, X, mkGoals, cloneBoard };
+module.exports = { playLevel, X, mkGoals, cloneBoard, POLICY, humanMove, bestMove, resolve, blankTally, applyTally, met, remaining };
