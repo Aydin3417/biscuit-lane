@@ -309,7 +309,7 @@ canvas{ max-width:100%; }
 .purse{ display:flex; align-items:center; gap:6px; }
 .chip{
   display:inline-flex; align-items:center; gap:5px;
-  padding:5px 10px 5px 6px; border-radius:999px;
+  padding:8px 10px 8px 7px; border-radius:999px;
   background:var(--surface-2); border:1px solid var(--line-soft);
   font-weight:700; font-size:var(--t-small); font-variant-numeric:tabular-nums;
   box-shadow:var(--shadow-1); white-space:nowrap;
@@ -338,8 +338,11 @@ canvas{ max-width:100%; }
    on the control, reaching out to 48 in both directions. Nothing moves
    and nothing looks different; the thing simply catches the tap that
    used to land beside it. */
+/* forty, not thirty-four: the settings gear and the level's back button
+   were the two smallest things on the screen, and both under the 44px
+   a thumb is designed around; the row has the height to spare */
 .iconbtn{
-  width:34px; height:34px; border-radius:12px; display:grid; place-items:center;
+  width:40px; height:40px; border-radius:13px; display:grid; place-items:center;
   background:var(--surface-2); border:1px solid var(--line-soft); box-shadow:var(--shadow-1);
   transition:transform .12s ease, background .15s ease; flex:0 0 auto;
   position:relative;
@@ -1042,7 +1045,13 @@ canvas{ max-width:100%; }
 .winPet{ display:grid; place-items:center; margin:-2px 0 -6px; }
 .winPet canvas{ width:116px; height:116px; animation:winPetIn .5s cubic-bezier(.18,1.5,.4,1) both; }
 @keyframes winPetIn{ from{ transform:translateY(9px) scale(.72); opacity:0 } to{ transform:none; opacity:1 } }
-@media (prefers-reduced-motion:reduce){ .winPet canvas{ animation:none } }
+/* once the stars are in, the animal jumps for them; the card used to
+   hold a body drawn once and left there while the numbers came up */
+.winPet canvas.hop{ animation:winHop .72s cubic-bezier(.3,1.3,.5,1) both; }
+@keyframes winHop{ 0%{transform:none} 28%{transform:translateY(-16px) scale(1.05,.97)} 52%{transform:translateY(0) scale(.98,1.03)} 74%{transform:translateY(-7px)} 100%{transform:none} }
+.winPet canvas.sag{ animation:winSag .6s ease-out both; }
+@keyframes winSag{ from{ transform:translateY(-6px) } to{ transform:translateY(2px) } }
+@media (prefers-reduced-motion:reduce){ .winPet canvas, .winPet canvas.hop, .winPet canvas.sag{ animation:none } }
 
 /* One primary action per screen. The hero card is what the player came
    for; the two errands beside it are offers, not instructions, and
@@ -1309,7 +1318,13 @@ const E = {
   elastic: t => t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -9 * t) * Math.sin((t * 10 - .75) * (2 * Math.PI / 3)) + 1
 };
 
-const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* The query is made once. Asking window.matchMedia allocates a new
+   MediaQueryList every call, and this is called from the camera step and
+   from every particle emitted — twice per tile in a full-board clear,
+   which is a hundred and forty-odd allocations in a frame that is
+   already the heaviest one the game draws. */
+const RM_QUERY = (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+const reduceMotion = () => !!(RM_QUERY && RM_QUERY.matches);
 
 /* Timed wait used to pace cascades.
 
@@ -1717,10 +1732,34 @@ let lastBuzzAt = 0;
    anyway, so asking is only noise. */
 let userGestured = false;
 function markGesture() { userGestured = true; }
+/* The native motor, where there is one.
+
+   navigator.vibrate is how the browser build feels anything, and it is
+   also how an Android WebView feels it — but an iPhone's web view has no
+   navigator.vibrate at all, so on iOS every pattern in HAP below was a
+   silent no-op and the game was numb. The Capacitor haptics plugin is
+   reached by name, the way the other native seams are, so the shipped
+   file still imports nothing and the browser build is untouched. A
+   pattern is a duration or a list of on/off durations; the plugin
+   speaks in taps, so a pattern is read as one: short is a light tap,
+   long a heavy one, and the five-part win pattern is the system's own
+   success notification. */
+function nativeHaptics() {
+  const P = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || null;
+  return P && P.Haptics ? P.Haptics : null;
+}
 function buzz(pattern) {
   try {
     if (!SAVE || !SAVE.settings.haptics || !userGestured) return;
-    if (navigator.vibrate) navigator.vibrate(pattern);
+    const H = nativeHaptics();
+    if (H) {
+      if (Array.isArray(pattern)) {
+        if (pattern.length >= 5 && H.notification) H.notification({ type: 'SUCCESS' });
+        else if (H.impact) H.impact({ style: 'HEAVY' });
+      } else if (H.impact) {
+        H.impact({ style: pattern <= 10 ? 'LIGHT' : pattern <= 20 ? 'MEDIUM' : 'HEAVY' });
+      }
+    } else if (navigator.vibrate) navigator.vibrate(pattern);
     lastBuzzAt = Date.now();
   } catch (e) { /* unsupported */ }
 }
@@ -1903,6 +1942,16 @@ const STRINGS = {
     retry: 'Try again', to_map: 'Back to the lane', keep_going: 'Carry on',
     lose_extra: 'Buy {n} more moves',
     lose_extra_sub: '{n} treats',
+    lose_extra_short: '{n} treats · you have {have}',
+    /* one line about what to do differently, by the goal that fell shortest */
+    lose_why: 'Next time',
+    lose_tip_collect: 'Match low on the board — what falls in from above brings more of them.',
+    lose_tip_mud: 'Clear the tiles standing on the mud; a rocket down a muddy column cleans the lot.',
+    lose_tip_crate: 'Crates break from beside them. Match against the crate wall, not away from it.',
+    lose_tip_rescue: 'Clear the tiles under a basket — it only comes down when the ones below it go.',
+    lose_tip_bramble: 'Cut from the edge of the patch inward, before it grows back over what you cleared.',
+    lose_tip_score: 'Four in a row makes a rocket and five makes a star; specials are where the points are.',
+    lose_tip_mole: 'Fill the hills in from beside them, and keep hitting the one nearest to closing.',
 
     /* the till */
     store_t: 'Treats',
@@ -1991,7 +2040,9 @@ const STRINGS = {
     daily_s: 'Day {n} of your streak.',
     daily_take: 'Take it in',
     daily_ladder: 'Seven days on the step',
-    daily_miss: 'Miss a day and it starts at one again.',
+    daily_miss: 'Miss two days running and it starts at one again.',
+    nh_notify: 'Tell me when they are back',
+    nh_notify_ok: 'You will hear when the hearts are full.',
     daily_tomorrow: 'Tomorrow: {what}',
     daily_today: 'Today: {what}',
     daily_n_treats: '{n} treats',
@@ -2053,6 +2104,8 @@ const STRINGS = {
     pass_buy: 'Get the book',
     pass_have: 'Yours',
     pass_take: 'Take',
+    pass_open: 'Open',
+    lvl_resumed: 'Picked up where you left off.',
     pass_why: 'Stamps come from clearing a level for the first time, three-starring it, walking the lane and coming through a gate. Buying the book hands over everything you have already reached.',
     pass_bought: 'The book is yours. Everything you had already reached is in your purse.',
     pass_late: 'Not enough of the season left for the book to be worth its price — it comes back round with the next one. The free column still pays out.',
@@ -2202,6 +2255,15 @@ const STRINGS = {
     retry: 'Yeniden dene', to_map: 'Sokağa dön', keep_going: 'Devam',
     lose_extra: '{n} hamle daha al',
     lose_extra_sub: '{n} ödül',
+    lose_extra_short: '{n} ödül · sende {have} var',
+    lose_why: 'Bir dahakine',
+    lose_tip_collect: 'Tahtanın altında eşle; yukarıdan dolan taşlar daha fazlasını getirir.',
+    lose_tip_mud: 'Çamurun üstündeki taşları temizle; çamurlu bir sütuna inen roket hepsini siler.',
+    lose_tip_crate: 'Kasalar yanından kırılır. Kasa duvarına doğru eşle, ondan uzağa değil.',
+    lose_tip_rescue: 'Sepetin altındaki taşları temizle; ancak altındakiler gidince iner.',
+    lose_tip_bramble: 'Kümenin kenarından içeri doğru kes, temizlediğin yere yeniden yayılmadan.',
+    lose_tip_score: 'Dörtlü roket, beşli yıldız yapar; puan özel taşlarda.',
+    lose_tip_mole: 'Tepecikleri yanından doldur; kapanmaya en yakın olana vurmaya devam et.',
 
     /* kasa */
     store_t: 'Ödüller',
@@ -2286,7 +2348,9 @@ const STRINGS = {
     daily_s: 'Serinin {n}. günü.',
     daily_take: 'İçeri al',
     daily_ladder: 'Kapıdaki yedi gün',
-    daily_miss: 'Bir gün atlarsan seri bire döner.',
+    daily_miss: 'Üst üste iki gün atlarsan seri bire döner.',
+    nh_notify: 'Dolunca haber ver',
+    nh_notify_ok: 'Kalpler dolunca haber gelecek.',
     daily_tomorrow: 'Yarın: {what}',
     daily_today: 'Bugün: {what}',
     daily_n_treats: '{n} ödül',
@@ -2346,6 +2410,8 @@ const STRINGS = {
     pass_buy: 'Defteri al',
     pass_have: 'Senin',
     pass_take: 'Al',
+    pass_open: 'Aç',
+    lvl_resumed: 'Kaldığın yerden devam.',
     pass_why: 'Damga; bir bölümü ilk kez geçmekten, üç yıldız almaktan, günlük yürüyüşten ve bir kapıdan geçmekten gelir. Defteri aldığında o ana kadar ulaştığın her şey birden hesabına geçer.',
     pass_bought: 'Defter senin. O ana kadar ulaştığın her şey kesene geçti.',
     pass_late: 'Defterin parasını çıkarmasına yetecek kadar sezon kalmadı — bir sonrakinde yine karşına çıkar. Ücretsiz sütun yine de ödemeye devam ediyor.',
@@ -3146,9 +3212,19 @@ const BADGES = [
     of: 10, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 250, treats: 2
   },
   {
+    /* Six, not five, and forty tiles, not thirty.
+
+       Played from an empty save through the real interface, level one
+       paid four badges at once — this one, the thirty-tile one, the
+       three-star one and "first one home" — because a seven-by-seven
+       board dealing five colours cascades six deep on its own and clears
+       thirty tiles in a move nobody planned. A badge handed over for a
+       thing that happened to the player is not a badge. A six-chain is
+       one move in a hundred and fourteen on plain matches (test/chains.js),
+       which is rare enough to be noticed and common enough to arrive. */
     id: 'combo5', icon: 'flame', fam: 'feat', en: 'Snowball', tr: 'Çığ',
-    enDesc: 'Set off a five-chain cascade.', trDesc: 'Beş zincirlik bir çığ başlat.',
-    of: 5, at: s => s.stats.bestCombo, coins: 80
+    enDesc: 'Set off a six-chain cascade.', trDesc: 'Altı zincirlik bir çığ başlat.',
+    of: 6, at: s => s.stats.bestCombo, coins: 80
   },
   {
     id: 'combo8', icon: 'bolt', fam: 'feat', en: 'Avalanche', tr: 'Heyelan',
@@ -3157,8 +3233,8 @@ const BADGES = [
   },
   {
     id: 'big30', icon: 'hammer', fam: 'feat', en: 'One good move', tr: 'Tek iyi hamle',
-    enDesc: 'Clear thirty tiles in a single move.', trDesc: 'Tek hamlede otuz taş temizle.',
-    of: 30, at: s => s.stats.biggestClear, coins: 150
+    enDesc: 'Clear forty tiles in a single move.', trDesc: 'Tek hamlede kırk taş temizle.',
+    of: 40, at: s => s.stats.biggestClear, coins: 150
   },
   {
     id: 'pop2k', icon: 'shuffle', fam: 'feat', en: 'Two thousand faces', tr: 'İki bin yüz',
@@ -3266,9 +3342,15 @@ const BADGES = [
     of: 3, at: s => (s.pets || []).length, coins: 100, treats: 1
   },
   {
-    id: 'family6', icon: 'home', fam: 'care', en: 'All six home', tr: 'Altısı da evde',
-    enDesc: 'Adopt every breed on the lane.', trDesc: 'Yoldaki her cinsi sahiplen.',
-    of: 6, at: s => (s.pets || []).length, coins: 200, treats: 3
+    /* This carried the id `family6`, the same as the crown badge above,
+       so checkBadges paid the crown and then found this one already in
+       the save and skipped it: six pets showed two badges on the shelf
+       and paid for one. It asks for something different now — six
+       animals and all of them looked after — which is what a badge in
+       the care family should be about. */
+    id: 'allcared', icon: 'home', fam: 'care', en: 'All six home', tr: 'Altısı da evde',
+    enDesc: 'Six animals, every one of them fed today.', trDesc: 'Altı hayvan, hepsi bugün yedirilmiş.',
+    of: 6, at: s => (s.pets || []).filter(p => p.food >= 60).length, coins: 200, treats: 3
   },
   {
     id: 'grown2', icon: 'flame', fam: 'care', en: 'Raised them right', tr: 'İyi büyüttün',
@@ -3411,231 +3493,241 @@ const LEVELS = [
      boosters, no perks and no stage moves, and has just been asked to
      name an animal. The first three carry a real cushion; the curve
      descends from level 4, where it already did. */
-  { n: 1, w: 7, h: 7, types: 5, moves: 21, goals: [[GK.COLLECT, 0, 34]], base: 11500, want: 0.97, tut: 'swap' },
-  { n: 2, w: 7, h: 7, types: 5, moves: 21, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 11500, want: 0.95 },
-  { n: 3, w: 7, h: 8, types: 5, moves: 24, goals: [[GK.SCORE, 0, 14500]], base: 23500, want: 0.97, tut: 'special' },
+  { n: 1, w: 7, h: 7, types: 5, moves: 26, goals: [[GK.COLLECT, 0, 34]], base: 10600, want: 0.97, tut: 'swap' },
+  { n: 2, w: 7, h: 7, types: 5, moves: 24, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 10700, want: 0.95 },
+  /* A score goal is the one kind of level a person cannot plan: nothing
+     on the board says which swap is worth more, so the only strategy is
+     to keep matching and hope the cascade is kind. Measured with the
+     player who cannot see cascades (test/_solver.js), the two score
+     levels in the opening were the two worst things in it — level 3
+     cleared 30% and level 9 cleared 3%, against 100% and 92% for the
+     solver that could — and the first gate carried a score goal on top
+     of a rescue. All three are collect goals now, which a person can
+     look at and go after. The score levels that remain sit past level
+     35, where a player has specials to make and knows it. */
+  { n: 3, w: 7, h: 8, types: 5, moves: 26, goals: [[GK.COLLECT, 2, 30]], base: 9700, want: 0.97, tut: 'special' },
   {
-    n: 4, w: 7, h: 8, types: 5, moves: 18, goals: [[GK.MUD, 0, 76]], base: 12200, want: 0.93,
+    n: 4, w: 7, h: 8, types: 5, moves: 19, goals: [[GK.MUD, 0, 76]], base: 10000, want: 0.93,
     map: ['.......', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', '.......']
   },
-  { n: 5, w: 8, h: 8, types: 5, moves: 23, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 17300, want: 0.9 },
+  { n: 5, w: 8, h: 8, types: 5, moves: 32, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 16600, want: 0.9 },
   {
-    n: 6, w: 8, h: 8, types: 5, moves: 15, goals: [[GK.CRATE, 0, 28]], base: 9200, want: 0.9,
+    n: 6, w: 8, h: 8, types: 5, moves: 17, goals: [[GK.CRATE, 0, 28]], base: 7200, want: 0.9,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
-  { n: 7, w: 8, h: 8, types: 5, moves: 26, goals: [[GK.RESCUE, 0, 2]], base: 9800, want: 0.93, tut: 'rescue' },
+  { n: 7, w: 8, h: 8, types: 5, moves: 27, goals: [[GK.RESCUE, 0, 2]], base: 7000, want: 0.95, tut: 'rescue' },
   {
-    n: 8, w: 8, h: 8, types: 5, moves: 26, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 20000, want: 0.88,
+    n: 8, w: 8, h: 8, types: 5, moves: 33, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 19300, want: 0.87,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 9, w: 8, h: 8, types: 5, moves: 28, goals: [[GK.SCORE, 0, 19000]], base: 25200, want: 0.85,
+    n: 9, w: 8, h: 8, types: 5, moves: 24, goals: [[GK.COLLECT, 1, 34], [GK.COLLECT, 4, 28]], base: 11300, want: 0.91,
     map: ['##....##', '#......#', '........', '........', '........', '........', '#......#', '##....##']
   },
   {
-    n: 10, w: 8, h: 9, types: 5, moves: 29, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26700, want: 0.82,
+    n: 10, w: 8, h: 9, types: 5, moves: 43, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26600, want: 0.82,
     map: ['##....##', '#......#', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 11, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.CRATE, 0, 28]], base: 10300, want: 0.85,
+    n: 11, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.CRATE, 0, 28]], base: 9400, want: 0.96,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', '........', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
   {
-    n: 12, w: 8, h: 9, types: 5, moves: 31, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 16300, want: 0.9,
+    n: 12, w: 8, h: 9, types: 5, moves: 39, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 15400, want: 0.92,
     map: ['#......#', '........', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 13, w: 8, h: 8, types: 6, moves: 22, goals: [[GK.MUD, 0, 24]], base: 8900, want: 0.91,
+    n: 13, w: 8, h: 8, types: 6, moves: 25, goals: [[GK.MUD, 0, 24]], base: 6100, want: 0.91,
     map: ['MMMM....', 'MMMM....', '........', '........', '........', '........', '....MMMM', '....MMMM']
   },
   {
-    n: 14, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.BRAMBLE, 0, 18]], base: 12400, want: 0.91, tut: 'bramble',
+    n: 14, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.BRAMBLE, 0, 18]], base: 9900, want: 0.95, tut: 'bramble',
     map: ['........', '........', '.vvvvvv.', '.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........']
   },
   {
-    n: 15, w: 8, h: 9, types: 5, moves: 22, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 19800, want: 0.91,
+    n: 15, w: 8, h: 9, types: 5, moves: 29, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 18700, want: 0.87,
     map: ['..c..c..', '.cc..cc.', '........', '.c....c.', '........', '.c....c.', '........', '.cc..cc.', '..c..c..']
   },
   {
-    n: 16, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 11000, want: 0.63,
+    n: 16, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 7900, want: 0.82,
     map: ['........', '...mm...', '..mmmm..', '.mmmmmm.', 'mmmmmmmm', '.mmmmmm.', '..mmmm..', '...mm...', '........']
   },
   {
-    n: 17, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 14600, want: 0.85,
+    n: 17, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12100, want: 0.85,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 18, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 16]], base: 14000, want: 0.81,
+    n: 18, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.CRATE, 0, 16]], base: 11400, want: 0.84,
     map: ['C......C', '........', '..cccc..', '..c..c..', '..c..c..', '..cccc..', '........', 'C......C', '........']
   },
   {
-    n: 19, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15200, want: 0.84,
+    n: 19, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15100, want: 0.82,
     map: ['####..##', '###....#', '##......', '#.......', '........', '........', '........', '........', '........']
   },
   {
-    n: 20, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.RESCUE, 0, 1], [GK.SCORE, 0, 9500]], base: 10900, want: 0.72,
+    n: 20, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.RESCUE, 0, 1], [GK.COLLECT, 3, 26]], base: 10400, want: 0.77,
     map: ['..####..', '..####..', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 21, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 24]], base: 12400, want: 0.91,
+    n: 21, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.MUD, 0, 24]], base: 10200, want: 0.94,
     map: ['........', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', '........']
   },
   {
-    n: 22, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 12800, want: 0.89,
+    n: 22, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 12000, want: 0.89,
     map: ['..CCCC..', '........', '.c....c.', '..c..c..', '..c..c..', '........', '.c....c.', '........', '........']
   },
   {
-    n: 23, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 14700, want: 0.78,
+    n: 23, w: 8, h: 9, types: 6, moves: 53, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 12600, want: 0.88,
     map: ['........', '.m....m.', '..m..m..', '...mm...', '........', '...mm...', '..m..m..', '.m....m.', '........']
   },
   {
-    n: 24, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.BRAMBLE, 0, 28]], base: 17200, want: 0.75,
+    n: 24, w: 8, h: 9, types: 6, moves: 59, goals: [[GK.BRAMBLE, 0, 28]], base: 14500, want: 0.8,
     map: ['........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........']
   },
   {
-    n: 25, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 12700, want: 0.88,
+    n: 25, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 9700, want: 0.86,
     map: ['mmmmmmmm', 'm.c..c.m', 'm......m', 'm..cc..m', 'm..cc..m', 'm......m', 'm.c..c.m', 'mmmmmmmm', '........']
   },
   {
-    n: 26, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 14600, want: 0.69,
+    n: 26, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 9900, want: 0.78,
     map: ['##....##', '#......#', '#......#', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 27, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.CRATE, 0, 22]], base: 13000, want: 0.83,
+    n: 27, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.CRATE, 0, 22]], base: 9700, want: 0.83,
     map: ['CC....CC', 'C......C', '..cccc..', '..c..c..', '..c..c..', '..cccc..', 'C......C', 'CC....CC', '........']
   },
   {
-    n: 28, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 17700, want: 0.85,
+    n: 28, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 12200, want: 0.82,
     map: ['MMMMMMMM', 'MMMMMMMM', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 29, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 15100, want: 0.72,
+    n: 29, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 9600, want: 0.81,
     map: ['.######.', '.######.', '..####..', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 30, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 12800, want: 0.72,
+    n: 30, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 10800, want: 0.72,
     map: ['........', '........', '.vvvvvv.', '.v....v.', '.v....v.', '.v....v.', '.vvvvvv.', '........', '........']
   },
   {
-    n: 31, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 10200, want: 0.85,
+    n: 31, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 7700, want: 0.92,
     map: ['mccccccm', 'm......m', 'm.mmmm.m', 'm......m', '........', 'm......m', 'm.mmmm.m', 'm......m', 'mccccccm']
   },
   {
-    n: 32, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 14800, want: 0.75,
+    n: 32, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 11800, want: 0.87,
     map: ['........', '.c....c.', '........', '..c..c..', '........', '..c..c..', '........', '.c....c.', '........']
   },
   {
-    n: 33, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.COLLECT, 0, 42], [GK.COLLECT, 3, 36], [GK.COLLECT, 5, 30]], base: 16900, want: 0.84,
+    n: 33, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.COLLECT, 0, 42], [GK.COLLECT, 3, 36], [GK.COLLECT, 5, 30]], base: 16000, want: 0.86,
     map: ['.######.', '..####..', '...##...', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 34, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.MUD, 0, 60]], base: 13900, want: 0.81,
+    n: 34, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 60]], base: 11100, want: 0.84,
     map: ['MMMMMMMM', 'M......M', 'M.mmmm.M', 'M.m..m.M', 'M.m..m.M', 'M.mmmm.M', 'M......M', 'MMMMMMMM', '........']
   },
   {
-    n: 35, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 12500, want: 0.8,
+    n: 35, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 10200, want: 0.82,
     map: ['........', '.cc..cc.', '........', '..c..c..', '........', '..c..c..', '........', '.cc..cc.', '........']
   },
   {
-    n: 36, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.SCORE, 0, 16000]], base: 22400, want: 0.86,
+    n: 36, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.SCORE, 0, 16000]], base: 20200, want: 0.75,
     map: ['###..###', '##....##', '##....##', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 37, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 13700, want: 0.69,
+    n: 37, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 12000, want: 0.79,
     map: ['mmmmmmmm', '........', '..mmmm..', '........', '........', '........', '..mmmm..', '........', 'mmmmmmmm']
   },
   {
-    n: 38, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 11000, want: 0.85,
+    n: 38, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 10300, want: 0.78,
     map: ['C.C..C.C', '........', 'iCiiiiCi', '........', '..CCCC..', '........', 'iCiiiiCi', '........', 'C.C..C.C']
   },
   {
-    n: 39, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 14100, want: 0.66,
+    n: 39, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 12000, want: 0.75,
     map: ['MMMMMMMM', 'Mc.cc.cM', 'M......M', 'M......M', 'M......M', 'M......M', 'M......M', 'Mc.cc.cM', 'MMMMMMMM']
   },
   {
-    n: 40, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 17400, want: 0.63,
+    n: 40, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 11400, want: 0.74,
     map: ['##....##', '##....##', '........', '........', '........', '........', '........', '........', '........']
   },
 
   /* ---- the lane keeps going: 41 to 60 ---- */
   {
-    n: 41, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.COLLECT, 0, 34], [GK.COLLECT, 3, 28]], base: 13600, want: 0.91,
+    n: 41, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.COLLECT, 0, 34], [GK.COLLECT, 3, 28]], base: 13500, want: 0.91,
     map: ['#.#..#.#', '#.#..#.#', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 42, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11900, want: 0.78,
+    n: 42, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11700, want: 0.78,
     map: ['........', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 43, w: 8, h: 9, types: 6, moves: 23, goals: [[GK.CRATE, 0, 28]], base: 8400, want: 0.79,
+    n: 43, w: 8, h: 9, types: 6, moves: 21, goals: [[GK.CRATE, 0, 28]], base: 6900, want: 0.85,
     map: ['c......c', '.cccccc.', '.c....c.', '.c.cc.c.', '.c.cc.c.', '.c....c.', '.cccccc.', 'c......c', '........']
   },
   {
-    n: 44, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 11000, want: 0.69,
+    n: 44, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 11700, want: 0.78,
     map: ['........', '........', '..mmmm..', '.mmmmmm.', '.mmmmmm.', '..mmmm..', '........', '........', '........']
   },
   {
-    n: 45, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.SCORE, 0, 11200]], base: 14300, want: 0.85,
+    n: 45, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.SCORE, 0, 11200]], base: 14800, want: 0.84,
     map: ['##....##', '#......#', '........', '...##...', '...##...', '........', '#......#', '##....##', '........']
   },
   {
-    n: 46, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.BRAMBLE, 0, 14]], base: 9500, want: 0.84,
+    n: 46, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.BRAMBLE, 0, 14]], base: 6500, want: 0.91,
     map: ['........', '..vvvv..', '..v..v..', '..v..v..', '..v..v..', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 47, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 13600, want: 0.81,
+    n: 47, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 12300, want: 0.81,
     map: ['........', '..iiii..', '........', '.i....i.', '.i....i.', '........', '..iiii..', '........', '........']
   },
   {
-    n: 48, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 12200, want: 0.78,
+    n: 48, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 10200, want: 0.91,
     map: ['cc....cc', '........', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '........', 'cc....cc', '........']
   },
   {
-    n: 49, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 11000]], base: 14500, want: 0.72,
+    n: 49, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 11000]], base: 11600, want: 0.71,
     map: ['########', '.###.###', '..#...#.', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 50, w: 8, h: 9, types: 6, moves: 24, goals: [[GK.MUD, 0, 40], [GK.CRATE, 0, 8], [GK.COLLECT, 0, 26]], base: 12500, want: 0.69,
+    n: 50, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 40], [GK.CRATE, 0, 8], [GK.COLLECT, 0, 26]], base: 10400, want: 0.66,
     map: ['MMMMMMMM', 'M.cccc.M', 'M......M', 'M......M', 'M......M', 'M......M', 'M.cccc.M', 'MMMMMMMM', '........']
   },
   {
-    n: 51, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 13100, want: 0.91,
+    n: 51, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 13400, want: 0.91,
     map: ['###..###', '##....##', '#......#', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 52, w: 8, h: 9, types: 6, moves: 47, goals: [[GK.BRAMBLE, 0, 24]], base: 19800, want: 0.69,
+    n: 52, w: 8, h: 9, types: 6, moves: 53, goals: [[GK.BRAMBLE, 0, 24]], base: 13700, want: 0.82,
     map: ['.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........', '.vvvvvv.', '.vvvvvv.', '........']
   },
   {
-    n: 53, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 17300, want: 0.75,
+    n: 53, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 14800, want: 0.84,
     map: ['iCiiiiCi', '........', '..CCCC..', '........', '........', '........', '..CCCC..', '........', 'iCiiiiCi']
   },
   {
-    n: 54, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.RESCUE, 0, 3]], base: 14100, want: 0.69,
+    n: 54, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.RESCUE, 0, 3]], base: 9400, want: 0.77,
     map: ['##....##', '##....##', '#......#', '#......#', '........', '........', '........', '........', '........']
   },
   {
-    n: 55, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.SCORE, 0, 16400]], base: 24500, want: 0.84,
+    n: 55, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.SCORE, 0, 16400]], base: 19500, want: 0.76,
     map: ['#####...', '####....', '###.....', '##......', '#.......', '........', '........', '........', '........']
   },
   {
-    n: 56, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.MUD, 0, 38]], base: 10900, want: 0.83,
+    n: 56, w: 8, h: 9, types: 6, moves: 25, goals: [[GK.MUD, 0, 38]], base: 8400, want: 0.83,
     map: ['mmmmmmmm', 'mmmmmmmm', 'mmmmmmmm', '........', '........', '........', 'mmmmmmmm', 'mmmmmmmm', '........']
   },
   {
-    n: 57, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 20300, want: 0.69,
+    n: 57, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 13900, want: 0.74,
     map: ['mmmmmmmm', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', 'mmmmmmmm', '........']
   },
   {
-    n: 58, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.CRATE, 0, 30]], base: 7600, want: 0.8,
+    n: 58, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.CRATE, 0, 30]], base: 6100, want: 0.8,
     map: ['CCCCCCCC', 'C......C', 'C.cccc.C', 'C.c..c.C', 'C.c..c.C', 'C.cccc.C', 'C......C', 'CCCCCCCC', '........']
   },
   {
-    n: 59, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 15000, want: 0.63,
+    n: 59, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 11000, want: 0.74,
     map: ['..####..', '...##...', '...##...', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 60, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 15600, want: 0.63,
+    n: 60, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 13800, want: 0.63,
     map: ['mmmmmmmm', '.cc..cc.', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '.cc..cc.', 'mmmmmmmm', '........']
   }
 ];
@@ -3791,7 +3883,7 @@ const SHAPES = ['bands', 'columns', 'diamond', 'ring', 'corners', 'checker', 'we
    would describe nothing. Calibration plays reference builds, which
    depend on no measurement, and the curve then says what a budget does
    *relative to that fixed point*. */
-function levelDef(n, ref) {
+function levelDef(n, ref, forceKind) {
   /* The daily used to be reached through here, which is how the level
      table came to read SAVE.reached. It is its own generator with its
      own seed — call dailyLevel() for it. Said out loud because the
@@ -3840,7 +3932,10 @@ function levelDef(n, ref) {
     return want >= rng[0] - .05 && want <= rng[1] + .05;
   });
   const pool = fits.length ? fits : kinds;
-  const kind = pool[Math.floor(r() * pool.length)];
+  /* a kind may be forced: test/calibrate.js measures how each kind answers
+     its budget, and has to be able to build a mud level even while the
+     curve it is about to replace says mud never fits */
+  const kind = forceKind || pool[Math.floor(r() * pool.length)];
   const tier = Math.min(4, Math.floor((n - 40) / 12));
   const h = 9, w = 8;
   /* the early tiers deal one colour fewer, which is how the handcrafted
@@ -4587,7 +4682,7 @@ const SAVE_VERSION = 2;
 /* what a build calls itself when it reports anything. Bumped by hand,
    with android/app/build.gradle's versionName, so a crash from an old
    install is not read as one from the current one. */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
 function migrate(d) {
   const v = d.v || 1;
@@ -5386,6 +5481,21 @@ function passState() {
   if (!SAVE.pass) SAVE.pass = { season: -1, stamps: 0, paid: false, claimed: {} };
   const now = seasonNo(seasonStart());
   if (SAVE.pass.season !== now) {
+    /* Whatever the old season still owed is paid before it goes.
+
+       Claiming was a "Take" per tier, and a rollover threw away every
+       tier that had not been tapped — the free column and, for somebody
+       who had bought the book, the paid one, which is money handed over
+       for rewards that were then deleted for not being collected in
+       time. Reached is earned; it is granted now, not forfeited. */
+    const old = SAVE.pass;
+    if (old.season >= 0 && typeof PASS_TRACK !== 'undefined') {
+      const tier = passTier(old.stamps);
+      for (let i = 0; i < Math.min(tier, PASS_TRACK.length); i++) {
+        if (!old.claimed['f' + i]) grantReward(PASS_TRACK[i].free);
+        if (old.paid && !old.claimed['p' + i]) grantReward(PASS_TRACK[i].paid);
+      }
+    }
     SAVE.pass = { season: now, stamps: 0, paid: false, claimed: {} };
   }
   return SAVE.pass;
@@ -5563,8 +5673,20 @@ function dailyDone(score) {
 }
 
 /* ---------- daily gift ---------- */
-function dayStamp(t) { const d = new Date(t); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
-function giftReady() { return dayStamp(now()) !== dayStamp(SAVE.lastGift || 0); }
+/* Days between the last basket and today, counted the way the walk
+   counts them — dayNumber(), a local calendar date as an integer — and
+   not by taking twenty-four hours off the clock. The night the clocks go
+   forward is twenty-three hours long, and between midnight and one the
+   old arithmetic put "yesterday" two dates back and reset a six-day
+   streak to one. Reproduced with TZ=America/New_York. */
+function giftDays() { return SAVE.lastGift ? dayNumber() - dayNumber(SAVE.lastGift) : 99; }
+function giftReady() { return giftDays() >= 1; }
+/* One missed day is forgiven. The streak holds across a gap of two
+   calendar days — it simply does not climb for the day that was missed
+   — and starts again after three. A week's streak was being lost to a
+   single busy day, which is the one thing a streak must not do to the
+   person who has kept it for six. */
+function giftKeeps() { const d = giftDays(); return d >= 1 && d <= 2; }
 /* The ladder, in one place. It used to live inside claimGift, which
    meant the sheet could only report what today held — and the day-7
    basket, five treats and a booster, was a week's worth of reason that
@@ -5581,18 +5703,14 @@ function giftFor(day) {
 }
 /* which rung the basket on the step is standing on, without taking it */
 function giftDay() {
-  const yesterday = dayStamp(now() - DAY);
-  const last = dayStamp(SAVE.lastGift || 0);
-  return (((last === yesterday ? SAVE.streak + 1 : 1) - 1) % 7) + 1;
+  return (((giftKeeps() ? SAVE.streak + 1 : 1) - 1) % 7) + 1;
 }
 /* and which one tomorrow's would be, which is the number a player who
    has already opened today's needs in order to come back */
 function giftDayNext() { return (SAVE.streak % 7) + 1; }
 function claimGift() {
   const day = giftDay();
-  const yesterday = dayStamp(now() - DAY);
-  const last = dayStamp(SAVE.lastGift || 0);
-  SAVE.streak = (last === yesterday) ? SAVE.streak + 1 : 1;
+  SAVE.streak = giftKeeps() ? SAVE.streak + 1 : 1;
   SAVE.lastGift = now();
   const reward = giftFor(day);
   SAVE.coins += reward.coins;
@@ -5786,12 +5904,19 @@ const NOTIFY = {
        a thing they have already done is how an app teaches its user that
        its notifications are not worth reading. */
     this.cancel('walk');
-    if (!dailyState().done) {
-      const d = new Date();
-      d.setHours(10, 0, 0, 0);
-      if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
-      this.at('walk', d.getTime(), T('note_walk_t'), T('note_walk_s'));
-    }
+    /* Always the next ten o'clock, not only when today's walk is undone.
+
+       The old condition meant the reminder could only ever be scheduled
+       by a player who was, at that moment, closing the app on a day they
+       had not walked — so the one person it was written for, somebody
+       who walked yesterday and did not open the game today, never got
+       it. Scheduled from a walk day it lands the following morning; a
+       player who opens the game before ten reschedules it past
+       themselves on the way out and never sees it. */
+    const d = new Date();
+    d.setHours(10, 0, 0, 0);
+    if (d.getTime() <= Date.now() || dailyState().done) d.setDate(d.getDate() + 1);
+    this.at('walk', d.getTime(), T('note_walk_t'), T('note_walk_s'));
   }
 };
 
@@ -6491,6 +6616,15 @@ function noiseBurst(o) {
 function mallet(f, o) {
   o = o || {};
   if (!sfxOn()) return;
+  /* The third partial sits at 10.6 times the fundamental, and a deep
+     cascade climbs the scale two steps a chain with a fifth stacked on
+     top: at chain six the fifth's partial was asking for 33 kHz, above
+     anything the context can make, and the browser clamped it with a
+     warning on every tile. Forty of those in a session. The bar has a
+     top note now, just under the point where its overtones leave the
+     audible range, and the cascade brightens by gain and reverb send
+     past it rather than by pitch. */
+  f = Math.min(f, 1900);
   const dur = o.dur || .34;
   if (!claimVoice(dur)) return;
   const c = AU.ctx, t = c.currentTime + (o.delay || 0);
@@ -7582,6 +7716,16 @@ function drawNoseMouth(c, spec, s, o) {
     c.quadraticCurveTo(0, my + nw * 2.5, nw * .8, my + nw * .9);
     c.quadraticCurveTo(0, my + nw * 1.1, -nw * .8, my + nw * .9);
     c.fill();
+  } else if (o.mouth === 'sad') {
+    /* the smile turned over: the same two strokes, curving down from the
+       nose rather than up, and no tongue — the face on the lose card
+       used to be the same smile as the win card */
+    c.beginPath();
+    c.moveTo(0, my + nw * .5);
+    c.quadraticCurveTo(-nw * .9, my + nw * .1, -nw * 1.6, my + nw * .9);
+    c.moveTo(0, my + nw * .5);
+    c.quadraticCurveTo(nw * .9, my + nw * .1, nw * 1.6, my + nw * .9);
+    c.stroke();
   } else {
     c.beginPath();
     c.moveTo(0, my - s * .01);
@@ -10587,6 +10731,148 @@ function sceneProgress() {
   return sum / G.goals.length;
 }
 
+/* ---------------- the six stretches of the lane ----------------
+
+   The map has had six named stretches for a while — the Doorstep, the
+   Allotments, the Common, the Canal Path, the Old Orchard, Home Again —
+   each with its own ground colour, and the level card names the one you
+   are on. The play screen did not know. Level 1, level 38 and level 100
+   were played in front of the same hedge, the same cottage, the same
+   tree and the same five pales of fence, screenshots of all three
+   overlaid without a pixel moving. A third of the play screen is this
+   picture, and it was the same picture for three hundred levels.
+
+   So the scene is the stretch now. The ground takes the stretch's own
+   colour from CHAPTERS, the far side changes — a hedge, a row of beds,
+   open grass, water, fruit trees, a garden wall — and the things in the
+   middle band are the things that stretch would have. Nothing here
+   animates and nothing is drawn per frame; the scene is painted once
+   per layout and once per walk step, exactly as before, so six of them
+   cost what one did.
+
+   Dusk is not an inverted day: each stretch carries its own evening
+   ground, again from CHAPTERS, and the props read PAL.dark as they
+   always have. */
+function drawWater(c, y, W, h, dark) {
+  c.save();
+  const g = c.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, dark ? '#243A44' : '#8EC4C8');
+  g.addColorStop(1, dark ? '#1C2E36' : '#6FA9B3');
+  c.fillStyle = g;
+  c.fillRect(-4, y, W + 8, h);
+  /* the light on it: short pale strokes, seeded so the water is the same
+     water every time the board relays out */
+  const wr = mulberry(9131);
+  c.strokeStyle = rgba('#FFFFFF', dark ? .16 : .38);
+  c.lineCap = 'round';
+  for (let i = 0; i < 26; i++) {
+    const x = wr() * W, yy = y + 3 + wr() * (h - 6), len = 4 + wr() * 9;
+    c.lineWidth = .8 + wr() * .8;
+    c.beginPath(); c.moveTo(x, yy); c.lineTo(x + len, yy); c.stroke();
+  }
+  /* reeds along the near bank */
+  c.strokeStyle = dark ? '#3E5A3A' : '#5F8A4E';
+  for (let i = 0; i < 22; i++) {
+    const x = wr() * W, hgt = 6 + wr() * 8;
+    c.lineWidth = 1.2;
+    c.beginPath(); c.moveTo(x, y + h + 1); c.lineTo(x + (wr() - .5) * 3, y + h - hgt); c.stroke();
+  }
+  c.restore();
+}
+/* a footbridge where the lane crosses the water: two rails and a curve */
+function drawBridge(c, x, y, w, dark) {
+  c.save(); c.translate(x, y);
+  c.strokeStyle = dark ? '#7A6446' : '#9A7748';
+  c.lineCap = 'round';
+  c.lineWidth = 2.2;
+  [-1, 1].forEach(sd => {
+    c.beginPath();
+    c.moveTo(sd * w * .5 - w * .36, 0);
+    c.quadraticCurveTo(sd * w * .5, -w * .34, sd * w * .5 + w * .36, 0);
+    c.stroke();
+    for (let i = -1; i <= 1; i++) {
+      const px = sd * w * .5 + i * w * .3;
+      const py = -w * .34 * (1 - Math.abs(i) * .55);
+      c.beginPath(); c.moveTo(px, py); c.lineTo(px, py + w * .22); c.stroke();
+    }
+  });
+  c.restore();
+}
+/* a vegetable bed: a strip of turned soil with a row of sprouts on it */
+function drawBed(c, x, y, w, seed, dark) {
+  const r = mulberry(seed * 977);
+  c.save(); c.translate(x, y);
+  c.fillStyle = rgba('#2A1E12', dark ? .3 : .14);
+  ellipse(c, 0, 2, w * .55, 4); c.fill();
+  c.fillStyle = dark ? '#3B2E22' : '#7E5A3A';
+  rr(c, -w * .5, -7, w, 9, 3); c.fill();
+  c.fillStyle = dark ? '#4A3A2A' : '#9A7048';
+  rr(c, -w * .5, -7, w, 3, 2); c.fill();
+  const n = Math.max(3, Math.round(w / 9));
+  for (let i = 0; i < n; i++) {
+    const px = -w * .5 + (i + .5) * (w / n);
+    const kind = r();
+    c.fillStyle = kind < .5 ? (dark ? '#4F7A3E' : '#6FB25A') : (dark ? '#5C7C3C' : '#8BC46A');
+    ellipse(c, px, -8, 2.6, 2.2); c.fill();
+    ellipse(c, px - 2.2, -9.5, 1.8, 1.6); c.fill();
+    ellipse(c, px + 2.2, -9.5, 1.8, 1.6); c.fill();
+    if (kind > .75) { c.fillStyle = dark ? '#B7692E' : '#E27B33'; ellipse(c, px, -6.2, 1.5, 1.5); c.fill(); }
+  }
+  c.restore();
+}
+/* an apple tree: the round tree with fruit in it and a few on the grass */
+function drawFruitTree(c, x, y, s, seed, dark) {
+  drawTree(c, x, y, s, 0);
+  const r = mulberry(seed * 4271);
+  c.save(); c.translate(x, y - s * .7);
+  c.fillStyle = dark ? '#B24B4B' : '#E0533F';
+  for (let i = 0; i < 7; i++) {
+    const a = r() * Math.PI * 2, d = r() * s * .42;
+    ellipse(c, Math.cos(a) * d, -s * .2 + Math.sin(a) * d * .8, s * .045, s * .045); c.fill();
+  }
+  c.restore();
+  c.save(); c.translate(x, y);
+  c.fillStyle = dark ? '#8E3E3E' : '#D14D3B';
+  for (let i = 0; i < 3; i++) { ellipse(c, (r() - .5) * s * .9, 2 + r() * 5, 1.9, 1.7); c.fill(); }
+  c.restore();
+}
+/* wild flowers on the common: three colours, seeded, never in a row */
+function drawFlowers(c, x0, y0, w, h, seed, dark) {
+  const r = mulberry(seed * 313);
+  const cols = dark ? ['#C8A0B4', '#D6C68C', '#DAD6C8'] : ['#E8789A', '#F2CB4E', '#FFFFFF'];
+  c.save();
+  for (let i = 0; i < 26; i++) {
+    const x = x0 + r() * w, y = y0 + r() * h;
+    c.strokeStyle = dark ? '#3E5A3A' : '#6E9A55'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x, y - 4); c.stroke();
+    c.fillStyle = cols[Math.floor(r() * 3)];
+    ellipse(c, x, y - 5, 1.9, 1.9); c.fill();
+  }
+  c.restore();
+}
+/* a low stone wall with a gap for the lane: the garden you are coming home to */
+function drawWall(c, y, W, gapX, gapW, dark) {
+  c.save();
+  const stone = dark ? '#4A4A48' : '#C9BEA8', mortar = dark ? '#3A3A38' : '#AEA28C';
+  const draw = (x0, x1) => {
+    c.fillStyle = stone; rr(c, x0, y - 12, x1 - x0, 12, 2); c.fill();
+    c.strokeStyle = mortar; c.lineWidth = 1;
+    for (let x = x0 + 6; x < x1 - 2; x += 11) { c.beginPath(); c.moveTo(x, y - 12); c.lineTo(x, y - 6); c.stroke(); }
+    for (let x = x0 + 1; x < x1 - 2; x += 11) { c.beginPath(); c.moveTo(x, y - 6); c.lineTo(x, y); c.stroke(); }
+    c.beginPath(); c.moveTo(x0, y - 6); c.lineTo(x1, y - 6); c.stroke();
+  };
+  draw(-4, gapX - gapW / 2);
+  draw(gapX + gapW / 2, W + 4);
+  c.restore();
+}
+
+/* which stretch is being played: the level's own, or, on the daily walk,
+   wherever the player has got to */
+function sceneChapter() {
+  const n = (typeof G !== 'undefined' && G.n > 0) ? G.n : ((typeof SAVE !== 'undefined' && SAVE.reached) || 1);
+  return chapterOf(n);
+}
+
 function drawLevelScene() {
   const cv = $('#scene'), wrap = $('#boardWrap');
   if (!cv || !wrap) return;
@@ -10597,6 +10883,8 @@ function drawLevelScene() {
   const ph = roomPhase(PAL.dark);
   const sky = skyColours(ph);
   const dark = PAL.dark;
+  const chap = sceneChapter();
+  const stretch = chap.id;
   /* where the board actually landed, asked rather than assumed: the
      wrap is bottom-weighted, and guessing it was centred put the hedge
      through the middle of the tray */
@@ -10609,31 +10897,48 @@ function drawLevelScene() {
   const topBand = Math.max(0, by), botBand = Math.max(0, H - (by + bh));
   c.clearRect(0, 0, W, H);
 
-  /* the same ground the lane is drawn on, so it reads as one world */
+  /* the same ground the lane is drawn on, so it reads as one world — and
+     the ground is the stretch's own, from the same table the map reads */
+  const ground = dark ? chap.dusk : chap.day;
   const g = c.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, dark ? '#1A2430' : mix(sky[2], '#C7D8A8', .55));
-  g.addColorStop(.22, dark ? '#20301F' : '#B7CE95');
-  g.addColorStop(1, dark ? '#1B2A1B' : '#A5C186');
+  g.addColorStop(0, dark ? '#1A2430' : mix(sky[2], mix(ground, '#FFFFFF', .25), .55));
+  g.addColorStop(.22, ground);
+  g.addColorStop(1, shade(ground, dark ? -.06 : -.09));
   c.fillStyle = g;
   c.fillRect(0, 0, W, H);
 
   /* A hedge along the far side, which is what gives the ground a far
      side at all — without a horizon the grass is only a green fill.
      Built from overlapping lumps rather than a wavy band: a band reads
-     as a ribbon of colour, and the eye wants to see leaves. */
+     as a ribbon of colour, and the eye wants to see leaves.
+
+     Each stretch has its own far side: the Allotments a low hedge behind
+     a row of beds, the Common no hedge but a line of trees, the Canal a
+     bank and the water below it, the Orchard a hedge with fruit trees
+     in front, and Home Again a garden wall. */
   const hy = Math.min(topBand * .58, 44);
   if (topBand > 30) {
     const back = dark ? '#1E2D1C' : '#4E8A5E';
     const mid = dark ? '#27391F' : '#5E9B6E';
     const lit = dark ? '#37502F' : '#78B983';
     c.save();
-    c.fillStyle = back;
-    c.fillRect(-4, hy + 2, W + 8, 30);
-    const lump = (x, y, rx, ry, col) => { c.fillStyle = col; ellipse(c, x, y, rx, ry); c.fill(); };
-    const hr = mulberry(8821);
-    for (let x = -14; x < W + 20; x += 21) lump(x + hr() * 8, hy + 10 + hr() * 5, 20 + hr() * 9, 15 + hr() * 6, back);
-    for (let x = -10; x < W + 20; x += 26) lump(x + hr() * 9, hy + 3 + hr() * 5, 17 + hr() * 8, 13 + hr() * 5, mid);
-    for (let x = -6; x < W + 20; x += 34) lump(x + hr() * 11, hy - 3 + hr() * 4, 12 + hr() * 6, 9 + hr() * 4, lit);
+    if (stretch === 'common') {
+      /* open ground: the far side is a line of trees, not a wall of leaves */
+      const tr = mulberry(6113);
+      for (let x = -6; x < W + 20; x += 38) drawTree(c, x + tr() * 14, hy + 26, 16 + tr() * 8, 0);
+    } else if (stretch === 'home') {
+      drawWall(c, hy + 24, W, W * .56, 34, dark);
+    } else {
+      c.fillStyle = back;
+      c.fillRect(-4, hy + 2, W + 8, stretch === 'canal' ? 16 : 30);
+      const lump = (x, y, rx, ry, col) => { c.fillStyle = col; ellipse(c, x, y, rx, ry); c.fill(); };
+      const hr = mulberry(8821);
+      const low = stretch === 'allot' || stretch === 'canal' ? .62 : 1;
+      for (let x = -14; x < W + 20; x += 21) lump(x + hr() * 8, hy + 10 * low + hr() * 5, 20 + hr() * 9, (15 + hr() * 6) * low, back);
+      for (let x = -10; x < W + 20; x += 26) lump(x + hr() * 9, hy + 3 * low + hr() * 5, 17 + hr() * 8, (13 + hr() * 5) * low, mid);
+      for (let x = -6; x < W + 20; x += 34) lump(x + hr() * 11, hy - 3 * low + hr() * 4, 12 + hr() * 6, (9 + hr() * 4) * low, lit);
+    }
+    if (stretch === 'canal') drawWater(c, hy + 16, W, 22, dark);
     c.restore();
   }
 
@@ -10779,12 +11084,45 @@ function drawLevelScene() {
      which is the whole of perspective and costs three numbers */
   if (topBand > 130) {
     const far = hy + 30, mid = hy + (by - hy) * .46, near = by - 10;
-    drawCottage(c, W * .16, far + 10, 26, 7);
-    drawBush(c, W * .78, far + 12, 9);
-    drawTree(c, W * .90, mid + 22, 31, 0);
-    drawFence(c, W * .12, mid + 24, 30);
-    drawBush(c, W * .06, near, 16);
-    drawBush(c, W * .95, near - 4, 14);
+    if (stretch === 'allot') {
+      drawCottage(c, W * .84, far + 8, 22, 3);
+      drawBed(c, W * .16, far + 26, 62, 1, dark);
+      drawBed(c, W * .80, mid + 4, 72, 2, dark);
+      drawBed(c, W * .14, mid + 22, 78, 3, dark);
+      drawFence(c, W * .90, mid + 30, 28);
+      drawBush(c, W * .06, near, 14);
+    } else if (stretch === 'common') {
+      drawTree(c, W * .12, mid + 6, 34, 0);
+      drawTree(c, W * .88, mid + 24, 30, 0);
+      drawFlowers(c, W * .02, far + 18, W * .34, by - far - 40, 5, dark);
+      drawFlowers(c, W * .66, far + 26, W * .32, by - far - 50, 9, dark);
+      drawBush(c, W * .95, near - 4, 14);
+    } else if (stretch === 'canal') {
+      drawBridge(c, W * .56, hy + 40, 40, dark);
+      drawTree(c, W * .10, mid + 4, 30, 0);
+      drawBush(c, W * .84, mid + 10, 11);
+      drawBush(c, W * .04, near, 15);
+      drawBush(c, W * .94, near - 2, 13);
+    } else if (stretch === 'orchard') {
+      drawFruitTree(c, W * .14, far + 22, 28, 1, dark);
+      drawFruitTree(c, W * .86, far + 18, 26, 2, dark);
+      drawFruitTree(c, W * .90, mid + 26, 34, 3, dark);
+      drawFruitTree(c, W * .10, mid + 34, 32, 4, dark);
+      drawBasket(c, W * .28, near + 2, 18);
+    } else if (stretch === 'home') {
+      drawCottage(c, W * .20, mid + 4, 38, 11);
+      drawGateway(c, W * .56, hy + 30, 30, true);
+      drawFlowers(c, W * .04, mid + 6, W * .30, near - mid - 8, 13, dark);
+      drawTree(c, W * .90, mid + 22, 31, 0);
+      drawBush(c, W * .95, near - 4, 14);
+    } else {
+      drawCottage(c, W * .16, far + 10, 26, 7);
+      drawBush(c, W * .78, far + 12, 9);
+      drawTree(c, W * .90, mid + 22, 31, 0);
+      drawFence(c, W * .12, mid + 24, 30);
+      drawBush(c, W * .06, near, 16);
+      drawBush(c, W * .95, near - 4, 14);
+    }
   } else if (topBand > 52) {
     drawTree(c, W * .87, by - 12, Math.min(36, topBand * .58), 0);
     drawCottage(c, W * .17, by - 14, Math.min(30, topBand * .44), 7);
@@ -11896,17 +12234,31 @@ function shuffleTypes(B) {
 }
 
 /* ---------------- match finding ---------------- */
+/* A rainbow is not a colour.
+
+   It is drawn without one and it fires on whatever it is swapped with,
+   but it kept the type of the run it was born from, so three of that
+   colour in a line with the rainbow among them matched — and set the
+   rainbow off on a colour the player never chose and could not see.
+   Its birth colour is no longer anybody's business: it is swapped, or it
+   is hit by another special, and nothing else moves it. Both the game
+   and the solver read this function, so the difficulty numbers already
+   count it. */
+function plainTile(B, r, c) {
+  const t = tileAt(B, r, c);
+  return (!t || t.type < 0 || t.sp === SP.RAIN) ? null : t;
+}
 function findMatches(B) {
   const runs = [];
   /* horizontal */
   for (let r = 0; r < B.h; r++) {
     let c = 0;
     while (c < B.w) {
-      const t0 = tileAt(B, r, c);
-      if (!t0 || t0.type < 0) { c++; continue; }
+      const t0 = plainTile(B, r, c);
+      if (!t0) { c++; continue; }
       let k = c + 1;
       while (k < B.w) {
-        const t = tileAt(B, r, k);
+        const t = plainTile(B, r, k);
         if (!t || t.type !== t0.type) break;
         k++;
       }
@@ -11922,11 +12274,11 @@ function findMatches(B) {
   for (let c = 0; c < B.w; c++) {
     let r = 0;
     while (r < B.h) {
-      const t0 = tileAt(B, r, c);
-      if (!t0 || t0.type < 0) { r++; continue; }
+      const t0 = plainTile(B, r, c);
+      if (!t0) { r++; continue; }
       let k = r + 1;
       while (k < B.h) {
-        const t = tileAt(B, k, c);
+        const t = plainTile(B, k, c);
         if (!t || t.type !== t0.type) break;
         k++;
       }
@@ -12284,8 +12636,94 @@ const G = {
   usedExtra: false,
   cursor: null, keyMode: false,     /* keyboard play */
   creepTick: 0,
-  epoch: 0                          /* bumped by every startLevel */
+  epoch: 0,                         /* bumped by every startLevel */
+  finale: false, finaleSkip: false  /* the leftover-move fireworks, and a tap to hurry them */
 };
+
+/* Leaving a level with a cascade still in flight.
+
+   startLevel bumps the epoch so that nothing from the previous level can
+   write into the next one, and every async routine checks it after each
+   wait. Nothing did the same when a player quit: the cascade kept
+   resolving, scoring and sounding on a board nobody could see, until the
+   next level began and finally invalidated it. The quit is an epoch
+   boundary too now. */
+function abandonLevel() {
+  G.epoch++;
+  G.over = true;
+  G.busy = false;
+  G.finale = false;
+  G.finaleSkip = false;
+}
+
+/* ---------------- a level that survives the phone ----------------
+
+   Nothing about a level in progress was ever written down. A phone
+   call, a low-memory kill, a swipe from the recents screen — and the
+   board, the moves and the heart that paid for them were gone, while
+   quitting on purpose gave the heart back. Tested on the emulator:
+   force-stop mid-level, relaunch, home screen, one heart fewer.
+
+   The board, the moves, the score and the goals are written to the save
+   after every completed move and at every hide, and a save holding one
+   is resumed on the next launch on the same board with the same moves.
+   The heart stays spent: it is one attempt, interrupted, not two. The
+   daily walk is resumed only on the day it was started. */
+function snapshotLevel() {
+  if (!G.B || G.over) return null;
+  const B = G.B;
+  return {
+    n: G.n, day: G.n === DAILY_LEVEL ? dayNumber() : 0, reached: SAVE.reached,
+    moves: G.moves, score: G.score, charge: G.charge, scoreMul: G.scoreMul,
+    usedExtra: G.usedExtra, rescued: G.rescued, creepTick: G.creepTick,
+    pupQueue: B.pupQueue || 0, startedAt: G.startedAt, bestChain: G.bestChain,
+    goals: G.goals.map(g => g.have),
+    cells: B.cell.map(row => row.map(c => [c.hole ? 1 : 0, c.crate, c.mud, c.ice, c.bram, c.mole, c.moleT || 0,
+      c.tile ? c.tile.type : null, c.tile ? c.tile.sp : 0]))
+  };
+}
+function keepLevel() { SAVE.inLevel = snapshotLevel(); persist(); }
+function dropLevel() { if (SAVE.inLevel) { SAVE.inLevel = null; persist(); } }
+function levelToResume() {
+  const s = SAVE.inLevel;
+  if (!s || !s.cells || !s.n) return null;
+  if (s.n === DAILY_LEVEL && (s.day !== dayNumber() || s.reached !== SAVE.reached)) return null;
+  if (s.n > 0 && s.n > SAVE.reached) return null;
+  return s;
+}
+function restoreBoard(B, s) {
+  for (let r = 0; r < B.h; r++) for (let c = 0; c < B.w; c++) {
+    const v = s.cells[r] && s.cells[r][c];
+    if (!v) continue;
+    const cell = B.cell[r][c];
+    cell.hole = !!v[0]; cell.crate = v[1] || 0; cell.mud = v[2] || 0; cell.ice = v[3] || 0;
+    cell.bram = v[4] || 0; cell.mole = v[5] || 0; cell.moleT = v[6] || 0;
+    cell.tile = (v[7] === null || v[7] === undefined) ? null : mkTile(v[7], v[8] || 0);
+  }
+  B.pupQueue = s.pupQueue || 0;
+}
+/* ---------------- tempo ----------------
+
+   Every wait in a cascade goes through here. While a level is being
+   played the answer is the number that was asked for. During the finale
+   — the leftover moves turning into fireworks after a win — it is under
+   half, and a tap on the board takes it to an eighth.
+
+   Measured on the real interface with a solver playing: the time from
+   the last move to the results card was 12.2, 12.9, 12.3, 19.3, 17.5,
+   27.3, 30.2 and 37.9 seconds across eight levels, growing with the
+   moves left over, because each batch of three fireworks ran a whole
+   cascade at playing speed. The better somebody played, the longer they
+   sat looking at a board they had already won. The fireworks are one
+   volley now (see finishWin), and they run at this tempo. */
+function tempo() {
+  if (!G.finale) return 1;
+  return G.finaleSkip ? .12 : .36;
+}
+function pace(ms) {
+  const k = tempo();
+  return k === 1 ? ms : Math.max(16, Math.round(ms * k));
+}
 
 /* ---------------- geometry ---------------- */
 /* Shared by layoutBoard and the self-heal check in renderGame — if the
@@ -12331,6 +12769,17 @@ function layoutBoard() {
   G.compCtx = fitCanvas($('#compCanvas'), 50, 50);
   clearSprites();
   drawLevelScene();
+  warmSprites();
+}
+/* The first frame after a layout paints every sprite the board needs
+   from scratch — measured at 9.7 to 11.7 ms on a desktop against a warm
+   frame of 1.4, which on a phone is a 50–90 ms hitch on the frame the
+   deal-in animation starts. The plain face of every colour in play is
+   painted here instead, before that frame, for about two milliseconds
+   nobody is watching. */
+function warmSprites() {
+  if (!G.B || !G.cell) return;
+  for (let t = 0; t < G.B.types; t++) tileSprite(t, SP.NONE, G.cell * .90, SAVE.settings.marks, false, false);
 }
 const cellX = c => G.ox + c * G.cell;
 const cellY = r => G.oy + r * G.cell;
@@ -12435,28 +12884,34 @@ function startLevel(n, opts) {
      sizing, not a level number, so the caller picks rather than the
      level table reaching into the save to find out how far you got */
   G.def = n === DAILY_LEVEL ? dailyLevel(SAVE.reached) : levelDef(n);
-  G.startedAt = now();
-  track('level_start', { n: n, moves: G.def.moves, tries: (SAVE.stats.played || 0) });
+  const res = opts.resume || null;
+  G.startedAt = res ? (res.startedAt || now()) : now();
+  track('level_start', { n: n, moves: G.def.moves, tries: (SAVE.stats.played || 0), resumed: !!res });
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
+  if (res) restoreBoard(G.B, res);
   const pet = activePet();
-  const perks = opts.perks || [];
-  let moves = G.def.moves;
-  G.scoreMul = 1;
-  G.charge = 0;
+  const perks = res ? [] : (opts.perks || []);
+  let moves = res ? res.moves : G.def.moves;
+  G.scoreMul = res ? (res.scoreMul || 1) : 1;
+  G.charge = res ? (res.charge || 0) : 0;
   perks.forEach(p => {
     if (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait') moves += p.v;
     if (p.id === 'charge') G.charge = p.v;
     if (p.id === 'score') G.scoreMul += p.v;
   });
-  if (opts.extraMoves) moves += opts.extraMoves;
+  if (opts.extraMoves && !res) moves += opts.extraMoves;
   G.moves = moves;
-  G.score = 0;
-  G.chain = 0; G.bestChain = 0; G.bestShown = false;
+  G.score = res ? (res.score || 0) : 0;
+  G.chain = 0; G.bestChain = res ? (res.bestChain || 0) : 0; G.bestShown = false;
   G.over = false; G.busy = true;
   G.sel = null; G.armed = null; G.armedFirst = null;
   G.particles = []; G.floats = []; G.beams = []; G.rings = [];
-  G.rescued = 0; G.usedExtra = false; G.creepTick = 0; G.lastPraise = 0;
+  G.rescued = res ? (res.rescued || 0) : 0;
+  G.usedExtra = res ? !!res.usedExtra : false;
+  G.creepTick = res ? (res.creepTick || 0) : 0;
+  G.lastPraise = 0;
+  G.finale = false; G.finaleSkip = false;
   G.starTargets = starTargets(G.def);
   G.starsEarned = 0;
   /* -1 rather than 0, so the first sync of a level always paints the
@@ -12464,21 +12919,23 @@ function startLevel(n, opts) {
      would otherwise show an unwalked path */
   G.walkStep = -1;
   G.goals = G.def.goals.map(g => ({ kind: g[0], arg: g[1], need: g[2], have: 0 }));
+  if (res) G.goals.forEach((g, i) => { g.have = (res.goals && res.goals[i]) || 0; });
   G.goals.forEach(g => {
     if (g.kind === GK.BRAMBLE) g.have = clamp(g.need - brambleCount(G.B), 0, g.need);
   });
   const rescueGoal = G.goals.find(g => g.kind === GK.RESCUE);
   G.pupsWanted = rescueGoal ? rescueGoal.need : 0;
 
-  /* seed the board with the pups that need walking home */
-  if (G.pupsWanted) {
+  /* seed the board with the pups that need walking home — a resumed
+     board already has its baskets where they were */
+  if (G.pupsWanted && !res) {
     /* a couple more baskets than the goal asks for: with exactly as many
        as you need, one landing in a slow column loses the level outright */
     const onBoard = Math.min(PUPS_IN_PLAY, G.pupsWanted + 2);
     for (let i = 0; i < onBoard; i++) placePup(G.B);
   }
   /* an energetic pet leaves a rocket lying about */
-  if (perks.some(p => p.id === 'gift')) {
+  if (!res && perks.some(p => p.id === 'gift')) {
     const spots = [];
     eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.ice === 0) spots.push([r, c]); });
     if (spots.length) {
@@ -12511,8 +12968,8 @@ function startLevel(n, opts) {
   });
   gameLoopStart();
   setTimeout(() => { G.busy = false; G.hintT = 0; }, 700);
-  SAVE.stats.played++;
-  persist();
+  if (!res) SAVE.stats.played++;
+  keepLevel();
 }
 /* Baskets start in the upper middle rather than the very top row: from
    row 0 a basket needs the whole column to clear beneath it before it
@@ -12824,7 +13281,13 @@ function hitCell(B, r, c, ctx, direct) {
   if (t.type === PUP) return;                     // pups only leave by the door
   if (t.dying) return;
 
-  if (t.sp !== SP.NONE) ctx.chain.push({ r, c, sp: t.sp, type: t.type });
+  /* a rainbow set off by something else — a rocket through it, a bomb
+     beside it — clears whatever colour the board holds most of, which is
+     what specialKeys does with no colour. It used to clear the colour
+     the rainbow happened to be born from, which nothing on the tile
+     shows, so the biggest blast on the board picked its target from a
+     number the player could not see. */
+  if (t.sp !== SP.NONE) ctx.chain.push({ r, c, sp: t.sp, type: t.sp === SP.RAIN ? -1 : t.type });
   t.dying = .01;
   t.dieDelay = ctx.delay;
   ctx.removed.push({ r, c, t });
@@ -12915,6 +13378,23 @@ async function blastWaves(startKeys, chain, silent) {
     });
     /* score + goals */
     let gained = 0;
+    /* A clear that takes most of the board is the biggest thing this
+       game can do, and it used to happen at the same speed as a plain
+       three: a rainbow swapped onto a rainbow emptied all seventy-two
+       cells inside 400ms with one shake and a word. Frames of it,
+       captured 90ms apart, show the old board in one and the new one in
+       the next. So a big clear is staged: the tiles go in a ripple from
+       the top of the board to the bottom, the swell lasts long enough
+       to be seen, the camera kicks and the screen flashes. */
+    const big = !silent && ctx.removed.length >= 20;
+    if (big) {
+      ctx.removed.sort((p, q) => (p.r - q.r) || (p.c - q.c));
+      ctx.removed.forEach((it, i) => { it.t.dieDelay = (i / ctx.removed.length) * .9; });
+      G.shake = 13;
+      G.flash = Math.max(G.flash, .75);
+      FX.punchZoom(1.4);
+      buzz([18, 40, 36, 40, 60]);
+    }
     ctx.removed.forEach((it, i) => {
       gained += 62 * Math.min(8, chain || 1);
       burst(it.r, it.c, it.t.type >= 0 ? slotGem(it.t.type) : PAL.accent, 7, 1);
@@ -12949,7 +13429,10 @@ async function blastWaves(startKeys, chain, silent) {
     }
     addScore(gained);
     applyCounts(ctx);
-    if (ctx.removed.length) await wait(reduceMotion() ? 40 : 145);
+    /* the ripple above takes .9 of a tile's own swell on top of the
+       swell itself, which the tile runs at 4.6 a second: 420ms sees the
+       last tile out, and it is time a whole-board clear has earned */
+    if (ctx.removed.length) await wait(pace(reduceMotion() ? 40 : (big ? 420 : 145)));
     if (stale(_ep)) return;
     ctx.removed.forEach(it => {
       const cell = G.B.cell[it.r][it.c];
@@ -12959,7 +13442,7 @@ async function blastWaves(startKeys, chain, silent) {
     const next = [];
     ctx.chain.forEach(s => { specialKeys(G.B, s.r, s.c, s.sp, s.type).forEach(k => next.push(k)); });
     wave = next;
-    if (next.length) await wait(reduceMotion() ? 30 : 90);
+    if (next.length) await wait(pace(reduceMotion() ? 30 : 90));
     if (stale(_ep)) return;
   }
   SAVE.stats.tilesPopped += totalTiles;
@@ -12985,8 +13468,20 @@ function applyCounts(ctx) {
   const pet = activePet();
   if (pet && !G.over && !G.spending) {
     const fav = favType();
+    /* The meter fills fastest on the pet's own face, and that stays: it
+       is the reason the face is on the board. But on a level whose goal
+       is another colour the player was being asked to choose between
+       the goal and the meter, and on level two — thirty-three yellow
+       and twenty-eight orange for a blue dog — the meter lost every
+       time and the ability never fired. A goal colour charges at a
+       third of the pet's own rate now, so chasing the level charges the
+       animal too, just more slowly than chasing the animal would. */
+    const wanted = new Set(G.goals.filter(g => g.kind === GK.COLLECT && g.have < g.need).map(g => g.arg));
     let add = 0;
-    for (const k in ctx.collect) add += (+k === fav ? CHARGE_FAV : CHARGE_OTHER) * ctx.collect[k];
+    for (const k in ctx.collect) {
+      const rate = +k === fav ? CHARGE_FAV : wanted.has(+k) ? CHARGE_FAV / 3 : CHARGE_OTHER;
+      add += rate * ctx.collect[k];
+    }
     add *= traitChargeScale(pet);
     if (add) {
       const was = G.charge;
@@ -13066,7 +13561,7 @@ async function clearGroups(groups, swapCells) {
       SFX.select();
     }
   });
-  if (makeSpecials.length) await wait(reduceMotion() ? 30 : 110);
+  if (makeSpecials.length) await wait(pace(reduceMotion() ? 30 : 110));
   if (stale(_ep)) return;
 }
 
@@ -13082,19 +13577,20 @@ async function settleBoard(depth) {
     return;
   }
   let maxDur = 0;
+  const k = tempo();
   moves.forEach(m => {
     const t = m.tile;
     if (m.materialise) { t.x = m.toC; t.y = m.toR; t.scale = 0; return; }
     if (m.spawn) { t.x = m.fromC; t.y = m.fromR; }
     const dist = Math.max(Math.abs(m.toR - t.y), Math.abs(m.toC - t.x));
-    const dur = clamp(.10 + dist * .050, .12, .46);
+    const dur = clamp(.10 + dist * .050, .12, .46) * k;
     maxDur = Math.max(maxDur, dur);
     setTarget(t, m.toC, m.toR, dur, E.drop);
     t.tw.land = true;
     t.tw.force = clamp(dist / 4, .15, 1);
   });
   SFX.drop();
-  await wait(reduceMotion() ? 40 : maxDur * 1000 + 40);
+  await wait(reduceMotion() ? 40 : maxDur * 1000 + pace(40));
   if (stale(_ep)) return;
   if (collectPups() && (depth || 0) < 12) await settleBoard((depth || 0) + 1);
   if (stale(_ep)) return;
@@ -13334,13 +13830,17 @@ async function runCombo(kind, a, b) {
     SFX.rainbow(); G.flash = .6;
   } else if (kind === 'rainspecial') {
     const other = ta.sp === SP.RAIN ? tb : ta;
-    const type = commonType(B);
+    /* the colour of the special you swapped in, the way the rainbow-onto-
+       plain case below already reads it. This took the board's most
+       common colour instead, so the one combo a player sets up on
+       purpose fired on a colour they had not chosen. */
+    const type = other.type >= 0 ? other.type : commonType(B);
     tilesOfType(B, type).forEach(([r, c]) => {
       const t = B.cell[r][c].tile;
       if (t) { t.sp = other.sp === SP.BOMB ? SP.BOMB : (Math.random() < .5 ? SP.ROW : SP.COL); t.jiggle = 1; }
     });
     SFX.rainbow(); G.flash = .8;
-    await wait(280);
+    await wait(pace(280));
     if (stale(_ep)) return;
     keys.add(a[0] + ':' + a[1]); keys.add(b[0] + ':' + b[1]);
     tilesOfType(B, type).forEach(([r, c]) => keys.add(r + ':' + c));
@@ -13723,13 +14223,17 @@ function scoreOnlyLevel() {
 function checkEnd() {
   if (G.over) return;
   if (goalsMet()) {
-    if (scoreOnlyLevel() && G.moves > 0) return;      /* keep going for the stars */
-    G.over = true; finishWin(); return;
+    if (scoreOnlyLevel() && G.moves > 0) { keepLevel(); return; }      /* keep going for the stars */
+    G.over = true; dropLevel(); finishWin(); return;
   }
   if (G.moves <= 0) {
     G.over = true;
+    dropLevel();
     if (scoreOnlyLevel() && goalsMet()) finishWin(); else finishLose();
+    return;
   }
+  /* still going: this is the board the next launch will find */
+  keepLevel();
 }
 
 async function finishWin() {
@@ -13746,27 +14250,50 @@ async function finishWin() {
   if (pet) { G.petMood = 'happy'; G.petMoodT = 3; petVoice(pet, 1.05); }
   await wait(420);
   if (stale(_ep)) return;
-  /* leftover moves turn into fireworks — a score level has already spent
-     its own, which is the point of letting it run on */
+  /* Leftover moves turn into fireworks — a score level has already spent
+     its own, which is the point of letting it run on.
+
+     They used to go three at a time, each batch a full cascade at
+     playing speed, and the results card arrived 12 to 38 seconds after
+     the last move depending on how many moves were left — the better
+     the play, the longer the wait. One volley now: every leftover move
+     becomes a special at once, lit in a ripple so the eye can count
+     them, then the whole lot goes up together and the cascade that
+     follows runs at the finale tempo (see pace). A second volley only
+     if there were more moves than plain tiles to put them on. A tap on
+     the board hurries all of it. */
+  G.finale = true;
+  G.finaleSkip = false;
   let left = G.moves;
-  while (left > 0) {
+  let volley = 0;
+  while (left > 0 && volley++ < 2) {
     const spots = [];
-    eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE) spots.push([r, c]); });
+    eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && !cell.tile.dying) spots.push([r, c]); });
     if (!spots.length) break;
-    const take = Math.min(left, 3);
-    for (let i = 0; i < take && spots.length; i++) {
-      const [r, c] = spots.splice(Math.floor(Math.random() * spots.length), 1)[0];
+    shuffleArr(spots);
+    const take = Math.min(left, spots.length);
+    for (let i = 0; i < take; i++) {
+      const [r, c] = spots[i];
       const t = G.B.cell[r][c].tile;
       t.sp = Math.random() < .35 ? SP.BOMB : (Math.random() < .5 ? SP.ROW : SP.COL);
       t.jiggle = 1;
+      t.scale = .55;
+      if (i < 14) ring(r, c, PAL.accent);
+      /* lit one after another rather than all in the same frame */
+      if (i < take - 1 && i < 24) await wait(pace(Math.max(18, 260 / take)));
+      if (stale(_ep)) return;
     }
     left -= take;
     G.moves = left;
     syncHud();
-    await wait(140);
+    SFX.chargeReady();
+    await wait(pace(300));
     if (stale(_ep)) return;
     const keys = new Set();
     eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.sp !== SP.NONE) keys.add(r + ':' + c); });
+    G.shake = 13;
+    G.flash = Math.max(G.flash, .6);
+    SFX.bomb();
     await blastWaves(keys, 3, false);
     if (stale(_ep)) return;
     await settleBoard();
@@ -13774,6 +14301,7 @@ async function finishWin() {
     await resolveBoard(null);
     if (stale(_ep)) return;
   }
+  G.finale = false;
   await wait(360);
   if (stale(_ep)) return;
   /* the board says the level was won. What that looks like is not
@@ -14116,10 +14644,12 @@ function renderGame(dt) {
   }
   c.restore();
 
-  /* idle hint */
+  /* idle hint. Sooner on the opening levels: a person who has never
+     played this has stopped because they do not know what a move looks
+     like yet, and five seconds of that is a first session ending. */
   if (!G.busy && !G.over) {
     G.hintT += dt;
-    if (G.hintT > 5 && !G.hint) G.hint = bestHint();
+    if (G.hintT > (G.n > 0 && G.n <= 5 ? 3 : 5) && !G.hint) G.hint = bestHint();
   } else { G.hint = null; }
 
   drawCompanion(dt);
@@ -14151,7 +14681,15 @@ function hintScore(a, b) {
   swapTiles(G.B, a, b);
   try {
     findMatches(G.B).forEach(run => {
-      if (run.len > best) best = run.len;
+      /* A group from findMatches carries maxH and maxV, never `len`.
+         This read `run.len`, which is undefined, so `best` stayed at
+         zero and the shape bonus below never fired: for as long as the
+         hint has existed it has pointed at a plain three while a four
+         or a five sat elsewhere on the board — exactly the failure the
+         comment above says it was written to avoid. Found by following
+         the hint move for move through level one and losing at 26/34. */
+      const len = Math.max(run.maxH || 0, run.maxV || 0);
+      if (len > best) best = len;
       run.cells.forEach(([r2, c2]) => {
         const cell = openCell(G.B, r2, c2);
         if (!cell) return;
@@ -14420,6 +14958,8 @@ function bindBoard() {
   let start = null, moved = false;
 
   const down = ev => {
+    /* a tap during the fireworks is somebody who has seen enough */
+    if (G.finale) { G.finaleSkip = true; return; }
     if (G.busy || G.over || !G.B) return;
     audioResume();
     const p = boardPos(ev);
@@ -15250,9 +15790,13 @@ function drawMapNode(c, n) {
     c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText(n.n, n.x, n.y + 1);
   }
-  /* Every fifth level pays two treats the first time it is cleared, and
-     nothing said so. Shown until it has been paid. */
-  if (unlocked && !cleared && n.n % 5 === 0) {
+  /* A milestone level pays a treat the first time it is cleared, and
+     nothing said so. Shown until it has been paid.
+
+     This read `n % 5` while the payout is `ECON.milestoneEvery`, which is
+     ten: levels 5, 15, 25 wore a treat that was never paid. The map asks
+     the same table the win sheet pays from now. */
+  if (unlocked && !cleared && n.n % ECON.milestoneEvery === 0) {
     const bx = n.x + R * .78, by = n.y - R * .78, br = R * .46;
     c.fillStyle = rgba('#2A1E12', PAL.dark ? .5 : .25);
     ellipse(c, bx, by + R * .07, br, br); c.fill();
@@ -15600,11 +16144,18 @@ function renderHome() {
      errands sit side by side under it rather than continuing the column.
      Four full-width cards stacked in a row is the shape of a settings
      screen; it gives the eye no idea which one matters. */
+  /* The two errands wait until the player has a few levels behind
+     them. A brand-new player was offered "Clean 58 muddy tiles" as a
+     daily walk before level four had shown them what mud is, and a
+     season book at tier nought with a button that had nothing to take.
+     Ten ideas on the first screen is how a first minute ends; the lane
+     is the first screen's whole job. */
+  const settled = SAVE.reached >= 5;
   pad.innerHTML = `
     ${heroCard}
     <div class="todayRow">
     ${giftReady() ? heroGift() : ''}
-    ${(() => {
+    ${!settled ? '' : (() => {
       const d = dailyState();
       const def = dailyLevel(SAVE.reached);
       return `
@@ -15620,7 +16171,7 @@ function renderHome() {
         <span class="btn sm">${d.done ? T('daily_walk_again') : T('daily_walk_go')}</span>
       </button>`;
     })()}
-    ${(() => {
+    ${!settled ? '' : (() => {
       const p = passState();
       const tier = passTier(p.stamps);
       const waiting = passWaiting();
@@ -15632,7 +16183,7 @@ function renderHome() {
           <small>${T('pass_sub', { n: tier, c: PASS.tiers, d: seasonDaysLeft(seasonStart()) })}</small>
           ${waiting ? `<span class="pill warn" style="margin-top:5px">${T('pass_ready', { n: waiting })}</span>` : ''}
         </span>
-        <span class="btn sm">${T('pass_take')}</span>
+        <span class="btn sm">${waiting ? T('pass_take') : T('pass_open')}</span>
       </button>`;
     })()}
     </div>
@@ -15965,7 +16516,8 @@ function paintArtCanvases(root) {
     const idx = +cv.dataset.body;
     const coat = cv.dataset.coat !== undefined ? BREEDS[idx].coats[+cv.dataset.coat] : null;
     drawBody(c, Object.assign(specOf(idx, coat, cv.dataset.eye),
-      { hat: cv.dataset.hat, collar: cv.dataset.collar, stage: +(cv.dataset.stage || 0) }), px * .40 * k, { mouth: 'smile' });
+      { hat: cv.dataset.hat, collar: cv.dataset.collar, stage: +(cv.dataset.stage || 0) }), px * .40 * k,
+      { mouth: cv.dataset.mouth || 'smile', mood: cv.dataset.mood || undefined });
   });
   $$('canvas[data-tile]', root).forEach(cv => {
     const px = askSize(cv, 44);
@@ -16057,7 +16609,7 @@ function badgeModal(list) {
     <div class="goalItem">
       <span class="rosette fam-${b.fam}">${IC[b.icon] || IC.crown}</span>
       <span class="t"><b>${badgeName(b)}</b>${badgeDesc(b)}</span>
-      <span class="pill warn">${b.coins ? '+' + b.coins : ''}${b.treats ? ' +' + b.treats + '★' : ''}</span>
+      <span class="pill warn">${b.coins ? '+' + b.coins : ''}${b.treats ? ' +' + b.treats + IC.treat : ''}</span>
     </div>`).join('');
   const m = modal(`
     <span style="color:var(--accent-strong);width:52px;height:52px;align-self:center">${IC.crown}</span>
@@ -17044,11 +17596,15 @@ function noHeartsSheet() {
   track('hearts_empty', { n: SAVE.reached });
   /* The one place in this game that asks to send a notification, and the
      only moment the answer is obviously yes: the player has just been
-     told they cannot play for two hours. Asked here rather than at boot
-     because a decline is close to permanent on both platforms, so the
-     cheapest moment to ask is also the one that wastes the ask. Nothing
-     waits on the answer — the sheet draws either way. */
-  NOTIFY.ask().then(() => NOTIFY.sync());
+     told they cannot play for two hours.
+
+     It used to put the system's own dialog up the instant this sheet
+     opened, with nothing in the game having said why. On Android that
+     dialog is shown twice per install and never again, and a question
+     nobody expected is a question people say no to. So the sheet
+     carries the offer in its own words, once, and the system asks only
+     after the player has pressed it. */
+  const offer = NOTIFY.ready() && !SAVE.settings.notify && !SAVE.notifyAsked;
   const line = () => T('lvl_no_hearts_sub', { m: HEART_REFILL / MIN, t: fmtTime(heartsIn()) });
   let tick = null;
   const m = modal(`
@@ -17059,7 +17615,19 @@ function noHeartsSheet() {
       <button class="btn ghost" id="nhWait">${T('lvl_wait')}</button>
       <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: ECON.heartRefillTreats })}</button>
     </div>
+    ${offer ? `<button class="btn wide" id="nhNotify" style="margin-top:4px">${T('nh_notify')}</button>` : ''}
   `, { onClose: () => { if (tick) clearInterval(tick); onHeartArrived = () => { }; } });
+  const nb = $('#nhNotify', m.el);
+  if (nb) nb.addEventListener('click', () => {
+    nb.disabled = true;
+    SAVE.notifyAsked = true;
+    persist(true);
+    NOTIFY.ask().then(ok => {
+      NOTIFY.sync();
+      if (ok) toast(T('nh_notify_ok'), 'heart');
+      if (nb.isConnected) nb.remove();
+    });
+  });
 
   /* the number has to move, or waiting looks like nothing happening */
   heartClockStart();
@@ -17165,10 +17733,10 @@ function showWin() {
   const m = modal(`
     ${pet ? `<div class="winPet"><canvas data-body="${pet.breed}" data-coat="${pet.coat}"
       data-eye="${petEye(pet)}" data-hat="${pet.hat}" data-collar="${pet.collar}"
-      data-stage="${petStageIdx(pet)}" data-scale="1.55" width="116" height="116"></canvas></div>` : ''}
+      data-stage="${petStageIdx(pet)}" data-scale="1.55" data-mouth="open" data-mood="happy" width="116" height="116"></canvas></div>` : ''}
     <div class="starsRow">${[0, 1, 2].map(i => `<span class="s" data-i="${i}">${i < stars ? IC.star : IC.starOut}</span>`).join('')}</div>
     <h2>${T('win_t')}</h2>
-    <p>${T('lvl_intro', { n })} · <span class="num">${fmt(G.score)}</span></p>
+    <p>${T('lvl_intro', { n })} · <span class="num" id="wScore">0</span></p>
     ${newBest && prevBest ? `<p style="color:var(--accent-strong)"><b>${T('win_new_best')}</b></p>`
       : prevBest ? `<p style="color:var(--text-dim)">${T('map_best', { n: fmt(prevBest) })}</p>` : ''}
     <div class="rewardRow">
@@ -17196,18 +17764,47 @@ function showWin() {
     else s.classList.add('pop');
     if (i < stars) s.style.color = 'var(--accent)'; else s.style.color = 'var(--text-faint)';
   });
-  $('#wMap', m.el).addEventListener('click', () => { m.close(); leaveLevel(); });
-  $('#wNext', m.el).addEventListener('click', () => {
-    m.close();
+  /* The card used to open with the final score already printed and a
+     body drawn once and left there. The number counts up now, over the
+     time the stars take to land, and the animal jumps once the last one
+     is in — the card answers the win instead of filing it. */
+  const scoreEl = $('#wScore', m.el);
+  const petCv = $('.winPet canvas', m.el);
+  const tally = 220 + stars * 260 + 120;
+  if (scoreEl && !reduceMotion()) {
+    const t0 = performance.now();
+    const tick = t => {
+      const k = clamp((t - t0) / tally, 0, 1);
+      scoreEl.textContent = fmt(G.score * (1 - Math.pow(1 - k, 3)));
+      if (k < 1 && scoreEl.isConnected) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  } else if (scoreEl) scoreEl.textContent = fmt(G.score);
+  if (petCv) setTimeout(() => { petCv.classList.add('hop'); const p2 = activePet(); if (p2) petVoice(p2, 1.15); }, tally);
+
+  /* Whatever the win also earned — a stage, a badge — waits behind this
+     card and shows when it closes. "Carry on" used to start the next
+     level the moment the card went, so the badge for level one came up
+     over the board of level two, and a stage-up modal could arrive with
+     a cascade running underneath it. The next level starts when the
+     shelf is clear. */
+  const goOn = () => {
     gameLoopStop();
     setScreen('map');
     mapLayout();
-    setTimeout(() => openLevelIntro(SAVE.reached), 260);
-  });
+    const start = () => { if (sheetIsOpen()) setTimeout(start, 140); else setTimeout(() => openLevelIntro(SAVE.reached), 200); };
+    setTimeout(start, 120);
+  };
+  $('#wMap', m.el).addEventListener('click', () => { m.close(); leaveLevel(); });
+  $('#wNext', m.el).addEventListener('click', () => { m.close(); goOn(); });
   syncPurse();
   const wonBadges = checkBadges();
-  if (grew) setTimeout(() => stageUpModal(pet), 900);
-  if (wonBadges.length) setTimeout(() => badgeModal(wonBadges), grew ? 2000 : 900);
+  /* queued now, not on a timer: a timer that fires after the player has
+     already pressed Carry on lands on the wrong screen. Queued as the
+     call rather than as the sheet, so the stage-up's fanfare and sparks
+     start when it takes the screen and not under this card. */
+  if (grew) modalQueue.push(() => stageUpModal(pet));
+  if (wonBadges.length) modalQueue.push(() => badgeModal(wonBadges));
 }
 function showLose() {
   say(T('a11y_failed'), true);
@@ -17252,8 +17849,19 @@ function showLose() {
      somebody else's sentence, in either language. It was also saying
      exactly what the list underneath says, only without the progress
      bars, which are the part worth reading. So it is a label now. */
+  /* The goal that fell furthest short says what to do differently next
+     time. A lost level used to end in a list of numbers and a kind word;
+     nothing on the card told a player *why*, which is the difference
+     between "I made a mistake" and "the game cheated". One line, by the
+     kind of goal, in the reference sheet's own voice. */
+  const worst = short.slice().sort((a, b) => (a.have / a.g.need) - (b.have / b.g.need))[0];
+  const tip = worst ? T('lose_tip_' + worst.g.kind) : '';
+  const short2 = SAVE.treats < ECON.continueTreats;
   const m = modal(`
-    <span style="color:var(--text-faint);width:52px;height:52px;align-self:center">${IC.starOut}</span>
+    ${pet ? `<div class="winPet"><canvas data-body="${pet.breed}" data-coat="${pet.coat}"
+      data-eye="${petEye(pet)}" data-hat="${pet.hat}" data-collar="${pet.collar}"
+      data-stage="${petStageIdx(pet)}" data-scale="1.55" data-mouth="sad" data-mood="tired" class="sag" width="116" height="116"></canvas></div>`
+      : `<span style="color:var(--text-faint);width:52px;height:52px;align-self:center">${IC.starOut}</span>`}
     <h2>${T('lose_t')}</h2>
     <p>${close ? `<b style="color:var(--accent-strong)">${T('lose_close')}</b> ` : ''}<span style="color:var(--text-dim)">${T('lose_s')}</span></p>
     <div class="goalList">
@@ -17264,6 +17872,7 @@ function showLose() {
         </span></span>
       </div>`).join('')}
     </div>
+    ${tip ? `<p style="font-size:var(--t-micro);color:var(--text-dim);margin-top:-4px"><b style="color:var(--text)">${T('lose_why')}:</b> ${tip}</p>` : ''}
     ${pet ? `<p>${T('lose_petline', { name: pet.name })}</p>` : ''}
     <div class="row">
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
@@ -17273,9 +17882,9 @@ function showLose() {
     <div class="offer">
       <span class="ot">
         <b>${T('lose_extra', { n: ECON.continueMoves })}</b>
-        <small>${T('lose_extra_sub', { n: ECON.continueTreats })}</small>
+        <small>${short2 ? T('lose_extra_short', { n: ECON.continueTreats, have: SAVE.treats }) : T('lose_extra_sub', { n: ECON.continueTreats })}</small>
       </span>
-      <button class="btn sm" id="lExtra">${T('shop_buy')}</button>
+      <button class="btn sm" id="lExtra"${short2 ? ' style="opacity:.6"' : ''}>${T('shop_buy')}</button>
     </div>` + (ADS.available('carry') ? `
     <div class="offer">
       <span class="ot">
@@ -17325,9 +17934,16 @@ function showLose() {
     startLevel(G.n, { perks: perksFor(pet2), reseed: Math.floor(Math.random() * 9999) });
   });
 }
+/* the level the last launch was in the middle of — see snapshotLevel */
+function resumeLevel(s) {
+  setScreen('game');
+  startLevel(s.n, { resume: s });
+  toast(T('lvl_resumed'), 'play');
+}
 function leaveLevel() {
   gameLoopStop();
-  G.over = true;
+  abandonLevel();
+  dropLevel();
   setScreen('map');
   mapLayout();
   scrollMapToCurrent();
@@ -18186,10 +18802,14 @@ function boot() {
          stopped, so nothing is competing for the frame */
       TRACK.flush();
       gameLoopStop(); roomStop();
+      /* the motes were the one loop that never stopped: a full-screen
+         canvas repainted for nobody, in a pocket, on a battery */
+      if (AMB.raf) { cancelAnimationFrame(AMB.raf); AMB.raf = null; }
     } else {
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
       if (SAVE.hearts < HEART_MAX) heartClockStart();
       if (SAVE.settings.music) musicStart();
+      if (!AMB.raf && !reduceMotion()) { AMB.last = performance.now(); AMB.raf = requestAnimationFrame(motesLoop); }
       if (SCREEN === 'home') { renderHome(); roomLayout(); roomStart(); }
       if (SCREEN === 'game') { layoutBoard(); gameLoopStart(); }
     }
@@ -18238,13 +18858,22 @@ function boot() {
   } else {
     SCREEN = '';
     setScreen('home');
-    /* Only onto the home screen. The gift opens itself seven hundred
-       milliseconds after boot, and a player who taps into a level
-       faster than that used to meet it mid-board — and, with sheets
-       queueing, meet the result of the level they just played behind
-       it. Nothing is lost by not opening: the gift card stays on the
-       home screen and the reward is not claimed until it is. */
-    if (giftReady()) setTimeout(() => { if (SCREEN === 'home') openDailyGift(); }, 700);
+    /* A level that was in progress when the app was last alive comes
+       back first, before the gift or anything else: the player was in
+       the middle of something, and the home screen is not where they
+       left off. See snapshotLevel in 40-game.js. */
+    const unfinished = levelToResume();
+    if (unfinished) {
+      setTimeout(() => { if (SCREEN === 'home' && !sheetIsOpen()) resumeLevel(unfinished); }, 350);
+    } else if (giftReady()) {
+      /* Only onto the home screen. The gift opens itself seven hundred
+         milliseconds after boot, and a player who taps into a level
+         faster than that used to meet it mid-board — and, with sheets
+         queueing, meet the result of the level they just played behind
+         it. Nothing is lost by not opening: the gift card stays on the
+         home screen and the reward is not claimed until it is. */
+      setTimeout(() => { if (SCREEN === 'home') openDailyGift(); }, 700);
+    }
   }
 }
 

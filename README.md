@@ -89,7 +89,9 @@ npm run test:check         # duplicate names, unresolved calls and
 npm run test:browser       # the 39 checks against a real document
 npm run hunt               # the wide net: every screen, every sheet
 node test/sim.js           # 10k simulated moves + the level-design audit
-node test/ai.js 1 60 12    # difficulty: a solver plays every level N times
+node test/ai.js 1 60 12    # difficulty: a player plays every level N times
+                           # (one who cannot see cascades; SOLVER=solver
+                           # brings back the one who can — test/_solver.js)
 node test/ai.js 61 140 6   # the same, over the generated run
 node test/tune.js 1 60     # suggests move counts from measured play
 node test/chains.js 400    # how deep cascades actually go
@@ -3526,3 +3528,186 @@ appearing in the browser, because the worker was still handing out the
 morning's file. `build.js` stamps the name with a hash of the built page
 now. The same build produces the same name and does not churn the cache;
 any change at all produces a new one and drops the old cache whole.
+
+## The levels were tuned to a player who could see the future
+
+Every difficulty number in this project — the `want` on each authored
+level, the response curves the generator reads, the sixty move budgets
+— was measured with the solver in `test/_solver.js`. 11-design.js called
+it "about as well as an attentive human who is not trying very hard".
+It tries every legal swap on a copy of the board, resolves the whole
+cascade including the tiles that fall in afterwards, and keeps the swap
+that moved the goals furthest. It sees the cascade before it happens,
+and on a five-colour board the cascade is most of what a move delivers.
+
+I played the game the other way round, through the real interface with
+a bot that scores only what a match visibly does — the tiles in the
+run, the mud under them, the crates beside them — and nothing else.
+Level one was lost at 27 of 34. Then I had the game's own hint choose
+every move: lost again, 26 of 34. So a policy that cannot see cascades
+went into the solver beside the one that can, and the whole lane was
+measured with both, thirty seeds a level:
+
+    level        1     3     6     9    10    15    16
+    solver     92%  100%   92%   92%   75%   83%   42%
+    person     63%   30%   20%    3%    7%   10%   20%
+
+The person is the default player now (`SOLVER=solver` brings the other
+back). Getting the policy right took three tries, each of which is a
+number in the comment above `humanMove`: with ties broken in scan order
+it cleared level one 30%, because a match at the top of the board drops
+nothing through it; breaking them toward the lower match, which is the
+first thing anyone learns at this game, cleared 73%; and a first draft
+that valued a special-on-special swap at 120 the way the hint does chose
+that swap, watched the harness fail to play it — `resolve()` knows lines,
+not combos — and chose it again until the budget was gone. Level one
+measured 20% for as long as that line was in.
+
+Then the lane was refitted to the person: `test/envelope.js` out to
+1.75× the authored budget rather than 1.35×, because the person needs
+more room than the solver to reach the same rate, and `test/fit-lane.js`
+writing sixty budgets and sixty star thresholds back. The two score
+levels in the opening went first — a score goal is the one kind of level
+nobody can plan, and they were the two worst things in the opening at
+30% and 3% — so 3 and 9 are collect levels now, and the first gate no
+longer carries a score goal on top of a rescue. Six rows the fit pinned
+against the edge of the envelope were corrected by hand.
+
+    before  overall 66%  levels under 50%: 6, 9, 10, 15, 19, 20
+    after   overall 83%  levels under 50%: none   bias 0%
+
+The hint has its own bug in the same family: `hintScore` read `run.len`
+off the groups `findMatches` returns, which carry `maxH` and `maxV` and
+no `len`, so the shape bonus never fired and the hint had pointed at a
+plain three while a five sat elsewhere for as long as it has existed.
+Fixed, and it arrives after three seconds rather than five on the first
+five levels, where a player who has stopped has stopped because they do
+not yet know what a move looks like.
+
+## The better you played, the longer you waited
+
+Measured on the real interface: the time from the last move of a won
+level to the results card was 12.2, 12.9, 12.3, 19.3, 17.5, 27.3, 30.2
+and 37.9 seconds across eight levels, growing with the moves left over.
+`finishWin` converted leftover moves into fireworks three at a time and
+ran each batch as a full cascade at playing speed, so a player who
+finished a 38-move level in 16 sat through 22 fireworks, one cascade
+each, for most of a minute.
+
+They go up as one volley now: every leftover move becomes a special at
+once, lit in a ripple so the eye can count them, and the whole lot fires
+together. The cascade that follows runs at a finale tempo — every wait
+in `blastWaves`, `clearGroups` and `settleBoard` goes through `pace()`,
+which is the number asked for while a level is being played and about a
+third of it during the finale, and an eighth after a tap on the board.
+
+    level 8   17.5s  ->  6.1s        level 14   37.9s  ->  5.9s
+
+A whole-board clear had the opposite problem. A rainbow swapped onto a
+rainbow emptied all seventy-two cells inside 400ms with one shake and a
+word; frames captured 90ms apart show the old board in one and the new
+one in the next. A clear of twenty tiles or more is staged now — the
+tiles go in a ripple from the top of the board to the bottom, the swell
+lasts long enough to be seen, the camera kicks and the screen flashes.
+
+Two rules of the specials moved while I was in there. A rainbow kept the
+type of the run it was born from, so three of that colour in a line with
+the rainbow among them matched, and set the rainbow off on a colour the
+player had never chosen and could not see; a rainbow is not a colour any
+more, and both the game and the solver read the change. And a rainbow
+swapped onto a rocket converted the board's most common colour instead
+of the rocket's own, which is the one combo a player sets up on purpose.
+
+## Six stretches, one picture
+
+The map has had six named stretches for a while, each with its own
+ground colour, and the level card names the one you are on. The play
+screen did not know: level 1, level 38 and level 100 were played in
+front of the same hedge, the same cottage and the same five pales of
+fence — screenshots of all three overlaid without a pixel moving, and a
+third of the play screen is that picture.
+
+The scene is the stretch now. The ground takes the stretch's colour
+from `CHAPTERS`, the far side changes — a hedge, a row of vegetable beds,
+a line of trees, water with a footbridge, fruit trees, a garden wall
+with a gate — and the things in the middle band are the things that
+stretch would have. Nothing animates and nothing is drawn per frame; the
+scene is painted once per layout and once per walk step exactly as
+before, so six of them cost what one did, and each carries its own
+evening ground for Dusk.
+
+## A card that answers the win
+
+The results card opened with the final score already printed and a body
+drawn once and left there. The number counts up now over the time the
+stars take to land, the animal jumps once the last one is in, and the
+lost card carries a sad face instead of the same smile as the won one.
+
+A lost level also used to end in a list of numbers and a kind word.
+Nothing on the card said *why*, which is the difference between "I made
+a mistake" and "the game cheated". The goal that fell furthest short
+picks one line, by its kind, in the reference sheet's own voice: match
+low, clear what the basket is sitting on, cut the patch from the edge
+in. And the carry-on row says "9 treats · you have 6" when it cannot be
+afforded, rather than a price and a button that answers with a toast.
+
+Whatever the win also earned waits behind the card properly. "Carry on"
+started the next level the moment the card went, so the badges for level
+one came up over the board of level two; the stage-up and badge sheets
+are queued as calls now, so their fanfare starts when they take the
+screen, and the next level starts when the shelf is clear.
+
+## A level that survives the phone
+
+Nothing about a level in progress was ever written down. Tested on the
+emulator: force-stop mid-level, relaunch — home screen, one heart fewer,
+board gone. Meanwhile quitting on purpose refunded the heart, so the two
+ways of not finishing a level cost different amounts.
+
+The board, the moves, the score and the goals go into the save after
+every completed move and at every hide (`snapshotLevel`), and a save that
+holds one is resumed on the next launch on the same board with the same
+moves. The heart stays spent: one attempt, interrupted, not two. The
+daily walk is resumed only on the day it was started.
+
+## Seven promises the game did not keep
+
+Found in the audit, each one small, each one a thing the game said and
+did not do.
+
+- The map drew a treat on every fifth level. Milestones pay on every
+  tenth. Levels 5, 15 and 25 wore a reward that was never paid; the map
+  reads `ECON.milestoneEvery` now.
+- Two badges shared the id `family6`, so six pets showed two on the shelf
+  and paid for one. The second asks for something different now.
+- The season book discarded every unclaimed tier at rollover, paid
+  column included. Reached is earned; it is granted before the reset.
+- The gift streak reset on a single missed day, and — subtracting
+  twenty-four hours from a clock on the night the clocks go forward —
+  on no missed day at all. It counts calendar days the way the walk does
+  and forgives one.
+- The walk reminder was only ever scheduled by somebody closing the app
+  on a day they had not walked, so the lapsed player it was written for
+  never got it. It is scheduled for the next morning from a walk day.
+- Running out of hearts put the system's notification dialog up with
+  nothing in the game having said why. Android shows that dialog twice
+  per install and never again. The sheet carries the offer in its own
+  words, once, and the system asks only after it is pressed.
+- Level one paid four badges at once, because a seven-by-seven board of
+  five colours cascades six deep and clears thirty tiles in a move
+  nobody planned. Snowball wants six now and One Good Move wants forty.
+
+And a handful that were not promises, only misses: the first frame of
+every level painted every sprite from scratch, 10–12 ms on a desktop and
+a visible hitch on a phone, so the plain face of every colour is warmed
+before the deal; the motes loop never stopped, in a pocket, on a
+battery; `reduceMotion()` allocated a MediaQueryList per call, twice
+per tile in a full-board clear; a deep cascade asked the mallet for
+33 kHz and the browser said so on every tile; the settings gear and the
+level's back button were 34px; an iPhone's web view has no
+`navigator.vibrate`, so the game was numb on iOS until the haptics
+plugin was reached through the same seam as the others; the meter now
+charges at a third of the pet's own rate on the level's goal colour, so
+chasing the level charges the animal too; and the daily walk and the
+season book were on the first screen a new player saw, offering "clean
+58 muddy tiles" before level four had shown them mud.

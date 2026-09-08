@@ -191,3 +191,11 @@ Kept here so the list above stays a list of what is left.
 - **Stripped level 1.** One goal, 7×7, one concept.
 - **Fixed the season book giving itself away** on a cancelled purchase, and put `test/till.js` around it.
 - **Anchored the season to the player**, not to a global calendar.
+- **Retuned the lane to a player who cannot see cascades** (`test/_solver.js` `human`, the default now). Levels 3, 9 and the first gate lost their score goals; overall clear for that player 66% → 83%, no level under 50%.
+- **One-volley finale.** Last move to results card 12–38 s → 6 s; a tap hurries it. Whole-board clears are staged rather than instant.
+- **Six play scenes**, one per stretch, day and dusk.
+- **Cards that answer**: rolling score, a jumping animal, a sad one on a loss, a "next time" line by the goal that fell shortest, an honest carry-on price.
+- **A level survives a kill**: board, moves and goals resume on the next launch; the heart is not lost twice.
+- **Seven kept promises**: map treat pips, `family6`, season rollover claims, streak grace and DST, walk reminder for the lapsed, a notification pre-prompt, badge thresholds.
+- **iOS haptics** through `@capacitor/haptics` (an iPhone web view has no `navigator.vibrate`).
+- **Version 1.1.0 (build 2)** across Android, iOS and the crash reports.
