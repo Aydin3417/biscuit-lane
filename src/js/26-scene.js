@@ -1371,6 +1371,148 @@ function sceneProgress() {
   return sum / G.goals.length;
 }
 
+/* ---------------- the six stretches of the lane ----------------
+
+   The map has had six named stretches for a while — the Doorstep, the
+   Allotments, the Common, the Canal Path, the Old Orchard, Home Again —
+   each with its own ground colour, and the level card names the one you
+   are on. The play screen did not know. Level 1, level 38 and level 100
+   were played in front of the same hedge, the same cottage, the same
+   tree and the same five pales of fence, screenshots of all three
+   overlaid without a pixel moving. A third of the play screen is this
+   picture, and it was the same picture for three hundred levels.
+
+   So the scene is the stretch now. The ground takes the stretch's own
+   colour from CHAPTERS, the far side changes — a hedge, a row of beds,
+   open grass, water, fruit trees, a garden wall — and the things in the
+   middle band are the things that stretch would have. Nothing here
+   animates and nothing is drawn per frame; the scene is painted once
+   per layout and once per walk step, exactly as before, so six of them
+   cost what one did.
+
+   Dusk is not an inverted day: each stretch carries its own evening
+   ground, again from CHAPTERS, and the props read PAL.dark as they
+   always have. */
+function drawWater(c, y, W, h, dark) {
+  c.save();
+  const g = c.createLinearGradient(0, y, 0, y + h);
+  g.addColorStop(0, dark ? '#243A44' : '#8EC4C8');
+  g.addColorStop(1, dark ? '#1C2E36' : '#6FA9B3');
+  c.fillStyle = g;
+  c.fillRect(-4, y, W + 8, h);
+  /* the light on it: short pale strokes, seeded so the water is the same
+     water every time the board relays out */
+  const wr = mulberry(9131);
+  c.strokeStyle = rgba('#FFFFFF', dark ? .16 : .38);
+  c.lineCap = 'round';
+  for (let i = 0; i < 26; i++) {
+    const x = wr() * W, yy = y + 3 + wr() * (h - 6), len = 4 + wr() * 9;
+    c.lineWidth = .8 + wr() * .8;
+    c.beginPath(); c.moveTo(x, yy); c.lineTo(x + len, yy); c.stroke();
+  }
+  /* reeds along the near bank */
+  c.strokeStyle = dark ? '#3E5A3A' : '#5F8A4E';
+  for (let i = 0; i < 22; i++) {
+    const x = wr() * W, hgt = 6 + wr() * 8;
+    c.lineWidth = 1.2;
+    c.beginPath(); c.moveTo(x, y + h + 1); c.lineTo(x + (wr() - .5) * 3, y + h - hgt); c.stroke();
+  }
+  c.restore();
+}
+/* a footbridge where the lane crosses the water: two rails and a curve */
+function drawBridge(c, x, y, w, dark) {
+  c.save(); c.translate(x, y);
+  c.strokeStyle = dark ? '#7A6446' : '#9A7748';
+  c.lineCap = 'round';
+  c.lineWidth = 2.2;
+  [-1, 1].forEach(sd => {
+    c.beginPath();
+    c.moveTo(sd * w * .5 - w * .36, 0);
+    c.quadraticCurveTo(sd * w * .5, -w * .34, sd * w * .5 + w * .36, 0);
+    c.stroke();
+    for (let i = -1; i <= 1; i++) {
+      const px = sd * w * .5 + i * w * .3;
+      const py = -w * .34 * (1 - Math.abs(i) * .55);
+      c.beginPath(); c.moveTo(px, py); c.lineTo(px, py + w * .22); c.stroke();
+    }
+  });
+  c.restore();
+}
+/* a vegetable bed: a strip of turned soil with a row of sprouts on it */
+function drawBed(c, x, y, w, seed, dark) {
+  const r = mulberry(seed * 977);
+  c.save(); c.translate(x, y);
+  c.fillStyle = rgba('#2A1E12', dark ? .3 : .14);
+  ellipse(c, 0, 2, w * .55, 4); c.fill();
+  c.fillStyle = dark ? '#3B2E22' : '#7E5A3A';
+  rr(c, -w * .5, -7, w, 9, 3); c.fill();
+  c.fillStyle = dark ? '#4A3A2A' : '#9A7048';
+  rr(c, -w * .5, -7, w, 3, 2); c.fill();
+  const n = Math.max(3, Math.round(w / 9));
+  for (let i = 0; i < n; i++) {
+    const px = -w * .5 + (i + .5) * (w / n);
+    const kind = r();
+    c.fillStyle = kind < .5 ? (dark ? '#4F7A3E' : '#6FB25A') : (dark ? '#5C7C3C' : '#8BC46A');
+    ellipse(c, px, -8, 2.6, 2.2); c.fill();
+    ellipse(c, px - 2.2, -9.5, 1.8, 1.6); c.fill();
+    ellipse(c, px + 2.2, -9.5, 1.8, 1.6); c.fill();
+    if (kind > .75) { c.fillStyle = dark ? '#B7692E' : '#E27B33'; ellipse(c, px, -6.2, 1.5, 1.5); c.fill(); }
+  }
+  c.restore();
+}
+/* an apple tree: the round tree with fruit in it and a few on the grass */
+function drawFruitTree(c, x, y, s, seed, dark) {
+  drawTree(c, x, y, s, 0);
+  const r = mulberry(seed * 4271);
+  c.save(); c.translate(x, y - s * .7);
+  c.fillStyle = dark ? '#B24B4B' : '#E0533F';
+  for (let i = 0; i < 7; i++) {
+    const a = r() * Math.PI * 2, d = r() * s * .42;
+    ellipse(c, Math.cos(a) * d, -s * .2 + Math.sin(a) * d * .8, s * .045, s * .045); c.fill();
+  }
+  c.restore();
+  c.save(); c.translate(x, y);
+  c.fillStyle = dark ? '#8E3E3E' : '#D14D3B';
+  for (let i = 0; i < 3; i++) { ellipse(c, (r() - .5) * s * .9, 2 + r() * 5, 1.9, 1.7); c.fill(); }
+  c.restore();
+}
+/* wild flowers on the common: three colours, seeded, never in a row */
+function drawFlowers(c, x0, y0, w, h, seed, dark) {
+  const r = mulberry(seed * 313);
+  const cols = dark ? ['#C8A0B4', '#D6C68C', '#DAD6C8'] : ['#E8789A', '#F2CB4E', '#FFFFFF'];
+  c.save();
+  for (let i = 0; i < 26; i++) {
+    const x = x0 + r() * w, y = y0 + r() * h;
+    c.strokeStyle = dark ? '#3E5A3A' : '#6E9A55'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(x, y); c.lineTo(x, y - 4); c.stroke();
+    c.fillStyle = cols[Math.floor(r() * 3)];
+    ellipse(c, x, y - 5, 1.9, 1.9); c.fill();
+  }
+  c.restore();
+}
+/* a low stone wall with a gap for the lane: the garden you are coming home to */
+function drawWall(c, y, W, gapX, gapW, dark) {
+  c.save();
+  const stone = dark ? '#4A4A48' : '#C9BEA8', mortar = dark ? '#3A3A38' : '#AEA28C';
+  const draw = (x0, x1) => {
+    c.fillStyle = stone; rr(c, x0, y - 12, x1 - x0, 12, 2); c.fill();
+    c.strokeStyle = mortar; c.lineWidth = 1;
+    for (let x = x0 + 6; x < x1 - 2; x += 11) { c.beginPath(); c.moveTo(x, y - 12); c.lineTo(x, y - 6); c.stroke(); }
+    for (let x = x0 + 1; x < x1 - 2; x += 11) { c.beginPath(); c.moveTo(x, y - 6); c.lineTo(x, y); c.stroke(); }
+    c.beginPath(); c.moveTo(x0, y - 6); c.lineTo(x1, y - 6); c.stroke();
+  };
+  draw(-4, gapX - gapW / 2);
+  draw(gapX + gapW / 2, W + 4);
+  c.restore();
+}
+
+/* which stretch is being played: the level's own, or, on the daily walk,
+   wherever the player has got to */
+function sceneChapter() {
+  const n = (typeof G !== 'undefined' && G.n > 0) ? G.n : ((typeof SAVE !== 'undefined' && SAVE.reached) || 1);
+  return chapterOf(n);
+}
+
 function drawLevelScene() {
   const cv = $('#scene'), wrap = $('#boardWrap');
   if (!cv || !wrap) return;
@@ -1381,6 +1523,8 @@ function drawLevelScene() {
   const ph = roomPhase(PAL.dark);
   const sky = skyColours(ph);
   const dark = PAL.dark;
+  const chap = sceneChapter();
+  const stretch = chap.id;
   /* where the board actually landed, asked rather than assumed: the
      wrap is bottom-weighted, and guessing it was centred put the hedge
      through the middle of the tray */
@@ -1393,31 +1537,48 @@ function drawLevelScene() {
   const topBand = Math.max(0, by), botBand = Math.max(0, H - (by + bh));
   c.clearRect(0, 0, W, H);
 
-  /* the same ground the lane is drawn on, so it reads as one world */
+  /* the same ground the lane is drawn on, so it reads as one world — and
+     the ground is the stretch's own, from the same table the map reads */
+  const ground = dark ? chap.dusk : chap.day;
   const g = c.createLinearGradient(0, 0, 0, H);
-  g.addColorStop(0, dark ? '#1A2430' : mix(sky[2], '#C7D8A8', .55));
-  g.addColorStop(.22, dark ? '#20301F' : '#B7CE95');
-  g.addColorStop(1, dark ? '#1B2A1B' : '#A5C186');
+  g.addColorStop(0, dark ? '#1A2430' : mix(sky[2], mix(ground, '#FFFFFF', .25), .55));
+  g.addColorStop(.22, ground);
+  g.addColorStop(1, shade(ground, dark ? -.06 : -.09));
   c.fillStyle = g;
   c.fillRect(0, 0, W, H);
 
   /* A hedge along the far side, which is what gives the ground a far
      side at all — without a horizon the grass is only a green fill.
      Built from overlapping lumps rather than a wavy band: a band reads
-     as a ribbon of colour, and the eye wants to see leaves. */
+     as a ribbon of colour, and the eye wants to see leaves.
+
+     Each stretch has its own far side: the Allotments a low hedge behind
+     a row of beds, the Common no hedge but a line of trees, the Canal a
+     bank and the water below it, the Orchard a hedge with fruit trees
+     in front, and Home Again a garden wall. */
   const hy = Math.min(topBand * .58, 44);
   if (topBand > 30) {
     const back = dark ? '#1E2D1C' : '#4E8A5E';
     const mid = dark ? '#27391F' : '#5E9B6E';
     const lit = dark ? '#37502F' : '#78B983';
     c.save();
-    c.fillStyle = back;
-    c.fillRect(-4, hy + 2, W + 8, 30);
-    const lump = (x, y, rx, ry, col) => { c.fillStyle = col; ellipse(c, x, y, rx, ry); c.fill(); };
-    const hr = mulberry(8821);
-    for (let x = -14; x < W + 20; x += 21) lump(x + hr() * 8, hy + 10 + hr() * 5, 20 + hr() * 9, 15 + hr() * 6, back);
-    for (let x = -10; x < W + 20; x += 26) lump(x + hr() * 9, hy + 3 + hr() * 5, 17 + hr() * 8, 13 + hr() * 5, mid);
-    for (let x = -6; x < W + 20; x += 34) lump(x + hr() * 11, hy - 3 + hr() * 4, 12 + hr() * 6, 9 + hr() * 4, lit);
+    if (stretch === 'common') {
+      /* open ground: the far side is a line of trees, not a wall of leaves */
+      const tr = mulberry(6113);
+      for (let x = -6; x < W + 20; x += 38) drawTree(c, x + tr() * 14, hy + 26, 16 + tr() * 8, 0);
+    } else if (stretch === 'home') {
+      drawWall(c, hy + 24, W, W * .56, 34, dark);
+    } else {
+      c.fillStyle = back;
+      c.fillRect(-4, hy + 2, W + 8, stretch === 'canal' ? 16 : 30);
+      const lump = (x, y, rx, ry, col) => { c.fillStyle = col; ellipse(c, x, y, rx, ry); c.fill(); };
+      const hr = mulberry(8821);
+      const low = stretch === 'allot' || stretch === 'canal' ? .62 : 1;
+      for (let x = -14; x < W + 20; x += 21) lump(x + hr() * 8, hy + 10 * low + hr() * 5, 20 + hr() * 9, (15 + hr() * 6) * low, back);
+      for (let x = -10; x < W + 20; x += 26) lump(x + hr() * 9, hy + 3 * low + hr() * 5, 17 + hr() * 8, (13 + hr() * 5) * low, mid);
+      for (let x = -6; x < W + 20; x += 34) lump(x + hr() * 11, hy - 3 * low + hr() * 4, 12 + hr() * 6, (9 + hr() * 4) * low, lit);
+    }
+    if (stretch === 'canal') drawWater(c, hy + 16, W, 22, dark);
     c.restore();
   }
 
@@ -1563,12 +1724,45 @@ function drawLevelScene() {
      which is the whole of perspective and costs three numbers */
   if (topBand > 130) {
     const far = hy + 30, mid = hy + (by - hy) * .46, near = by - 10;
-    drawCottage(c, W * .16, far + 10, 26, 7);
-    drawBush(c, W * .78, far + 12, 9);
-    drawTree(c, W * .90, mid + 22, 31, 0);
-    drawFence(c, W * .12, mid + 24, 30);
-    drawBush(c, W * .06, near, 16);
-    drawBush(c, W * .95, near - 4, 14);
+    if (stretch === 'allot') {
+      drawCottage(c, W * .84, far + 8, 22, 3);
+      drawBed(c, W * .16, far + 26, 62, 1, dark);
+      drawBed(c, W * .80, mid + 4, 72, 2, dark);
+      drawBed(c, W * .14, mid + 22, 78, 3, dark);
+      drawFence(c, W * .90, mid + 30, 28);
+      drawBush(c, W * .06, near, 14);
+    } else if (stretch === 'common') {
+      drawTree(c, W * .12, mid + 6, 34, 0);
+      drawTree(c, W * .88, mid + 24, 30, 0);
+      drawFlowers(c, W * .02, far + 18, W * .34, by - far - 40, 5, dark);
+      drawFlowers(c, W * .66, far + 26, W * .32, by - far - 50, 9, dark);
+      drawBush(c, W * .95, near - 4, 14);
+    } else if (stretch === 'canal') {
+      drawBridge(c, W * .56, hy + 40, 40, dark);
+      drawTree(c, W * .10, mid + 4, 30, 0);
+      drawBush(c, W * .84, mid + 10, 11);
+      drawBush(c, W * .04, near, 15);
+      drawBush(c, W * .94, near - 2, 13);
+    } else if (stretch === 'orchard') {
+      drawFruitTree(c, W * .14, far + 22, 28, 1, dark);
+      drawFruitTree(c, W * .86, far + 18, 26, 2, dark);
+      drawFruitTree(c, W * .90, mid + 26, 34, 3, dark);
+      drawFruitTree(c, W * .10, mid + 34, 32, 4, dark);
+      drawBasket(c, W * .28, near + 2, 18);
+    } else if (stretch === 'home') {
+      drawCottage(c, W * .20, mid + 4, 38, 11);
+      drawGateway(c, W * .56, hy + 30, 30, true);
+      drawFlowers(c, W * .04, mid + 6, W * .30, near - mid - 8, 13, dark);
+      drawTree(c, W * .90, mid + 22, 31, 0);
+      drawBush(c, W * .95, near - 4, 14);
+    } else {
+      drawCottage(c, W * .16, far + 10, 26, 7);
+      drawBush(c, W * .78, far + 12, 9);
+      drawTree(c, W * .90, mid + 22, 31, 0);
+      drawFence(c, W * .12, mid + 24, 30);
+      drawBush(c, W * .06, near, 16);
+      drawBush(c, W * .95, near - 4, 14);
+    }
   } else if (topBand > 52) {
     drawTree(c, W * .87, by - 12, Math.min(36, topBand * .58), 0);
     drawCottage(c, W * .17, by - 14, Math.min(30, topBand * .44), 7);
