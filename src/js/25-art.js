@@ -599,6 +599,16 @@ function drawNoseMouth(c, spec, s, o) {
     c.quadraticCurveTo(0, my + nw * 2.5, nw * .8, my + nw * .9);
     c.quadraticCurveTo(0, my + nw * 1.1, -nw * .8, my + nw * .9);
     c.fill();
+  } else if (o.mouth === 'sad') {
+    /* the smile turned over: the same two strokes, curving down from the
+       nose rather than up, and no tongue — the face on the lose card
+       used to be the same smile as the win card */
+    c.beginPath();
+    c.moveTo(0, my + nw * .5);
+    c.quadraticCurveTo(-nw * .9, my + nw * .1, -nw * 1.6, my + nw * .9);
+    c.moveTo(0, my + nw * .5);
+    c.quadraticCurveTo(nw * .9, my + nw * .1, nw * 1.6, my + nw * .9);
+    c.stroke();
   } else {
     c.beginPath();
     c.moveTo(0, my - s * .01);

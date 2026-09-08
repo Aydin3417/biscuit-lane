@@ -272,11 +272,18 @@ function renderHome() {
      errands sit side by side under it rather than continuing the column.
      Four full-width cards stacked in a row is the shape of a settings
      screen; it gives the eye no idea which one matters. */
+  /* The two errands wait until the player has a few levels behind
+     them. A brand-new player was offered "Clean 58 muddy tiles" as a
+     daily walk before level four had shown them what mud is, and a
+     season book at tier nought with a button that had nothing to take.
+     Ten ideas on the first screen is how a first minute ends; the lane
+     is the first screen's whole job. */
+  const settled = SAVE.reached >= 5;
   pad.innerHTML = `
     ${heroCard}
     <div class="todayRow">
     ${giftReady() ? heroGift() : ''}
-    ${(() => {
+    ${!settled ? '' : (() => {
       const d = dailyState();
       const def = dailyLevel(SAVE.reached);
       return `
@@ -292,7 +299,7 @@ function renderHome() {
         <span class="btn sm">${d.done ? T('daily_walk_again') : T('daily_walk_go')}</span>
       </button>`;
     })()}
-    ${(() => {
+    ${!settled ? '' : (() => {
       const p = passState();
       const tier = passTier(p.stamps);
       const waiting = passWaiting();
@@ -304,7 +311,7 @@ function renderHome() {
           <small>${T('pass_sub', { n: tier, c: PASS.tiers, d: seasonDaysLeft(seasonStart()) })}</small>
           ${waiting ? `<span class="pill warn" style="margin-top:5px">${T('pass_ready', { n: waiting })}</span>` : ''}
         </span>
-        <span class="btn sm">${T('pass_take')}</span>
+        <span class="btn sm">${waiting ? T('pass_take') : T('pass_open')}</span>
       </button>`;
     })()}
     </div>
@@ -637,7 +644,8 @@ function paintArtCanvases(root) {
     const idx = +cv.dataset.body;
     const coat = cv.dataset.coat !== undefined ? BREEDS[idx].coats[+cv.dataset.coat] : null;
     drawBody(c, Object.assign(specOf(idx, coat, cv.dataset.eye),
-      { hat: cv.dataset.hat, collar: cv.dataset.collar, stage: +(cv.dataset.stage || 0) }), px * .40 * k, { mouth: 'smile' });
+      { hat: cv.dataset.hat, collar: cv.dataset.collar, stage: +(cv.dataset.stage || 0) }), px * .40 * k,
+      { mouth: cv.dataset.mouth || 'smile', mood: cv.dataset.mood || undefined });
   });
   $$('canvas[data-tile]', root).forEach(cv => {
     const px = askSize(cv, 44);
@@ -729,7 +737,7 @@ function badgeModal(list) {
     <div class="goalItem">
       <span class="rosette fam-${b.fam}">${IC[b.icon] || IC.crown}</span>
       <span class="t"><b>${badgeName(b)}</b>${badgeDesc(b)}</span>
-      <span class="pill warn">${b.coins ? '+' + b.coins : ''}${b.treats ? ' +' + b.treats + '★' : ''}</span>
+      <span class="pill warn">${b.coins ? '+' + b.coins : ''}${b.treats ? ' +' + b.treats + IC.treat : ''}</span>
     </div>`).join('');
   const m = modal(`
     <span style="color:var(--accent-strong);width:52px;height:52px;align-self:center">${IC.crown}</span>
@@ -1716,11 +1724,15 @@ function noHeartsSheet() {
   track('hearts_empty', { n: SAVE.reached });
   /* The one place in this game that asks to send a notification, and the
      only moment the answer is obviously yes: the player has just been
-     told they cannot play for two hours. Asked here rather than at boot
-     because a decline is close to permanent on both platforms, so the
-     cheapest moment to ask is also the one that wastes the ask. Nothing
-     waits on the answer — the sheet draws either way. */
-  NOTIFY.ask().then(() => NOTIFY.sync());
+     told they cannot play for two hours.
+
+     It used to put the system's own dialog up the instant this sheet
+     opened, with nothing in the game having said why. On Android that
+     dialog is shown twice per install and never again, and a question
+     nobody expected is a question people say no to. So the sheet
+     carries the offer in its own words, once, and the system asks only
+     after the player has pressed it. */
+  const offer = NOTIFY.ready() && !SAVE.settings.notify && !SAVE.notifyAsked;
   const line = () => T('lvl_no_hearts_sub', { m: HEART_REFILL / MIN, t: fmtTime(heartsIn()) });
   let tick = null;
   const m = modal(`
@@ -1731,7 +1743,19 @@ function noHeartsSheet() {
       <button class="btn ghost" id="nhWait">${T('lvl_wait')}</button>
       <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: ECON.heartRefillTreats })}</button>
     </div>
+    ${offer ? `<button class="btn wide" id="nhNotify" style="margin-top:4px">${T('nh_notify')}</button>` : ''}
   `, { onClose: () => { if (tick) clearInterval(tick); onHeartArrived = () => { }; } });
+  const nb = $('#nhNotify', m.el);
+  if (nb) nb.addEventListener('click', () => {
+    nb.disabled = true;
+    SAVE.notifyAsked = true;
+    persist(true);
+    NOTIFY.ask().then(ok => {
+      NOTIFY.sync();
+      if (ok) toast(T('nh_notify_ok'), 'heart');
+      if (nb.isConnected) nb.remove();
+    });
+  });
 
   /* the number has to move, or waiting looks like nothing happening */
   heartClockStart();
@@ -1837,10 +1861,10 @@ function showWin() {
   const m = modal(`
     ${pet ? `<div class="winPet"><canvas data-body="${pet.breed}" data-coat="${pet.coat}"
       data-eye="${petEye(pet)}" data-hat="${pet.hat}" data-collar="${pet.collar}"
-      data-stage="${petStageIdx(pet)}" data-scale="1.55" width="116" height="116"></canvas></div>` : ''}
+      data-stage="${petStageIdx(pet)}" data-scale="1.55" data-mouth="open" data-mood="happy" width="116" height="116"></canvas></div>` : ''}
     <div class="starsRow">${[0, 1, 2].map(i => `<span class="s" data-i="${i}">${i < stars ? IC.star : IC.starOut}</span>`).join('')}</div>
     <h2>${T('win_t')}</h2>
-    <p>${T('lvl_intro', { n })} · <span class="num">${fmt(G.score)}</span></p>
+    <p>${T('lvl_intro', { n })} · <span class="num" id="wScore">0</span></p>
     ${newBest && prevBest ? `<p style="color:var(--accent-strong)"><b>${T('win_new_best')}</b></p>`
       : prevBest ? `<p style="color:var(--text-dim)">${T('map_best', { n: fmt(prevBest) })}</p>` : ''}
     <div class="rewardRow">
@@ -1868,18 +1892,47 @@ function showWin() {
     else s.classList.add('pop');
     if (i < stars) s.style.color = 'var(--accent)'; else s.style.color = 'var(--text-faint)';
   });
-  $('#wMap', m.el).addEventListener('click', () => { m.close(); leaveLevel(); });
-  $('#wNext', m.el).addEventListener('click', () => {
-    m.close();
+  /* The card used to open with the final score already printed and a
+     body drawn once and left there. The number counts up now, over the
+     time the stars take to land, and the animal jumps once the last one
+     is in — the card answers the win instead of filing it. */
+  const scoreEl = $('#wScore', m.el);
+  const petCv = $('.winPet canvas', m.el);
+  const tally = 220 + stars * 260 + 120;
+  if (scoreEl && !reduceMotion()) {
+    const t0 = performance.now();
+    const tick = t => {
+      const k = clamp((t - t0) / tally, 0, 1);
+      scoreEl.textContent = fmt(G.score * (1 - Math.pow(1 - k, 3)));
+      if (k < 1 && scoreEl.isConnected) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  } else if (scoreEl) scoreEl.textContent = fmt(G.score);
+  if (petCv) setTimeout(() => { petCv.classList.add('hop'); const p2 = activePet(); if (p2) petVoice(p2, 1.15); }, tally);
+
+  /* Whatever the win also earned — a stage, a badge — waits behind this
+     card and shows when it closes. "Carry on" used to start the next
+     level the moment the card went, so the badge for level one came up
+     over the board of level two, and a stage-up modal could arrive with
+     a cascade running underneath it. The next level starts when the
+     shelf is clear. */
+  const goOn = () => {
     gameLoopStop();
     setScreen('map');
     mapLayout();
-    setTimeout(() => openLevelIntro(SAVE.reached), 260);
-  });
+    const start = () => { if (sheetIsOpen()) setTimeout(start, 140); else setTimeout(() => openLevelIntro(SAVE.reached), 200); };
+    setTimeout(start, 120);
+  };
+  $('#wMap', m.el).addEventListener('click', () => { m.close(); leaveLevel(); });
+  $('#wNext', m.el).addEventListener('click', () => { m.close(); goOn(); });
   syncPurse();
   const wonBadges = checkBadges();
-  if (grew) setTimeout(() => stageUpModal(pet), 900);
-  if (wonBadges.length) setTimeout(() => badgeModal(wonBadges), grew ? 2000 : 900);
+  /* queued now, not on a timer: a timer that fires after the player has
+     already pressed Carry on lands on the wrong screen. Queued as the
+     call rather than as the sheet, so the stage-up's fanfare and sparks
+     start when it takes the screen and not under this card. */
+  if (grew) modalQueue.push(() => stageUpModal(pet));
+  if (wonBadges.length) modalQueue.push(() => badgeModal(wonBadges));
 }
 function showLose() {
   say(T('a11y_failed'), true);
@@ -1924,8 +1977,19 @@ function showLose() {
      somebody else's sentence, in either language. It was also saying
      exactly what the list underneath says, only without the progress
      bars, which are the part worth reading. So it is a label now. */
+  /* The goal that fell furthest short says what to do differently next
+     time. A lost level used to end in a list of numbers and a kind word;
+     nothing on the card told a player *why*, which is the difference
+     between "I made a mistake" and "the game cheated". One line, by the
+     kind of goal, in the reference sheet's own voice. */
+  const worst = short.slice().sort((a, b) => (a.have / a.g.need) - (b.have / b.g.need))[0];
+  const tip = worst ? T('lose_tip_' + worst.g.kind) : '';
+  const short2 = SAVE.treats < ECON.continueTreats;
   const m = modal(`
-    <span style="color:var(--text-faint);width:52px;height:52px;align-self:center">${IC.starOut}</span>
+    ${pet ? `<div class="winPet"><canvas data-body="${pet.breed}" data-coat="${pet.coat}"
+      data-eye="${petEye(pet)}" data-hat="${pet.hat}" data-collar="${pet.collar}"
+      data-stage="${petStageIdx(pet)}" data-scale="1.55" data-mouth="sad" data-mood="tired" class="sag" width="116" height="116"></canvas></div>`
+      : `<span style="color:var(--text-faint);width:52px;height:52px;align-self:center">${IC.starOut}</span>`}
     <h2>${T('lose_t')}</h2>
     <p>${close ? `<b style="color:var(--accent-strong)">${T('lose_close')}</b> ` : ''}<span style="color:var(--text-dim)">${T('lose_s')}</span></p>
     <div class="goalList">
@@ -1936,6 +2000,7 @@ function showLose() {
         </span></span>
       </div>`).join('')}
     </div>
+    ${tip ? `<p style="font-size:var(--t-micro);color:var(--text-dim);margin-top:-4px"><b style="color:var(--text)">${T('lose_why')}:</b> ${tip}</p>` : ''}
     ${pet ? `<p>${T('lose_petline', { name: pet.name })}</p>` : ''}
     <div class="row">
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
@@ -1945,9 +2010,9 @@ function showLose() {
     <div class="offer">
       <span class="ot">
         <b>${T('lose_extra', { n: ECON.continueMoves })}</b>
-        <small>${T('lose_extra_sub', { n: ECON.continueTreats })}</small>
+        <small>${short2 ? T('lose_extra_short', { n: ECON.continueTreats, have: SAVE.treats }) : T('lose_extra_sub', { n: ECON.continueTreats })}</small>
       </span>
-      <button class="btn sm" id="lExtra">${T('shop_buy')}</button>
+      <button class="btn sm" id="lExtra"${short2 ? ' style="opacity:.6"' : ''}>${T('shop_buy')}</button>
     </div>` + (ADS.available('carry') ? `
     <div class="offer">
       <span class="ot">
@@ -1997,9 +2062,16 @@ function showLose() {
     startLevel(G.n, { perks: perksFor(pet2), reseed: Math.floor(Math.random() * 9999) });
   });
 }
+/* the level the last launch was in the middle of — see snapshotLevel */
+function resumeLevel(s) {
+  setScreen('game');
+  startLevel(s.n, { resume: s });
+  toast(T('lvl_resumed'), 'play');
+}
 function leaveLevel() {
   gameLoopStop();
-  G.over = true;
+  abandonLevel();
+  dropLevel();
   setScreen('map');
   mapLayout();
   scrollMapToCurrent();

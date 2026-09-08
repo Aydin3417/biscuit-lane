@@ -288,10 +288,14 @@ function boot() {
          stopped, so nothing is competing for the frame */
       TRACK.flush();
       gameLoopStop(); roomStop();
+      /* the motes were the one loop that never stopped: a full-screen
+         canvas repainted for nobody, in a pocket, on a battery */
+      if (AMB.raf) { cancelAnimationFrame(AMB.raf); AMB.raf = null; }
     } else {
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
       if (SAVE.hearts < HEART_MAX) heartClockStart();
       if (SAVE.settings.music) musicStart();
+      if (!AMB.raf && !reduceMotion()) { AMB.last = performance.now(); AMB.raf = requestAnimationFrame(motesLoop); }
       if (SCREEN === 'home') { renderHome(); roomLayout(); roomStart(); }
       if (SCREEN === 'game') { layoutBoard(); gameLoopStart(); }
     }
@@ -340,13 +344,22 @@ function boot() {
   } else {
     SCREEN = '';
     setScreen('home');
-    /* Only onto the home screen. The gift opens itself seven hundred
-       milliseconds after boot, and a player who taps into a level
-       faster than that used to meet it mid-board — and, with sheets
-       queueing, meet the result of the level they just played behind
-       it. Nothing is lost by not opening: the gift card stays on the
-       home screen and the reward is not claimed until it is. */
-    if (giftReady()) setTimeout(() => { if (SCREEN === 'home') openDailyGift(); }, 700);
+    /* A level that was in progress when the app was last alive comes
+       back first, before the gift or anything else: the player was in
+       the middle of something, and the home screen is not where they
+       left off. See snapshotLevel in 40-game.js. */
+    const unfinished = levelToResume();
+    if (unfinished) {
+      setTimeout(() => { if (SCREEN === 'home' && !sheetIsOpen()) resumeLevel(unfinished); }, 350);
+    } else if (giftReady()) {
+      /* Only onto the home screen. The gift opens itself seven hundred
+         milliseconds after boot, and a player who taps into a level
+         faster than that used to meet it mid-board — and, with sheets
+         queueing, meet the result of the level they just played behind
+         it. Nothing is lost by not opening: the gift card stays on the
+         home screen and the reward is not claimed until it is. */
+      setTimeout(() => { if (SCREEN === 'home') openDailyGift(); }, 700);
+    }
   }
 }
 

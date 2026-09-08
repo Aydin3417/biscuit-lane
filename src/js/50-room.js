@@ -763,9 +763,13 @@ function drawMapNode(c, n) {
     c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText(n.n, n.x, n.y + 1);
   }
-  /* Every fifth level pays two treats the first time it is cleared, and
-     nothing said so. Shown until it has been paid. */
-  if (unlocked && !cleared && n.n % 5 === 0) {
+  /* A milestone level pays a treat the first time it is cleared, and
+     nothing said so. Shown until it has been paid.
+
+     This read `n % 5` while the payout is `ECON.milestoneEvery`, which is
+     ten: levels 5, 15, 25 wore a treat that was never paid. The map asks
+     the same table the win sheet pays from now. */
+  if (unlocked && !cleared && n.n % ECON.milestoneEvery === 0) {
     const bx = n.x + R * .78, by = n.y - R * .78, br = R * .46;
     c.fillStyle = rgba('#2A1E12', PAL.dark ? .5 : .25);
     ellipse(c, bx, by + R * .07, br, br); c.fill();

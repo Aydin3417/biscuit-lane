@@ -180,11 +180,18 @@ const NOTIFY = {
        a thing they have already done is how an app teaches its user that
        its notifications are not worth reading. */
     this.cancel('walk');
-    if (!dailyState().done) {
-      const d = new Date();
-      d.setHours(10, 0, 0, 0);
-      if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
-      this.at('walk', d.getTime(), T('note_walk_t'), T('note_walk_s'));
-    }
+    /* Always the next ten o'clock, not only when today's walk is undone.
+
+       The old condition meant the reminder could only ever be scheduled
+       by a player who was, at that moment, closing the app on a day they
+       had not walked — so the one person it was written for, somebody
+       who walked yesterday and did not open the game today, never got
+       it. Scheduled from a walk day it lands the following morning; a
+       player who opens the game before ten reschedules it past
+       themselves on the way out and never sees it. */
+    const d = new Date();
+    d.setHours(10, 0, 0, 0);
+    if (d.getTime() <= Date.now() || dailyState().done) d.setDate(d.getDate() + 1);
+    this.at('walk', d.getTime(), T('note_walk_t'), T('note_walk_s'));
   }
 };

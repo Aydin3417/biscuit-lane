@@ -74,7 +74,7 @@ const SAVE_VERSION = 2;
 /* what a build calls itself when it reports anything. Bumped by hand,
    with android/app/build.gradle's versionName, so a crash from an old
    install is not read as one from the current one. */
-const APP_VERSION = '1.0.0';
+const APP_VERSION = '1.1.0';
 
 function migrate(d) {
   const v = d.v || 1;
@@ -873,6 +873,21 @@ function passState() {
   if (!SAVE.pass) SAVE.pass = { season: -1, stamps: 0, paid: false, claimed: {} };
   const now = seasonNo(seasonStart());
   if (SAVE.pass.season !== now) {
+    /* Whatever the old season still owed is paid before it goes.
+
+       Claiming was a "Take" per tier, and a rollover threw away every
+       tier that had not been tapped — the free column and, for somebody
+       who had bought the book, the paid one, which is money handed over
+       for rewards that were then deleted for not being collected in
+       time. Reached is earned; it is granted now, not forfeited. */
+    const old = SAVE.pass;
+    if (old.season >= 0 && typeof PASS_TRACK !== 'undefined') {
+      const tier = passTier(old.stamps);
+      for (let i = 0; i < Math.min(tier, PASS_TRACK.length); i++) {
+        if (!old.claimed['f' + i]) grantReward(PASS_TRACK[i].free);
+        if (old.paid && !old.claimed['p' + i]) grantReward(PASS_TRACK[i].paid);
+      }
+    }
     SAVE.pass = { season: now, stamps: 0, paid: false, claimed: {} };
   }
   return SAVE.pass;
@@ -1050,8 +1065,20 @@ function dailyDone(score) {
 }
 
 /* ---------- daily gift ---------- */
-function dayStamp(t) { const d = new Date(t); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); }
-function giftReady() { return dayStamp(now()) !== dayStamp(SAVE.lastGift || 0); }
+/* Days between the last basket and today, counted the way the walk
+   counts them — dayNumber(), a local calendar date as an integer — and
+   not by taking twenty-four hours off the clock. The night the clocks go
+   forward is twenty-three hours long, and between midnight and one the
+   old arithmetic put "yesterday" two dates back and reset a six-day
+   streak to one. Reproduced with TZ=America/New_York. */
+function giftDays() { return SAVE.lastGift ? dayNumber() - dayNumber(SAVE.lastGift) : 99; }
+function giftReady() { return giftDays() >= 1; }
+/* One missed day is forgiven. The streak holds across a gap of two
+   calendar days — it simply does not climb for the day that was missed
+   — and starts again after three. A week's streak was being lost to a
+   single busy day, which is the one thing a streak must not do to the
+   person who has kept it for six. */
+function giftKeeps() { const d = giftDays(); return d >= 1 && d <= 2; }
 /* The ladder, in one place. It used to live inside claimGift, which
    meant the sheet could only report what today held — and the day-7
    basket, five treats and a booster, was a week's worth of reason that
@@ -1068,18 +1095,14 @@ function giftFor(day) {
 }
 /* which rung the basket on the step is standing on, without taking it */
 function giftDay() {
-  const yesterday = dayStamp(now() - DAY);
-  const last = dayStamp(SAVE.lastGift || 0);
-  return (((last === yesterday ? SAVE.streak + 1 : 1) - 1) % 7) + 1;
+  return (((giftKeeps() ? SAVE.streak + 1 : 1) - 1) % 7) + 1;
 }
 /* and which one tomorrow's would be, which is the number a player who
    has already opened today's needs in order to come back */
 function giftDayNext() { return (SAVE.streak % 7) + 1; }
 function claimGift() {
   const day = giftDay();
-  const yesterday = dayStamp(now() - DAY);
-  const last = dayStamp(SAVE.lastGift || 0);
-  SAVE.streak = (last === yesterday) ? SAVE.streak + 1 : 1;
+  SAVE.streak = giftKeeps() ? SAVE.streak + 1 : 1;
   SAVE.lastGift = now();
   const reward = giftFor(day);
   SAVE.coins += reward.coins;
