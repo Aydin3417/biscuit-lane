@@ -3860,31 +3860,39 @@ loop as it was, and coming home is the same loop, slower and quieter,
 which is the one thing a player who has walked the whole lane will
 recognise.
 
-## The animals had no edge
+## The animals were painted, and the ones that sell are drawn
 
 Put beside the characters this game is measured against, the animals
-were not badly drawn; they were drawn without a line. Soft shading with
-no edge reads as a blob of colour with features on it, at 48dp on a
-tile and at 200px in the room alike, and every mascot that sells has a
-warm dark line round it. So they have one now: the coat's own shadow
-colour pulled toward ink, never black, a little fainter on a dark coat
-where the silhouette does the work, round the head, the ears, the body,
-the legs and the tail.
+were not badly drawn; they were painted. Gradients for volume, a key
+light, a jaw shadow, tufts along every edge — and at 48dp on a tile
+and 200px in the room alike they read as blobs of colour with features
+on them. A first pass added a warm line round the painting, a lash line
+and a crisp catchlight to the eye, a drawn mouth. Put side by side with
+the old ones nobody could tell which was which, which is the honest
+measure of a polish.
 
-The eye got the three things a drawn eye has that a bead does not: a
-thick lash line along its top edge, a limbal ring so the iris parts
-from the white, and a crisp catchlight with a soft halo behind it in
-place of the glow that read as a glass marble. The mouth went from a
-half-opaque suggestion to a line, the nose took the ink, the cheeks
-catch the key light, a cat's face has fur tufts standing outside its
-skull, a tabby is striped on the body and not only the brow, a beagle
-wears its saddle, the Siamese mask reaches the eyes, and the pug's mask
-is the muzzle and two rings rather than a grey veil.
+Three concept sheets were generated to choose a direction against, in
+three styles asked for by name, and all three came back the same way:
+flat fills, one shadow tone, and a thick warm line of even weight round
+everything. That is the style the tools draw because it is the style
+that sells, and it happens to be the style Canvas paths are best at.
+So the animals were rebuilt as stickers, from a prototype of one cat
+and one dog laid over the sheet: a head about as tall as the body,
+eyes a third of the head, a line of .045 of the head everywhere and
+never black, fills flat, one shadow band low on the body and under the
+chin, markings as flat strokes, front legs that stand, a tail that is a
+stroke with the line round it. The beagle got its blaze and saddle and
+white paws, the Siamese its mask up over the blue eyes and its points
+on the legs, the pug its black muzzle, eye rings and wrinkles, the
+tabby its stripes on the body and the tail.
 
-Three concept sheets were generated to choose a direction against —
-one flat-sticker style came back for all three prompts, which is
-itself an answer about what the tools draw — and they are references,
-per DIRECTION.md, not assets. `BL.art` exposes the drawing so a sheet
-of every breed can be rendered at any size (`drawFace`, `drawBody`,
-`specOf`), and `tools/art-gate.js` said the change looks different and
-plays the same: colours hold, 39/39 in the browser, frames at 1.6–1.8ms.
+Everything the old drawing answered is still answered — coat, eye
+colour, six ear and three face types, moods in the ears and pupils,
+blink, three mouths, the stage build, hats and collars — so nothing
+that calls the face or the body changed. `BL.art` exposes the drawing
+so a sheet of every breed, and every tile at the size it is played at,
+can be rendered and judged rather than guessed at. `tools/art-gate.js`:
+the colours still play, 39/39 in the browser, frames inside budget.
+The concept sheets are references, per DIRECTION.md; the next step up
+from here is an illustrator with them as the brief, and the game is
+built so that it does not need one.

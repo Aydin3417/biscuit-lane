@@ -7403,154 +7403,6 @@ const EAR_POSE = {
   sleeping: { rot: .36, out: .022, droop: .26 }
 };
 
-function drawEars(c, spec, s, back, o) {
-  const b = spec.breed, fur = spec.fur, fur2 = spec.fur2, inner = spec.inner || '#E8A0A8';
-  const k = b.ear;
-  if (back && (k === 'droop' || k === 'flop' || k === 'button')) return;   // drawn in front
-  if (!back && !(k === 'droop' || k === 'flop' || k === 'button')) return;
-
-  const pose = EAR_POSE[(o && o.mood) || 'content'] || EAR_POSE.content;
-  const ear = (sx) => {
-    c.save(); c.scale(sx, 1);
-    /* turn about where the ear leaves the skull, not about the face,
-       or a tired ear slides off the head instead of folding down */
-    if (pose.rot || pose.droop || pose.out) {
-      c.translate(.22 * s + pose.out * s, -.26 * s);
-      c.rotate(pose.rot);
-      c.scale(1, 1 - pose.droop);
-      c.translate(-.22 * s, .26 * s);
-    }
-    if (k === 'triangle') {
-      /* Set wide on the skull and leaning out, about a third of the
-         head tall. The old pair were small tabs perched on the crown. */
-      c.fillStyle = fur;
-      c.beginPath();
-      c.moveTo(.08 * s, -.28 * s);
-      c.quadraticCurveTo(.23 * s, -.82 * s, .49 * s, -.32 * s);
-      c.quadraticCurveTo(.33 * s, -.14 * s, .08 * s, -.28 * s);
-      c.fill(); inkStroke(c, spec, s);
-      /* the inside of an ear is a cone: dark where it meets the skull,
-         catching light toward the tip. Flat colour made it a sticker. */
-      const ig1 = c.createLinearGradient(.20 * s, -.24 * s, .34 * s, -.62 * s);
-      ig1.addColorStop(0, shade(inner, -.30));
-      ig1.addColorStop(.55, inner);
-      ig1.addColorStop(1, shade(inner, .22));
-      c.fillStyle = ig1;
-      c.beginPath();
-      c.moveTo(.16 * s, -.30 * s);
-      c.quadraticCurveTo(.26 * s, -.66 * s, .41 * s, -.33 * s);
-      c.quadraticCurveTo(.29 * s, -.21 * s, .16 * s, -.30 * s);
-      c.fill();
-    } else if (k === 'tall') {
-      c.fillStyle = spec.point || fur2;
-      c.beginPath();
-      c.moveTo(.12 * s, -.30 * s);
-      c.quadraticCurveTo(.30 * s, -.88 * s, .50 * s, -.30 * s);
-      c.quadraticCurveTo(.32 * s, -.18 * s, .12 * s, -.30 * s);
-      c.fill(); inkStroke(c, spec, s);
-      c.fillStyle = rgba('#000000', .12);
-      c.beginPath();
-      c.moveTo(.21 * s, -.31 * s);
-      c.quadraticCurveTo(.31 * s, -.68 * s, .42 * s, -.31 * s);
-      c.quadraticCurveTo(.31 * s, -.24 * s, .21 * s, -.31 * s);
-      c.fill();
-    } else if (k === 'round') {
-      /* Round-eared, still a cat: a broad triangle with a soft tip.
-         Two circles on a circle is a bear, which is what this was. */
-      c.fillStyle = fur;
-      c.beginPath();
-      c.moveTo(.09 * s, -.27 * s);
-      c.quadraticCurveTo(.20 * s, -.74 * s, .46 * s, -.35 * s);
-      c.quadraticCurveTo(.32 * s, -.15 * s, .09 * s, -.27 * s);
-      c.fill(); inkStroke(c, spec, s);
-      const ig2 = c.createLinearGradient(.20 * s, -.24 * s, .32 * s, -.58 * s);
-      ig2.addColorStop(0, shade(inner, -.30));
-      ig2.addColorStop(.55, inner);
-      ig2.addColorStop(1, shade(inner, .22));
-      c.fillStyle = ig2;
-      c.beginPath();
-      c.moveTo(.17 * s, -.29 * s);
-      c.quadraticCurveTo(.24 * s, -.60 * s, .39 * s, -.35 * s);
-      c.quadraticCurveTo(.29 * s, -.21 * s, .17 * s, -.29 * s);
-      c.fill();
-    } else if (k === 'droop') {
-      c.fillStyle = fur2;
-      c.beginPath();
-      c.moveTo(.28 * s, -.26 * s);
-      c.quadraticCurveTo(.62 * s, -.20 * s, .58 * s, .22 * s);
-      c.quadraticCurveTo(.52 * s, .48 * s, .34 * s, .38 * s);
-      c.quadraticCurveTo(.30 * s, .08 * s, .28 * s, -.26 * s);
-      c.fill(); inkStroke(c, spec, s);
-      c.fillStyle = rgba('#000000', .13);
-      c.beginPath();
-      c.moveTo(.30 * s, -.20 * s);
-      c.quadraticCurveTo(.50 * s, -.10 * s, .47 * s, .18 * s);
-      c.quadraticCurveTo(.43 * s, .34 * s, .35 * s, .30 * s);
-      c.fill();
-    } else if (k === 'flop') {
-      c.fillStyle = fur2;
-      c.beginPath();
-      c.moveTo(.24 * s, -.30 * s);
-      c.quadraticCurveTo(.58 * s, -.34 * s, .54 * s, .06 * s);
-      c.quadraticCurveTo(.50 * s, .30 * s, .30 * s, .24 * s);
-      c.quadraticCurveTo(.26 * s, -.02 * s, .24 * s, -.30 * s);
-      c.fill(); inkStroke(c, spec, s);
-      c.fillStyle = rgba('#FFFFFF', .12);
-      c.beginPath();
-      c.moveTo(.30 * s, -.24 * s);
-      c.quadraticCurveTo(.48 * s, -.22 * s, .45 * s, .04 * s);
-      c.quadraticCurveTo(.42 * s, .18 * s, .34 * s, .14 * s);
-      c.fill();
-    } else if (k === 'button') {
-      c.fillStyle = fur2;
-      c.beginPath();
-      c.moveTo(.16 * s, -.36 * s);
-      c.quadraticCurveTo(.46 * s, -.48 * s, .44 * s, -.16 * s);
-      c.quadraticCurveTo(.32 * s, -.06 * s, .18 * s, -.20 * s);
-      c.closePath();
-      c.fill(); inkStroke(c, spec, s);
-      c.fillStyle = rgba('#000000', .16);
-      c.beginPath();
-      c.moveTo(.21 * s, -.31 * s);
-      c.quadraticCurveTo(.39 * s, -.36 * s, .38 * s, -.18 * s);
-      c.quadraticCurveTo(.29 * s, -.13 * s, .22 * s, -.21 * s);
-      c.fill();
-    }
-    c.restore();
-  };
-  ear(1); ear(-1);
-}
-
-/* ---------------- head ---------------- */
-function headPath(c, spec, s) {
-  const f = spec.breed.face;
-  c.beginPath();
-  if (f === 'flat') {
-    c.moveTo(-.44 * s, -.06 * s);
-    c.bezierCurveTo(-.46 * s, -.36 * s, -.26 * s, -.46 * s, 0, -.46 * s);
-    c.bezierCurveTo(.26 * s, -.46 * s, .46 * s, -.36 * s, .44 * s, -.06 * s);
-    c.bezierCurveTo(.43 * s, .26 * s, .26 * s, .42 * s, 0, .42 * s);
-    c.bezierCurveTo(-.26 * s, .42 * s, -.43 * s, .26 * s, -.44 * s, -.06 * s);
-  } else if (f === 'dog') {
-    c.moveTo(-.40 * s, -.04 * s);
-    c.bezierCurveTo(-.42 * s, -.34 * s, -.24 * s, -.44 * s, 0, -.44 * s);
-    c.bezierCurveTo(.24 * s, -.44 * s, .42 * s, -.34 * s, .40 * s, -.04 * s);
-    c.bezierCurveTo(.39 * s, .20 * s, .24 * s, .44 * s, 0, .44 * s);
-    c.bezierCurveTo(-.24 * s, .44 * s, -.39 * s, .20 * s, -.40 * s, -.04 * s);
-  } else {
-    /* A cat's head is a wedge, not a ball: the skull is moderate, the
-       cheeks are the widest part, and it tapers to a small chin. Drawn
-       as a circle with ears on top — which is what this was — it reads
-       as a bear, and the Sable read as one most of all. */
-    c.moveTo(-.43 * s, .02 * s);
-    c.bezierCurveTo(-.44 * s, -.26 * s, -.24 * s, -.42 * s, 0, -.42 * s);
-    c.bezierCurveTo(.24 * s, -.42 * s, .44 * s, -.26 * s, .43 * s, .02 * s);
-    c.bezierCurveTo(.42 * s, .22 * s, .26 * s, .36 * s, .11 * s, .42 * s);
-    c.bezierCurveTo(.04 * s, .45 * s, -.04 * s, .45 * s, -.11 * s, .42 * s);
-    c.bezierCurveTo(-.26 * s, .36 * s, -.42 * s, .22 * s, -.43 * s, .02 * s);
-  }
-  c.closePath();
-}
 
 /* A tabby mark is thick where it leaves the spine and thin where it
    ends, and it follows the curve of the skull. Stroked with a round cap
@@ -7581,73 +7433,6 @@ function taperMark(c, x0, y0, cx, cy, x1, y1, w0, w1) {
   c.closePath();
 }
 
-function drawMarkings(c, spec, s) {
-  const b = spec.breed;
-  c.save();
-  headPath(c, spec, s); c.clip();
-  if (b.mark === 'tabby') {
-    c.fillStyle = rgba(spec.fur2, .70);
-    /* the forehead's M, fanning out from the brow rather than three
-       parallel scratches */
-    taperMark(c, -.05 * s, -.22 * s, -.13 * s, -.34 * s, -.17 * s, -.44 * s, s * .052, s * .012);
-    c.fill();
-    taperMark(c, 0, -.24 * s, 0, -.36 * s, 0, -.47 * s, s * .050, s * .011);
-    c.fill();
-    taperMark(c, .05 * s, -.22 * s, .13 * s, -.34 * s, .17 * s, -.44 * s, s * .052, s * .012);
-    c.fill();
-    /* cheek bars, curving back with the cheek */
-    c.fillStyle = rgba(spec.fur2, .46);
-    [-1, 1].forEach(sx => {
-      taperMark(c, sx * .25 * s, -.13 * s, sx * .36 * s, -.14 * s, sx * .44 * s, -.09 * s, s * .046, s * .014);
-      c.fill();
-      taperMark(c, sx * .27 * s, .01 * s, sx * .37 * s, .02 * s, sx * .44 * s, .06 * s, s * .042, s * .013);
-      c.fill();
-    });
-  } else if (b.mark === 'patch') {
-    c.fillStyle = rgba(spec.fur2, .9);
-    ellipse(c, -.20 * s, -.16 * s, .19 * s, .16 * s, -.2); c.fill();
-    c.fillStyle = rgba(spec.belly, .95);
-    c.beginPath();
-    c.moveTo(0, -.46 * s); c.quadraticCurveTo(.07 * s, -.14 * s, 0, .14 * s);
-    c.quadraticCurveTo(-.07 * s, -.14 * s, 0, -.46 * s); c.fill();
-  } else if (b.mark === 'points') {
-    /* the points sit on the muzzle, which moved down with the features;
-       left where it was the mask covered the eyes instead of the nose */
-    /* the seal point's mask runs from the nose up between the eyes and
-       out to the cheeks; stopped at the muzzle it was a smudge, and the
-       blue eyes had nothing dark to sit in */
-    const gr = c.createRadialGradient(0, .22 * s, .04 * s, 0, .18 * s, .42 * s);
-    gr.addColorStop(0, rgba(spec.fur2, .92));
-    gr.addColorStop(.55, rgba(spec.fur2, .62));
-    gr.addColorStop(1, rgba(spec.fur2, 0));
-    c.fillStyle = gr;
-    ellipse(c, 0, .16 * s, .40 * s, .36 * s); c.fill();
-  } else if (b.mark === 'mask') {
-    /* A pug's mask is the muzzle and a ring round each eye, with the
-       forehead left fawn. Drawn as one wide grey oval over the middle
-       of the face it read as a veil, and the eyes sat in fog. */
-    const gr = c.createRadialGradient(0, .30 * s, .03 * s, 0, .28 * s, .26 * s);
-    gr.addColorStop(0, rgba(spec.fur2, .96));
-    gr.addColorStop(.6, rgba(spec.fur2, .80));
-    gr.addColorStop(1, rgba(spec.fur2, 0));
-    c.fillStyle = gr;
-    ellipse(c, 0, .28 * s, .25 * s, .22 * s); c.fill();
-    const look = lookOf(spec);
-    [-1, 1].forEach(sx => {
-      const er = c.createRadialGradient(sx * look.x * s, look.y * s, look.r * s * .9, sx * look.x * s, look.y * s, look.r * s * 1.45);
-      er.addColorStop(0, rgba(spec.fur2, .62));
-      er.addColorStop(1, rgba(spec.fur2, 0));
-      c.fillStyle = er;
-      ellipse(c, sx * look.x * s, look.y * s, look.r * s * 1.45, look.r * s * 1.45); c.fill();
-    });
-    c.strokeStyle = rgba(spec.fur2, .5); c.lineWidth = s * .035; c.lineCap = 'round';
-    c.beginPath();
-    c.moveTo(-.17 * s, -.24 * s); c.quadraticCurveTo(0, -.34 * s, .17 * s, -.24 * s);
-    c.moveTo(-.13 * s, -.15 * s); c.quadraticCurveTo(0, -.24 * s, .13 * s, -.15 * s);
-    c.stroke();
-  }
-  c.restore();
-}
 
 /* ---------- legibility on dark coats ---------- */
 /* Relative luminance, 0..1. Features drawn in near-black vanish on a
@@ -7698,16 +7483,6 @@ function inkOn(hex) { return coatLum(hex) > .45 ? '#22271C' : '#FFFFFF'; }
    a warm dark line reads as a drawn animal. The line is the coat's own
    shadow colour pulled toward ink, not black, and it is a little
    fainter on a dark coat, where the silhouette does the work. */
-function inkLine(spec) {
-  return darkCoat(spec) ? rgba(mix(spec.fur2, '#000000', .55), .50)
-    : rgba(mix(spec.fur2, '#2A1810', .62), .62);
-}
-function inkStroke(c, spec, s, w) {
-  c.strokeStyle = inkLine(spec);
-  c.lineWidth = s * (w || .028);
-  c.lineJoin = 'round'; c.lineCap = 'round';
-  c.stroke();
-}
 /* the colour a line or a nose is drawn in so that it always reads */
 function featureInk(spec) { return darkCoat(spec) ? '#E4D8C8' : '#2A2118'; }
 
@@ -7735,278 +7510,6 @@ const FACE_LOOK = {
 };
 function lookOf(spec) { return FACE_LOOK[spec.breed.id] || FACE_LOOK.marmalade; }
 
-function eyePath(c, rx, ry, almond) {
-  if (!almond) { ellipse(c, 0, 0, rx, ry); return; }
-  c.beginPath();
-  c.moveTo(-rx, ry * .12);
-  c.bezierCurveTo(-rx * .5, -ry * 1.28, rx * .5, -ry * 1.18, rx, -ry * .16);
-  c.bezierCurveTo(rx * .5, ry * 1.12, -rx * .5, ry * 1.18, -rx, ry * .12);
-  c.closePath();
-}
-
-function drawEye(c, x, y, r, spec, o, side) {
-  const look = lookOf(spec);
-  const blink = o.blink || 0;
-  /* The iris is .84 of the eye and the eye is clipped, so travel past
-     the rim is not a mistake — it is how a real eye reads when it looks
-     hard at something. At .22 the pupil barely left centre and the pet
-     appeared to stare through you whatever it was looking at; the gaze
-     only became worth wiring to a finger once it could be seen. */
-  const dx = (o.eyeDir ? o.eyeDir[0] : 0) * r * .30;
-  const dy = (o.eyeDir ? o.eyeDir[1] : 0) * r * .30;
-  const dk = darkCoat(spec);
-  const rx = r, ry = r * 1.06 * (1 - blink * .92);
-
-  c.save();
-  c.translate(x, y);
-  c.rotate(look.tilt * (side || 1));
-
-  if (blink > .82) {
-    c.strokeStyle = rgba(featureInk(spec), .82);
-    c.lineWidth = r * .26; c.lineCap = 'round';
-    c.beginPath();
-    c.moveTo(-rx * .8, 0);
-    c.quadraticCurveTo(0, r * .3, rx * .8, 0);
-    c.stroke();
-    c.restore();
-    return;
-  }
-
-  c.save();
-  eyePath(c, rx, ry, look.almond); c.clip();
-  c.fillStyle = dk ? '#312B36' : '#1E1A22';
-  eyePath(c, rx, ry, look.almond); c.fill();
-
-  /* iris — lifted on a dark coat so it parts from both fur and pupil */
-  /* A brown-eyed dog has an iris near black, and against a pupil that
-     is now half the eye it merges into one hole — the Pug went from
-     eyes to voids. Anything this dark gets lifted until there is an
-     iris to see. */
-  let iris = dk ? shade(spec.eyes, .34) : spec.eyes;
-  const irgb = hex2rgb(iris);
-  const ilum = (irgb[0] * .299 + irgb[1] * .587 + irgb[2] * .114) / 255;
-  if (ilum < .30) iris = shade(iris, .30 + (.30 - ilum) * 1.5);
-  const ig = c.createRadialGradient(dx, dy - ry * .2, rx * .1, dx, dy, rx * .95);
-  ig.addColorStop(0, shade(iris, .34));
-  ig.addColorStop(.62, iris);
-  ig.addColorStop(1, shade(iris, -.34));
-  c.fillStyle = ig;
-  ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
-  /* the limbal ring: the dark edge of an iris is what separates it
-     from the white, and without it the iris bled into the sclera */
-  c.strokeStyle = rgba(shade(iris, -.55), .55);
-  c.lineWidth = r * .06;
-  ellipse(c, dx, dy, rx * .82, ry * .84); c.stroke();
-  /* An eye is a wet ball under a lid, and two things say so: the lid
-     drops a shadow across the top of the iris, and light bounces back
-     off the bottom of it. Without them the iris is a flat disc, which
-     is what these were — a green circle with a black dot on it. */
-  const shadeTop = c.createLinearGradient(0, dy - ry * .9, 0, dy + ry * .15);
-  shadeTop.addColorStop(0, rgba('#100C16', .55));
-  shadeTop.addColorStop(1, rgba('#100C16', 0));
-  c.fillStyle = shadeTop;
-  ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
-  const bounce = c.createLinearGradient(0, dy + ry * .25, 0, dy + ry * .9);
-  bounce.addColorStop(0, rgba(shade(iris, .55), 0));
-  bounce.addColorStop(1, rgba(shade(iris, .55), .75));
-  c.fillStyle = bounce;
-  ellipse(c, dx, dy, rx * .84, ry * .86); c.fill();
-
-  /* pupil — a slit for cats, round for dogs */
-  /* A thin slit is an alert predator. Cute is a big soft pupil that
-     fills the eye — every cat anyone has ever put on a T-shirt has one.
-     The cat keeps a taller-than-wide shape so it is still a cat's eye,
-     but it is wide enough to read as pupil rather than as a knife. */
-  /* A pupil is not a fixed hole. It opens when an animal is pleased or
-     wants something and closes when it is bored or half asleep, and it
-     is the cheapest expression in the whole face — nothing else here
-     moves and the pet still looks like it is feeling something. */
-  const dil = PUPIL_DILATE[(o && o.mood) || 'content'] || 1;
-  c.fillStyle = '#17141B';
-  if (spec.breed.species === 'cat') ellipse(c, dx, dy, rx * .50 * dil, ry * .70 * dil);
-  else ellipse(c, dx, dy, rx * .54 * dil, ry * .56 * dil);
-  c.fill();
-
-  /* the lid: what stops an eye looking like a bead */
-  if (look.lid > .02) {
-    /* a shadow, not a swatch of coat: at half-opaque fur colour this
-       read as a brown smear sitting on the eye */
-    c.fillStyle = rgba('#1A1420', .30 * look.lid + .12);
-    c.beginPath();
-    c.moveTo(-rx * 1.1, -ry * 1.1);
-    c.lineTo(rx * 1.1, -ry * 1.1);
-    c.lineTo(rx * 1.1, -ry * (1 - look.lid * .78));
-    c.quadraticCurveTo(0, -ry * (1 - look.lid * .78) + ry * .5, -rx * 1.1, -ry * (1 - look.lid * .78));
-    c.closePath();
-    c.fill();
-  }
-
-  /* highlights */
-  /* A soft glow alone read as a glass marble. The reflection every
-     drawn animal that sells has is a crisp one with a soft halo behind
-     it, and a second, smaller one opposite: crisp is what makes the
-     eye wet rather than glazed. */
-  const hx = -rx * .36 + dx, hy = -ry * .42 + dy, hr = rx * .34;
-  const hg = c.createRadialGradient(hx, hy, hr * .2, hx, hy, hr * 1.25);
-  hg.addColorStop(0, rgba('#FFFFFF', .55));
-  hg.addColorStop(1, rgba('#FFFFFF', 0));
-  c.fillStyle = hg;
-  ellipse(c, hx, hy, hr * 1.25, hr * 1.15); c.fill();
-  c.fillStyle = rgba('#FFFFFF', .96);
-  ellipse(c, hx, hy, hr * .78, hr * .66, -.45); c.fill();
-  c.fillStyle = rgba('#FFFFFF', .78);
-  ellipse(c, rx * .32 + dx, ry * .36 + dy, rx * .13, ry * .11); c.fill();
-  c.restore();
-
-  /* the rim of the eye, and a lash line along the top of it: the
-     thick dark upper edge is the single mark that turns a bead into a
-     drawn eye, and every character these are measured against has one */
-  c.strokeStyle = dk ? rgba('#0C0A10', .70) : rgba('#2A2118', .55);
-  c.lineWidth = r * .055;
-  eyePath(c, rx, ry, look.almond); c.stroke();
-  c.fillStyle = dk ? rgba('#0C0A10', .92) : rgba('#22181C', .90);
-  taperMark(c, -rx * .96, ry * .02, 0, -ry * 1.30, rx * .96, -ry * .10, r * .02, r * .17);
-  c.fill();
-  c.restore();
-}
-
-/* the pale spots above a beagle's or a pug's eyes */
-function drawBrows(c, spec, s) {
-  const look = lookOf(spec);
-  if (!look.brow) return;
-  const w = s * .075 * look.brow, h = s * .05 * look.brow;
-  c.fillStyle = rgba(mix(spec.belly, spec.fur, .25), .8);
-  [-1, 1].forEach(sx => {
-    ellipse(c, sx * look.x * s, (look.y - .105) * s, w, h, sx * .2);
-    c.fill();
-  });
-}
-
-function drawNoseMouth(c, spec, s, o) {
-  const f = spec.breed.face, cat = spec.breed.species === 'cat';
-  /* under the eyes, not beside them: with the eyes doubled the muzzle
-     has to drop or the face has no forehead and no chin, just features */
-  const ny = f === 'dog' ? .30 * s : f === 'flat' ? .26 * s : .27 * s;
-  const nw = f === 'dog' ? .075 * s : f === 'flat' ? .095 * s : .064 * s;
-
-  /* muzzle patch */
-  if (f !== 'cat' || spec.breed.mark === 'points') {
-    c.fillStyle = rgba(spec.belly, f === 'flat' ? .35 : .8);
-    ellipse(c, 0, ny + .04 * s, nw * 2.5, nw * 1.9); c.fill();
-  }
-  /* A cat has two whisker pads with the nose sitting in the notch
-     between them. Cats were the one face that got no muzzle at all —
-     the test above excludes them — so the nose floated on a flat plane
-     and the whiskers came out of nowhere. That, more than anything
-     else, is what stopped them reading as cats.
-
-     Lightened fur rather than the belly colour, because a dark coat's
-     belly is dark too and the pads have to catch light on Sable. */
-  if (cat) {
-    const pw = nw * 1.95, ph = nw * 1.45, py = ny + nw * .95;
-    c.save();
-    c.fillStyle = rgba('#000000', .07);
-    ellipse(c, 0, py + nw * .30, pw * 1.9, ph * 1.15); c.fill();
-    /* a dark coat needs a gentler lift or the pads become a pale mask */
-    c.fillStyle = rgba(mix(spec.fur, '#FFFFFF', darkCoat(spec) ? .16 : .30),
-      darkCoat(spec) ? .55 : .85);
-    ellipse(c, -pw * .60, py, pw, ph); c.fill();
-    ellipse(c, pw * .60, py, pw, ph); c.fill();
-    c.restore();
-  }
-  /* nose */
-  const noseBase = cat ? (spec.nose || '#E08A96')
-    : darkCoat(spec) ? mix('#33292A', '#B6A79E', .6) : '#33292A';
-  /* a nose is a small wet wedge, not a flat swatch */
-  const ng = c.createLinearGradient(0, ny - nw, 0, ny + nw);
-  ng.addColorStop(0, shade(noseBase, .26));
-  ng.addColorStop(.6, noseBase);
-  ng.addColorStop(1, shade(noseBase, -.24));
-  c.fillStyle = ng;
-  c.beginPath();
-  c.moveTo(-nw, ny - nw * .5);
-  c.quadraticCurveTo(0, ny - nw * .85, nw, ny - nw * .5);
-  c.quadraticCurveTo(nw * .75, ny + nw * .75, 0, ny + nw * .95);
-  c.quadraticCurveTo(-nw * .75, ny + nw * .75, -nw, ny - nw * .5);
-  c.fill();
-  c.strokeStyle = rgba(cat ? '#7A3A48' : '#1A1214', .55); c.lineWidth = s * .014; c.stroke();
-  const nhx = -nw * .28, nhy = ny - nw * .30;
-  const nh = c.createRadialGradient(nhx, nhy, nw * .04, nhx, nhy, nw * .38);
-  nh.addColorStop(0, rgba('#FFFFFF', .62));
-  nh.addColorStop(1, rgba('#FFFFFF', 0));
-  c.fillStyle = nh;
-  ellipse(c, nhx, nhy, nw * .38, nw * .26, -.3); c.fill();
-
-  /* mouth */
-  /* the smile was s*.034 at .7 — a thick dark squiggle against a face
-     whose other lines are half that. */
-  /* at half opacity and s*.024 the smile was a suggestion; the mouth
-     on a drawn animal is a line you can see across the room */
-  c.strokeStyle = rgba(featureInk(spec), darkCoat(spec) ? .62 : .78);
-  c.lineWidth = s * .030; c.lineCap = 'round';
-  const my = ny + nw * .95;
-  if (o.mouth === 'open') {
-    c.fillStyle = '#8C3B4A';
-    c.beginPath();
-    c.moveTo(-nw * 1.5, my);
-    c.quadraticCurveTo(0, my + nw * 2.4, nw * 1.5, my);
-    c.quadraticCurveTo(0, my + nw * .4, -nw * 1.5, my);
-    c.fill();
-    c.fillStyle = '#E4808F';
-    c.beginPath();
-    c.moveTo(-nw * .8, my + nw * .9);
-    c.quadraticCurveTo(0, my + nw * 2.5, nw * .8, my + nw * .9);
-    c.quadraticCurveTo(0, my + nw * 1.1, -nw * .8, my + nw * .9);
-    c.fill();
-  } else if (o.mouth === 'sad') {
-    /* the smile turned over: the same two strokes, curving down from the
-       nose rather than up, and no tongue — the face on the lose card
-       used to be the same smile as the win card */
-    c.beginPath();
-    c.moveTo(0, my + nw * .5);
-    c.quadraticCurveTo(-nw * .9, my + nw * .1, -nw * 1.6, my + nw * .9);
-    c.moveTo(0, my + nw * .5);
-    c.quadraticCurveTo(nw * .9, my + nw * .1, nw * 1.6, my + nw * .9);
-    c.stroke();
-  } else {
-    c.beginPath();
-    c.moveTo(0, my - s * .01);
-    c.quadraticCurveTo(-nw * .8, my + nw * .95, -nw * 1.7, my + nw * .1);
-    c.moveTo(0, my - s * .01);
-    c.quadraticCurveTo(nw * .8, my + nw * .95, nw * 1.7, my + nw * .1);
-    c.stroke();
-    if (spec.breed.tongue && o.tongue !== false) {
-      c.fillStyle = '#E4808F';
-      c.beginPath();
-      c.moveTo(-nw * .55, my + nw * .5);
-      c.quadraticCurveTo(-nw * .7, my + nw * 2.3, 0, my + nw * 2.3);
-      c.quadraticCurveTo(nw * .7, my + nw * 2.3, nw * .55, my + nw * .5);
-      c.closePath(); c.fill();
-      c.strokeStyle = rgba('#B85B6B', .6); c.lineWidth = s * .018;
-      c.beginPath(); c.moveTo(0, my + nw * .9); c.lineTo(0, my + nw * 2); c.stroke();
-    }
-  }
-  /* whiskers */
-  if (cat) {
-    /* A whisker is thick at the pad and comes to a point, and it droops.
-       Stroked at an even width these were three grey wires the length of
-       the head — the most machine-looking thing on the face. */
-    const wc = PAL.dark ? '#FFFFFF' : '#3A2E22';
-    [-1, 1].forEach(sx => {
-      c.save(); c.scale(sx, 1);
-      c.fillStyle = rgba(wc, .30);
-      taperMark(c, .16 * s, ny + .02 * s, .31 * s, ny - .07 * s, .45 * s, ny - .12 * s, s * .020, s * .002);
-      c.fill();
-      c.fillStyle = rgba(wc, .26);
-      taperMark(c, .15 * s, ny + .07 * s, .31 * s, ny + .05 * s, .46 * s, ny + .04 * s, s * .019, s * .002);
-      c.fill();
-      c.fillStyle = rgba(wc, .20);
-      taperMark(c, .14 * s, ny + .10 * s, .29 * s, ny + .15 * s, .41 * s, ny + .19 * s, s * .016, s * .002);
-      c.fill();
-      c.restore();
-    });
-  }
-}
 
 /* Colour in the cheeks, by how it feels. A flat blush on a miserable
    animal is the same mistake as a fixed ear: the face wearing an
@@ -8123,113 +7626,8 @@ function specOfPet(p) {
     { hat: p.hat, collar: p.collar, stage: petStageIdx(p) });
 }
 
-function drawFace(c, spec, s, o) {
-  o = o || {};
-  c.save();
-  if (o.squash) c.scale(1 + o.squash, 1 - o.squash);
-  drawEars(c, spec, s, true, o);
-  /* cheek tufts, behind the head so its own line covers the join: a
-     cat's face is wider than its skull because of fur, and the wedge
-     read as bald without them. In front of the head they were thorns. */
-  if (spec.breed.species === 'cat') {
-    furEdgeInk(c, spec, s, 0, .04 * s, .41 * s, .38 * s, -Math.PI * .12, Math.PI * .24, 4, s * .075);
-    furEdgeInk(c, spec, s, 0, .04 * s, .41 * s, .38 * s, Math.PI * .76, Math.PI * 1.12, 4, s * .075);
-  }
-  /* head */
-  const gr = c.createLinearGradient(0, -.45 * s, 0, .45 * s);
-  gr.addColorStop(0, shade(spec.fur, .13));
-  gr.addColorStop(.55, spec.fur);
-  gr.addColorStop(1, shade(spec.fur, -.1));
-  c.fillStyle = gr;
-  headPath(c, spec, s); c.fill();
-  drawMarkings(c, spec, s);
-  /* Form. The head was filled with one linear gradient running top to
-     bottom, which is a flat disc with a lighter half — a balloon. A key
-     light from the upper left and an occlusion under the jaw give it a
-     front and a back, and the markings sit under both because pigment
-     is under light, not over it. */
-  c.save();
-  headPath(c, spec, s); c.clip();
-  const key = c.createRadialGradient(-.16 * s, -.24 * s, s * .04, -.10 * s, -.14 * s, s * .74);
-  key.addColorStop(0, rgba('#FFFFFF', .30));
-  key.addColorStop(.5, rgba('#FFFFFF', .10));
-  key.addColorStop(1, rgba('#FFFFFF', 0));
-  c.fillStyle = key;
-  headPath(c, spec, s); c.fill();
-  const jaw = c.createLinearGradient(0, .06 * s, 0, .46 * s);
-  jaw.addColorStop(0, rgba('#2A1E12', 0));
-  jaw.addColorStop(1, rgba('#2A1E12', .20));
-  c.fillStyle = jaw;
-  headPath(c, spec, s); c.fill();
-  c.restore();
-  /* rim light */
-  c.save();
-  headPath(c, spec, s); c.clip();
-  c.strokeStyle = rgba('#FFFFFF', .28); c.lineWidth = s * .07;
-  headPath(c, spec, s * .995); c.stroke();
-  c.restore();
-
-  /* fur along the jaw, so the head has an edge made of hair rather than
-     a bezier. The body already had this; the head was a smooth outline. */
-  c.save();
-  headPath(c, spec, s); c.clip();
-  furEdge(c, 0, .02 * s, .43 * s, .43 * s, Math.PI * .18, Math.PI * .82, 11, s * .030,
-    rgba(shade(spec.fur, -.12), .5));
-  furEdge(c, 0, .02 * s, .43 * s, .43 * s, Math.PI * 1.16, Math.PI * 1.84, 9, s * .026,
-    rgba(shade(spec.fur, .16), .45));
-  /* the cheeks catch the key light: two soft lifts under where the eyes
-     will sit, which is what makes a face plush rather than flat */
-  [-1, 1].forEach(sx => {
-    const ck = c.createRadialGradient(sx * .24 * s, .16 * s, s * .02, sx * .24 * s, .16 * s, s * .20);
-    ck.addColorStop(0, rgba('#FFFFFF', .16));
-    ck.addColorStop(1, rgba('#FFFFFF', 0));
-    c.fillStyle = ck;
-    ellipse(c, sx * .24 * s, .16 * s, .20 * s, .16 * s); c.fill();
-  });
-  c.restore();
-  /* the line, over the fur so the jaw tufts stay inside it */
-  headPath(c, spec, s); inkStroke(c, spec, s, .026);
-
-  drawBlush(c, spec, s, o);
-  const look = lookOf(spec);
-  drawBrows(c, spec, s);
-  drawEye(c, -look.x * s, look.y * s, look.r * s, spec, o, -1);
-  drawEye(c, look.x * s, look.y * s, look.r * s, spec, o, 1);
-  drawNoseMouth(c, spec, s, o);
-  drawEars(c, spec, s, false, o);
-  if (spec.hat) drawHat(c, spec.hat, spec, s);
-  c.restore();
-}
 
 /* ---------------- full body (sitting) ---------------- */
-/* A tapered tail: a polygon swept along a curve, so it thins to a
-   point the way fur does instead of ending in a round cap. */
-function tailPath(c, s, pts, w0, w1) {
-  const N = 18;
-  const left = [], right = [];
-  const at = t => {
-    /* quadratic through p0, p1, p2 */
-    const u = 1 - t;
-    return [
-      u * u * pts[0][0] + 2 * u * t * pts[1][0] + t * t * pts[2][0],
-      u * u * pts[0][1] + 2 * u * t * pts[1][1] + t * t * pts[2][1]
-    ];
-  };
-  for (let i = 0; i <= N; i++) {
-    const t = i / N;
-    const [x, y] = at(t);
-    const [x2, y2] = at(Math.min(1, t + .02));
-    const dx = x2 - x, dy = y2 - y;
-    const L = Math.hypot(dx, dy) || 1;
-    const w = lerp(w0, w1, t * t) * s * .5;
-    left.push([x - dy / L * w, y + dx / L * w]);
-    right.push([x + dy / L * w, y - dx / L * w]);
-  }
-  c.beginPath();
-  left.forEach((pt, i) => i ? c.lineTo(pt[0], pt[1]) : c.moveTo(pt[0], pt[1]));
-  for (let i = right.length - 1; i >= 0; i--) c.lineTo(right[i][0], right[i][1]);
-  c.closePath();
-}
 
 /* Little tufts along an edge — the difference between a shape and
    an animal. Angles are in radians around the given centre. */
@@ -8251,26 +7649,386 @@ function furEdge(c, cx, cy, rx, ry, a0, a1, n, len, col) {
   }
 }
 
-/* the same tufts, each with the ink line round it, for the ones that
-   stand outside the silhouette and would otherwise read as thorns */
-function furEdgeInk(c, spec, s, cx, cy, rx, ry, a0, a1, n, len) {
+
+/* ============================================================
+   THE ANIMALS, DRAWN AS STICKERS
+   ============================================================
+
+   The first animals were painted: gradients for volume, a key light, a
+   jaw shadow, fur tufts along every edge. Beside the characters this
+   game is measured against they read as blobs of colour with features
+   on them, at 48dp on a tile and at 200px in the room alike, and a
+   pass that added a line round the painting and lashes to the eyes was
+   a polish, not a change — put side by side with the old ones nobody
+   could tell which was which.
+
+   Three generated concept sheets were asked for in three styles and
+   all three came back the same way: flat fills, one shadow tone, and a
+   thick warm line of even weight round everything. That is the style
+   the tools draw because it is the style that sells, and it is the
+   style Canvas paths are best at. So the animals are built that way
+   now, from a prototype of one cat and one dog laid over the sheet:
+
+     head about as tall as the body, eyes a third of the head, a line
+     of .045 of the head everywhere, fills flat, one shadow band low on
+     the body and under the chin, markings as flat strokes, front legs
+     that stand, a tail that is a stroke with the line round it.
+
+   Everything the old drawing was asked for is still answered here —
+   coat, eye colour, six ear and three face types, four markings,
+   moods in the ears and pupils, blink, three mouths, the stage build,
+   hats and collars — so nothing that calls drawFace or drawBody had to
+   change. The line is not black: black is a hole in a warm palette.
+   ============================================================ */
+const INK = '#3A2416';
+const LINE = .045;
+/* the line, and where a coat is dark enough to swallow it, a lighter
+   one of its own colour so the legs still part from the body */
+function inkLine(spec) {
+  return darkCoat(spec) ? mix(spec.fur, '#FFFFFF', .26) : INK;
+}
+function inkStroke(c, spec, s, w) {
   c.strokeStyle = inkLine(spec);
-  c.lineWidth = s * .022; c.lineJoin = 'round';
-  c.fillStyle = spec.fur;
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1 || 1);
-    const a = lerp(a0, a1, t);
-    const wob = .82 + Math.sin(i * 2.4) * .3;
-    const x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry;
-    const nx = Math.cos(a), ny = Math.sin(a);
-    const tx = -ny, ty = nx;
-    const L = len * wob;
-    c.beginPath();
-    c.moveTo(x + tx * L * .9, y + ty * L * .9);
-    c.quadraticCurveTo(x + nx * L * 1.15, y + ny * L * 1.15, x - tx * L * .9, y - ty * L * .9);
-    c.closePath();
-    c.fill(); c.stroke();
+  c.lineWidth = s * (w || LINE);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  c.stroke();
+}
+/* the flat shadow tone: a little of the coat's own dark, never grey */
+function shadeBand(spec) {
+  return rgba(mix(spec.fur2, '#3A2416', .5), darkCoat(spec) ? .22 : .14);
+}
+
+/* ---------------- head ---------------- */
+function headPath(c, spec, s) {
+  const f = spec.breed.face;
+  c.beginPath();
+  if (f === 'flat') {
+    /* a pug: wide, low, the jowls the widest part */
+    c.moveTo(-.50 * s, -.02 * s);
+    c.bezierCurveTo(-.50 * s, -.36 * s, -.28 * s, -.46 * s, 0, -.46 * s);
+    c.bezierCurveTo(.28 * s, -.46 * s, .50 * s, -.36 * s, .50 * s, -.02 * s);
+    c.bezierCurveTo(.50 * s, .30 * s, .28 * s, .44 * s, 0, .44 * s);
+    c.bezierCurveTo(-.28 * s, .44 * s, -.50 * s, .30 * s, -.50 * s, -.02 * s);
+  } else if (f === 'dog') {
+    c.moveTo(-.48 * s, -.06 * s);
+    c.bezierCurveTo(-.48 * s, -.40 * s, -.26 * s, -.50 * s, 0, -.50 * s);
+    c.bezierCurveTo(.26 * s, -.50 * s, .48 * s, -.40 * s, .48 * s, -.06 * s);
+    c.bezierCurveTo(.48 * s, .28 * s, .26 * s, .44 * s, 0, .44 * s);
+    c.bezierCurveTo(-.26 * s, .44 * s, -.48 * s, .28 * s, -.48 * s, -.06 * s);
+  } else {
+    /* a cat: the cheeks are the widest part, and there is a chin */
+    c.moveTo(-.50 * s, -.02 * s);
+    c.bezierCurveTo(-.50 * s, -.34 * s, -.28 * s, -.46 * s, 0, -.46 * s);
+    c.bezierCurveTo(.28 * s, -.46 * s, .50 * s, -.34 * s, .50 * s, -.02 * s);
+    c.bezierCurveTo(.50 * s, .26 * s, .28 * s, .42 * s, 0, .42 * s);
+    c.bezierCurveTo(-.28 * s, .42 * s, -.50 * s, .26 * s, -.50 * s, -.02 * s);
   }
+  c.closePath();
+}
+
+/* ---------------- ears ---------------- */
+function drawEars(c, spec, s, back, o) {
+  const b = spec.breed, fur = spec.fur, fur2 = spec.fur2, inner = spec.inner || '#F2B7B0';
+  const k = b.ear;
+  const front = k === 'droop' || k === 'flop' || k === 'button';
+  if (back === front) return;
+  const pose = EAR_POSE[(o && o.mood) || 'content'] || EAR_POSE.content;
+  const ear = sx => {
+    c.save(); c.scale(sx, 1);
+    /* turn about where the ear leaves the skull, not about the face */
+    if (pose.rot || pose.droop || pose.out) {
+      c.translate(.22 * s + pose.out * s, -.26 * s);
+      c.rotate(pose.rot);
+      c.scale(1, 1 - pose.droop);
+      c.translate(-.22 * s, .26 * s);
+    }
+    if (k === 'triangle') {
+      c.beginPath();
+      c.moveTo(.14 * s, -.30 * s); c.lineTo(.38 * s, -.74 * s); c.lineTo(.52 * s, -.24 * s); c.closePath();
+      c.fillStyle = fur; c.fill(); inkStroke(c, spec, s);
+      c.beginPath();
+      c.moveTo(.23 * s, -.33 * s); c.lineTo(.37 * s, -.60 * s); c.lineTo(.45 * s, -.30 * s); c.closePath();
+      c.fillStyle = inner; c.fill();
+    } else if (k === 'tall') {
+      /* a Siamese: taller, set wider, and the point's colour */
+      c.beginPath();
+      c.moveTo(.12 * s, -.30 * s); c.lineTo(.36 * s, -.86 * s); c.lineTo(.54 * s, -.26 * s); c.closePath();
+      c.fillStyle = spec.point || fur2; c.fill(); inkStroke(c, spec, s);
+      c.beginPath();
+      c.moveTo(.22 * s, -.34 * s); c.lineTo(.36 * s, -.70 * s); c.lineTo(.46 * s, -.32 * s); c.closePath();
+      c.fillStyle = mix(inner, spec.point || fur2, .35); c.fill();
+    } else if (k === 'round') {
+      /* round-eared, still a cat: a wide triangle with a soft tip */
+      c.beginPath();
+      c.moveTo(.12 * s, -.28 * s);
+      c.quadraticCurveTo(.26 * s, -.76 * s, .40 * s, -.62 * s);
+      c.quadraticCurveTo(.50 * s, -.50 * s, .52 * s, -.22 * s);
+      c.closePath();
+      c.fillStyle = fur; c.fill(); inkStroke(c, spec, s);
+      c.beginPath();
+      c.moveTo(.22 * s, -.32 * s);
+      c.quadraticCurveTo(.30 * s, -.62 * s, .39 * s, -.54 * s);
+      c.quadraticCurveTo(.44 * s, -.46 * s, .45 * s, -.30 * s);
+      c.closePath();
+      c.fillStyle = inner; c.fill();
+    } else if (k === 'droop') {
+      /* a beagle: long, hanging beside the face, the darker coat */
+      c.beginPath();
+      c.moveTo(.30 * s, -.38 * s);
+      c.bezierCurveTo(.64 * s, -.42 * s, .68 * s, .12 * s, .52 * s, .32 * s);
+      c.bezierCurveTo(.40 * s, .42 * s, .30 * s, .30 * s, .32 * s, .08 * s);
+      c.closePath();
+      c.fillStyle = fur2; c.fill(); inkStroke(c, spec, s);
+    } else if (k === 'flop') {
+      /* a retriever: shorter and softer, the coat's own colour */
+      c.beginPath();
+      c.moveTo(.30 * s, -.40 * s);
+      c.bezierCurveTo(.60 * s, -.44 * s, .64 * s, .02 * s, .50 * s, .18 * s);
+      c.bezierCurveTo(.40 * s, .28 * s, .30 * s, .18 * s, .32 * s, 0);
+      c.closePath();
+      c.fillStyle = mix(fur, fur2, .45); c.fill(); inkStroke(c, spec, s);
+    } else if (k === 'button') {
+      /* a pug: a small dark fold at the top corner */
+      c.beginPath();
+      c.moveTo(.20 * s, -.42 * s);
+      c.quadraticCurveTo(.50 * s, -.52 * s, .50 * s, -.20 * s);
+      c.quadraticCurveTo(.40 * s, -.08 * s, .24 * s, -.22 * s);
+      c.closePath();
+      c.fillStyle = fur2; c.fill(); inkStroke(c, spec, s);
+    }
+    c.restore();
+  };
+  ear(1); ear(-1);
+}
+
+/* ---------------- markings ---------------- */
+function drawMarkings(c, spec, s) {
+  const b = spec.breed;
+  c.save();
+  headPath(c, spec, s); c.clip();
+  c.lineCap = 'round';
+  if (b.mark === 'tabby') {
+    /* the forehead M and the cheek bars, as flat strokes */
+    c.strokeStyle = spec.fur2; c.lineWidth = .05 * s;
+    [[-.16, -.22, -.21, -.42], [0, -.25, 0, -.45], [.16, -.22, .21, -.42]].forEach(([x0, y0, x1, y1]) => {
+      c.beginPath(); c.moveTo(x0 * s, y0 * s); c.lineTo(x1 * s, y1 * s); c.stroke();
+    });
+    [-1, 1].forEach(sx => {
+      c.beginPath(); c.moveTo(sx * .36 * s, -.10 * s); c.lineTo(sx * .50 * s, -.14 * s);
+      c.moveTo(sx * .37 * s, .05 * s); c.lineTo(sx * .50 * s, .03 * s); c.stroke();
+    });
+  } else if (b.mark === 'patch') {
+    /* a beagle: the blaze, from the crown down over the muzzle */
+    c.fillStyle = spec.belly;
+    c.beginPath();
+    c.moveTo(-.06 * s, -.52 * s); c.lineTo(.06 * s, -.52 * s);
+    c.bezierCurveTo(.12 * s, -.12 * s, .32 * s, .08 * s, .32 * s, .46 * s);
+    c.lineTo(-.32 * s, .46 * s);
+    c.bezierCurveTo(-.32 * s, .08 * s, -.12 * s, -.12 * s, -.06 * s, -.52 * s);
+    c.closePath(); c.fill();
+  } else if (b.mark === 'points') {
+    /* the seal point's mask, from the nose up over the eyes; the blue
+       eyes are drawn on top of it and that is the whole point of them */
+    c.fillStyle = rgba(spec.point || spec.fur2, .45);
+    ellipse(c, 0, .10 * s, .40 * s, .38 * s); c.fill();
+    c.fillStyle = spec.point || spec.fur2;
+    ellipse(c, 0, .12 * s, .34 * s, .32 * s); c.fill();
+  } else if (b.mark === 'mask') {
+    /* a pug: the black muzzle, a ring round each eye, and the wrinkles */
+    const look = lookOf(spec);
+    c.fillStyle = spec.fur2;
+    ellipse(c, 0, .26 * s, .25 * s, .21 * s); c.fill();
+    c.fillStyle = rgba(spec.fur2, .55);
+    [-1, 1].forEach(sx => { ellipse(c, sx * look.x * s, look.y * s, look.r * s * 1.4, look.r * s * 1.45); c.fill(); });
+    c.strokeStyle = rgba(spec.fur2, .7); c.lineWidth = .035 * s;
+    c.beginPath();
+    c.moveTo(-.16 * s, -.26 * s); c.quadraticCurveTo(0, -.36 * s, .16 * s, -.26 * s);
+    c.moveTo(-.11 * s, -.16 * s); c.quadraticCurveTo(0, -.25 * s, .11 * s, -.16 * s);
+    c.stroke();
+  }
+  /* every dog but the pug has a lighter muzzle */
+  if (b.face === 'dog' && b.mark !== 'patch') {
+    c.fillStyle = rgba(spec.belly, .85);
+    ellipse(c, 0, .24 * s, .22 * s, .17 * s); c.fill();
+  }
+  c.restore();
+}
+
+/* ---------------- eyes ---------------- */
+function eyePath(c, rx, ry, almond) {
+  if (!almond) { ellipse(c, 0, 0, rx, ry); return; }
+  /* a cat's eye: an almond with a rounded point at each end */
+  c.beginPath();
+  c.moveTo(-rx, ry * .08);
+  c.bezierCurveTo(-rx * .55, -ry * 1.22, rx * .55, -ry * 1.16, rx, -ry * .12);
+  c.bezierCurveTo(rx * .55, ry * 1.14, -rx * .55, ry * 1.18, -rx, ry * .08);
+  c.closePath();
+}
+
+function drawEye(c, x, y, r, spec, o, side) {
+  const look = lookOf(spec);
+  const blink = o.blink || 0;
+  const cat = spec.breed.species === 'cat';
+  const dx = (o.eyeDir ? o.eyeDir[0] : 0) * r * .26;
+  const dy = (o.eyeDir ? o.eyeDir[1] : 0) * r * .26;
+  const rx = r, ry = r * 1.10 * (1 - blink * .92);
+  c.save();
+  c.translate(x, y);
+  c.rotate(look.tilt * (side || 1));
+  if (blink > .82) {
+    /* shut: one line, curving down, the way a drawn eye closes */
+    c.strokeStyle = featureInk(spec);
+    c.lineWidth = r * .22; c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(-rx * .78, 0);
+    c.quadraticCurveTo(0, r * .34, rx * .78, 0);
+    c.stroke();
+    c.restore();
+    return;
+  }
+  /* the iris is the eye. A dark iris is lifted until it parts from
+     the pupil, or a brown-eyed dog has two holes for eyes. */
+  let iris = spec.eyes;
+  const irgb = hex2rgb(iris);
+  const ilum = (irgb[0] * .299 + irgb[1] * .587 + irgb[2] * .114) / 255;
+  if (ilum < .30) iris = shade(iris, .30 + (.30 - ilum) * 1.5);
+  c.fillStyle = iris;
+  eyePath(c, rx, ry, look.almond); c.fill();
+  c.save();
+  eyePath(c, rx, ry, look.almond); c.clip();
+  /* a shade across the top third, flat, so the eye sits under a lid */
+  c.fillStyle = rgba(shade(iris, -.35), .42);
+  c.fillRect(-rx * 1.2, -ry * 1.2, rx * 2.4, ry * .48);
+  /* the pupil: tall on a cat, round on a dog, open or narrow by mood */
+  const dil = PUPIL_DILATE[(o && o.mood) || 'content'] || 1;
+  c.fillStyle = '#1C1418';
+  if (cat) ellipse(c, dx, dy + ry * .04, rx * .46 * dil, ry * .72 * dil);
+  else ellipse(c, dx, dy + ry * .04, rx * .58 * dil, ry * .62 * dil);
+  c.fill();
+  /* two crisp reflections, the big one upper left */
+  c.fillStyle = '#FFFFFF';
+  ellipse(c, dx - rx * .30, dy - ry * .38, rx * .30, ry * .26); c.fill();
+  c.fillStyle = rgba('#FFFFFF', .9);
+  ellipse(c, dx + rx * .32, dy + ry * .34, rx * .13, ry * .12); c.fill();
+  c.restore();
+  /* the rim, in the ink, a little thinner than the silhouette's */
+  c.strokeStyle = inkLine(spec);
+  c.lineWidth = r * .20; c.lineJoin = 'round';
+  eyePath(c, rx, ry, look.almond); c.stroke();
+  c.restore();
+}
+
+/* ---------------- nose and mouth ---------------- */
+function drawNoseMouth(c, spec, s, o) {
+  const f = spec.breed.face, cat = spec.breed.species === 'cat';
+  const ink = inkLine(spec), mouthInk = featureInk(spec);
+  const W = s * LINE;
+  let my;                                   /* where the mouth starts */
+  if (cat) {
+    /* a small pink triangle, point down */
+    const nw = .065 * s, ny = .19 * s;
+    c.fillStyle = spec.nose || '#E8828F';
+    c.beginPath();
+    c.moveTo(-nw, ny); c.lineTo(nw, ny); c.lineTo(0, ny + nw * 1.15); c.closePath();
+    c.fill();
+    c.strokeStyle = ink; c.lineWidth = W * .55; c.lineJoin = 'round'; c.stroke();
+    my = ny + nw * 1.15;
+  } else {
+    /* a dog's: a rounded wedge, wide on a pug, in the nose colour */
+    const nw = f === 'flat' ? .11 * s : .085 * s, ny = f === 'flat' ? .15 * s : .14 * s;
+    c.fillStyle = darkCoat(spec) ? '#4A3A3A' : '#2A1E1A';
+    c.beginPath();
+    c.moveTo(-nw, ny + nw * .2);
+    c.quadraticCurveTo(0, ny - nw * .55, nw, ny + nw * .2);
+    c.quadraticCurveTo(nw * .7, ny + nw * 1.25, 0, ny + nw * 1.4);
+    c.quadraticCurveTo(-nw * .7, ny + nw * 1.25, -nw, ny + nw * .2);
+    c.closePath(); c.fill();
+    c.fillStyle = rgba('#FFFFFF', .35);
+    ellipse(c, -nw * .35, ny + nw * .1, nw * .28, nw * .18, -.3); c.fill();
+    my = ny + nw * 1.4;
+    /* the line from the nose to the lip */
+    c.strokeStyle = mouthInk; c.lineWidth = W * .6; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(0, my); c.lineTo(0, my + s * .045); c.stroke();
+    my += s * .045;
+  }
+  const mw = cat ? .12 * s : .13 * s;
+  c.strokeStyle = mouthInk; c.lineWidth = W * .65; c.lineCap = 'round'; c.lineJoin = 'round';
+  if (o.mouth === 'open') {
+    /* open: a dark mouth with a tongue in it, the line round it */
+    c.fillStyle = '#7A2E3C';
+    c.beginPath();
+    c.moveTo(-mw * 1.1, my);
+    c.quadraticCurveTo(0, my + mw * 2.2, mw * 1.1, my);
+    c.quadraticCurveTo(0, my + mw * .3, -mw * 1.1, my);
+    c.closePath(); c.fill();
+    c.strokeStyle = ink; c.lineWidth = W * .55; c.stroke();
+    c.fillStyle = '#E8828F';
+    c.beginPath();
+    c.moveTo(-mw * .55, my + mw * .8);
+    c.quadraticCurveTo(0, my + mw * 2.1, mw * .55, my + mw * .8);
+    c.quadraticCurveTo(0, my + mw * 1.0, -mw * .55, my + mw * .8);
+    c.closePath(); c.fill();
+  } else if (o.mouth === 'sad') {
+    c.beginPath();
+    c.moveTo(0, my + mw * .35);
+    c.quadraticCurveTo(-mw * .5, my - mw * .1, -mw * 1.1, my + mw * .55);
+    c.moveTo(0, my + mw * .35);
+    c.quadraticCurveTo(mw * .5, my - mw * .1, mw * 1.1, my + mw * .55);
+    c.stroke();
+  } else {
+    /* the smile: two curves out and up from the middle */
+    c.beginPath();
+    c.moveTo(0, my);
+    c.quadraticCurveTo(-mw * .45, my + mw * .75, -mw * 1.05, my + mw * .25);
+    c.moveTo(0, my);
+    c.quadraticCurveTo(mw * .45, my + mw * .75, mw * 1.05, my + mw * .25);
+    c.stroke();
+    if (spec.breed.tongue && o.tongue !== false) {
+      c.fillStyle = '#E8828F';
+      c.beginPath();
+      c.moveTo(-mw * .45, my + mw * .35);
+      c.quadraticCurveTo(-mw * .5, my + mw * 1.9, 0, my + mw * 1.9);
+      c.quadraticCurveTo(mw * .5, my + mw * 1.9, mw * .45, my + mw * .35);
+      c.closePath(); c.fill();
+      c.strokeStyle = ink; c.lineWidth = W * .45; c.stroke();
+    }
+  }
+  /* whiskers, when there is room for them to be lines and not noise */
+  if (cat && s > 60) {
+    c.strokeStyle = rgba(mouthInk, .5); c.lineWidth = W * .35; c.lineCap = 'round';
+    [-1, 1].forEach(sx => {
+      c.beginPath();
+      c.moveTo(sx * .20 * s, .20 * s); c.lineTo(sx * .46 * s, .14 * s);
+      c.moveTo(sx * .20 * s, .26 * s); c.lineTo(sx * .46 * s, .28 * s);
+      c.stroke();
+    });
+  }
+}
+
+/* ---------------- the face ---------------- */
+function drawFace(c, spec, s, o) {
+  o = o || {};
+  c.save();
+  if (o.squash) c.scale(1 + o.squash, 1 - o.squash);
+  drawEars(c, spec, s, true, o);
+  c.fillStyle = spec.fur;
+  headPath(c, spec, s); c.fill();
+  /* one flat shadow tone under the chin */
+  c.save();
+  headPath(c, spec, s); c.clip();
+  c.fillStyle = shadeBand(spec);
+  c.fillRect(-.6 * s, .30 * s, 1.2 * s, .3 * s);
+  c.restore();
+  drawMarkings(c, spec, s);
+  headPath(c, spec, s); inkStroke(c, spec, s);
+  drawEars(c, spec, s, false, o);
+  drawBlush(c, spec, s, o);
+  const look = lookOf(spec);
+  drawEye(c, -look.x * s, look.y * s, look.r * s * 1.06, spec, o, -1);
+  drawEye(c, look.x * s, look.y * s, look.r * s * 1.06, spec, o, 1);
+  drawNoseMouth(c, spec, s, o);
+  if (spec.hat) drawHat(c, spec.hat, spec, s);
+  c.restore();
 }
 
 /* ---------------- full body (sitting) ----------------
@@ -8280,217 +8038,111 @@ function drawBody(c, spec, s, o) {
   o = o || {};
   const breath = o.breath || 0;
   const tailA = o.tail || 0;
-  const cat = spec.breed.species === 'cat';
+  const b = spec.breed, cat = b.species === 'cat';
   const lift = breath * .012 * s;
-  /* spec.build lets the stage-up animation pass a half-way build */
   const gb = spec.build || STAGE_BUILD[clamp(spec.stage || 0, 0, STAGE_BUILD.length - 1)];
-  /* the head has to come down by however much the squash lowered the
-     shoulders, or it floats off the neck */
   const drop = (1 - gb.sy) * .60 * s;
+  const W = s * LINE;
+  /* the legs of a point cat are its points; a beagle's are white */
+  const legFur = b.mark === 'points' ? (spec.point || spec.fur2) : b.mark === 'patch' ? spec.belly : spec.fur;
 
   c.save();
-  /* grow about the floor line so the feet stay where they were */
-  if (gb.k !== 1) {
-    c.translate(0, .93 * s); c.scale(gb.k, gb.k); c.translate(0, -.93 * s);
-  }
+  if (gb.k !== 1) { c.translate(0, .93 * s); c.scale(gb.k, gb.k); c.translate(0, -.93 * s); }
 
   /* ---- contact shadow ---- */
   if (o.shadow !== false) {
-    const sg = c.createRadialGradient(0, .93 * s, s * .04, 0, .93 * s, s * .55);
-    sg.addColorStop(0, rgba('#2A1E12', PAL.dark ? .38 : .22));
-    sg.addColorStop(1, rgba('#2A1E12', 0));
-    c.fillStyle = sg;
-    ellipse(c, 0, .93 * s, .55 * s, .12 * s); c.fill();
+    c.fillStyle = rgba('#2A1E12', PAL.dark ? .34 : .16);
+    ellipse(c, 0, .94 * s, .50 * s, .09 * s); c.fill();
   }
 
-  /* everything below the neck is squat on a young animal; the head is
-     drawn after this closes, at its true proportions */
   c.save();
-  if (gb.sy !== 1 || gb.sx !== 1) {
-    c.translate(0, .90 * s); c.scale(gb.sx, gb.sy); c.translate(0, -.90 * s);
-  }
+  if (gb.sy !== 1 || gb.sx !== 1) { c.translate(0, .90 * s); c.scale(gb.sx, gb.sy); c.translate(0, -.90 * s); }
 
-  /* ---- tail, behind everything ---- */
-  c.save();
-  /* one definition, used for the fill and again as the clip, so the
-     highlight can never end up outside the tail it belongs to */
-  const tailPts = cat ? [
-    [.24 * s, .84 * s],
-    [.74 * s + tailA * .12 * s, .86 * s],
-    [.72 * s + tailA * .22 * s, .30 * s - tailA * .12 * s]
-  ] : [
-    [.24 * s, .82 * s],
-    [.62 * s + tailA * .16 * s, .82 * s],
-    [.60 * s + tailA * .26 * s, .42 * s]
-  ];
-  const tailW = cat ? [.17, .045] : [.15, .05];
-  const tailShape = () => tailPath(c, s, tailPts, tailW[0], tailW[1]);
-
-  const tg = c.createLinearGradient(0, .4 * s, .8 * s, .9 * s);
-  tg.addColorStop(0, shade(spec.fur2, -.06));
-  tg.addColorStop(1, shade(spec.fur2, .12));
-  c.fillStyle = tg;
-  tailShape();
-  c.fill(); inkStroke(c, spec, s, .022);
-
-  /* the same key light as the head, running along the top of the tail */
-  c.save();
-  tailShape();
-  c.clip();
-  c.fillStyle = rgba(spec.belly, cat ? .35 : .26);
-  tailPath(c, s, [
-    [lerp(tailPts[0][0], tailPts[1][0], .55), lerp(tailPts[0][1], tailPts[1][1], .5) - s * .06],
-    [tailPts[1][0], tailPts[1][1] - s * .10],
-    [tailPts[2][0], tailPts[2][1]]
-  ], tailW[0] * .55, tailW[1] * .9);
-  c.fill();
-  c.restore();
-  c.restore();
-
-  /* a tabby is striped all over, not only on the forehead: three marks
-     down each flank, under the fur edge so they sit in the coat */
-  const stripes = spec.breed.mark === 'tabby';
-  const flankMarks = () => {
-    /* a beagle wears a saddle: the darker coat over the shoulders and
-       back, the belly colour below. Drawn on the head alone the breed
-       was a brown dog with a blaze. */
-    if (spec.breed.mark === 'patch') {
-      const sg = c.createLinearGradient(0, .30 * s, 0, .70 * s);
-      sg.addColorStop(0, rgba(spec.fur2, .85));
-      sg.addColorStop(.55, rgba(spec.fur2, .55));
-      sg.addColorStop(1, rgba(spec.fur2, 0));
-      c.fillStyle = sg;
-      ellipse(c, 0, .40 * s, .40 * s, .26 * s); c.fill();
-    }
-    if (!stripes) return;
-    c.fillStyle = rgba(spec.fur2, .66);
-    [-1, 1].forEach(sx => {
-      [[.44, .16], [.56, .12], [.68, .10]].forEach(([y, len]) => {
-        taperMark(c, sx * .16 * s, y * s, sx * .30 * s, (y - .02) * s, sx * (.30 + len) * s, (y + .03) * s, s * .05, s * .012);
-        c.fill();
-      });
-    });
-  };
-
-  /* ---- haunch (the back leg you can see from the front) ---- */
-  c.fillStyle = shade(spec.fur, -.08);
-  ellipse(c, .30 * s, .74 * s, .17 * s, .19 * s, -.18); c.fill(); inkStroke(c, spec, s, .022);
-  ellipse(c, -.30 * s, .74 * s, .17 * s, .19 * s, .18); c.fill(); inkStroke(c, spec, s, .022);
-
-  /* ---- body mass ---- */
-  /* A seated animal is narrow at the shoulder and widest at the haunch.
-     This was a symmetric bell — the same curve up and down, widest
-     halfway — which is why the room pet read as a mound with a head on
-     it. The shoulders come in and the widest point drops; a cat carries
-     it a little narrower than a dog. */
-  const shoulder = cat ? .235 : .255;
-  const flank = cat ? .455 : .475;
-  const bodyPath = () => {
+  /* ---- tail, behind everything: a stroke with the line round it ---- */
+  const tail = () => {
     c.beginPath();
-    c.moveTo(-shoulder * s, .30 * s + lift);
-    c.bezierCurveTo(-.42 * s, .52 * s, -flank * s, .90 * s, 0, .90 * s);
-    c.bezierCurveTo(flank * s, .90 * s, .42 * s, .52 * s, shoulder * s, .30 * s + lift);
+    if (cat) {
+      c.moveTo(.26 * s, .84 * s);
+      c.bezierCurveTo(.70 * s + tailA * .10 * s, .92 * s, .86 * s + tailA * .16 * s, .40 * s, .64 * s + tailA * .22 * s, .16 * s - tailA * .10 * s);
+    } else {
+      c.moveTo(.26 * s, .82 * s);
+      c.bezierCurveTo(.62 * s + tailA * .12 * s, .86 * s, .74 * s + tailA * .18 * s, .44 * s, .58 * s + tailA * .24 * s, .30 * s - tailA * .08 * s);
+    }
+  };
+  const tailW = (cat ? .16 : .15) * s;
+  const tailFur = b.mark === 'points' ? (spec.point || spec.fur2) : b.mark === 'patch' ? spec.fur2 : spec.fur;
+  tail(); c.strokeStyle = inkLine(spec); c.lineWidth = tailW + W * 2; c.lineCap = 'round'; c.stroke();
+  tail(); c.strokeStyle = tailFur; c.lineWidth = tailW; c.stroke();
+  if (b.mark === 'patch') {
+    /* the white tip every beagle has */
+    c.save(); tail(); c.strokeStyle = spec.belly; c.lineWidth = tailW; c.setLineDash([tailW * .9, s * 3]); c.lineDashOffset = -s * 1.02; c.stroke(); c.restore();
+  }
+  if (b.mark === 'tabby') {
+    c.save(); tail(); c.strokeStyle = spec.fur2; c.lineWidth = tailW; c.setLineDash([tailW * .32, tailW * .5]); c.lineDashOffset = -s * .3; c.stroke(); c.restore();
+  }
+
+  /* ---- torso: narrow at the shoulder, widest where it sits ---- */
+  const torso = () => {
+    c.beginPath();
+    c.moveTo(-.33 * s, .34 * s + lift);
+    c.bezierCurveTo(-.50 * s, .52 * s + lift, -.50 * s, .88 * s, -.28 * s, .92 * s);
+    c.lineTo(.28 * s, .92 * s);
+    c.bezierCurveTo(.50 * s, .88 * s, .50 * s, .52 * s + lift, .33 * s, .34 * s + lift);
     c.closePath();
   };
-  const bodyGr = c.createLinearGradient(-.2 * s, .28 * s, .28 * s, .95 * s);
-  bodyGr.addColorStop(0, shade(spec.fur, .16));
-  bodyGr.addColorStop(.45, spec.fur);
-  bodyGr.addColorStop(1, shade(spec.fur, -.16));
-  c.fillStyle = bodyGr;
-  bodyPath();
-  c.fill();
-
-  /* rim light down the shoulder, same key light as the head */
+  c.fillStyle = b.mark === 'patch' ? spec.belly : spec.fur;
+  torso(); c.fill();
   c.save();
-  bodyPath(); c.clip();
-  flankMarks();
-  c.strokeStyle = rgba('#FFFFFF', .22);
-  c.lineWidth = s * .075;
-  c.save(); c.translate(s * .012, s * .012);
-  bodyPath(); c.stroke();
+  torso(); c.clip();
+  if (b.mark === 'patch') {
+    /* a beagle's saddle: the coat over the shoulders, the dark over the back */
+    c.fillStyle = spec.fur;
+    ellipse(c, 0, .40 * s + lift, .44 * s, .24 * s); c.fill();
+    c.fillStyle = mix(spec.fur2, '#2A1E1A', .5);
+    ellipse(c, -.36 * s, .54 * s, .16 * s, .20 * s, .3); c.fill();
+    ellipse(c, .36 * s, .54 * s, .16 * s, .20 * s, -.3); c.fill();
+  } else if (b.mark === 'tabby') {
+    c.strokeStyle = spec.fur2; c.lineWidth = .045 * s; c.lineCap = 'round';
+    [-1, 1].forEach(sx => [.46, .60, .74].forEach(y => {
+      c.beginPath(); c.moveTo(sx * .48 * s, y * s); c.quadraticCurveTo(sx * .34 * s, (y - .03) * s, sx * .24 * s, (y + .02) * s); c.stroke();
+    }));
+  }
+  /* the chest, lighter, on every coat that has a lighter belly */
+  if (b.mark !== 'patch') {
+    c.fillStyle = spec.belly;
+    ellipse(c, 0, .60 * s + lift, .19 * s, .25 * s); c.fill();
+  }
+  /* one flat shadow band where the body meets the floor */
+  c.fillStyle = shadeBand(spec);
+  c.fillRect(-.6 * s, .76 * s, 1.2 * s, .3 * s);
   c.restore();
-  /* and a cool bounce along the floor edge */
-  const bounce = c.createLinearGradient(0, .78 * s, 0, .92 * s);
-  bounce.addColorStop(0, rgba(spec.belly, 0));
-  bounce.addColorStop(1, rgba(spec.belly, .3));
-  c.fillStyle = bounce;
-  c.fillRect(-.5 * s, .78 * s, s, .16 * s);
-  c.restore();
+  torso(); inkStroke(c, spec, s);
 
-  /* fur along the silhouette */
-  furEdge(c, 0, .62 * s, .445 * s, .30 * s, Math.PI * .62, Math.PI * .38, 9, s * .035, rgba(spec.fur, .95));
-  furEdge(c, 0, .62 * s, .445 * s, .30 * s, Math.PI * 1.38, Math.PI * 1.62, 7, s * .03, rgba(shade(spec.fur, .08), .9));
-  bodyPath(); inkStroke(c, spec, s, .026);
-
-  /* ---- chest fluff: feathered, not a pasted ellipse ---- */
-  c.save();
-  bodyPath();
-  c.clip();
-  const cg = c.createRadialGradient(0, .58 * s + lift, s * .04, 0, .62 * s + lift, s * .30);
-  cg.addColorStop(0, rgba(spec.belly, .95));
-  cg.addColorStop(.62, rgba(spec.belly, .72));
-  cg.addColorStop(1, rgba(spec.belly, 0));
-  c.fillStyle = cg;
-  ellipse(c, 0, .60 * s + lift, .215 * s, .275 * s); c.fill();
-  furEdge(c, 0, .60 * s + lift, .20 * s, .26 * s, Math.PI * .35, Math.PI * .65, 5, s * .028, rgba(spec.belly, .5));
-
-  /* ambient occlusion where the head meets the chest */
-  const ao = c.createLinearGradient(0, .26 * s + lift, 0, .52 * s + lift);
-  ao.addColorStop(0, rgba('#2A1E12', .30));
-  ao.addColorStop(1, rgba('#2A1E12', 0));
-  c.fillStyle = ao;
-  c.fillRect(-.5 * s, .26 * s + lift, s, .28 * s);
-  c.restore();
-
-  /* ---- front legs ---- */
+  /* ---- front legs: they stand ---- */
   [-1, 1].forEach(sx => {
-    c.save();
-    c.scale(sx, 1);
-    const legPath = () => {
+    const leg = () => {
       c.beginPath();
-      c.moveTo(.085 * s, .63 * s);
-      c.bezierCurveTo(.05 * s, .78 * s, .065 * s, .86 * s, .105 * s, .878 * s);
-      c.lineTo(.25 * s, .878 * s);
-      c.bezierCurveTo(.285 * s, .84 * s, .265 * s, .70 * s, .215 * s, .61 * s);
+      c.moveTo(sx * .07 * s, .54 * s);
+      c.lineTo(sx * .07 * s, .86 * s);
+      c.quadraticCurveTo(sx * .07 * s, .935 * s, sx * .15 * s, .935 * s);
+      c.lineTo(sx * .23 * s, .935 * s);
+      c.quadraticCurveTo(sx * .31 * s, .935 * s, sx * .29 * s, .86 * s);
+      c.lineTo(sx * .27 * s, .54 * s);
       c.closePath();
     };
-    /* the leg throws a shadow onto the torso behind it */
-    c.save();
-    c.filter = 'none';
-    c.fillStyle = rgba('#2A1E12', .16);
-    c.save(); c.translate(-s * .022, -s * .012);
-    legPath(); c.fill();
-    c.restore();
-    c.restore();
-
-    const lg = c.createLinearGradient(.06 * s, .62 * s, .27 * s, .90 * s);
-    lg.addColorStop(0, shade(spec.fur, .24));
-    lg.addColorStop(.55, shade(spec.fur, .08));
-    lg.addColorStop(1, shade(spec.fur, -.10));
-    c.fillStyle = lg;
-    legPath();
-    c.fill();
-    /* an edge so it never melts into the body */
-    legPath();
-    inkStroke(c, spec, s, .020);
-
-    /* paw and toes */
-    c.fillStyle = shade(spec.fur, .2);
-    ellipse(c, .178 * s, .872 * s, .088 * s, .054 * s); c.fill();
-    c.fillStyle = rgba('#FFFFFF', .18);
-    ellipse(c, .16 * s, .858 * s, .045 * s, .022 * s, -.2); c.fill();
-    c.strokeStyle = rgba(spec.fur2, .5);
-    c.lineWidth = s * .013; c.lineCap = 'round';
-    [-.032, .032].forEach(dx => {
-      c.beginPath();
-      c.moveTo(.178 * s + dx * s, .842 * s);
-      c.lineTo(.178 * s + dx * s, .876 * s);
-      c.stroke();
-    });
-    c.restore();
+    c.fillStyle = legFur;
+    leg(); c.fill();
+    c.save(); leg(); c.clip(); c.fillStyle = shadeBand(spec); c.fillRect(sx * .07 * s - s * .3, .80 * s, s * .6, .2 * s); c.restore();
+    leg(); inkStroke(c, spec, s);
+    /* toes */
+    c.strokeStyle = inkLine(spec); c.lineWidth = W * .7; c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(sx * .14 * s, .935 * s); c.lineTo(sx * .14 * s, .885 * s);
+    c.moveTo(sx * .21 * s, .935 * s); c.lineTo(sx * .21 * s, .885 * s);
+    c.stroke();
   });
 
-  if (spec.collar) drawCollar(c, spec.collar, s, .36 * s + lift);
+  if (spec.collar) drawCollar(c, spec.collar, s, .38 * s + lift);
   c.restore();                                    /* end of the squash */
 
   /* ---- head ---- */
@@ -19380,7 +19032,7 @@ window.BL = {
   setLang,
   /* the drawing itself, so an art pass can render a sheet of every
      breed at any size instead of judging it through a screenshot */
-  art: { drawFace, drawBody, specOf, get BREEDS() { return BREEDS; }, get STAGE_BUILD() { return STAGE_BUILD; } },
+  art: { drawFace, drawBody, specOf, tileSprite, get BREEDS() { return BREEDS; }, get STAGE_BUILD() { return STAGE_BUILD; } },
   openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, treatStore, confirmQuit,
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
   simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY, petRig, syncGoals, drawLevelScene,
