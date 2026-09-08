@@ -254,6 +254,15 @@ function noiseBurst(o) {
 function mallet(f, o) {
   o = o || {};
   if (!sfxOn()) return;
+  /* The third partial sits at 10.6 times the fundamental, and a deep
+     cascade climbs the scale two steps a chain with a fifth stacked on
+     top: at chain six the fifth's partial was asking for 33 kHz, above
+     anything the context can make, and the browser clamped it with a
+     warning on every tile. Forty of those in a session. The bar has a
+     top note now, just under the point where its overtones leave the
+     audible range, and the cascade brightens by gain and reverb send
+     past it rather than by pitch. */
+  f = Math.min(f, 1900);
   const dur = o.dur || .34;
   if (!claimVoice(dur)) return;
   const c = AU.ctx, t = c.currentTime + (o.delay || 0);

@@ -21,8 +21,94 @@ const G = {
   usedExtra: false,
   cursor: null, keyMode: false,     /* keyboard play */
   creepTick: 0,
-  epoch: 0                          /* bumped by every startLevel */
+  epoch: 0,                         /* bumped by every startLevel */
+  finale: false, finaleSkip: false  /* the leftover-move fireworks, and a tap to hurry them */
 };
+
+/* Leaving a level with a cascade still in flight.
+
+   startLevel bumps the epoch so that nothing from the previous level can
+   write into the next one, and every async routine checks it after each
+   wait. Nothing did the same when a player quit: the cascade kept
+   resolving, scoring and sounding on a board nobody could see, until the
+   next level began and finally invalidated it. The quit is an epoch
+   boundary too now. */
+function abandonLevel() {
+  G.epoch++;
+  G.over = true;
+  G.busy = false;
+  G.finale = false;
+  G.finaleSkip = false;
+}
+
+/* ---------------- a level that survives the phone ----------------
+
+   Nothing about a level in progress was ever written down. A phone
+   call, a low-memory kill, a swipe from the recents screen — and the
+   board, the moves and the heart that paid for them were gone, while
+   quitting on purpose gave the heart back. Tested on the emulator:
+   force-stop mid-level, relaunch, home screen, one heart fewer.
+
+   The board, the moves, the score and the goals are written to the save
+   after every completed move and at every hide, and a save holding one
+   is resumed on the next launch on the same board with the same moves.
+   The heart stays spent: it is one attempt, interrupted, not two. The
+   daily walk is resumed only on the day it was started. */
+function snapshotLevel() {
+  if (!G.B || G.over) return null;
+  const B = G.B;
+  return {
+    n: G.n, day: G.n === DAILY_LEVEL ? dayNumber() : 0, reached: SAVE.reached,
+    moves: G.moves, score: G.score, charge: G.charge, scoreMul: G.scoreMul,
+    usedExtra: G.usedExtra, rescued: G.rescued, creepTick: G.creepTick,
+    pupQueue: B.pupQueue || 0, startedAt: G.startedAt, bestChain: G.bestChain,
+    goals: G.goals.map(g => g.have),
+    cells: B.cell.map(row => row.map(c => [c.hole ? 1 : 0, c.crate, c.mud, c.ice, c.bram, c.mole, c.moleT || 0,
+      c.tile ? c.tile.type : null, c.tile ? c.tile.sp : 0]))
+  };
+}
+function keepLevel() { SAVE.inLevel = snapshotLevel(); persist(); }
+function dropLevel() { if (SAVE.inLevel) { SAVE.inLevel = null; persist(); } }
+function levelToResume() {
+  const s = SAVE.inLevel;
+  if (!s || !s.cells || !s.n) return null;
+  if (s.n === DAILY_LEVEL && (s.day !== dayNumber() || s.reached !== SAVE.reached)) return null;
+  if (s.n > 0 && s.n > SAVE.reached) return null;
+  return s;
+}
+function restoreBoard(B, s) {
+  for (let r = 0; r < B.h; r++) for (let c = 0; c < B.w; c++) {
+    const v = s.cells[r] && s.cells[r][c];
+    if (!v) continue;
+    const cell = B.cell[r][c];
+    cell.hole = !!v[0]; cell.crate = v[1] || 0; cell.mud = v[2] || 0; cell.ice = v[3] || 0;
+    cell.bram = v[4] || 0; cell.mole = v[5] || 0; cell.moleT = v[6] || 0;
+    cell.tile = (v[7] === null || v[7] === undefined) ? null : mkTile(v[7], v[8] || 0);
+  }
+  B.pupQueue = s.pupQueue || 0;
+}
+/* ---------------- tempo ----------------
+
+   Every wait in a cascade goes through here. While a level is being
+   played the answer is the number that was asked for. During the finale
+   — the leftover moves turning into fireworks after a win — it is under
+   half, and a tap on the board takes it to an eighth.
+
+   Measured on the real interface with a solver playing: the time from
+   the last move to the results card was 12.2, 12.9, 12.3, 19.3, 17.5,
+   27.3, 30.2 and 37.9 seconds across eight levels, growing with the
+   moves left over, because each batch of three fireworks ran a whole
+   cascade at playing speed. The better somebody played, the longer they
+   sat looking at a board they had already won. The fireworks are one
+   volley now (see finishWin), and they run at this tempo. */
+function tempo() {
+  if (!G.finale) return 1;
+  return G.finaleSkip ? .12 : .36;
+}
+function pace(ms) {
+  const k = tempo();
+  return k === 1 ? ms : Math.max(16, Math.round(ms * k));
+}
 
 /* ---------------- geometry ---------------- */
 /* Shared by layoutBoard and the self-heal check in renderGame — if the
@@ -68,6 +154,17 @@ function layoutBoard() {
   G.compCtx = fitCanvas($('#compCanvas'), 50, 50);
   clearSprites();
   drawLevelScene();
+  warmSprites();
+}
+/* The first frame after a layout paints every sprite the board needs
+   from scratch — measured at 9.7 to 11.7 ms on a desktop against a warm
+   frame of 1.4, which on a phone is a 50–90 ms hitch on the frame the
+   deal-in animation starts. The plain face of every colour in play is
+   painted here instead, before that frame, for about two milliseconds
+   nobody is watching. */
+function warmSprites() {
+  if (!G.B || !G.cell) return;
+  for (let t = 0; t < G.B.types; t++) tileSprite(t, SP.NONE, G.cell * .90, SAVE.settings.marks, false, false);
 }
 const cellX = c => G.ox + c * G.cell;
 const cellY = r => G.oy + r * G.cell;
@@ -172,28 +269,34 @@ function startLevel(n, opts) {
      sizing, not a level number, so the caller picks rather than the
      level table reaching into the save to find out how far you got */
   G.def = n === DAILY_LEVEL ? dailyLevel(SAVE.reached) : levelDef(n);
-  G.startedAt = now();
-  track('level_start', { n: n, moves: G.def.moves, tries: (SAVE.stats.played || 0) });
+  const res = opts.resume || null;
+  G.startedAt = res ? (res.startedAt || now()) : now();
+  track('level_start', { n: n, moves: G.def.moves, tries: (SAVE.stats.played || 0), resumed: !!res });
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
+  if (res) restoreBoard(G.B, res);
   const pet = activePet();
-  const perks = opts.perks || [];
-  let moves = G.def.moves;
-  G.scoreMul = 1;
-  G.charge = 0;
+  const perks = res ? [] : (opts.perks || []);
+  let moves = res ? res.moves : G.def.moves;
+  G.scoreMul = res ? (res.scoreMul || 1) : 1;
+  G.charge = res ? (res.charge || 0) : 0;
   perks.forEach(p => {
     if (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait') moves += p.v;
     if (p.id === 'charge') G.charge = p.v;
     if (p.id === 'score') G.scoreMul += p.v;
   });
-  if (opts.extraMoves) moves += opts.extraMoves;
+  if (opts.extraMoves && !res) moves += opts.extraMoves;
   G.moves = moves;
-  G.score = 0;
-  G.chain = 0; G.bestChain = 0; G.bestShown = false;
+  G.score = res ? (res.score || 0) : 0;
+  G.chain = 0; G.bestChain = res ? (res.bestChain || 0) : 0; G.bestShown = false;
   G.over = false; G.busy = true;
   G.sel = null; G.armed = null; G.armedFirst = null;
   G.particles = []; G.floats = []; G.beams = []; G.rings = [];
-  G.rescued = 0; G.usedExtra = false; G.creepTick = 0; G.lastPraise = 0;
+  G.rescued = res ? (res.rescued || 0) : 0;
+  G.usedExtra = res ? !!res.usedExtra : false;
+  G.creepTick = res ? (res.creepTick || 0) : 0;
+  G.lastPraise = 0;
+  G.finale = false; G.finaleSkip = false;
   G.starTargets = starTargets(G.def);
   G.starsEarned = 0;
   /* -1 rather than 0, so the first sync of a level always paints the
@@ -201,21 +304,23 @@ function startLevel(n, opts) {
      would otherwise show an unwalked path */
   G.walkStep = -1;
   G.goals = G.def.goals.map(g => ({ kind: g[0], arg: g[1], need: g[2], have: 0 }));
+  if (res) G.goals.forEach((g, i) => { g.have = (res.goals && res.goals[i]) || 0; });
   G.goals.forEach(g => {
     if (g.kind === GK.BRAMBLE) g.have = clamp(g.need - brambleCount(G.B), 0, g.need);
   });
   const rescueGoal = G.goals.find(g => g.kind === GK.RESCUE);
   G.pupsWanted = rescueGoal ? rescueGoal.need : 0;
 
-  /* seed the board with the pups that need walking home */
-  if (G.pupsWanted) {
+  /* seed the board with the pups that need walking home — a resumed
+     board already has its baskets where they were */
+  if (G.pupsWanted && !res) {
     /* a couple more baskets than the goal asks for: with exactly as many
        as you need, one landing in a slow column loses the level outright */
     const onBoard = Math.min(PUPS_IN_PLAY, G.pupsWanted + 2);
     for (let i = 0; i < onBoard; i++) placePup(G.B);
   }
   /* an energetic pet leaves a rocket lying about */
-  if (perks.some(p => p.id === 'gift')) {
+  if (!res && perks.some(p => p.id === 'gift')) {
     const spots = [];
     eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.ice === 0) spots.push([r, c]); });
     if (spots.length) {
@@ -248,8 +353,8 @@ function startLevel(n, opts) {
   });
   gameLoopStart();
   setTimeout(() => { G.busy = false; G.hintT = 0; }, 700);
-  SAVE.stats.played++;
-  persist();
+  if (!res) SAVE.stats.played++;
+  keepLevel();
 }
 /* Baskets start in the upper middle rather than the very top row: from
    row 0 a basket needs the whole column to clear beneath it before it
@@ -561,7 +666,13 @@ function hitCell(B, r, c, ctx, direct) {
   if (t.type === PUP) return;                     // pups only leave by the door
   if (t.dying) return;
 
-  if (t.sp !== SP.NONE) ctx.chain.push({ r, c, sp: t.sp, type: t.type });
+  /* a rainbow set off by something else — a rocket through it, a bomb
+     beside it — clears whatever colour the board holds most of, which is
+     what specialKeys does with no colour. It used to clear the colour
+     the rainbow happened to be born from, which nothing on the tile
+     shows, so the biggest blast on the board picked its target from a
+     number the player could not see. */
+  if (t.sp !== SP.NONE) ctx.chain.push({ r, c, sp: t.sp, type: t.sp === SP.RAIN ? -1 : t.type });
   t.dying = .01;
   t.dieDelay = ctx.delay;
   ctx.removed.push({ r, c, t });
@@ -652,6 +763,23 @@ async function blastWaves(startKeys, chain, silent) {
     });
     /* score + goals */
     let gained = 0;
+    /* A clear that takes most of the board is the biggest thing this
+       game can do, and it used to happen at the same speed as a plain
+       three: a rainbow swapped onto a rainbow emptied all seventy-two
+       cells inside 400ms with one shake and a word. Frames of it,
+       captured 90ms apart, show the old board in one and the new one in
+       the next. So a big clear is staged: the tiles go in a ripple from
+       the top of the board to the bottom, the swell lasts long enough
+       to be seen, the camera kicks and the screen flashes. */
+    const big = !silent && ctx.removed.length >= 20;
+    if (big) {
+      ctx.removed.sort((p, q) => (p.r - q.r) || (p.c - q.c));
+      ctx.removed.forEach((it, i) => { it.t.dieDelay = (i / ctx.removed.length) * .9; });
+      G.shake = 13;
+      G.flash = Math.max(G.flash, .75);
+      FX.punchZoom(1.4);
+      buzz([18, 40, 36, 40, 60]);
+    }
     ctx.removed.forEach((it, i) => {
       gained += 62 * Math.min(8, chain || 1);
       burst(it.r, it.c, it.t.type >= 0 ? slotGem(it.t.type) : PAL.accent, 7, 1);
@@ -686,7 +814,10 @@ async function blastWaves(startKeys, chain, silent) {
     }
     addScore(gained);
     applyCounts(ctx);
-    if (ctx.removed.length) await wait(reduceMotion() ? 40 : 145);
+    /* the ripple above takes .9 of a tile's own swell on top of the
+       swell itself, which the tile runs at 4.6 a second: 420ms sees the
+       last tile out, and it is time a whole-board clear has earned */
+    if (ctx.removed.length) await wait(pace(reduceMotion() ? 40 : (big ? 420 : 145)));
     if (stale(_ep)) return;
     ctx.removed.forEach(it => {
       const cell = G.B.cell[it.r][it.c];
@@ -696,7 +827,7 @@ async function blastWaves(startKeys, chain, silent) {
     const next = [];
     ctx.chain.forEach(s => { specialKeys(G.B, s.r, s.c, s.sp, s.type).forEach(k => next.push(k)); });
     wave = next;
-    if (next.length) await wait(reduceMotion() ? 30 : 90);
+    if (next.length) await wait(pace(reduceMotion() ? 30 : 90));
     if (stale(_ep)) return;
   }
   SAVE.stats.tilesPopped += totalTiles;
@@ -722,8 +853,20 @@ function applyCounts(ctx) {
   const pet = activePet();
   if (pet && !G.over && !G.spending) {
     const fav = favType();
+    /* The meter fills fastest on the pet's own face, and that stays: it
+       is the reason the face is on the board. But on a level whose goal
+       is another colour the player was being asked to choose between
+       the goal and the meter, and on level two — thirty-three yellow
+       and twenty-eight orange for a blue dog — the meter lost every
+       time and the ability never fired. A goal colour charges at a
+       third of the pet's own rate now, so chasing the level charges the
+       animal too, just more slowly than chasing the animal would. */
+    const wanted = new Set(G.goals.filter(g => g.kind === GK.COLLECT && g.have < g.need).map(g => g.arg));
     let add = 0;
-    for (const k in ctx.collect) add += (+k === fav ? CHARGE_FAV : CHARGE_OTHER) * ctx.collect[k];
+    for (const k in ctx.collect) {
+      const rate = +k === fav ? CHARGE_FAV : wanted.has(+k) ? CHARGE_FAV / 3 : CHARGE_OTHER;
+      add += rate * ctx.collect[k];
+    }
     add *= traitChargeScale(pet);
     if (add) {
       const was = G.charge;
@@ -803,7 +946,7 @@ async function clearGroups(groups, swapCells) {
       SFX.select();
     }
   });
-  if (makeSpecials.length) await wait(reduceMotion() ? 30 : 110);
+  if (makeSpecials.length) await wait(pace(reduceMotion() ? 30 : 110));
   if (stale(_ep)) return;
 }
 
@@ -819,19 +962,20 @@ async function settleBoard(depth) {
     return;
   }
   let maxDur = 0;
+  const k = tempo();
   moves.forEach(m => {
     const t = m.tile;
     if (m.materialise) { t.x = m.toC; t.y = m.toR; t.scale = 0; return; }
     if (m.spawn) { t.x = m.fromC; t.y = m.fromR; }
     const dist = Math.max(Math.abs(m.toR - t.y), Math.abs(m.toC - t.x));
-    const dur = clamp(.10 + dist * .050, .12, .46);
+    const dur = clamp(.10 + dist * .050, .12, .46) * k;
     maxDur = Math.max(maxDur, dur);
     setTarget(t, m.toC, m.toR, dur, E.drop);
     t.tw.land = true;
     t.tw.force = clamp(dist / 4, .15, 1);
   });
   SFX.drop();
-  await wait(reduceMotion() ? 40 : maxDur * 1000 + 40);
+  await wait(reduceMotion() ? 40 : maxDur * 1000 + pace(40));
   if (stale(_ep)) return;
   if (collectPups() && (depth || 0) < 12) await settleBoard((depth || 0) + 1);
   if (stale(_ep)) return;
@@ -1071,13 +1215,17 @@ async function runCombo(kind, a, b) {
     SFX.rainbow(); G.flash = .6;
   } else if (kind === 'rainspecial') {
     const other = ta.sp === SP.RAIN ? tb : ta;
-    const type = commonType(B);
+    /* the colour of the special you swapped in, the way the rainbow-onto-
+       plain case below already reads it. This took the board's most
+       common colour instead, so the one combo a player sets up on
+       purpose fired on a colour they had not chosen. */
+    const type = other.type >= 0 ? other.type : commonType(B);
     tilesOfType(B, type).forEach(([r, c]) => {
       const t = B.cell[r][c].tile;
       if (t) { t.sp = other.sp === SP.BOMB ? SP.BOMB : (Math.random() < .5 ? SP.ROW : SP.COL); t.jiggle = 1; }
     });
     SFX.rainbow(); G.flash = .8;
-    await wait(280);
+    await wait(pace(280));
     if (stale(_ep)) return;
     keys.add(a[0] + ':' + a[1]); keys.add(b[0] + ':' + b[1]);
     tilesOfType(B, type).forEach(([r, c]) => keys.add(r + ':' + c));
@@ -1460,13 +1608,17 @@ function scoreOnlyLevel() {
 function checkEnd() {
   if (G.over) return;
   if (goalsMet()) {
-    if (scoreOnlyLevel() && G.moves > 0) return;      /* keep going for the stars */
-    G.over = true; finishWin(); return;
+    if (scoreOnlyLevel() && G.moves > 0) { keepLevel(); return; }      /* keep going for the stars */
+    G.over = true; dropLevel(); finishWin(); return;
   }
   if (G.moves <= 0) {
     G.over = true;
+    dropLevel();
     if (scoreOnlyLevel() && goalsMet()) finishWin(); else finishLose();
+    return;
   }
+  /* still going: this is the board the next launch will find */
+  keepLevel();
 }
 
 async function finishWin() {
@@ -1483,27 +1635,50 @@ async function finishWin() {
   if (pet) { G.petMood = 'happy'; G.petMoodT = 3; petVoice(pet, 1.05); }
   await wait(420);
   if (stale(_ep)) return;
-  /* leftover moves turn into fireworks — a score level has already spent
-     its own, which is the point of letting it run on */
+  /* Leftover moves turn into fireworks — a score level has already spent
+     its own, which is the point of letting it run on.
+
+     They used to go three at a time, each batch a full cascade at
+     playing speed, and the results card arrived 12 to 38 seconds after
+     the last move depending on how many moves were left — the better
+     the play, the longer the wait. One volley now: every leftover move
+     becomes a special at once, lit in a ripple so the eye can count
+     them, then the whole lot goes up together and the cascade that
+     follows runs at the finale tempo (see pace). A second volley only
+     if there were more moves than plain tiles to put them on. A tap on
+     the board hurries all of it. */
+  G.finale = true;
+  G.finaleSkip = false;
   let left = G.moves;
-  while (left > 0) {
+  let volley = 0;
+  while (left > 0 && volley++ < 2) {
     const spots = [];
-    eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE) spots.push([r, c]); });
+    eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && !cell.tile.dying) spots.push([r, c]); });
     if (!spots.length) break;
-    const take = Math.min(left, 3);
-    for (let i = 0; i < take && spots.length; i++) {
-      const [r, c] = spots.splice(Math.floor(Math.random() * spots.length), 1)[0];
+    shuffleArr(spots);
+    const take = Math.min(left, spots.length);
+    for (let i = 0; i < take; i++) {
+      const [r, c] = spots[i];
       const t = G.B.cell[r][c].tile;
       t.sp = Math.random() < .35 ? SP.BOMB : (Math.random() < .5 ? SP.ROW : SP.COL);
       t.jiggle = 1;
+      t.scale = .55;
+      if (i < 14) ring(r, c, PAL.accent);
+      /* lit one after another rather than all in the same frame */
+      if (i < take - 1 && i < 24) await wait(pace(Math.max(18, 260 / take)));
+      if (stale(_ep)) return;
     }
     left -= take;
     G.moves = left;
     syncHud();
-    await wait(140);
+    SFX.chargeReady();
+    await wait(pace(300));
     if (stale(_ep)) return;
     const keys = new Set();
     eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.sp !== SP.NONE) keys.add(r + ':' + c); });
+    G.shake = 13;
+    G.flash = Math.max(G.flash, .6);
+    SFX.bomb();
     await blastWaves(keys, 3, false);
     if (stale(_ep)) return;
     await settleBoard();
@@ -1511,6 +1686,7 @@ async function finishWin() {
     await resolveBoard(null);
     if (stale(_ep)) return;
   }
+  G.finale = false;
   await wait(360);
   if (stale(_ep)) return;
   /* the board says the level was won. What that looks like is not
@@ -1853,10 +2029,12 @@ function renderGame(dt) {
   }
   c.restore();
 
-  /* idle hint */
+  /* idle hint. Sooner on the opening levels: a person who has never
+     played this has stopped because they do not know what a move looks
+     like yet, and five seconds of that is a first session ending. */
   if (!G.busy && !G.over) {
     G.hintT += dt;
-    if (G.hintT > 5 && !G.hint) G.hint = bestHint();
+    if (G.hintT > (G.n > 0 && G.n <= 5 ? 3 : 5) && !G.hint) G.hint = bestHint();
   } else { G.hint = null; }
 
   drawCompanion(dt);
@@ -1888,7 +2066,15 @@ function hintScore(a, b) {
   swapTiles(G.B, a, b);
   try {
     findMatches(G.B).forEach(run => {
-      if (run.len > best) best = run.len;
+      /* A group from findMatches carries maxH and maxV, never `len`.
+         This read `run.len`, which is undefined, so `best` stayed at
+         zero and the shape bonus below never fired: for as long as the
+         hint has existed it has pointed at a plain three while a four
+         or a five sat elsewhere on the board — exactly the failure the
+         comment above says it was written to avoid. Found by following
+         the hint move for move through level one and losing at 26/34. */
+      const len = Math.max(run.maxH || 0, run.maxV || 0);
+      if (len > best) best = len;
       run.cells.forEach(([r2, c2]) => {
         const cell = openCell(G.B, r2, c2);
         if (!cell) return;
@@ -2157,6 +2343,8 @@ function bindBoard() {
   let start = null, moved = false;
 
   const down = ev => {
+    /* a tap during the fireworks is somebody who has seen enough */
+    if (G.finale) { G.finaleSkip = true; return; }
     if (G.busy || G.over || !G.B) return;
     audioResume();
     const p = boardPos(ev);

@@ -39,7 +39,13 @@ const E = {
   elastic: t => t === 0 ? 0 : t === 1 ? 1 : Math.pow(2, -9 * t) * Math.sin((t * 10 - .75) * (2 * Math.PI / 3)) + 1
 };
 
-const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* The query is made once. Asking window.matchMedia allocates a new
+   MediaQueryList every call, and this is called from the camera step and
+   from every particle emitted — twice per tile in a full-board clear,
+   which is a hundred and forty-odd allocations in a frame that is
+   already the heaviest one the game draws. */
+const RM_QUERY = (typeof window !== 'undefined' && window.matchMedia) ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+const reduceMotion = () => !!(RM_QUERY && RM_QUERY.matches);
 
 /* Timed wait used to pace cascades.
 
@@ -447,10 +453,34 @@ let lastBuzzAt = 0;
    anyway, so asking is only noise. */
 let userGestured = false;
 function markGesture() { userGestured = true; }
+/* The native motor, where there is one.
+
+   navigator.vibrate is how the browser build feels anything, and it is
+   also how an Android WebView feels it — but an iPhone's web view has no
+   navigator.vibrate at all, so on iOS every pattern in HAP below was a
+   silent no-op and the game was numb. The Capacitor haptics plugin is
+   reached by name, the way the other native seams are, so the shipped
+   file still imports nothing and the browser build is untouched. A
+   pattern is a duration or a list of on/off durations; the plugin
+   speaks in taps, so a pattern is read as one: short is a light tap,
+   long a heavy one, and the five-part win pattern is the system's own
+   success notification. */
+function nativeHaptics() {
+  const P = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || null;
+  return P && P.Haptics ? P.Haptics : null;
+}
 function buzz(pattern) {
   try {
     if (!SAVE || !SAVE.settings.haptics || !userGestured) return;
-    if (navigator.vibrate) navigator.vibrate(pattern);
+    const H = nativeHaptics();
+    if (H) {
+      if (Array.isArray(pattern)) {
+        if (pattern.length >= 5 && H.notification) H.notification({ type: 'SUCCESS' });
+        else if (H.impact) H.impact({ style: 'HEAVY' });
+      } else if (H.impact) {
+        H.impact({ style: pattern <= 10 ? 'LIGHT' : pattern <= 20 ? 'MEDIUM' : 'HEAVY' });
+      }
+    } else if (navigator.vibrate) navigator.vibrate(pattern);
     lastBuzzAt = Date.now();
   } catch (e) { /* unsupported */ }
 }

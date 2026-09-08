@@ -113,17 +113,31 @@ function shuffleTypes(B) {
 }
 
 /* ---------------- match finding ---------------- */
+/* A rainbow is not a colour.
+
+   It is drawn without one and it fires on whatever it is swapped with,
+   but it kept the type of the run it was born from, so three of that
+   colour in a line with the rainbow among them matched — and set the
+   rainbow off on a colour the player never chose and could not see.
+   Its birth colour is no longer anybody's business: it is swapped, or it
+   is hit by another special, and nothing else moves it. Both the game
+   and the solver read this function, so the difficulty numbers already
+   count it. */
+function plainTile(B, r, c) {
+  const t = tileAt(B, r, c);
+  return (!t || t.type < 0 || t.sp === SP.RAIN) ? null : t;
+}
 function findMatches(B) {
   const runs = [];
   /* horizontal */
   for (let r = 0; r < B.h; r++) {
     let c = 0;
     while (c < B.w) {
-      const t0 = tileAt(B, r, c);
-      if (!t0 || t0.type < 0) { c++; continue; }
+      const t0 = plainTile(B, r, c);
+      if (!t0) { c++; continue; }
       let k = c + 1;
       while (k < B.w) {
-        const t = tileAt(B, r, k);
+        const t = plainTile(B, r, k);
         if (!t || t.type !== t0.type) break;
         k++;
       }
@@ -139,11 +153,11 @@ function findMatches(B) {
   for (let c = 0; c < B.w; c++) {
     let r = 0;
     while (r < B.h) {
-      const t0 = tileAt(B, r, c);
-      if (!t0 || t0.type < 0) { r++; continue; }
+      const t0 = plainTile(B, r, c);
+      if (!t0) { r++; continue; }
       let k = r + 1;
       while (k < B.h) {
-        const t = tileAt(B, k, c);
+        const t = plainTile(B, k, c);
         if (!t || t.type !== t0.type) break;
         k++;
       }
