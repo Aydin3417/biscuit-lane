@@ -1883,7 +1883,8 @@ function showWin() {
       <button class="btn ghost" id="wMap">${T('to_map')}</button>
       <button class="btn primary" id="wNext">${T('keep_going')}</button>
     </div>
-  `, { dismissable: false });
+  `, { dismissable: false, onClose: () => { closedByHand = true; } });
+  let closedByHand = false;
   paintArtCanvases(m.el);
   const wj = $('#wJar', m.el);
   if (wj) wj.addEventListener('click', () => { SFX.tap(); treatStore(); });
@@ -1931,8 +1932,13 @@ function showWin() {
      already pressed Carry on lands on the wrong screen. Queued as the
      call rather than as the sheet, so the stage-up's fanfare and sparks
      start when it takes the screen and not under this card. */
-  if (grew) modalQueue.push(() => stageUpModal(pet));
-  if (wonBadges.length) modalQueue.push(() => badgeModal(wonBadges));
+  /* and only if this card was closed by one of its own buttons: a
+     harness that pulls the veil out of the document leaves the queue
+     holding a sheet that would otherwise surface behind whatever
+     closes next */
+  const later = fn => modalQueue.push(() => { if (closedByHand) fn(); });
+  if (grew) later(() => stageUpModal(pet));
+  if (wonBadges.length) later(() => badgeModal(wonBadges));
 }
 function showLose() {
   say(T('a11y_failed'), true);

@@ -8446,9 +8446,12 @@ function paintBomb(c, s, type) {
   c.save();
   tilePath(c, type || 0, -s * .47, -s * .47, s * .94, s * .94);
   c.clip();
-  /* the dark band, just inside the outline */
-  c.strokeStyle = rgba('#241A12', .82);
-  c.lineWidth = s * .14;
+  /* the dark band, just inside the outline. Wider and darker than it
+     was: at 45px on a phone the bomb was the one special a player
+     could look straight past — the rocket has its chevrons and the
+     rainbow its swirl, and this had a thin ring that read as a shadow */
+  c.strokeStyle = rgba('#241A12', .92);
+  c.lineWidth = s * .18;
   tilePath(c, type || 0, -s * .47, -s * .47, s * .94, s * .94);
   c.stroke();
   /* lit on top, shaded underneath, so the band has thickness */
@@ -8551,9 +8554,9 @@ function drawTileFx(c, type, sp, s, t, seed) {
     c.save();
     c.globalCompositeOperation = 'lighter';
     c.globalAlpha = flick;
-    c.drawImage(blobBrush('#FFC24A'), fx - s * .22, fy - s * .22, s * .44, s * .44);
+    c.drawImage(blobBrush('#FFC24A'), fx - s * .28, fy - s * .28, s * .56, s * .56);
     c.globalAlpha = flick * .9;
-    c.drawImage(blobBrush('#FFF6D2'), fx - s * .07, fy - s * .07, s * .14, s * .14);
+    c.drawImage(blobBrush('#FFF6D2'), fx - s * .09, fy - s * .09, s * .18, s * .18);
     /* the glow it casts back down onto the casing */
     c.globalAlpha = flick * .22;
     c.drawImage(blobBrush('#FFB43C'), -s * .1, -s * .5, s * .6, s * .6);
@@ -15774,16 +15777,23 @@ function drawMapNode(c, n) {
     ellipse(c, n.x, n.y, R + 7, R + 7); c.stroke();
     c.globalAlpha = 1;
   }
-  /* label */
+  /* label. A locked node used to be a lock and nothing else, so the
+     lane ahead was a row of identical padlocks and nobody could tell
+     how far the gate was without counting. The lock is smaller now and
+     sits above the number. */
   if (!unlocked) {
     c.save();
-    c.translate(n.x - 9, n.y - 9);
-    c.scale(.75, .75);
+    c.translate(n.x - 6, n.y - 16);
+    c.scale(.5, .5);
     c.fillStyle = txt;
     c.fillRect(2, 12, 20, 13);
     c.strokeStyle = txt; c.lineWidth = 2.6;
     c.beginPath(); c.arc(12, 12, 6, Math.PI, 0); c.stroke();
     c.restore();
+    c.fillStyle = txt;
+    c.font = '800 13px Grandstander, sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(n.n, n.x, n.y + 6);
   } else {
     c.fillStyle = txt;
     c.font = '800 ' + (current ? 19 : 16) + 'px Grandstander, sans-serif';
@@ -17755,7 +17765,8 @@ function showWin() {
       <button class="btn ghost" id="wMap">${T('to_map')}</button>
       <button class="btn primary" id="wNext">${T('keep_going')}</button>
     </div>
-  `, { dismissable: false });
+  `, { dismissable: false, onClose: () => { closedByHand = true; } });
+  let closedByHand = false;
   paintArtCanvases(m.el);
   const wj = $('#wJar', m.el);
   if (wj) wj.addEventListener('click', () => { SFX.tap(); treatStore(); });
@@ -17803,8 +17814,13 @@ function showWin() {
      already pressed Carry on lands on the wrong screen. Queued as the
      call rather than as the sheet, so the stage-up's fanfare and sparks
      start when it takes the screen and not under this card. */
-  if (grew) modalQueue.push(() => stageUpModal(pet));
-  if (wonBadges.length) modalQueue.push(() => badgeModal(wonBadges));
+  /* and only if this card was closed by one of its own buttons: a
+     harness that pulls the veil out of the document leaves the queue
+     holding a sheet that would otherwise surface behind whatever
+     closes next */
+  const later = fn => modalQueue.push(() => { if (closedByHand) fn(); });
+  if (grew) later(() => stageUpModal(pet));
+  if (wonBadges.length) later(() => badgeModal(wonBadges));
 }
 function showLose() {
   say(T('a11y_failed'), true);

@@ -149,5 +149,10 @@ function budgetFor(kind, wantClear) {
   return MOVE_SCALES[MOVE_SCALES.length - 1];
 }
 `;
-fs.writeFileSync(path.join(__dirname, '..', 'src', 'js', '12-curve.js'), body);
-console.log('\nwrote src/js/12-curve.js');
+/* CURVE_OUT lets several kinds be measured side by side, one process
+   each, into files a merge step folds together afterwards; the default
+   is the curve the game reads. One process for all seven kinds took
+   over two hours, most of it in the kinds with the longest budgets. */
+const OUT = process.env.CURVE_OUT || path.join(__dirname, '..', 'src', 'js', '12-curve.js');
+fs.writeFileSync(OUT, body);
+console.log('\nwrote ' + OUT);

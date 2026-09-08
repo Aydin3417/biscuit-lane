@@ -747,16 +747,23 @@ function drawMapNode(c, n) {
     ellipse(c, n.x, n.y, R + 7, R + 7); c.stroke();
     c.globalAlpha = 1;
   }
-  /* label */
+  /* label. A locked node used to be a lock and nothing else, so the
+     lane ahead was a row of identical padlocks and nobody could tell
+     how far the gate was without counting. The lock is smaller now and
+     sits above the number. */
   if (!unlocked) {
     c.save();
-    c.translate(n.x - 9, n.y - 9);
-    c.scale(.75, .75);
+    c.translate(n.x - 6, n.y - 16);
+    c.scale(.5, .5);
     c.fillStyle = txt;
     c.fillRect(2, 12, 20, 13);
     c.strokeStyle = txt; c.lineWidth = 2.6;
     c.beginPath(); c.arc(12, 12, 6, Math.PI, 0); c.stroke();
     c.restore();
+    c.fillStyle = txt;
+    c.font = '800 13px Grandstander, sans-serif';
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(n.n, n.x, n.y + 6);
   } else {
     c.fillStyle = txt;
     c.font = '800 ' + (current ? 19 : 16) + 'px Grandstander, sans-serif';

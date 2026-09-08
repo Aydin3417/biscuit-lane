@@ -1329,9 +1329,12 @@ function paintBomb(c, s, type) {
   c.save();
   tilePath(c, type || 0, -s * .47, -s * .47, s * .94, s * .94);
   c.clip();
-  /* the dark band, just inside the outline */
-  c.strokeStyle = rgba('#241A12', .82);
-  c.lineWidth = s * .14;
+  /* the dark band, just inside the outline. Wider and darker than it
+     was: at 45px on a phone the bomb was the one special a player
+     could look straight past — the rocket has its chevrons and the
+     rainbow its swirl, and this had a thin ring that read as a shadow */
+  c.strokeStyle = rgba('#241A12', .92);
+  c.lineWidth = s * .18;
   tilePath(c, type || 0, -s * .47, -s * .47, s * .94, s * .94);
   c.stroke();
   /* lit on top, shaded underneath, so the band has thickness */
@@ -1434,9 +1437,9 @@ function drawTileFx(c, type, sp, s, t, seed) {
     c.save();
     c.globalCompositeOperation = 'lighter';
     c.globalAlpha = flick;
-    c.drawImage(blobBrush('#FFC24A'), fx - s * .22, fy - s * .22, s * .44, s * .44);
+    c.drawImage(blobBrush('#FFC24A'), fx - s * .28, fy - s * .28, s * .56, s * .56);
     c.globalAlpha = flick * .9;
-    c.drawImage(blobBrush('#FFF6D2'), fx - s * .07, fy - s * .07, s * .14, s * .14);
+    c.drawImage(blobBrush('#FFF6D2'), fx - s * .09, fy - s * .09, s * .18, s * .18);
     /* the glow it casts back down onto the casing */
     c.globalAlpha = flick * .22;
     c.drawImage(blobBrush('#FFB43C'), -s * .1, -s * .5, s * .6, s * .6);
