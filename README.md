@@ -3711,3 +3711,151 @@ charges at a third of the pet's own rate on the level's goal colour, so
 chasing the level charges the animal too; and the daily walk and the
 season book were on the first screen a new player saw, offering "clean
 58 muddy tiles" before level four had shown them mud.
+
+## The run's model missed by twenty points, so the run is measured too
+
+Everything past level sixty gets its move budget from a model: seven
+response curves, one per goal kind, each drawn through five levels of
+that kind by `test/calibrate.js`, and read backwards by the generator to
+turn "won about seven times in ten" into a move count. The curves were
+remade for the player who cannot see cascades, and then the run was
+played against its own design (`test/curve.js`, levels 61-120, twelve
+games a level). With the old aim-low correction still in — the model
+had landed nine points easy for the solver — it came out eight points
+*hard*. With the correction taken out it was centred, and still missed
+the level in front of the player by eighteen points on average, against
+fourteen of sampling noise: level 63 was drawn at 79% and cleared 8%,
+level 70, a gate, was drawn at 61% and cleared 92%. A curve is one line
+through five maps. The map in front of the player has its own blob, its
+own arrangement and its own tier's score demand, and it answers its
+budget in its own way.
+
+So the run is fitted the way the lane was, in `test/fit-run.js`: every
+level from 61 to 360 is played at the budget the model gives it, twenty
+games, and the budget moves — fifteen percent a step until the target
+is bracketed, one point in the middle, a weighted line through the
+points — until the level lands on its own target. Not the validation's
+seeds, so `test/curve.js` stays out of sample. Three and two-thirds
+points a level, forty minutes across eight processes, and the answers
+go into `src/js/13-run-fit.js`, which the generator reads before it
+reads the curves. The reference build the curves are calibrated against
+never reads it, so the circle the calibration depends on stays open.
+
+    model    mean miss 16%   bias -5%   worst: 63 drawn 79%, played 8%
+    fitted   mean miss  4%   bias  0%   every gate within eleven points
+             relief levels 84%, gates 54% — the rhythm is audible
+
+Those are the fit's own seeds. The first pass on the validation's seeds
+found the one thing the fit could not see: level 63, fitted to 48 moves
+and 80%, played at 10%. A collect goal was sized from the move budget,
+so the level was built with a 48-move goal on those 48 moves — the goal
+had chased the budget. Collect goals are sized from the model's budget
+now, which is the budget the fit varied against. Played again on the
+validation's seeds, ten games a level in three slices of a hundred, the
+run misses by 14%, 12% and 13% against 16% of sampling noise, with a
+bias of -3%, +3% and +2%; the relief levels clear 78% and the gates 55%.
+On target as far as ten games can see, which is the first time that
+sentence has been true past level sixty. The thirty gates, which are
+the levels a wrong number costs the most on, were fitted again at forty
+games and validated at thirty: mean miss 10% and 11% against 9% of
+noise. What is left is the deal: a bramble or crate level can swing
+twenty points between one family of seeds and another, and level 100
+measured 60%, 27% and 45% on three of them before it was fitted at
+eighty games and settled at 57%.
+
+Fourteen levels could not be fitted by the budget alone, and all
+fourteen were crate levels: at six tenths of their moves the player
+still cleared them nine times in ten, because of where the crates lay —
+a band of crates under a full board is cleared by the cascades of
+whatever falls through it, and the budget was not the lever. So the fit
+has a second lever, the goal itself, which grows by a quarter at a time
+until the budget can steer again; twelve took one step and two took
+two. One bramble gate, level 130, went the other way — nobody cleared
+it at twice its budget — and it keeps a little over half its patch on a
+long budget, which lands it on its target and makes it the one level in
+three hundred the fit is not proud of. `MODEL_BIAS` in 11-design.js is
+near zero now and only reaches the daily walk and any level past 360.
+
+## The first move, performed
+
+The first level opened with two cards of text and then a board. A
+person who has never played has not stopped because they are thinking;
+they have stopped because they do not know what a move looks like, and
+two rings around two tiles — which is what the hint was — say "these"
+without saying "do this". On the first three levels the hint is a hand
+now: it presses one tile, slides it onto the other, lets go, and does it
+again, two seconds a cycle. On level one it arrives the moment the last
+card closes, rather than after the idle wait that exists for somebody
+who has stopped; a touch anywhere sends it away and three seconds of
+stillness bring it back. With motion reduced it rests at the midpoint,
+pressed, which still says which two tiles and which way.
+
+## Forty-four translations the table had never heard of
+
+`LANG === 'tr' ? 'Kapalı' : 'Off'`, forty-four times, in the code beside
+the thing it labelled. `test/strings.js` checks the string table — a key
+in one language and not the other, a placeholder dropped in
+translation, a string nothing asks for — and none of these were in the
+table, so nothing checked them. Twenty-two of the forty-four pick a
+field off a record (`b.tr : b.en`) and are the table's own shape; the
+rest were literals, and they are keys now. The test fails on any
+`LANG === 'tr' ?` that is followed by a quote, so the count stays at
+zero.
+
+## The tray was painted every frame
+
+The board sits in a wooden tray: a gradient frame, seven grain lines, a
+bevel, four brass studs with a gradient each. It was painted on every
+frame, under a board that only ever moves with the camera. It is painted
+once per layout now, into its own canvas, and stamped; the companion's
+face on the rail, fourteen gradients on a fifty-pixel canvas, is drawn
+every other frame with the skipped frame's time carried so the blink
+clock keeps true time. And the map drew the whole lane on every scroll
+frame — four hundred grass blades, forty ellipses, three hundred road
+segments stroked three times — under a viewport that shows a tenth of
+it. It draws what is on screen now; the dice are still rolled for every
+piece, so it is the same picture.
+
+    play frame, level 8, desktop      0.64 ms  ->  0.55 ms
+    map redraw at level 300, desktop  5.7 ms   ->  3.0 ms
+
+The desktop is where it was measured and the phone is where it matters;
+the phone is still unmeasured by me.
+
+## Six animals, two voices
+
+Every cat was one meow and every dog one bark, told apart by the stage's
+pitch alone. Each breed has a voice now — a pitch, a vowel and a length:
+the ginger tabby is low, long and grumbling, the void is a short high
+mew, the Siamese is the long nasal yowl the breed is known for; the
+retriever is deep, the beagle bays, the pug yaps. The breed picker in the
+onboarding plays it, which is the moment it is for.
+
+## Three smaller things
+
+A save that could not be read used to be thrown away: the fresh save
+that replaced it was written over the broken one at the next move, and
+there was nothing left to repair. The broken blob is kept under its own
+key and the player is told once. Tested by corrupting the blob in the
+browser: onboarding, the toast, and the copy where it should be.
+
+A seven-chain looked exactly like a three-chain with a different word on
+it — the pitch climbed and the pulse deepened three percent a step, and
+nothing a player looks at got bigger. The word grows with the chain now,
+seventeen to thirty-two pixels, and from four on the camera punches and
+the board shakes with it.
+
+The small print — chip captions, pills, section hints — was 12.5px. It
+is 13px.
+
+## One loop for six stretches
+
+The music was one progression at one tempo for the whole game, under a
+scene that changes every ten levels. Each stretch has its own mood now —
+a progression, a tempo, where the bass falls, the voice and the rate of
+the bell — keyed by the chapter the level is on, and taken up on the
+next downbeat so a chord never changes under itself; off the board the
+loop follows the player's own place on the lane. The doorstep is the
+loop as it was, and coming home is the same loop, slower and quieter,
+which is the one thing a player who has walked the whole lane will
+recognise.

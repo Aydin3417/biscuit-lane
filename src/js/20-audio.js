@@ -537,50 +537,53 @@ const SFX = {
   /* ---- animals ----
      Two formants over a moving source: the cheapest way to make a
      synth sound like it came out of a throat.                    */
-  meow(pitch) {
+  /* `voice` is the breed's — see BREEDS: a formant multiplier for the
+     vowel and a length multiplier for how long the animal goes on */
+  meow(pitch, voice) {
     if (!sfxOn()) return;
-    if (!claimVoice(.55)) return;
+    const v = voice || {}, fm = v.formant || 1, L = v.len || 1;
+    if (!claimVoice(.55 * L)) return;
     const base = 460 * (pitch || 1);
     const c = AU.ctx, t = c.currentTime;
     const osc = c.createOscillator();
     const g = c.createGain();
     osc.type = 'sawtooth';
     osc.frequency.setValueAtTime(base * .74, t);
-    osc.frequency.linearRampToValueAtTime(base * 1.24, t + .13);
-    osc.frequency.linearRampToValueAtTime(base * .70, t + .44);
+    osc.frequency.linearRampToValueAtTime(base * 1.24, t + .13 * L);
+    osc.frequency.linearRampToValueAtTime(base * .70, t + .44 * L);
     /* vibrato */
     const lfo = c.createOscillator(), lg = c.createGain();
     lfo.frequency.value = 17; lg.gain.value = base * .035;
-    lfo.connect(lg); lg.connect(osc.frequency); lfo.start(t); lfo.stop(t + .5);
+    lfo.connect(lg); lg.connect(osc.frequency); lfo.start(t); lfo.stop(t + .5 * L);
     /* two formants sweeping from "ee" towards "ow" */
     const f1 = c.createBiquadFilter(), f2 = c.createBiquadFilter();
     f1.type = 'bandpass'; f1.Q.value = 6;
-    f1.frequency.setValueAtTime(720, t);
-    f1.frequency.linearRampToValueAtTime(520, t + .42);
+    f1.frequency.setValueAtTime(720 * fm, t);
+    f1.frequency.linearRampToValueAtTime(520 * fm, t + .42 * L);
     f2.type = 'bandpass'; f2.Q.value = 8;
-    f2.frequency.setValueAtTime(2100, t);
-    f2.frequency.linearRampToValueAtTime(1150, t + .42);
+    f2.frequency.setValueAtTime(2100 * fm, t);
+    f2.frequency.linearRampToValueAtTime(1150 * fm, t + .42 * L);
     const m1 = c.createGain(), m2 = c.createGain();
     m1.gain.value = 1.6; m2.gain.value = .85;
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(.30, t + .05);
-    g.gain.exponentialRampToValueAtTime(.21, t + .28);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + .5);
+    g.gain.exponentialRampToValueAtTime(.21, t + .28 * L);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + .5 * L);
     osc.connect(f1); osc.connect(f2);
     f1.connect(m1); f2.connect(m2);
     m1.connect(g); m2.connect(g);
     outputChain(g, { send: .3 });
-    osc.start(t); osc.stop(t + .52);
+    osc.start(t); osc.stop(t + .52 * L);
   },
 
-  bark(pitch) {
-    const p = pitch || 1;
+  bark(pitch, voice) {
+    const p = pitch || 1, L = (voice && voice.len) || 1;
     /* the shape of a bark is a hard consonant then a short vowel */
-    noiseBurst({ fc: 900 * p, fc2: 380 * p, dur: .12, gain: .28, filter: 'bandpass', q: 2.2, send: .22 });
-    tone({ f: 210 * p, f2: 118 * p, dur: .14, type: 'sawtooth', gain: .20, filter: 'lowpass', fc: 1100, send: .2 });
-    tone({ f: 420 * p, f2: 260 * p, dur: .11, type: 'triangle', gain: .09 });
-    noiseBurst({ fc: 700 * p, fc2: 320 * p, dur: .1, gain: .13, filter: 'bandpass', q: 2.2, delay: .17, send: .25 });
-    tone({ f: 195 * p, f2: 120 * p, dur: .12, type: 'sawtooth', gain: .1, filter: 'lowpass', fc: 1000, delay: .17 });
+    noiseBurst({ fc: 900 * p, fc2: 380 * p, dur: .12 * L, gain: .28, filter: 'bandpass', q: 2.2, send: .22 });
+    tone({ f: 210 * p, f2: 118 * p, dur: .14 * L, type: 'sawtooth', gain: .20, filter: 'lowpass', fc: 1100, send: .2 });
+    tone({ f: 420 * p, f2: 260 * p, dur: .11 * L, type: 'triangle', gain: .09 });
+    noiseBurst({ fc: 700 * p, fc2: 320 * p, dur: .1 * L, gain: .13, filter: 'bandpass', q: 2.2, delay: .17 * L, send: .25 });
+    tone({ f: 195 * p, f2: 120 * p, dur: .12 * L, type: 'sawtooth', gain: .1, filter: 'lowpass', fc: 1000, delay: .17 * L });
   },
 
   purr() {
@@ -654,18 +657,41 @@ const SFX = {
 function petVoice(p, pitch) {
   if (!p) return;
   const st = petStageIdx(p);
-  const k = (pitch || 1) * (st === 0 ? 1.28 : st === 1 ? 1.1 : .95);
-  if (petBreed(p).species === 'cat') SFX.meow(k); else SFX.bark(k);
+  const breed = petBreed(p), v = breed.voice || {};
+  const k = (pitch || 1) * (v.pitch || 1) * (st === 0 ? 1.28 : st === 1 ? 1.1 : .95);
+  if (breed.species === 'cat') SFX.meow(k, v); else SFX.bark(k, v);
 }
 
 /* ============================================================
    Music — a slow lamp-lit loop, scheduled against the audio clock
    so it does not drift when the tab is busy drawing.
    ============================================================ */
-const CHORDS = [
-  [-5, 0, 4, 7], [-7, -2, 2, 5], [-3, 2, 5, 9], [-5, 0, 4, 11]
-];
-const MUS = { next: 0, look: .12, beat: .52 };
+/* Six stretches, six moods.
+
+   The loop was one progression at one tempo for the whole game. The
+   scene changes every ten levels; music that never does is a picture
+   with the wrong soundtrack under it. Each stretch has its own
+   progression, its own tempo, where the bass falls, and the voice and
+   the rate of the bell, keyed by the chapter's id in CHAPTERS. The
+   doorstep is the loop as it was, and coming home is the same loop,
+   slower and quieter — the one thing a player who has walked the whole
+   lane will recognise. A change is taken up at the next bar, so a
+   chord never changes under itself. */
+const MOODS = {
+  doorstep: { chords: [[-5, 0, 4, 7], [-7, -2, 2, 5], [-3, 2, 5, 9], [-5, 0, 4, 11]], beat: .52, bell: 'sine', rate: .42, bass: [0, 2] },
+  allot:    { chords: [[0, 4, 7, 11], [-3, 0, 4, 7], [-5, 0, 4, 9], [-7, -3, 2, 5]], beat: .48, bell: 'triangle', rate: .5, bass: [0, 3] },
+  common:   { chords: [[-7, -2, 2, 5], [-5, 0, 4, 7], [-3, 2, 5, 9], [-10, -3, 0, 4]], beat: .56, bell: 'sine', rate: .34, bass: [0, 2] },
+  canal:    { chords: [[-3, 0, 4, 7], [-5, -1, 2, 7], [-8, -3, 0, 4], [-7, -2, 2, 5]], beat: .54, bell: 'sine', rate: .4, bass: [0, 2] },
+  orchard:  { chords: [[-5, 0, 4, 7], [-1, 2, 5, 9], [-3, 0, 4, 7], [-7, -2, 2, 5]], beat: .5, bell: 'triangle', rate: .46, bass: [0, 3] },
+  home:     { chords: [[-5, 0, 4, 7], [-7, -2, 2, 5], [-3, 2, 5, 9], [-5, 0, 4, 11]], beat: .58, bell: 'sine', rate: .3, bass: [0, 2] }
+};
+const MUS = { next: 0, look: .12, beat: .52, mood: MOODS.doorstep, pending: null };
+
+/* the stretch this level is on decides what the loop plays next bar */
+function musicMood(n) {
+  const m = MOODS[chapterOf(n).id] || MOODS.doorstep;
+  MUS.pending = m === MUS.mood ? null : m;
+}
 
 function musicStart() {
   audioInit();
@@ -676,6 +702,10 @@ function musicStart() {
   g.setValueAtTime(g.value, t0);
   g.linearRampToValueAtTime(MUS_BED, t0 + 1.4);
   AU.step = 0;
+  /* start in the stretch the player is on, not the one the loop was in */
+  if (typeof SAVE !== 'undefined' && SAVE) musicMood(SAVE.reached);
+  if (MUS.pending) { MUS.mood = MUS.pending; MUS.pending = null; }
+  MUS.beat = MUS.mood.beat;
   MUS.next = AU.ctx.currentTime + .1;
   const tick = () => {
     if (!AU.musicOn) return;
@@ -691,12 +721,19 @@ function musicStart() {
 
 function musicBeat(t) {
   const c = AU.ctx;
-  const bar = Math.floor(AU.step / 4) % CHORDS.length;
-  const ch = CHORDS[bar];
+  /* a new stretch is taken up on the downbeat, from its first chord */
+  if (MUS.pending && AU.step % 4 === 0) {
+    MUS.mood = MUS.pending; MUS.pending = null;
+    MUS.beat = MUS.mood.beat;
+    AU.step = 0;
+  }
+  const mood = MUS.mood;
+  const bar = Math.floor(AU.step / 4) % mood.chords.length;
+  const ch = mood.chords[bar];
   const s = AU.step % 4;
 
-  /* bass on 1 and 3 */
-  if (s === 0 || s === 2) {
+  /* the bass, where the stretch puts it */
+  if (mood.bass.indexOf(s) >= 0) {
     const o = c.createOscillator(), g = c.createGain();
     o.type = 'sine'; o.frequency.value = semi(ch[0] - 12);
     g.gain.setValueAtTime(0.0001, t);
@@ -722,10 +759,10 @@ function musicBeat(t) {
     });
   }
   /* a bell that wanders, more often when the board is busy */
-  if (Math.random() < .42 + AU.intensity * .2) {
+  if (Math.random() < mood.rate + AU.intensity * .2) {
     const n = ch[1 + Math.floor(Math.random() * 3)] + 12;
     const o = c.createOscillator(), g = c.createGain();
-    o.type = 'sine'; o.frequency.value = semi(n);
+    o.type = mood.bell; o.frequency.value = semi(n);
     g.gain.setValueAtTime(0.0001, t + .06);
     g.gain.exponentialRampToValueAtTime(.075, t + .1);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);

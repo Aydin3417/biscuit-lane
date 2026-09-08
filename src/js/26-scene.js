@@ -1139,6 +1139,37 @@ function drawHintRing(c, cx, cy, s, t, col) {
   c.restore();
 }
 
+/* A pointing hand, fingertip at (x, y). Over the hint on the opening
+   levels it presses one tile and slides to the other: two rings say
+   "these two", a hand says "do this", and on a board a person has never
+   touched that is the difference between a first move and a first
+   session ending. `press` is how far down the finger is, 0..1. */
+function drawGuideHand(c, x, y, s, press, alpha) {
+  c.save();
+  c.globalAlpha = alpha === undefined ? 1 : alpha;
+  c.translate(x, y);
+  /* the touch itself, under the fingertip */
+  if (press > 0) {
+    c.fillStyle = rgba('#FFFFFF', .45 * press);
+    c.beginPath(); c.arc(0, 0, s * (.16 + .1 * press), 0, Math.PI * 2); c.fill();
+  }
+  const k = 1 - press * .08;
+  c.scale(k, k);
+  c.rotate(-.32);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  c.shadowColor = 'rgba(40,30,20,.3)'; c.shadowBlur = s * .1; c.shadowOffsetY = s * .05;
+  c.fillStyle = '#FFF3E4'; c.strokeStyle = '#2A2118'; c.lineWidth = Math.max(1.5, s * .045);
+  /* the palm and the thumb sit below the finger; the finger's tip is the origin */
+  rr(c, -s * .13, s * .36, s * .48, s * .38, s * .13); c.fill(); c.stroke();
+  rr(c, -s * .26, s * .44, s * .16, s * .26, s * .08); c.fill(); c.stroke();
+  rr(c, -s * .095, 0, s * .19, s * .52, s * .095); c.fill(); c.stroke();
+  /* the folded fingers, as three short lines on the palm */
+  c.beginPath();
+  for (let i = 0; i < 3; i++) { const fx = s * (.1 + i * .1); c.moveTo(fx, s * .4); c.lineTo(fx, s * .56); }
+  c.stroke();
+  c.restore();
+}
+
 /* ---------------- scenery pieces ---------------- */
 /* Two trees, chosen by position so a given tree is always the same
    tree. A lane lined with one silhouette repeated at three sizes reads

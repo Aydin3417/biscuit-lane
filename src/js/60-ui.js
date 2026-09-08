@@ -48,6 +48,7 @@ function setScreen(name) {
   $('#topbar').style.display = inGame ? 'none' : '';
   $('#tabbar').style.display = inGame ? 'none' : '';
   if (name === 'home') { renderHome(); roomLayout(); roomStart(); } else roomStop();
+  if (!inGame) musicMood(SAVE.reached);
   if (name === 'game') {
     layoutBoard(); gameLoopStart();
     /* so the arrow keys reach the board straight away */
@@ -235,7 +236,7 @@ function renderHome() {
   const pad = $('#homePad');
   if (!pet) { pad.innerHTML = ''; return; }
   $('#petName').textContent = pet.name;
-  $('#petMeta').textContent = breedName(pet.breed) + ' · ' + (LANG === 'tr' ? 'Bağ ' : 'Bond ') + pet.bond;
+  $('#petMeta').textContent = breedName(pet.breed) + ' · ' + T('ui_bond') + ' ' + pet.bond;
   $('#petStage').textContent = stageName(pet);
 
   const perks = perksFor(pet);
@@ -352,7 +353,7 @@ function renderHome() {
         <span class="hint">${T('home_bond_hint', { lv: pet.bond, have: fmtXp(pet.bondXp), need: bondNeed(pet.bond) })}</span></div>
       <div class="bar"><i style="width:${bondPct}%;background:linear-gradient(90deg,var(--rose),var(--accent))"></i></div>
       <div class="divide"></div>
-      <div class="eyebrow">${LANG === 'tr' ? 'Karakter' : 'Who they are'}</div>
+      <div class="eyebrow">${T('prof_who')}</div>
       ${pet.trait
       ? `<div style="font-size:var(--t-small)"><b style="font-family:Grandstander,sans-serif">${traitName(pet.trait)}.</b>
          <span style="color:var(--text-dim)">${traitDesc(pet.trait)}</span></div>`
@@ -821,7 +822,7 @@ function shopFood() {
     </div>`).join('')}</div>`;
 }
 function shopToys() {
-  return `<div class="sectitle"><h3>${T('shop_toys')}</h3><span class="hint">${LANG === 'tr' ? 'En iyisi kullanılır' : 'The best one gets used'}</span></div>
+  return `<div class="sectitle"><h3>${T('shop_toys')}</h3><span class="hint">${T('shop_toys_hint')}</span></div>
   <div class="grid2">${TOYS.map(t => {
     const owned = !!SAVE.toys[t.id];
     return `<div class="good ${owned ? 'owned' : ''}">
@@ -847,7 +848,7 @@ function shopBoost() {
 function shopStyle() {
   const pet = activePet();
   return `
-  <div class="sectitle"><h3>${LANG === 'tr' ? 'Şapkalar' : 'Hats'}</h3><span class="hint">${pet ? pet.name : ''}</span></div>
+  <div class="sectitle"><h3>${T('shop_hats')}</h3><span class="hint">${pet ? pet.name : ''}</span></div>
   <div class="grid3">${HATS.map(h => {
     const owned = !!SAVE.hats[h.id];
     const worn = pet && pet.hat === h.id;
@@ -859,7 +860,7 @@ function shopStyle() {
         : `<button class="btn sm price" data-buy="${h.id}" data-kind="hat">${T('shop_buy')} ${priceTag(h.cost)}</button>`}
     </div>`;
   }).join('')}</div>
-  <div class="sectitle"><h3>${LANG === 'tr' ? 'Tasmalar' : 'Collars'}</h3></div>
+  <div class="sectitle"><h3>${T('shop_collars')}</h3></div>
   <div class="grid3">${COLLARS.map(h => {
     const owned = !!SAVE.collars[h.id];
     const worn = pet && pet.collar === h.id;
@@ -874,7 +875,7 @@ function shopStyle() {
 }
 function shopRoom() {
   return `
-  <div class="sectitle"><h3>${LANG === 'tr' ? 'Eşya' : 'Things'}</h3></div>
+  <div class="sectitle"><h3>${T('shop_things')}</h3></div>
   <div class="grid2">${FURNITURE.map(f => {
     const owned = !!SAVE.furniture[f.id];
     const placed = SAVE.room.placed.indexOf(f.id) >= 0;
@@ -887,8 +888,8 @@ function shopRoom() {
         : `<button class="btn sm price" data-buy="${f.id}" data-kind="furniture">${T('shop_buy')} ${priceTag(f.cost)}</button>`}
     </div>`;
   }).join('')}</div>
-  <div class="sectitle"><h3>${LANG === 'tr' ? 'Hatıra' : 'Keepsakes'}</h3>
-    <span class="hint">${LANG === 'tr' ? 'senin hayvanından yapılmış' : 'made from your own animal'}</span></div>
+  <div class="sectitle"><h3>${T('shop_keeps')}</h3>
+    <span class="hint">${T('shop_keeps_hint')}</span></div>
   <div class="grid2">${KEEPSAKES.map(k => {
     const owned = !!SAVE.keepsakes[k.id];
     const placed = SAVE.room.placed.indexOf(k.id) >= 0;
@@ -901,7 +902,7 @@ function shopRoom() {
         : `<button class="btn sm price" data-buy="${k.id}" data-kind="keepsake">${T('shop_buy')} ${priceTag(k.cost, true)}</button>`}
     </div>`;
   }).join('')}</div>
-  <div class="sectitle"><h3>${LANG === 'tr' ? 'Duvar' : 'Walls'}</h3></div>
+  <div class="sectitle"><h3>${T('shop_walls')}</h3></div>
   <div class="grid2">${ROOM_THEMES.map(t => {
     const owned = !!SAVE.roomThemes[t.id];
     const on = SAVE.room.theme === t.id;
@@ -926,7 +927,7 @@ function buyThing(id, kind) {
                  keepsake: SAVE.keepsakes }[kind];
   if (once && once[id]) return;
   if (item.treat) {
-    if (SAVE.treats < item.cost) { SFX.bad(); toast(LANG === 'tr' ? 'Ödül yetmiyor' : 'Not enough treats', 'treat'); return; }
+    if (SAVE.treats < item.cost) { SFX.bad(); toast(T('toast_treats'), 'treat'); return; }
     SAVE.treats -= item.cost;
   } else {
     if (SAVE.coins < item.cost) { SFX.bad(); toast(T('shop_poor'), 'coin'); return; }
@@ -1006,7 +1007,7 @@ function renderFamily() {
         <canvas data-body="${p.breed}" data-coat="${p.coat}" data-eye="${petEye(p)}" data-hat="${p.hat}" data-collar="${p.collar}" data-stage="${petStageIdx(p)}" width="56" height="56"></canvas>
         <span class="info" style="text-align:left">
           <span class="nm">${p.name}</span>
-          <span class="br">${breedName(p.breed)} · ${stageName(p)} · ${LANG === 'tr' ? 'bağ' : 'bond'} ${p.bond}</span>
+          <span class="br">${breedName(p.breed)} · ${stageName(p)} · ${T('ui_bond_l')} ${p.bond}</span>
           <span class="statPills">
             <span class="pill ${p.food > 55 ? 'ok' : p.food > 25 ? 'warn' : 'bad'}" title="${T('st_food')}">${IC.bowl}${Math.round(p.food)}</span>
             <span class="pill ${p.joy > 55 ? 'ok' : p.joy > 25 ? 'warn' : 'bad'}" title="${T('st_joy')}">${IC.heart}${Math.round(p.joy)}</span>
@@ -1505,7 +1506,7 @@ function openLevelIntro(n) {
       <span class="t"><b>${pet.name} · ${abilityName(pet)} · ${abilityPower(pet)}</b>
       ${perks.length
         ? `<span class="perkchips">${perkChips(perks).map(x => `<span class="pill ok">${x}</span>`).join('')}</span>`
-        : (LANG === 'tr' ? 'Bakımı desteği açar' : 'Care unlocks perks')}</span>
+        : T('care_perks')}</span>
     </div>
     <div class="goalItem">
       <canvas data-tile="${favType(def.types)}" width="34" height="34"></canvas>
@@ -1514,8 +1515,8 @@ function openLevelIntro(n) {
     <div class="eyebrow">${T('lvl_boosters')}</div>
     <button class="goalItem" id="pickMoves" style="width:100%">
       <span style="width:32px;display:grid;place-items:center;color:var(--accent-strong)">${IC.plusmove}</span>
-      <span class="t"><b>${LANG === 'tr' ? '+5 hamle' : '+5 moves'}</b>${T('shop_have', { n: SAVE.boosters.moves || 0 })}</span>
-      <span class="pill info" id="movesPill">${LANG === 'tr' ? 'Kapalı' : 'Off'}</span>
+      <span class="t"><b>${T('boost_moves')}</b>${T('shop_have', { n: SAVE.boosters.moves || 0 })}</span>
+      <span class="pill info" id="movesPill">${T('pill_off')}</span>
     </button>
     <div class="row">
       <button class="btn ghost" id="liCancel">${T('cancel')}</button>
@@ -1525,11 +1526,11 @@ function openLevelIntro(n) {
   paintArtCanvases(m.el);
   paintGoalIcons(m.el);
   $('#pickMoves', m.el).addEventListener('click', () => {
-    if (!(SAVE.boosters.moves > 0)) { SFX.bad(); toast(LANG === 'tr' ? 'Elinde yok' : 'You have none', 'plusmove'); return; }
+    if (!(SAVE.boosters.moves > 0)) { SFX.bad(); toast(T('toast_none'), 'plusmove'); return; }
     useMoves = !useMoves;
     SFX.tap();
     const pill = $('#movesPill', m.el);
-    pill.textContent = useMoves ? (LANG === 'tr' ? 'Açık' : 'On') : (LANG === 'tr' ? 'Kapalı' : 'Off');
+    pill.textContent = useMoves ? T('pill_on') : T('pill_off');
     pill.className = 'pill ' + (useMoves ? 'ok' : 'info');
   });
   $('#liCancel', m.el).addEventListener('click', m.close);
@@ -2338,7 +2339,7 @@ function openSettings() {
         <span class="lb">${T('set_lang')}</span>
         <span class="seg" id="segLang">
           <button data-lang="en" class="${LANG === 'en' ? 'on' : ''}">English</button>
-          <button data-lang="tr" class="${LANG === 'tr' ? 'on' : ''}">Türkçe</button>
+          <button data-lang="tr" class="${'tr' === LANG ? 'on' : ''}">Türkçe</button>
         </span>
       </div>
     </div>
@@ -2346,9 +2347,9 @@ function openSettings() {
     <button class="btn ghost wide" id="setKeys">${T('a11y_help_t')}</button>
     <div style="font-size:var(--t-micro);color:var(--text-faint);line-height:1.5">${T('set_credits')}</div>
     <div style="font-size:var(--t-micro);color:var(--text-faint);display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-      <span>${LANG === 'tr' ? 'Oynanan' : 'Played'}: <b class="num">${SAVE.stats.played}</b></span>
-      <span>${LANG === 'tr' ? 'Geçilen' : 'Cleared'}: <b class="num">${SAVE.stats.cleared}</b></span>
-      <span>${LANG === 'tr' ? 'En iyi kombo' : 'Best combo'}: <b class="num">x${SAVE.stats.bestCombo || 0}</b></span>
+      <span>${T('set_played')}: <b class="num">${SAVE.stats.played}</b></span>
+      <span>${T('set_cleared')}: <b class="num">${SAVE.stats.cleared}</b></span>
+      <span>${T('set_bestcombo')}: <b class="num">x${SAVE.stats.bestCombo || 0}</b></span>
     </div>
     <button class="btn ghost wide" id="setReset" style="color:var(--rose)">${T('set_reset')}</button>
     <button class="btn primary wide" id="setClose">${T('close')}</button>
@@ -2470,7 +2471,7 @@ function maybeTutorial(def) {
     steps.push({ k: 'mole', text: T('tut_mole'), art: 'mole' });
   }
   if (def.goals.some(g => g[0] === GK.RESCUE) && !SAVE.seen.rescue) {
-    steps.push({ k: 'rescue', text: LANG === 'tr' ? 'Sepetteki minikleri en alt sıraya indir; kapıdan çıkıp eve girerler.' : 'Walk the little ones down to the bottom row and they are home.' });
+    steps.push({ k: 'rescue', text: T('tut_rescue') });
   }
   /* the three that arrived with no explanation at all */
   const onMap = def.map ? def.map.join('') : '';
@@ -2484,7 +2485,10 @@ function maybeTutorial(def) {
   if (!steps.length) return;
   let i = 0;
   const show = () => {
-    if (i >= steps.length) return;
+    /* the last card has just closed on a board the player has never
+       touched; the hint, with its hand, is due now rather than after
+       the idle wait */
+    if (i >= steps.length) { nudgeHint(); return; }
     const s = steps[i++];
     SAVE.seen[s.k] = 1; persist();
     const m = modal(`
@@ -2603,7 +2607,7 @@ function runOnboarding() {
     const nx = $('#obNext'); if (nx) nx.addEventListener('click', next);
     const bk = $('#obBack'); if (bk) bk.addEventListener('click', () => { step--; SFX.tap(); render(); });
   };
-  const petVoiceBreed = i => { if (BREEDS[i].species === 'cat') SFX.meow(1.25); else SFX.bark(1.2); };
+  const petVoiceBreed = i => { const b = BREEDS[i], v = b.voice || {}; if (b.species === 'cat') SFX.meow(1.25 * (v.pitch || 1), v); else SFX.bark(1.2 * (v.pitch || 1), v); };
   let adopted = false;
   const next = () => {
     audioResume();

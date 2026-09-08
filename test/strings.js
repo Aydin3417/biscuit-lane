@@ -85,6 +85,17 @@ const reached = k => mentions(other, k) || families.some(f => k.indexOf(f) === 0
    about; neither is worth failing a build over on its own. */
 const orphans = keys[base].filter(k => !reached(k));
 
+/* A translation written into the code beside its English —
+   `LANG === 'tr' ? 'Kapalı' : 'Off'` — is a string this table has never
+   heard of, so nothing above can check it. The audit found forty-four.
+   A `LANG === 'tr'` that picks a field (`b.tr : b.en`) is the table's
+   own shape and stays; one followed by a quote is a literal, and fails. */
+fs.readdirSync(path.join(root, 'js')).filter(f => f.endsWith('.js')).forEach(f => {
+  fs.readFileSync(path.join(root, 'js', f), 'utf8').split('\n').forEach((line, i) => {
+    if (/LANG === 'tr'\s*\?\s*['"`][^\s]/.test(line)) faults.push('kodun içine yazılmış çeviri: ' + f + ':' + (i + 1));
+  });
+});
+
 console.log(LANGS.map(c => c + ' ' + keys[c].length).join(' / ') + ' anahtar');
 if (orphans.length) console.log('kimsenin istemediği (' + orphans.length + '): ' + orphans.join(', '));
 faults.forEach(f => console.log('  ✗ ' + f));

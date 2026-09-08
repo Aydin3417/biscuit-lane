@@ -479,11 +479,23 @@ function drawMap() {
   c.strokeStyle = PAL.dark ? '#4A6B48' : '#8FAE6E';
   c.lineWidth = 1.6; c.lineCap = 'round';
   const rr2 = mulberry(99);
+  /* Only what is on screen.
+
+     Every one of these loops drew the whole scroll — four hundred
+     blades, forty ellipses, a flower bed every two hundred and sixty
+     pixels, three hundred road segments stroked three times — under a
+     viewport that shows a tenth of it, on every scroll frame, and the
+     map was the slowest screen in the game at six and a half
+     milliseconds a frame on a desktop. The dice are still rolled for
+     every piece so the picture is the same picture; only the drawing
+     is skipped. */
+  const onScreen = (y, m) => y >= off - m && y <= off + H + m;
   for (let i = 0; i < 420; i++) {
-    const x = rr2() * W, y = rr2() * total, len = 4 + rr2() * 7;
+    const x = rr2() * W, y = rr2() * total, len = 4 + rr2() * 7, dx = (rr2() - .5) * 4;
+    if (!onScreen(y, 14)) continue;
     c.beginPath();
     c.moveTo(x, y);
-    c.lineTo(x + (rr2() - .5) * 4, y - len);
+    c.lineTo(x + dx, y - len);
     c.stroke();
   }
   c.restore();
@@ -496,8 +508,10 @@ function drawMap() {
   for (let i = 0; i < Math.ceil(total / 90) + 6; i++) {
     const x = pr() * W, y = pr() * total;
     const rx = 46 + pr() * 78, ry = 26 + pr() * 40;
-    c.globalAlpha = .07 + pr() * .07;
-    c.fillStyle = pr() > .45
+    const a = .07 + pr() * .07, deep = pr() > .45;
+    if (!onScreen(y, ry)) continue;
+    c.globalAlpha = a;
+    c.fillStyle = deep
       ? (PAL.dark ? '#2C4430' : '#8FB673')
       : (PAL.dark ? '#16241A' : '#CBDDA9');
     ellipse(c, x, y, rx, ry); c.fill();
@@ -510,6 +524,7 @@ function drawMap() {
     const petal = pr() > .5 ? (PAL.dark ? '#9BA9C0' : '#EFE4C4') : (PAL.dark ? '#8F82AA' : '#E5CB84');
     for (let k = 0; k < 3 + (pr() * 3 | 0); k++) {
       const x = cx2 + (pr() - .5) * 46, y = cy2 + (pr() - .5) * 34;
+      if (!onScreen(y, 6)) continue;
       c.fillStyle = PAL.dark ? '#3E5C3C' : '#84A867';
       c.fillRect(x - .4, y, 1, 3.2);
       c.fillStyle = petal;
@@ -521,16 +536,27 @@ function drawMap() {
 
   /* ---- the road ---- */
   const laneOrder = MAP.nodes.slice().reverse();
+  /* the stretch of road on screen, with a node's grace at each end so
+     the joins fall outside the viewport; the road runs bottom to top,
+     so it is walked from the bottom */
+  let i0 = 0, i1 = laneOrder.length - 1;
+  while (i0 < i1 && laneOrder[i0].y > off + H + 200) i0++;
+  while (i1 > i0 && laneOrder[i1].y < off - 200) i1--;
+  i0 = Math.max(0, i0 - 1); i1 = Math.min(laneOrder.length - 1, i1 + 1);
   const lanePath = () => {
     c.beginPath();
-    laneOrder.forEach((n, i) => {
-      if (!i) { c.moveTo(n.x, n.y + 90); c.lineTo(n.x, n.y); return; }
+    for (let i = i0; i <= i1; i++) {
+      const n = laneOrder[i];
+      if (i === i0) {
+        if (i === 0) { c.moveTo(n.x, n.y + 90); c.lineTo(n.x, n.y); } else c.moveTo(n.x, n.y);
+        continue;
+      }
       const prev = laneOrder[i - 1];
       const my = lerp(prev.y, n.y, .5);
       c.bezierCurveTo(prev.x, my, n.x, my, n.x, n.y);
-    });
+    }
     const last = laneOrder[laneOrder.length - 1];
-    if (last) c.lineTo(last.x, last.y - 70);
+    if (last && i1 === laneOrder.length - 1) c.lineTo(last.x, last.y - 70);
     c.stroke();
   };
   c.save();
@@ -562,6 +588,10 @@ function drawMap() {
     let kind = Math.floor(r() * 5);
     for (let g = 0; g < 5 && lastKinds.indexOf(kind) >= 0; g++) kind = (kind + 1) % 5;
     lastKinds.push(kind); if (lastKinds.length > 2) lastKinds.shift();
+    /* the kind is decided for every node, on screen or not, because the
+       next node's kind depends on it: a tree that became a cottage as it
+       scrolled into view would be the rotation restarting */
+    if (!onScreen(n.y, 160)) return;
     /* clamped by the prop's own half width, or a cottage set near the
        edge hangs half of itself off the screen */
     const at = (d, half) => clamp(n.x + side * d, (half || 20) + 6, W - (half || 20) - 6);

@@ -47,7 +47,7 @@
      purpose, so turning the text up grows the words inside the boxes
      rather than pushing the layout apart. */
   --t-nano:        0.6875rem;   /* 11.0px at the default root */
-  --t-micro:       0.78125rem;  /* 12.5px */
+  --t-micro:       0.8125rem;   /* 13.0px — was 12.5, which a phone at arm's length read as a caption */
   --t-small:       0.875rem;    /* 14.0px */
   --t-body:        1rem;        /* 16.0px */
   --t-title:       1.125rem;    /* 18.0px */

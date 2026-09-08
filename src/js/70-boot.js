@@ -318,6 +318,7 @@ function boot() {
   /* If the window refuses to store anything the game still plays, and a
      whole evening of it disappears when the tab closes. Say so once. */
   if (!canStore()) setTimeout(() => toast(T('no_save'), 'lock'), 1400);
+  if (SAVE_BROKEN) setTimeout(() => toast(T('save_broken'), 'lock'), 1800);
 
   /* a heart on its way back gets a second hand from the start, not only
      after the player spends one */
@@ -380,6 +381,7 @@ window.BL = {
     /* the music schedules on a wall clock, which does not run in an
        offline context, so a harness has to place the beats itself */
     beat: musicBeat,
+    get mood() { return MUS.mood; },
     get step() { return AU.step; },
     set step(v) { AU.step = v; },
     reset() {

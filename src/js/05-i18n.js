@@ -321,7 +321,21 @@ const STRINGS = {
     how_bram: 'Brambles. Clear the tile on top, and be quick: they grow back.',
     how_basket: 'A basket. Clear a path under it and walk it down to the floor.',
     how_open: 'How to play',
-    tut_got: 'Got it'
+    tut_got: 'Got it',
+    /* the ones that were written straight into the code beside their
+       Turkish, found by the audit and brought into the table */
+    ui_bond: 'Bond', ui_bond_l: 'bond',
+    prof_who: 'Who they are',
+    shop_toys_hint: 'The best one gets used',
+    shop_hats: 'Hats', shop_collars: 'Collars', shop_things: 'Things', shop_walls: 'Walls',
+    shop_keeps: 'Keepsakes', shop_keeps_hint: 'made from your own animal',
+    toast_treats: 'Not enough treats', toast_none: 'You have none',
+    care_perks: 'Care unlocks perks',
+    boost_moves: '+5 moves', pill_on: 'On', pill_off: 'Off',
+    set_played: 'Played', set_cleared: 'Cleared', set_bestcombo: 'Best combo',
+    save_broken: 'Your save could not be read. A copy was kept and the game starts fresh.',
+    tut_rescue: 'Walk the little ones down to the bottom row and they are home.',
+    perk_move: '+{n} move', perk_moves: '+{n} moves'
   },
 
   tr: {
@@ -627,7 +641,19 @@ const STRINGS = {
     how_bram: 'Böğürtlen. Üstündeki taşı temizle, hem de çabuk: geri uzuyor.',
     how_basket: 'Sepet. Altını açıp yere kadar indir.',
     how_open: 'Nasıl oynanır',
-    tut_got: 'Anlaşıldı'
+    tut_got: 'Anlaşıldı',
+    ui_bond: 'Bağ', ui_bond_l: 'bağ',
+    prof_who: 'Karakter',
+    shop_toys_hint: 'En iyisi kullanılır',
+    shop_hats: 'Şapkalar', shop_collars: 'Tasmalar', shop_things: 'Eşya', shop_walls: 'Duvar',
+    shop_keeps: 'Hatıra', shop_keeps_hint: 'senin hayvanından yapılmış',
+    toast_treats: 'Ödül yetmiyor', toast_none: 'Elinde yok',
+    care_perks: 'Bakımı desteği açar',
+    boost_moves: '+5 hamle', pill_on: 'Açık', pill_off: 'Kapalı',
+    set_played: 'Oynanan', set_cleared: 'Geçilen', set_bestcombo: 'En iyi kombo',
+    save_broken: 'Kayıt okunamadı. Bir kopyası saklandı, oyun sıfırdan başlıyor.',
+    tut_rescue: 'Sepetteki minikleri en alt sıraya indir; kapıdan çıkıp eve girerler.',
+    perk_move: '+{n} hamle', perk_moves: '+{n} hamle'
   }
 };
 

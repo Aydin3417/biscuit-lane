@@ -326,6 +326,12 @@ function loadSave() {
 
     return SAVE.pets.length > 0;
   } catch (e) {
+    /* The blob is kept under its own key rather than left to be
+       overwritten by the fresh save that follows: nothing can be
+       repaired from a save that no longer exists, and the next
+       persist() would have replaced it. The player is told once. */
+    try { localStorage.setItem(SAVE_KEY + '.broken', raw); } catch (e2) { /* nothing to keep it in */ }
+    SAVE_BROKEN = true;
     SAVE = freshSave();
     return false;
   }
@@ -333,6 +339,7 @@ function loadSave() {
 
 let saveTimer = null;
 let SAVE_WIPED = false;          /* once the player resets, never write again */
+let SAVE_BROKEN = false;         /* the save on disk could not be read this launch */
 function persist(immediate) {
   if (SAVE_WIPED) return;
   if (saveTimer) clearTimeout(saveTimer);
@@ -815,7 +822,7 @@ function perkChips(perks) {
     if (p.id === 'traitnote') return;
     out.push(perkLabel(p));
   });
-  if (moves) out.unshift(LANG === 'tr' ? '+' + moves + ' hamle' : '+' + moves + ' move' + (moves > 1 ? 's' : ''));
+  if (moves) out.unshift(T(moves > 1 ? 'perk_moves' : 'perk_move', { n: moves }));
   return out;
 }
 

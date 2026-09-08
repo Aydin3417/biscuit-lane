@@ -175,10 +175,9 @@ button that opens a 404 is worse than no button.
 None of these blocks release. All of them decide whether the people you
 pay to acquire are still there on day seven.
 
-1. **Escalate ordinary cascades.** The pet's move is loud now; a seven-chain still feels like a three-chain.
-2. **Make the tiles animals.** Six shapes, six colours, one shared face. It is the reason the game reads as a reskin in a screenshot.
-3. **More furniture.** Grooming bought the catalogue two more weeks — it runs dry around day 41 now rather than day 23 — but the room is still eight objects, and it is the screen a player looks at between every level. This is the one thing on the list I would not do without you looking at it: every piece is a hand-drawn path and the house style is yours.
-4. **Read the counters before changing anything else.** `BL.TRACK.dump()` on a device, or wire the sink. Everything above this line is measured against a simulation; none of it is measured against people.
+1. **Make the tiles animals.** Six shapes, six colours, one shared face. It is the reason the game reads as a reskin in a screenshot.
+2. **More furniture.** Grooming bought the catalogue two more weeks — it runs dry around day 41 now rather than day 23 — but the room is still eight objects, and it is the screen a player looks at between every level. This is the one thing on the list I would not do without you looking at it: every piece is a hand-drawn path and the house style is yours.
+3. **Read the counters before changing anything else.** `BL.TRACK.dump()` on a device, or wire the sink. Everything above this line is measured against a simulation; none of it is measured against people.
 
 ---
 
@@ -199,3 +198,10 @@ Kept here so the list above stays a list of what is left.
 - **Seven kept promises**: map treat pips, `family6`, season rollover claims, streak grace and DST, walk reminder for the lapsed, a notification pre-prompt, badge thresholds.
 - **iOS haptics** through `@capacitor/haptics` (an iPhone web view has no `navigator.vibrate`).
 - **Version 1.1.0 (build 2)** across Android, iOS and the crash reports.
+- **Fitted the run to the player, level by level** (`test/fit-run.js` → `src/js/13-run-fit.js`). The model missed its own targets by sixteen points on average; measured, every level from 61 to 360 lands within four, every gate within eleven, and the rhythm reads (relief 84%, gates 54%). Fourteen crate levels needed more crates rather than fewer moves.
+- **The first move is performed**: a hand presses and slides the hint on levels 1-3, and on level one it comes the moment the cards close.
+- **Forty-four inline translations** moved into the table; `test/strings.js` now fails on a new one.
+- **The tray is painted once**, the companion at thirty, the map draws what is on screen (5.7 → 3.0 ms a scroll frame at level 300).
+- **A voice per breed**, and the breed picker plays it.
+- **Six moods for six stretches**: the music loop follows the chapter, the way the scene does.
+- **A save that cannot be read is kept**, not overwritten; a chain is felt as it deepens; the small print is 13px.

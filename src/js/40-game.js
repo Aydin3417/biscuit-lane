@@ -13,7 +13,7 @@ const G = {
   ctx: null, cw: 0, ch: 0,
   shake: 0, flash: 0,
   armed: null, armedFirst: null,
-  hintT: 0, hint: null,
+  hintT: 0, hint: null, hintAt: 0,
   rescued: 0, pupsWanted: 0,
   petMood: 'idle', petMoodT: 0, blink: 0, blinkT: 1.5,
   compCtx: null, lastT: 0, raf: null,
@@ -131,6 +131,29 @@ function pace(ms) {
    tray gets clipped by the canvas, which is exactly what happened the
    first time this was tried at 8. */
 const BOARD_PAD = 11;
+
+/* The tray, painted once per layout.
+
+   It was painted every frame: a gradient frame, seven grain lines, a
+   bevel, four brass studs with a gradient each, under a board that only
+   ever moves with the camera. Drawn into its own canvas at the board's
+   size and stamped from there; a change of size, theme or pixel ratio
+   paints it again. The shadow hangs one and a half pads below the
+   frame, so the canvas keeps that much margin all round. */
+let TRAY = { key: '', cv: null, w: 0, h: 0, m: 0 };
+function stampTray(c) {
+  const pad = BOARD_PAD, m = Math.ceil(pad * 1.7);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const key = [G.boardW, G.boardH, PAL.dark ? 1 : 0, dpr].join('|');
+  if (TRAY.key !== key) {
+    const w = Math.ceil(G.boardW + m * 2), h = Math.ceil(G.boardH + m * 2);
+    const cv = document.createElement('canvas');
+    const cc = fitCanvas(cv, w, h);
+    drawTray(cc, m, m, G.boardW, G.boardH, pad);
+    TRAY = { key, cv, w, h, m };
+  }
+  c.drawImage(TRAY.cv, G.ox - TRAY.m, G.oy - TRAY.m, TRAY.w, TRAY.h);
+}
 function boardCellFor(wrap, B) {
   if (!wrap || !B || wrap.clientWidth <= 0) return 0;
   return Math.max(22, Math.floor(Math.min(
@@ -269,6 +292,7 @@ function startLevel(n, opts) {
      sizing, not a level number, so the caller picks rather than the
      level table reaching into the save to find out how far you got */
   G.def = n === DAILY_LEVEL ? dailyLevel(SAVE.reached) : levelDef(n);
+  musicMood(n === DAILY_LEVEL ? SAVE.reached : n);
   const res = opts.resume || null;
   G.startedAt = res ? (res.startedAt || now()) : now();
   track('level_start', { n: n, moves: G.def.moves, tries: (SAVE.stats.played || 0), resumed: !!res });
@@ -929,7 +953,17 @@ async function clearGroups(groups, swapCells) {
       G.lastPraise = t;
       const first = groups[0].cells[0];
       const words = ['g_sweet', 'g_tasty', 'g_lovely', 'g_amazing', 'g_unreal'];
-      cellFloat(first[0], first[1], T(words[Math.min(words.length - 1, G.chain - 2)]), PAL.accent, 17);
+      /* The word grows with the chain, and from four on the camera
+         punches and the board shakes with it. A seven-chain used to
+         look exactly like a three-chain with a different word on it:
+         the pitch climbed, the pulse deepened by three percent a step,
+         and nothing a player looks at got bigger. */
+      const deep = Math.min(5, G.chain - 2);
+      cellFloat(first[0], first[1], T(words[Math.min(words.length - 1, G.chain - 2)]), PAL.accent, 17 + deep * 3);
+      if (G.chain >= 4 && !reduceMotion()) {
+        FX.punchZoom(.5 + deep * .15);
+        G.shake = Math.max(G.shake, 3 + deep);
+      }
     }
   }
   await blastWaves(keys, G.chain);
@@ -1758,7 +1792,7 @@ function renderGame(dt) {
   c.translate(-G.cw / 2, -G.ch / 2);
 
   /* the tray the board sits in */
-  drawTray(c, G.ox, G.oy, G.boardW, G.boardH, BOARD_PAD);
+  stampTray(c);
 
   /* cells */
   eachCell(B, (cell, r, c2) => {
@@ -1930,6 +1964,8 @@ function renderGame(dt) {
     G.hint.forEach(([r, c2]) => {
       drawHintRing(c, cellX(c2) + G.cell / 2, cellY(r) + G.cell / 2, G.cell, tsec, PAL.sage);
     });
+    /* on the first three levels the hint is performed, not just marked */
+    if (G.n > 0 && G.n <= 3) drawGuide(c, G.hint, tsec);
   }
   if (G.armedFirst) {
     const [r, c2] = G.armedFirst;
@@ -2034,7 +2070,7 @@ function renderGame(dt) {
      like yet, and five seconds of that is a first session ending. */
   if (!G.busy && !G.over) {
     G.hintT += dt;
-    if (G.hintT > (G.n > 0 && G.n <= 5 ? 3 : 5) && !G.hint) G.hint = bestHint();
+    if (G.hintT > (G.n > 0 && G.n <= 5 ? 3 : 5) && !G.hint) { G.hint = bestHint(); G.hintAt = performance.now() / 1000; }
   } else { G.hint = null; }
 
   drawCompanion(dt);
@@ -2095,6 +2131,32 @@ function hintScore(a, b) {
   const shape = best >= 5 ? 40 : best >= 4 ? 18 : best;
   return shape + wanted;
 }
+/* The hint is due now. The tutorial card has just closed on a board the
+   player has never touched, and the idle wait is for somebody who has
+   stopped, not somebody who has not started. */
+function nudgeHint() {
+  if (!G.over) G.hintT = 99;
+}
+
+/* The hint, performed: a hand presses the first tile, slides it onto
+   the second, lets go, and does it again. Two seconds a cycle, held at
+   the start so the eye finds the hand before it moves. With motion
+   reduced it rests at the midpoint, pressed, which still says which
+   two tiles and which way. */
+function drawGuide(c, hint, tsec) {
+  const [a, b] = hint;
+  const ax = cellX(a[1]) + G.cell / 2, ay = cellY(a[0]) + G.cell / 2;
+  const bx = cellX(b[1]) + G.cell / 2, by = cellY(b[0]) + G.cell / 2;
+  const cycle = 2, k = ((tsec - G.hintAt) % cycle) / cycle;
+  let u, press, alpha = 1;
+  if (k < .24) { u = 0; press = k / .24; }
+  else if (k < .64) { u = (k - .24) / .4; u = u * u * (3 - 2 * u); press = 1; }
+  else if (k < .82) { u = 1; press = 1 - (k - .64) / .18; }
+  else { u = 1; press = 0; alpha = 1 - (k - .82) / .18; }
+  if (reduceMotion()) { u = .5; press = 1; alpha = 1; }
+  drawGuideHand(c, ax + (bx - ax) * u + G.cell * .04, ay + (by - ay) * u + G.cell * .06, G.cell * .92, press, alpha);
+}
+
 function bestHint() {
   const moves = allMoves(G.B);
   if (!moves.length) return null;
@@ -2108,6 +2170,16 @@ function bestHint() {
 
 /* the pet on the rail, watching */
 function drawCompanion(dt) {
+  /* Every other frame. The face is fourteen gradients on a fifty-pixel
+     canvas, and at sixty a second it was the most expensive still thing
+     on the play screen; at thirty, a bob of a pixel and a blink read no
+     differently. The skipped frame's time is carried forward, so the
+     blink clock keeps true time. The pet's own move is the one moment
+     the face is fast, and it is drawn every frame. */
+  G.compDt = (G.compDt || 0) + dt;
+  G.compFrame = (G.compFrame || 0) + 1;
+  if ((G.compFrame & 1) && G.petMood !== 'act') return;
+  dt = G.compDt; G.compDt = 0;
   const c = G.compCtx;
   const pet = activePet();
   if (!c || !pet) return;

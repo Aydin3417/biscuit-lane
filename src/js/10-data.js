@@ -8,6 +8,11 @@
 const BREEDS = [
   {
     id: 'marmalade', species: 'cat', gem: '#F2843C', gem2: '#C85E1E',
+    /* How each breed sounds. Every cat used to be one meow and every dog
+       one bark, told apart by the stage's pitch alone, so six animals
+       had two voices. `pitch` scales the fundamental, `formant` the
+       vowel — a bigger head is a lower vowel — and `len` the length. */
+    voice: { pitch: .9, formant: .92, len: 1.15 },
     en: 'Marmalade', tr: 'Marmelat',
     enDesc: 'Ginger tabby. Opinionated.', trDesc: 'Sarı tekir. Fikirleri var.',
     fur: '#F0954B', fur2: '#D6742E', belly: '#FBE0C2',
@@ -22,6 +27,7 @@ const BREEDS = [
   },
   {
     id: 'beagle', species: 'dog', gem: '#4E9EDE', gem2: '#2F72AC',
+    voice: { pitch: .95, len: 1.25 },
     en: 'Beagle', tr: 'Beagle',
     enDesc: 'Nose first, questions later.', trDesc: 'Önce burun, sonra soru.',
     fur: '#C98B4E', fur2: '#9A6532', belly: '#F7EEDF',
@@ -36,6 +42,7 @@ const BREEDS = [
   },
   {
     id: 'void', species: 'cat', gem: '#8E6FD6', gem2: '#6647B0',
+    voice: { pitch: 1.14, formant: 1.08, len: .78 },
     en: 'Sable', tr: 'Karagöz',
     enDesc: 'Two eyes in a dark room.', trDesc: 'Karanlıkta iki göz.',
     fur: '#3B3550', fur2: '#262238', belly: '#4E4768',
@@ -50,6 +57,7 @@ const BREEDS = [
   },
   {
     id: 'retriever', species: 'dog', gem: '#F0C243', gem2: '#C39A20',
+    voice: { pitch: .8, len: 1.15 },
     en: 'Retriever', tr: 'Golden',
     enDesc: 'Loves you. Loves everyone.', trDesc: 'Seni seviyor. Herkesi seviyor.',
     fur: '#EBBE7A', fur2: '#C99A50', belly: '#FAEDD6',
@@ -64,6 +72,7 @@ const BREEDS = [
   },
   {
     id: 'siamese', species: 'cat', gem: '#4FBF95', gem2: '#2E8E6B',
+    voice: { pitch: 1.0, formant: 1.2, len: 1.4 },
     en: 'Siamese', tr: 'Siyam',
     enDesc: 'Will tell you about it.', trDesc: 'Sana bunu anlatacak.',
     fur: '#EFDFC4', fur2: '#5C4736', belly: '#FBF3E4',
@@ -78,6 +87,7 @@ const BREEDS = [
   },
   {
     id: 'pug', species: 'dog', gem: '#EE7C97', gem2: '#C4506C',
+    voice: { pitch: 1.3, len: .7 },
     en: 'Pug', tr: 'Pug',
     enDesc: 'Breathes like a small kettle.', trDesc: 'Küçük bir çaydanlık gibi soluyor.',
     fur: '#E3C48D', fur2: '#3A3028', belly: '#F5E6C9',
