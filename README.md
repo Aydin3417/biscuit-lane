@@ -3859,3 +3859,32 @@ loop follows the player's own place on the lane. The doorstep is the
 loop as it was, and coming home is the same loop, slower and quieter,
 which is the one thing a player who has walked the whole lane will
 recognise.
+
+## The animals had no edge
+
+Put beside the characters this game is measured against, the animals
+were not badly drawn; they were drawn without a line. Soft shading with
+no edge reads as a blob of colour with features on it, at 48dp on a
+tile and at 200px in the room alike, and every mascot that sells has a
+warm dark line round it. So they have one now: the coat's own shadow
+colour pulled toward ink, never black, a little fainter on a dark coat
+where the silhouette does the work, round the head, the ears, the body,
+the legs and the tail.
+
+The eye got the three things a drawn eye has that a bead does not: a
+thick lash line along its top edge, a limbal ring so the iris parts
+from the white, and a crisp catchlight with a soft halo behind it in
+place of the glow that read as a glass marble. The mouth went from a
+half-opaque suggestion to a line, the nose took the ink, the cheeks
+catch the key light, a cat's face has fur tufts standing outside its
+skull, a tabby is striped on the body and not only the brow, a beagle
+wears its saddle, the Siamese mask reaches the eyes, and the pug's mask
+is the muzzle and two rings rather than a grey veil.
+
+Three concept sheets were generated to choose a direction against —
+one flat-sticker style came back for all three prompts, which is
+itself an answer about what the tools draw — and they are references,
+per DIRECTION.md, not assets. `BL.art` exposes the drawing so a sheet
+of every breed can be rendered at any size (`drawFace`, `drawBody`,
+`specOf`), and `tools/art-gate.js` said the change looks different and
+plays the same: colours hold, 39/39 in the browser, frames at 1.6–1.8ms.

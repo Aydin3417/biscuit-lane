@@ -204,4 +204,5 @@ Kept here so the list above stays a list of what is left.
 - **The tray is painted once**, the companion at thirty, the map draws what is on screen (5.7 → 3.0 ms a scroll frame at level 300).
 - **A voice per breed**, and the breed picker plays it.
 - **Six moods for six stretches**: the music loop follows the chapter, the way the scene does.
+- **The animals have an edge**: an ink line round every silhouette, a lash line and crisp catchlight in the eye, a drawn mouth, breed markings on the body. Three generated concept sheets are in the session notes as references; the next step up is an illustrator with those as the brief.
 - **A save that cannot be read is kept**, not overwritten; a chain is felt as it deepens; the small print is 13px.

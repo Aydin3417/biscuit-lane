@@ -404,6 +404,9 @@ window.BL = {
   track, TRACK, ADS, earnTreatsSheet,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
+  /* the drawing itself, so an art pass can render a sheet of every
+     breed at any size instead of judging it through a screenshot */
+  art: { drawFace, drawBody, specOf, get BREEDS() { return BREEDS; }, get STAGE_BUILD() { return STAGE_BUILD; } },
   openSettings, openDailyGift, keyboardHelp, howToPlay, badgeModal, traitModal, stageUpModal, noHeartsSheet, treatStore, confirmQuit,
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
   simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY, petRig, syncGoals, drawLevelScene,
