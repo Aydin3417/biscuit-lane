@@ -14,36 +14,48 @@
    hearts — where the game has something the player wanted and could not
    have. That is the whole of it.
 
-   Nothing here can take money yet, and it says so rather than pretending
-   otherwise. A store needs a merchant account, products declared in the
-   Play Console, and a receipt somebody trusts; none of those exist. What
-   exists is the shape of it, so that wiring a billing plugin is a change
-   to one function rather than to the game.
+   WHAT IS BEHIND IT. cordova-plugin-purchase, which talks to Google Play
+   Billing and to StoreKit and to nobody else: no server of its own, no
+   account of its own, and no receipt sent anywhere, because no validator
+   is set. It was chosen over RevenueCat for exactly that reason.
+   RevenueCat is a service that sees every purchase, and privacy.html
+   and the listing say in two languages that nobody but the store does,
+   which is also what the data answers for both stores rest on. It was
+   chosen over
+   capacitor-plugin-cdv-purchase — the same code, packaged for Capacitor
+   — because that one is reached through an `import` and the shipped page
+   has none. This one puts `CdvPurchase` on window, which is how every
+   other native thing in this game is reached.
+
+   The version of this file before it guessed. It asked whatever it found
+   for `getProducts`, `purchase` and `restorePurchases`, and tried four
+   spellings of "consume", and no plugin in circulation answers to that
+   shape; the one the checklist named, @capacitor-community/in-app-purchases,
+   is not on npm at all. Installed, it would have found RevenueCat's
+   `Purchases`, called methods that are not there, and sold nothing
+   without an error anywhere. A seam written to fit any plugin fitted
+   none. This one is written against one plugin's type definitions.
+
+   Money still does not change hands until the products are declared in
+   the Play Console and App Store Connect. Until a store has answered
+   with a price for at least one of them, `ready()` is false and the shop
+   shows how treats are earned instead — so a build that ships before
+   its products do behaves exactly like the build that shipped before the
+   plugin did.
 */
-
-/* ---------- the seam ----------
-
-   One object, four questions, and exactly one place that would have to
-   change to make this real. `ready` is what the interface asks before it
-   offers anything: false means the buttons are shown but explain
-   themselves instead of lying.
-
-   A Capacitor billing plugin — @capacitor-community/in-app-purchases, or
-   RevenueCat's, they present the same three calls — would be picked up
-   here by name. Until one is installed this stays honest. */
 const BILLING = {
-  plugin: null,
+  store: null,             // CdvPurchase.store, once initialize has answered
   prices: {},              // sku -> localized price string, once a store answers
+  started: null,           // the one promise every caller waits on
+  waiting: {},             // sku -> the answer of the buy() open on it
+  owed: {},                // transactionId -> approved and not yet handed back
 
-  /* Whether money can actually change hands in this build. Checked at
-     call time rather than cached at load: the plugin arrives with the
-     native bridge, which is not up yet when this file is read. */
+  /* Whether money can actually change hands in this build: a store is up
+     and it has told us the price of something we sell. A plugin with no
+     products declared behind it is not a shop. Asked synchronously,
+     because the interface asks it before it draws a price. */
   ready() {
-    if (this.plugin) return true;
-    const P = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || null;
-    if (!P) return false;
-    this.plugin = P.InAppPurchases || P.Purchases || P.CdvPurchase || null;
-    return !!this.plugin;
+    return !!this.store && Object.keys(this.prices).length > 0;
   },
 
   /* the price to put on a button: whatever the store said, or the
@@ -60,24 +72,101 @@ const BILLING = {
      which in Turkey is not a rounding error, it is the wrong number in
      the wrong unit. One list, and every caller reads it. */
   skus() {
-    return TREAT_PACKS.map(p => p.sku).concat([JAR.sku, PASS.sku]);
+    return TREAT_PACKS.map(p => p.sku).concat([JAR.sku, PASS.sku, STARTER.sku]);
+  },
+
+  /* ---------- starting the store ----------
+
+     Once, and everybody waits on the same promise. A Cordova plugin is
+     usable after `deviceready`, which comes after this file is read and
+     after boot has already asked for prices. In a browser there is no
+     `cordova` at all, and this answers false straight away rather than
+     after the timeout, so the web build and the tests never sit waiting
+     on a store that was never there.
+
+     Every product is registered CONSUMABLE — store/LISTING.md says why
+     the season book is one too. */
+  boot() {
+    if (this.started) return this.started;
+    this.started = new Promise(resolve => {
+      const w = typeof window !== 'undefined' ? window : null;
+      if (!w || !w.cordova || typeof document === 'undefined') { resolve(false); return; }
+      let settled = false;
+      const done = v => { if (!settled) { settled = true; resolve(v); } };
+      const go = () => {
+        const C = w.CdvPurchase;
+        if (!C || !C.store) { done(false); return; }
+        const ios = !!(w.Capacitor && w.Capacitor.getPlatform && w.Capacitor.getPlatform() === 'ios');
+        const platform = ios ? C.Platform.APPLE_APPSTORE : C.Platform.GOOGLE_PLAY;
+        const S = C.store;
+        S.register(this.skus().map(id => ({ id: id, type: C.ProductType.CONSUMABLE, platform: platform })));
+        /* Arrival is `approved`, not `verified`. With no validator set the
+           plugin passes every receipt without looking at it — its own
+           source says "for backward compatibility, we consider that the
+           receipt is verified" — so waiting for `verified` would be
+           waiting on a formality, through a receipt type whose shape the
+           definitions do not make plain. `verify` is still called, so
+           the plugin's own bookkeeping runs its usual course. The day a
+           validator is set, arrival moves to `verified` and this comment
+           stops being true. */
+        S.when()
+          .productUpdated(p => this.learn(p))
+          .approved(tx => { this.arrived(tx); tx.verify(); })
+          .pending(tx => this.held(tx));
+        S.initialize([platform]).then(() => {
+          this.store = S;
+          this.skus().forEach(id => this.learn(S.get(id, platform)));
+          done(true);
+        }, () => done(false));
+      };
+      document.addEventListener('deviceready', go, false);
+      /* a bridge that never comes up is a store that is not there */
+      setTimeout(() => done(false), 12000);
+    });
+    return this.started;
+  },
+
+  /* a product the store has described: keep its price as the store wrote
+     it, in the player's currency and the player's number format */
+  learn(p) {
+    if (p && p.id && p.pricing && p.pricing.price) this.prices[p.id] = String(p.pricing.price);
+  },
+
+  /* A transaction the store has approved.
+
+     If a buy() is waiting on that product, this is its answer. If not,
+     it is money that arrived while nobody was asking — approved after
+     the app was killed, or a pending payment that has since cleared — and
+     it waits in `owed` for the next restore, which every launch makes. */
+  arrived(tx) {
+    if (!tx || tx.state === 'finished' || !tx.transactionId) return;
+    const mine = this.skus();
+    (tx.products || []).forEach(p => {
+      if (!p || mine.indexOf(p.id) < 0) return;
+      const open = this.waiting[p.id];
+      if (open) open({ ok: true, receipt: tx });
+      else this.owed[tx.transactionId] = tx;
+    });
+  },
+
+  /* A payment the store has accepted and not cleared: a carrier bill, a
+     payment method that settles later, a parent asked to approve. It is
+     not a sale yet, so nothing is granted and the sheet says so; when it
+     clears it comes back through `arrived`, and the launch after that
+     pays it. */
+  held(tx) {
+    ((tx && tx.products) || []).forEach(p => {
+      const open = p && this.waiting[p.id];
+      if (open) open({ ok: false, why: 'pending' });
+    });
   },
 
   /* Ask the store what these cost where the player is. Safe to call when
      no store exists — it resolves having done nothing. */
   async refresh() {
-    if (!this.ready()) return false;
-    try {
-      const skus = this.skus();
-      const r = await this.plugin.getProducts({ productIdentifiers: skus, productIds: skus });
-      const list = (r && (r.products || r.productList)) || [];
-      list.forEach(p => {
-        const id = p.productId || p.identifier || p.id;
-        const shown = p.priceString || p.localizedPrice || p.price;
-        if (id && shown) this.prices[id] = String(shown);
-      });
-      return true;
-    } catch (e) { return false; }
+    if (!(await this.boot())) return false;
+    this.skus().forEach(id => this.learn(this.store.get(id)));
+    return this.ready();
   },
 
   /* ---------- closing the transaction ----------
@@ -95,53 +184,79 @@ const BILLING = {
 
      Everything this game sells is a consumable. The packs and the jar
      are bought again and again by design; the season book is bought once
-     per season, and a season ends — so all three have to be handed back
-     to the store as used, or the second purchase is refused with
-     "already owned". There is no non-consumable in this game and that is
-     deliberate: it is the only product type that needs no account.
+     per season, and a season ends; the welcome pack is bought once per
+     player, and a reinstall is a new player — so every one of them has
+     to be handed back to the store as used, or the second purchase is
+     refused with "already owned". There is no non-consumable in this
+     game and that is deliberate: it is the only product type that needs
+     no account.
 
-     The four names below are the four ways the plugins in circulation
-     spell the same call. Trying each is not indecision, it is the same
-     bet `ready()` makes: this seam should fit whichever one gets
-     installed without the game learning its name. */
-  async settle(receipt, sku) {
-    if (!this.plugin || !receipt) return;
-    const id = receipt.transactionId || receipt.purchaseToken || receipt.token || sku;
-    const arg = { productIdentifier: sku, productId: sku, transactionId: id, purchaseToken: id };
-    const names = ['consumePurchase', 'finishTransaction', 'consume', 'acknowledgePurchase'];
-    for (const n of names) {
-      if (typeof this.plugin[n] !== 'function') continue;
-      try { await this.plugin[n](arg); return; } catch (e) { /* try the next spelling */ }
-    }
+     And it is the second half, never the first. The caller grants the
+     purchase and writes the save, and only then calls this. A
+     transaction closed before the treats are written is a charge that
+     can never be claimed, because a consumed purchase is in nobody's
+     queue. Closed after, the worst a kill can do is leave it open — and
+     the next launch finds it, closes it, and does not pay for it twice,
+     because the save kept its transaction id (`granted`, 15-save.js). */
+  async settle(tx) {
+    if (!tx || typeof tx.finish !== 'function') return;
+    try { await tx.finish(); } catch (e) { return; /* still open; the next launch closes it */ }
+    if (tx.transactionId) delete this.owed[tx.transactionId];
+  },
+  async settleAll(list) {
+    for (const tx of (list || [])) await this.settle(tx);
   },
 
   /* The purchase itself.
 
-     Resolves { ok: true } only when a store has said so. Everything else
-     — no plugin, a cancelled sheet, a network that went away — comes
-     back { ok: false, why } and the caller grants nothing. There is no
-     branch in here that credits an account without a receipt, in any
-     build, including this one: a stub that pays out is a stub somebody
-     ships by accident. */
+     Resolves { ok: true, receipt } only when a store has approved it.
+     Everything else — no store, a cancelled sheet, a payment still
+     pending, a network that went away — comes back { ok: false, why }
+     and the caller grants nothing. There is no branch in here that
+     credits an account without a receipt, in any build, including this
+     one: a stub that pays out is a stub somebody ships by accident.
+
+     `order` resolving is not the answer. It resolves when the store's
+     sheet is done with, and the purchase itself is approved through the
+     `approved` event, which can land just before that or just after. So
+     the answer is whichever comes first: approval, a pending payment, an
+     error from the order, or a minute of nothing — which is reported as
+     pending rather than failed, because a charge may still clear, and if
+     it does the next launch will find it.
+
+     A receipt is checked by whoever issued it. Locally that means the
+     store's own signature and nothing more, which is enough for a
+     single-player game with no leaderboard — the only person a forged
+     receipt cheats is the person holding the phone. It is not enough the
+     day this game keeps anything on a server, and that is the day a
+     validator is set. */
   async buy(sku) {
-    if (!this.ready()) return { ok: false, why: 'nostore' };
-    try {
-      const r = await this.plugin.purchase({ productIdentifier: sku, productId: sku });
-      if (!r || r.cancelled || r.responseCode === 1) return { ok: false, why: 'cancelled' };
-      /* A receipt is checked by whoever issued it. Locally that means
-         the plugin's own verification and nothing more, which is enough
-         for a single-player game with no leaderboard — the only person
-         a forged receipt cheats is the person holding the phone. It is
-         not enough the day this game keeps anything on a server, and
-         that is the day this call grows a second half. */
-      await this.settle(r, sku);
-      return { ok: true, receipt: r };
-    } catch (e) {
-      return { ok: false, why: 'failed' };
-    }
+    if (!(await this.boot()) || !this.ready()) return { ok: false, why: 'nostore' };
+    const product = this.store.get(sku);
+    const offer = product && product.getOffer && product.getOffer();
+    if (!offer) return { ok: false, why: 'nostore' };
+    if (this.waiting[sku]) return { ok: false, why: 'busy' };
+    const C = window.CdvPurchase;
+    return new Promise(resolve => {
+      let over = false;
+      const answer = r => {
+        if (over) return;
+        over = true;
+        if (this.waiting[sku] === answer) delete this.waiting[sku];
+        resolve(r);
+      };
+      this.waiting[sku] = answer;
+      offer.order().then(err => {
+        if (err && err.isError) {
+          answer({ ok: false, why: err.code === C.ErrorCode.PAYMENT_CANCELLED ? 'cancelled' : 'failed' });
+          return;
+        }
+        setTimeout(() => answer({ ok: false, why: 'pending' }), 60000);
+      }, () => answer({ ok: false, why: 'failed' }));
+    });
   },
 
-  /* What the store still says this player owns.
+  /* What the store still says this player is owed.
 
      Consumables do not survive being consumed, so on a healthy device
      this comes back empty and that is the correct answer — there is
@@ -151,17 +266,30 @@ const BILLING = {
      store saying yes and the save being written. Those sit in the queue
      until somebody claims them, and this is how they get claimed.
 
-     Returns the product ids, so the caller decides what each one is
-     worth. This file knows about receipts and nothing about treats. */
+     What is outstanding arrives through `approved` as the store starts
+     and again when it is asked to restore, and collects in `owed`; the
+     local receipts are read as well, for anything approved before this
+     file was listening. The transactions go back beside the product
+     ids, so the caller can claim each one by its id and then hand every
+     one of them back to the store — the ones the save already held
+     included, since those are exactly the ones a kill left open.
+
+     This file knows about receipts and nothing about treats. */
   async restore() {
-    if (!this.ready()) return { ok: false, why: 'nostore', skus: [] };
-    try {
-      const r = await this.plugin.restorePurchases({ productIds: this.skus() });
-      const list = (r && (r.purchases || r.transactions || r.results)) || [];
-      const skus = list
-        .map(p => p && (p.productId || p.productIdentifier || p.identifier || p.id))
-        .filter(Boolean);
-      return { ok: true, skus: skus, receipts: list };
-    } catch (e) { return { ok: false, why: 'failed', skus: [] }; }
+    if (!(await this.boot())) return { ok: false, why: 'nostore', skus: [], receipts: [] };
+    try { await this.store.restorePurchases(); } catch (e) { /* what already arrived still counts */ }
+    const mine = this.skus();
+    const ours = tx => ((tx && tx.products) || []).some(p => p && mine.indexOf(p.id) >= 0);
+    (this.store.localReceipts || []).forEach(r => ((r && r.transactions) || []).forEach(tx => {
+      if (tx && tx.state === 'approved' && tx.transactionId && !this.owed[tx.transactionId] && ours(tx)) {
+        this.owed[tx.transactionId] = tx;
+      }
+    }));
+    const receipts = Object.keys(this.owed).map(k => this.owed[k]);
+    const skus = [];
+    receipts.forEach(tx => (tx.products || []).forEach(p => {
+      if (p && mine.indexOf(p.id) >= 0) skus.push(p.id);
+    }));
+    return { ok: true, skus: skus, receipts: receipts };
   }
 };

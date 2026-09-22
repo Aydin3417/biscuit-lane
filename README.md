@@ -3896,3 +3896,283 @@ the colours still play, 39/39 in the browser, frames inside budget.
 The concept sheets are references, per DIRECTION.md; the next step up
 from here is an illustrator with them as the brief, and the game is
 built so that it does not need one.
+## A till that fitted every plugin and worked with none
+
+`17-billing.js` was written so that wiring a store would be "a change to
+one function rather than to the game". It looked for a plugin on
+`Capacitor.Plugins`, asked it for `getProducts` and `purchase`, and tried
+four spellings of consume one after another, so that it would fit
+whichever plugin got installed.
+
+It fitted none. The checklist told whoever set up billing to choose
+between `@capacitor-community/in-app-purchases` and RevenueCat, and the
+first of those is not on npm — `npm view` answers 404. The plugin that
+does exist and does the job, `cordova-plugin-purchase`, is a Cordova
+plugin: it never appears on `Capacitor.Plugins` at all, and its store has
+`get`, `order` and `initialize`, not `getProducts` and `purchase`.
+Installed under the old seam, it would have been invisible, the shop
+would have stayed shut, and nothing anywhere would have said why. A seam
+written against no plugin in particular turned out to be written against
+none.
+
+**Which plugin, and why this one.** Two reasons, and both are this
+project's rather than the plugin's. It talks to Play Billing and StoreKit
+and to nothing else, so `privacy.html` and the listing stay true as
+written; RevenueCat is a service that sees every purchase, and both of
+those documents, and the data answers built on them, would have had to
+change. And it puts `CdvPurchase` on `window`, the way everything native
+in this game is reached — the same code packaged for Capacitor is reached
+through an `import`, and the shipped page has none. The adapter is
+written against the plugin's own `store.d.ts`, and one line of its
+`store.js` settled a detail: with no validator set it passes every
+receipt without looking, so a purchase arrives on `approved` rather than
+waiting on a `verified` that is a formality.
+
+The release bundle went from 4.4 MB to 5.1 MB with Play Billing 9 in
+it, and `com.android.vending.BILLING` is in the merged manifest. On iOS
+the plugin is wired into `CapApp-SPM/Package.swift` with StoreKit linked.
+Nothing on this machine can compile that part, and I have not.
+
+**`ready()` means a shop now.** A plugin with no products declared behind
+it is not one, so `ready()` is true only once the store has priced
+something this game sells. Until then the treat chip opens the sheet
+about earning treats, exactly as it did with no plugin, and shipping
+before the products exist is the same build.
+
+**Written down, then closed.** The old `buy()` settled a purchase inside
+the call, before the caller had granted anything. Against a real store
+that is the order that loses money: a consumed purchase is in nobody's
+queue, so a kill between the store closing it and the save being written
+is a charge that can never be claimed. It is the other way round now —
+grant, persist, then `settle` — and every grant writes the transaction id
+into the save in the same write as the treats (`granted`, 15-save.js). A
+kill between the two leaves the purchase open, the next launch's restore
+finds it, the id says it was already paid, and it is closed without
+paying twice. `test/till.js` reads the source to hold every buy site to
+that order.
+
+**A pending payment is neither a sale nor a refusal.** Some payment
+methods clear later, and a parent can be asked to approve. `buy()`
+answers `pending` for those, the sheet says the store is still waiting,
+and the approval, whenever it comes, is paid on the next launch.
+
+**Tested against a store that is not there.** `test/till-live.js` puts a
+`CdvPurchase` in the page before the game loads, built from the type
+definitions rather than from the adapter, and does six things to the
+game with it: no products declared, a sale, a cancelled sheet, a pending
+payment that later clears, a kill between the treats and the close, and a
+purchase the store held while the app was shut. Twenty-three checks, all
+passing, and a CI step after the browser layer.
+
+Its first run failed one check and passed another, for the same wrong
+reason. It asked `document.body.textContent` whether the screen had said
+"That did not go through", and `textContent` includes the inline script,
+which carries every string in both languages — so a cancel seemed to show
+an error it never showed, and the pending line seemed to appear whether
+or not it had. It reads `innerText` now, which is what a person can read.
+
+`test/check.js` caught the last thing: `initialize()`, `verify()` and
+`order()` written with their parentheses in comments, which its call
+pattern reads as calls to functions nobody declared. Prose here does not
+carry the parentheses, and the fix was the comments rather than the check.
+
+## Three things a store would have found first
+
+**The privacy policy was at the wrong address.** The listing gave
+`https://aydin3417.github.io/pawtika/privacy.html`. GitHub Pages serves a
+project site under the repository's name, and the repository is
+`biscuit-lane`, so that address is a 404 — and both stores fetch the URL
+before they publish. The page had been live all along at
+`/biscuit-lane/privacy.html`, answering 200.
+
+**The screenshots were of a different game.** `shots/store/`, the folder
+the checklist pointed at, was made on 3 September by an older tool, two
+art passes before the animals got their ears and markings. The current
+tool writes `store/graphics/`, and its iPhone and iPad sizes had never
+been committed. Regenerated, and the checklist points at the folder the
+tool actually writes.
+
+**The tool that plays the first five minutes had not played one since the
+first minute lost its text.** `tools/firstrun.js` looked for the level
+card's start button, and below level 8 there is no card — the level
+starts at once, which was the whole fix. It reported "no start button on
+the card" and stopped, which read like a fault in the game and tested
+nothing. It accepts a board that is already running now, and plays on.
+
+## The shop stopped at $4.99, and the first larger size hid the book
+
+The question was what Candy Crush does that this game does not, and the
+honest answer splits in two. Part of it is walls: levels built to be
+failed, lives that run out, a "+5 moves" sheet at the moment of losing.
+This game measured its way out of all three on purpose — the lane clears
+four times in five, `test/economy.js` records no heart refills in ninety
+days of ordinary play, and the carry-on is mostly paid for with treats
+the player earned. None of that was touched. The gates were looked at
+and left alone as well: the lane's gates are drawn from 82% down to 63%
+and the run's measure 54%, which is already a wall, and a harder one
+would cost players treats they earned long before it cost anybody money.
+
+The other part is simply that there was very little to buy. Two packs,
+the largest $4.99. A player on twenty-four levels a day runs dry and
+refills ten times a month in the economy file, and the only thing on
+sale for them was the same paper bag again.
+
+**Two larger sizes.** 240 treats for $9.99 and 520 for $19.99. Each size
+gives more treats for the dollar than the one below it — 20.1, 22.0, 24.0
+and 26.0 — so a bigger size is a better offer rather than a bigger bill,
+and the star moved to the largest because that is now the best rate
+among the packs. None of them reaches the jar, which is 33.4 a dollar
+and stays the best rate in the game: those are treats the player filled
+by playing.
+
+**A welcome pack, once.** $1.99 for 60 treats, three +5 move starts,
+three hammers and two shuffles. Thirty treats a dollar, better than any
+pack and still short of the jar; the boosters are 600 coins at shop
+prices, about ten three-starred levels of income. It sits at the top of
+the treat sheet and nowhere else — no popup, no timer, nothing that
+counts down — so it is only ever seen by somebody who opened the sheet
+themselves, at the chip or when they were short for the carry-on. Once
+it is bought the save remembers and the row is gone, relaunch or not. It
+is a consumable like everything else; "once" belongs to the save, so a
+reinstall is offered it again.
+
+**The book would have disappeared.** `passWorthBuying` decides whether
+the season book is offered, by asking whether the paid side would return
+more treats than a pack. It compared the book with the *largest* pack,
+which was the pack beside it for as long as nothing cost more than the
+book. With a 520-treat sack on sale, a finished book's 114 treats could
+never win, and the book would never have been offered to anybody again.
+`test/till.js` failed on "a player at the start of a season is offered
+the book" the first time it ran. It compares against the largest pack at
+or under the book's price now, which is what its comment always said it
+did; the same wrong comparison was sitting in the test and in the
+economy printout, and both were changed with it.
+
+What holds it: `test/till.js` checks that every larger size is a better
+rate, that nothing beats the jar, that the welcome pack beats every pack
+as its row claims, that the star is on the best rate and only there, and
+that a restore reporting the welcome pack's sale does not unpack it
+twice. `test/till-live.js` buys it through the fake store and checks it
+is first in the sheet, at the store's own price, hands over its treats
+and boosters, is closed with the store, and is not offered again even
+after a relaunch. The economy file's ninety days came out identical,
+because none of this is a coin sink and none of it is free.
+
+The price button on the welcome pack was drawn primary at first, orange
+with the price in plum on top of it — hard to read, and the one loud
+button in a sheet of quiet ones. The row is tinted already; the button is
+the same as the rows under it.
+
+## The game sold relief to people who never needed it
+
+The question was how Candy Crush earns and what this game was missing,
+and the first honest answer was that the table saying "almost nothing is
+different between a free player and a paying one" was not a design
+choice being described, it was the game not earning. So the economy was
+measured again before anything was changed, and the measurement had
+been wrong.
+
+**The model charged a heart it should have given back.** `test/economy.js`
+took a heart for every attempt. The game has given one back for every
+win since hearts became a brake on repeated failure, so the file reported
+a player on twelve levels a day running dry sixty times a month when the
+game would have let them play on. It also used one clear rate, 80%, for
+every level in the game — a gate and the relief after it cost the same.
+Both are fixed: it charges a heart only for a loss, and each level is
+played at its own `targetClear`.
+
+Measured that way, nobody ran out of hearts below twenty-four levels a
+day, and the carry-on was mostly paid for with treats earned by playing.
+The reason is the pet. Measured at nine games a level, a cared-for pet
+took the run from 72% to 87% and the lane from 86% to 94%. With a heart
+returned on every win, a player who loses one level in eight is never
+stopped by anything.
+
+**The decision was the owner's, and it was to earn the way the genre
+does, in a dose.** What follows is the dose.
+
+**The run is harder; the lane is not.** `11-design.js`: the run opens at
+.70 instead of .78, settles toward .52 instead of .61, the gate asks .18
+below the ease instead of .15, and the floor is .35. The first sixty
+levels are untouched, because that is where a new player learns the
+game. All three hundred generated levels were refitted to the new
+targets (`test/fit-run.js`, eight slices, twenty games a point): mean
+miss 3%, one level pinned at its ceiling (162, a bramble patch that
+reaches 65% against 70%). Four rescue levels had been fitted to noise —
+level 278's points read 40, 65, 20 and 55% at 19, 20, 21 and 22 moves,
+and the fit took the 20 — so they were fitted again at sixty games a
+point and now land within two points. Out of sample (`test/curve.js`,
+61-120): bias -2%, gates 47%, relief after a gate 79%, the rhythm 31
+points wide.
+
+Whether that was enough was decided before it was measured. A cared-for
+pet should clear a gate between 55% and 70% of the time; above that the
+gates would be deepened again, below it softened. Measured by beat, bare
+and cared-for side by side, on a third seed family:
+
+| run, by beat | bare | cared-for |
+|---|---|---|
+| relief | 77% | 88% |
+| middle | 67% | 86% |
+| run-up | 53% | 78% |
+| gate | 50% | 69% |
+| all | 62% | 80% |
+
+69%, inside the band, so nothing more was done to the curve. The same
+table said something the averages had hidden: a pet keeps about half the
+losses of an ordinary level but nearly two thirds of a gate. Care helps
+least exactly where the wall is, and the economy file now uses those
+shares by beat instead of one average for the whole run.
+
+**Treats are paid at the walls.** Three stars on an ordinary level paid a
+treat and was the largest single source of free treats; it pays on a gate
+only now. Hearts refill every thirty minutes, the genre's number, and a
+full set costs twelve treats rather than nine, because a set of hearts is
+five attempts and a carry-on is one. A second carry-on exists at sixteen
+treats, once per attempt, and there is no third. The jar fills four a
+level instead of three, so the fairest offer in the game comes round
+every twenty-five levels. Boosters cost 150, 110, 130 and 100 coins,
+priced for the month in which coins stop having anywhere to go.
+
+**Paying buys things that are not otherwise there.** The book's paid
+column used to hold collars and hats the shop sold for forty to one
+hundred and eighty coins. It holds three collars and two rooms that exist
+nowhere else now, two hours of unlimited hearts in three pieces, and 120
+treats — still more than the $4.99 bag beside it, which is the rule it is
+sold under. Unlimited hearts are a stretch of time in which a loss costs
+nothing, and they come only inside something else: the welcome pack (an
+hour), the biscuit tin (an hour), the feed sack (three hours) and the
+book. The shop never lists a book exclusive until it is owned, and
+`buyThing` refuses one outright, because an exclusive is priced at zero
+by being not for sale.
+
+**What it does, in the same model.** A bare pet, thirty days at six levels
+a day, before and after: free treats 161 to 112; carry-on offers the
+player could not afford 41% to 60%, and every second carry-on out of
+reach; the jar offered four times to five or six. At twenty-four levels a
+day, three dry sittings a month became eleven. For a cared-for pet over
+ninety days, half of all carry-on offers find the player short and four
+in five second ones do. Hearts still bind only for somebody playing
+twenty-four levels a day or more, and that is said plainly rather than
+tuned away: it is who a stretch of unlimited hearts is worth something
+to, and a casual player meeting a wall twice a week is a casual player
+who stops.
+
+Held by tests: `test/till.js` checks that unlimited hearts stack and cost
+no heart while they run, that every cosmetic in the paid column is one the
+shop does not sell, and that the column still beats the pack at its price.
+Played in the page: two carry-ons at nine and sixteen treats and no third,
+the heart chip reading `∞ 1:29:59`, the book showing its exclusives, the
+shop hiding them.
+
+Found on the way, and not all of it fixed. `test/fit-run.js` rewrites its
+output file after every level, so the first watcher waiting for eight
+files to exist merged half the run and started a validation on it; it was
+stopped and the merge done again when every slice had printed its time.
+`test/fit-lane.js` keeps its own copy of the design constants, with a
+beat scale of .45 and .55 where `11-design.js` says .35 and .65; the lane
+was not touched, so it changed nothing today, and it is the next place a
+lane change would silently not arrive. And two of the numbers the economy
+file stands on are still guesses with names — how many losses are near
+misses, and how often five moves are not enough. The dose is a model
+until the analytics has somewhere to go and real players replace them.

@@ -208,7 +208,7 @@ function boot() {
   $('#btnSettings').addEventListener('click', () => { audioResume(); openSettings(); });
   $('#btnQuit').innerHTML = IC.back;
   $('#btnQuit').addEventListener('click', () => { SFX.tap(); confirmQuit(); });
-  $('#chipHearts').addEventListener('click', () => { if (SAVE.hearts < HEART_MAX) noHeartsSheet(); });
+  $('#chipHearts').addEventListener('click', () => { if (SAVE.hearts < HEART_MAX && !heartsInfinite()) noHeartsSheet(); });
   /* the chip explained what treats were and then stopped, which was the
      right card back when there was nothing to do about it */
   $('#chipTreats').addEventListener('click', () => { SFX.tap(); treatStore(); });
@@ -229,7 +229,8 @@ function boot() {
      on every launch, it resolves before they notice. */
   BILLING.restore().then(r => {
     if (!r.ok || !r.skus.length) return;
-    const n = claimOutstanding(r.skus);
+    const n = claimOutstanding(r.skus, r.receipts);
+    BILLING.settleAll(r.receipts);
     if (!n) return;
     syncPurse();
     track('restore_claimed', { n: n });
@@ -293,7 +294,7 @@ function boot() {
       if (AMB.raf) { cancelAnimationFrame(AMB.raf); AMB.raf = null; }
     } else {
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
-      if (SAVE.hearts < HEART_MAX) heartClockStart();
+      if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
       if (SAVE.settings.music) musicStart();
       if (!AMB.raf && !reduceMotion()) { AMB.last = performance.now(); AMB.raf = requestAnimationFrame(motesLoop); }
       if (SCREEN === 'home') { renderHome(); roomLayout(); roomStart(); }
@@ -322,7 +323,7 @@ function boot() {
 
   /* a heart on its way back gets a second hand from the start, not only
      after the player spends one */
-  if (SAVE.hearts < HEART_MAX) heartClockStart();
+  if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
 
   /* first gesture starts the audio engine */
   const kick = () => { audioResume(); musicSync(); document.removeEventListener('pointerdown', kick); };

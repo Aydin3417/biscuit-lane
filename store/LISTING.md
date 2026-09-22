@@ -227,29 +227,51 @@ no server — so nothing about them is collected or shared. Play asks
 separately about the notifications *permission*; declare it, and say it
 is used for gameplay reminders the player opts into.
 
-Privacy policy URL: `https://aydin3417.github.io/pawtika/privacy.html`
+Privacy policy URL: `https://aydin3417.github.io/biscuit-lane/privacy.html`
+
+Checked 11 Sep 2026: that address answers 200. The one this line used to
+give, `/pawtika/privacy.html`, is a 404 — GitHub Pages serves a project
+site under the repository name, and the repository is `biscuit-lane`.
+Both stores fetch the URL, and both would have refused it.
 
 ## Content rating
 
 - No violence, no language, no gambling, no user-generated content, no
   social features, no location, no advertising.
-- Purchases: only if in-app products are enabled before submitting.
+- In-app purchases: **yes** — digital goods only (treats, and the paid
+  column of a season book). Nothing bought is randomised: no loot boxes,
+  no paid draws. The daily basket is free and cannot be bought.
 - Expected: **PEGI 3 / ESRB Everyone / USK 0**.
 
 ## In-app products
 
-Declare all four as **CONSUMABLE**, including the season book. It is per
+Declare all seven as **CONSUMABLE**, including the season book and the
+welcome pack. The welcome pack's "once" is kept by the game's save, not
+by the store, so a reinstall is offered it again. It is per
 season and the season resets, so a non-consumable would be refused as
 "already owned" the second month. There is no non-consumable in this
 game, deliberately: it is the only product type that needs no account
 behind it.
 
+The plugin is installed and wired (`cordova-plugin-purchase`, straight to
+Play Billing and StoreKit). Create these with **exactly** these ids —
+the game asks the store for them by name and shows nothing it does not
+get an answer for.
+
+- **Play Console** → Monetize → Products → In-app products. Needs a
+  payments profile on the developer account first.
+- **App Store Connect** → the app → In-App Purchases → Consumable. Needs
+  the Paid Apps agreement signed, and each product a review screenshot.
+
 | Product id | What it is | Suggested |
 |---|---|---|
 | `treats_pocket_40` | 40 treats | $1.99 |
 | `treats_bag_110` | 110 treats | $4.99 |
+| `treats_tin_240` | 240 treats and 1 hour of unlimited hearts | $9.99 |
+| `treats_sack_520` | 520 treats and 3 hours of unlimited hearts | $19.99 |
+| `starter_pack` | the welcome pack, offered once per player: 60 treats, 3 × +5 moves, 3 hammers, 2 shuffles, 1 hour of unlimited hearts | $1.99 |
 | `treat_jar` | the jar, opened — up to 100 treats the player filled by playing | $2.99 |
-| `season_book` | the paid column of the season book, 28 days | $4.99 |
+| `season_book` | the paid column of the season book, 28 days: 120 treats, three collars and two rooms sold nowhere else, two hours of unlimited hearts, two keepsakes | $4.99 |
 
 The dollar figures are fallback labels only. The game asks the store for
 the real price in the player's own currency and shows that instead; set
@@ -261,20 +283,16 @@ Games → Puzzle. Tags: match 3, casual, pets, offline.
 
 ---
 
-## This machine cannot build the APK yet
+## Building
 
-Checked, not assumed — `node tools/gradle.js assembleDebug` says so in a
-third of a second now instead of failing after two and a half minutes
-with a dependency-resolution error that never mentions the real cause.
+Checked 11 Sep 2026, on the machine this was written on:
+`node tools/gradle.js bundleRelease` builds the release AAB — 5.1 MB with
+Play Billing in it, `com.android.vending.BILLING` in the merged manifest.
+It is unsigned until the four signing properties below exist.
 
-| Missing | Fix |
-|---|---|
-| Java 8 is on PATH; Android Gradle needs 17+ | Install Temurin 17, or use Android Studio's: `set JAVA_HOME=<studio>\jbr` |
-| No Android SDK | Android Studio, or the command-line tools alone, then `ANDROID_HOME` |
-| Capacitor not installed | `npm install` |
-
-Nothing else waits on any of it. The web build, this listing and the
-store graphics are done.
+iOS builds only on a Mac. The `ios/` project is synced and the purchase
+plugin is in `ios/App/CapApp-SPM/Package.swift` with StoreKit linked, but
+nothing here has compiled it.
 
 ## What only you can do
 
@@ -296,5 +314,5 @@ not automated.
    builds, unsigned, and says so before it starts.
 4. **Publish `privacy.html`** at the URL above (GitHub Pages already
    serves the repository root, so pushing it is enough).
-5. **In-app products**, if you want them — the code has a billing bridge
-   waiting but no plugin installed and no SKUs defined.
+5. **In-app products** — the plugin is installed and wired. Create the seven
+   consumables above in each console; nothing in the build changes.

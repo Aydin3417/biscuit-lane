@@ -61,6 +61,16 @@ function freshSave() {
     pass: { season: -1, stamps: 0, paid: false, claimed: {} },
     /* asked once, ever — see maybeAskForAReview in 60-ui.js */
     rated: { asked: 0, said: 0 },
+    /* transactionId -> 1, for every store purchase already written into
+       this save. A purchase is handed back to the store only after it is
+       granted, so a kill between the two leaves it open and the next
+       launch reports it again; this is how that launch knows it has
+       already paid. */
+    granted: {},
+    /* the welcome pack is sold once per player — see STARTER in 10-data.js */
+    starter: { bought: false },
+    /* until when a lost level costs no heart — see heartsInfinite */
+    infiniteUntil: 0,
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
   };
 }
@@ -285,6 +295,9 @@ function loadSave() {
     SAVE.jar.fill = clamp(Math.round(+SAVE.jar.fill || 0), 0, JAR.cap);
     SAVE.keepsakes = Object.assign({}, d.keepsakes || {});
     SAVE.rated = Object.assign({ asked: 0, said: 0 }, d.rated || {});
+    SAVE.granted = Object.assign({}, d.granted || {});
+    SAVE.starter = Object.assign({ bought: false }, d.starter || {});
+    SAVE.infiniteUntil = +d.infiniteUntil || 0;
     SAVE.coats = Object.assign({}, d.coats || {});
     SAVE.eyes = Object.assign({}, d.eyes || {});
     SAVE.ads = Object.assign({ day: 0, used: {} }, d.ads || {});
@@ -388,7 +401,7 @@ let heartTimer = null;
 function heartClockStart() {
   if (heartTimer) return;
   heartTimer = setInterval(() => {
-    if (SAVE.hearts >= HEART_MAX) { heartClockStop(); EV.emit('purse'); return; }
+    if (SAVE.hearts >= HEART_MAX && !heartsInfinite()) { heartClockStop(); EV.emit('purse'); return; }
     heartTick();
     EV.emit('purse');
   }, 1000);
@@ -405,12 +418,34 @@ function heartsIn() {
 }
 function spendHeart() {
   heartTick();
+  if (heartsInfinite()) return true;
   if (SAVE.hearts <= 0) return false;
   heartClockStart();
   if (SAVE.hearts === HEART_MAX) SAVE.heartAt = now();
   SAVE.hearts--;
   persist();
   return true;
+}
+
+/* ---------- unlimited hearts ----------
+
+   A stretch of time in which starting a level costs nothing. It is sold
+   inside the larger packs and the welcome pack, and the book hands out
+   two hours of it in three pieces. Time stacks: a second hour bought
+   inside the first begins where the first ends, not where it was bought.
+
+   The heart count itself is left alone while it runs, so nothing that
+   was waiting on it — a regen clock, a reminder — has to learn about it;
+   spendHeart simply does not take one. */
+function heartsInfinite() {
+  return (SAVE.infiniteUntil || 0) > now();
+}
+function infiniteLeft() {
+  return Math.max(0, (SAVE.infiniteUntil || 0) - now());
+}
+function grantInfinite(minutes) {
+  if (!(minutes > 0)) return;
+  SAVE.infiniteUntil = Math.max(now(), SAVE.infiniteUntil || 0) + minutes * MIN;
 }
 
 /* ---------- pets ---------- */
@@ -931,7 +966,14 @@ function passWorthBuying() {
   const designed = PASS.tiers * PASS.per / SEASON_DAYS;
   const rate = gone >= 5 ? p.stamps / gone : designed;
   const projected = p.stamps + rate * left;
-  const pack = TREAT_PACKS.reduce((m, x) => Math.max(m, x.treats), 0);
+  /* the largest pack at or under the price of the book, which is the pack
+     beside it. This took the largest pack of all, which was the same one
+     while nothing cost more than the book; with a $19.99 size on sale no
+     season would ever have been worth buying, and the book would never have
+     been offered again. test/till.js caught it before it shipped. */
+  const price = s => parseFloat(String(s).replace(/[^0-9.]/g, ""));
+  const pack = TREAT_PACKS.filter(x => price(x.usd) <= price(PASS.usd))
+    .reduce((m, x) => Math.max(m, x.treats), 0);
   return passBanked(projected) >= pack;
 }
 
@@ -970,6 +1012,8 @@ function grantReward(r) {
     if (SAVE.keepsakes[r.keepsake]) SAVE.treats += 20;
     else SAVE.keepsakes[r.keepsake] = keepsakeOf(r.keepsake);
   }
+  if (r.theme) { if (SAVE.roomThemes[r.theme]) SAVE.treats += 4; else SAVE.roomThemes[r.theme] = 1; }
+  if (r.infinite) grantInfinite(r.infinite);
 }
 
 /* ---------- granting ----------
@@ -985,11 +1029,16 @@ function grantReward(r) {
    a sale. The treat store next to it had always tested `r.ok` and was
    never wrong. That is the argument for one door rather than two, and
    the book comes through this one now. */
-function grantPurchase(kind, id) {
+function grantPurchase(kind, id, txId) {
+  /* one transaction, one grant — see `granted` in freshSave */
+  if (txId && SAVE.granted && SAVE.granted[txId]) return 0;
+  const mark = () => { if (txId) (SAVE.granted || (SAVE.granted = {}))[txId] = 1; };
   if (kind === 'pack') {
     const p = TREAT_PACKS.find(x => x.id === id);
     if (!p) return 0;
     SAVE.treats += p.treats;
+    if (p.infinite) grantInfinite(p.infinite);
+    mark();
     persist(true);
     return p.treats;
   }
@@ -999,6 +1048,7 @@ function grantPurchase(kind, id) {
     SAVE.treats += got;
     j.fill = 0;
     j.opened = (j.opened || 0) + 1;
+    mark();
     persist(true);
     return got;
   }
@@ -1006,8 +1056,24 @@ function grantPurchase(kind, id) {
     const p = passState();
     if (p.paid) return 0;              /* already theirs; a restore said so twice */
     p.paid = true;
+    mark();
     persist(true);
     return 1;
+  }
+  if (kind === 'starter') {
+    /* "Once" is the treat sheet's rule, not this function's. A purchase
+       that reached here was paid for and gets what it paid for, even in
+       the case nobody can reach — and a second report of the same sale
+       is the ledger's to refuse, above, not this branch's. */
+    SAVE.treats += STARTER.treats;
+    Object.keys(STARTER.boosters).forEach(k => {
+      SAVE.boosters[k] = (SAVE.boosters[k] || 0) + STARTER.boosters[k];
+    });
+    SAVE.starter = { bought: true };
+    if (STARTER.infinite) grantInfinite(STARTER.infinite);
+    mark();
+    persist(true);
+    return STARTER.treats;
   }
 
   return 0;
@@ -1023,19 +1089,28 @@ function grantPurchase(kind, id) {
 
    The store still knows. Consumables sit in its queue until the app
    claims them, so the fix is to ask on every launch and grant whatever
-   is outstanding. Nothing here can double-pay: a pack that has been
-   granted was consumed in the same breath and is no longer in the queue,
-   and the book checks `paid` before it sets it.
+   is outstanding. Nothing here can double-pay: every claim carries its
+   transaction id, a granted id goes into the save in the same write as
+   the treats, and the book checks `paid` before it sets it. The store
+   is told a purchase is closed only after that write.
 
    This is also the whole of what the "restore a purchase" button does,
    which is why the button and the boot call the same function. */
-function claimOutstanding(skus) {
+function claimOutstanding(skus, receipts) {
   let n = 0;
-  (skus || []).forEach(sku => {
+  /* With transactions, each is claimed by its id, which is what makes a
+     second report of the same purchase worth nothing. The bare list is
+     what a store with no ids would hand back, and what the tests pass. */
+  const claims = (receipts && receipts.length)
+    ? receipts.reduce((out, tx) => out.concat(((tx && tx.products) || [])
+        .map(p => ({ sku: p && p.id, tx: tx.transactionId }))), [])
+    : (skus || []).map(sku => ({ sku: sku, tx: null }));
+  claims.forEach(({ sku, tx }) => {
     const pack = TREAT_PACKS.find(p => p.sku === sku);
-    if (pack) { n += grantPurchase('pack', pack.id) ? 1 : 0; return; }
-    if (sku === JAR.sku) { n += grantPurchase('jar', 'jar') ? 1 : 0; return; }
-    if (sku === PASS.sku) { n += grantPurchase('pass', 'pass') ? 1 : 0; }
+    if (pack) { n += grantPurchase('pack', pack.id, tx) ? 1 : 0; return; }
+    if (sku === JAR.sku) { n += grantPurchase('jar', 'jar', tx) ? 1 : 0; return; }
+    if (sku === STARTER.sku) { n += grantPurchase('starter', 'starter', tx) ? 1 : 0; return; }
+    if (sku === PASS.sku) { n += grantPurchase('pass', 'pass', tx) ? 1 : 0; }
   });
   return n;
 }

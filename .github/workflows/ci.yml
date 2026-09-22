@@ -82,6 +82,13 @@ jobs:
       - name: Browser layer — 39 checks against a real document
         run: npm run test:browser
 
+      # The only test of the money path. A store is put in the page, written
+      # from cordova-plugin-purchase type definitions rather than from the
+      # code it tests, and it does the two things a real store never does
+      # on cue: a cancelled sheet, and a kill between the treats and the close.
+      - name: The till, against a store
+        run: npm run test:till-live
+
       - name: Wide net — every screen, every sheet, real moves
         run: npm run hunt
 

@@ -12,11 +12,11 @@ password, a payment method or a Mac, and none of those are mine to have.
 | --- | --- |
 | iOS platform added, portrait-locked, arm64, bundle `com.pawtika.game` | `ios/` |
 | Android platform, portrait-locked, hardware back button handled | `android/` |
-| Version aligned at **1.0.0 (build 1)** across Android, iOS and the crash reports | `build.gradle`, `project.pbxproj`, `15-save.js` |
+| Version aligned at **1.1.0 (build 2)** across Android, iOS and the crash reports | `build.gradle`, `project.pbxproj`, `15-save.js` |
 | App icon and launch image for iOS, drawn from the game's own logo | `tools/icon.js` → `ios/App/App/Assets.xcassets/` |
 | Android launcher icons, 5 densities, adaptive + legacy + round | `tools/icon.js` → `android/.../mipmap-*` |
-| Store screenshots: Play phone 1080×1920, iPhone 6.7" 1290×2796, iPad 12.9" 2048×2732 | `shots/store/` |
-| Feature graphic 1024×500 | `shots/store/feature-graphic-1024x500.png` |
+| Store screenshots: Play phone 1080×1920, iPhone 6.7" 1290×2796, iPad 12.9" 2048×2732, EN + TR | `store/graphics/` (`node tools/store.js`) |
+| Feature graphic 1024×500 | `store/graphics/feature-graphic.png` |
 | Listing copy, EN + TR, both stores, inside character limits | `store/LISTING.md` |
 | Privacy policy | `privacy.html` |
 | Content-rating answers | `store/LISTING.md`, bottom |
@@ -26,6 +26,8 @@ password, a payment method or a Mac, and none of those are mine to have.
 | **Release AAB builds green** (unsigned until you make a key) | `node tools/gradle.js bundleRelease` |
 | **Purchases close properly** — every sale is consumed, so Play cannot auto-refund it after three days | `src/js/17-billing.js` |
 | **Restore actually restores**, on the button and on every launch | `17-billing.js`, `70-boot.js` |
+| **Purchases wired to a real plugin** — `cordova-plugin-purchase`, straight to Play Billing and StoreKit; release AAB builds with it | `17-billing.js`, `package.json` |
+| **Granted before closed, and never paid twice** — transaction ids kept in the save | `15-save.js`, `test/till.js` |
 | **The save survives the OS**, mirrored to native Preferences | `src/js/15-save.js` |
 | **Two reminders**, asked for at the out-of-hearts moment only | `src/js/16-notify.js` |
 | **A review prompt**, once ever, after a three-star clear | `60-ui.js`, `maybeAskForAReview` |
@@ -36,39 +38,74 @@ password, a payment method or a Mac, and none of those are mine to have.
 
 ## Yours — in order
 
-### 1. Decide about billing *(this is the release blocker)*
+### 1. Turn the till on *(the blocker for earning anything)*
 
-Nothing else on this list stops you shipping. This does.
+The plugin is in. `cordova-plugin-purchase` 13.18 talks to Play Billing
+and StoreKit directly — no third-party service, so the privacy policy
+and the data forms stay true — and `17-billing.js` is written against
+its type definitions rather than guessed at. The release AAB builds
+with it (5.1 MB, `com.android.vending.BILLING` in the merged manifest),
+and on iOS it is wired into `CapApp-SPM/Package.swift` with StoreKit
+linked.
 
-The code side is finished and tested: `test/till.js` covers it, purchases
-are consumed so Play cannot auto-refund them, restore works from the
-button and from every launch, and every product asks the store for its
-local price. What is missing is not code. It is accounts.
+The advice that used to be here named `@capacitor-community/in-app-purchases`.
+That package is not on npm, and the old seam would not have worked with
+any plugin that is. Both are gone.
 
-Pick one:
+What is left is accounts, and nothing in the build changes for them:
 
-- **Ship without purchases now.** Fastest, and defensible: it gets the game in front of people and the counters start telling you what to sell. The shop already hides its priced rows when no store is behind the build and shows "here is how treats are earned" instead — that is `earnTreatsSheet`, and it needs no change.
-- **Wire it up first.** Then I need from you: a Google Play merchant account, an Apple paid-apps agreement (App Store Connect → Business), and a decision between `@capacitor-community/in-app-purchases` and RevenueCat. The seam in `17-billing.js` picks either up by name, so the code change is small — the accounts are the long pole, and Apple's banking and tax forms in particular can take days.
+- **Google Play**: a payments profile (merchant account) on the developer
+  account, then Monetize → Products → In-app products — the seven below.
+- **Apple**: the Paid Apps agreement, banking and tax in App Store
+  Connect → Business (this can take days), then the seven as Consumable
+  in-app purchases, each with a review screenshot.
 
-**Declare all four products as CONSUMABLE**, including the season book.
-`treats_pocket_40`, `treats_bag_110`, `treat_jar`, `season_book`. The book
+Until a store answers with a price for at least one product, the shop
+stays in its "here is how treats are earned" state. Shipping before the
+products are live is safe, and it is the same build.
+
+A purchase is **granted and saved first, closed with the store second**,
+and its transaction id goes into the save in the same write as the
+treats. A kill between the two leaves the purchase open; the next launch
+finds it, closes it, and does not pay twice. `test/till.js` reads the
+source to hold every buy site to that order.
+
+**Before real money:** Play Console → Settings → License testing, add
+your own Google account. Buy once, cancel once, then kill the app between
+the payment sheet closing and the toast, and relaunch — the treats should
+arrive once. On iOS, the same with a Sandbox account (App Store Connect →
+Users and Access → Sandbox).
+
+**Declare all seven products as CONSUMABLE**, including the season book
+and the welcome pack: `treats_pocket_40`, `treats_bag_110`,
+`treats_tin_240`, `treats_sack_520`, `starter_pack`, `treat_jar`,
+`season_book`. The book
 is per-season and the season resets, so a non-consumable would be
 refused as "already owned" the second month. There is no non-consumable
 in this game, deliberately: it is the only product type that needs no
 account behind it.
 
-**Do not sell anything on "unlimited hearts".** The economy simulation
-records zero heart refills across thirty days of ordinary play at six
-levels a day; the wall is real for somebody playing twelve or more, and
-that is who the refill is for.
+**Unlimited hearts are sold now, and only as time inside something
+else.** This used to say never. It rested on the economy file reporting
+that a player on twelve levels a day ran dry sixty times a month — which
+was that file charging a heart for every attempt, when the game gives one
+back for every win. Measured with the game's own rule, hearts bind for
+somebody playing twenty-four levels a day or more, and that is who a
+stretch of unlimited hearts is worth something to. It comes inside the
+welcome pack (1 hour), the biscuit tin (1 hour), the feed sack (3 hours)
+and the book's paid column (two hours in three pieces). There is no
+product that is only unlimited hearts.
 
 ### 2. Host the privacy policy
 
-Publish `privacy.html` — GitHub Pages is fine and
-free. Before you do:
-
-- Replace `[YOUR CONTACT EMAIL]` with a real address. Both stores check it.
-- Delete the two `> **Developer note**` blocks.
+It is already published: `https://aydin3417.github.io/biscuit-lane/privacy.html`
+answers 200 (checked 11 Sep 2026). Contact address filled in, developer
+notes gone. The listing used to give `/pawtika/privacy.html`, which is a
+404 and would have been refused by both stores; it is corrected there.
+Checked against the live page on 11 Sep: the contact address is there and
+the developer notes are gone. The one sentence added since, about keeping
+transaction numbers, reaches the live page when the branch GitHub Pages
+serves is pushed.
 
 Then paste the URL into Play Console and App Store Connect. Both refuse
 to publish without it.
@@ -79,6 +116,13 @@ With this build, both answers are the simple ones:
 
 - **Play → Data safety: "No data collected, no data shared."** True today: the telemetry has no sink and makes no network request.
 - **Apple → App Privacy: "Data Not Collected."** Same reason.
+
+Purchases do not change what the app itself does: the plugin has no
+server and no validator is set, so nothing about a purchase leaves the
+phone except through the store's own sheet, and the game keeps only the
+store's transaction number, in the save, on the device. Read the store's
+own guidance on "purchase history" when you fill the form in, and answer
+from that — I have not had the form in front of me.
 
 The two reminders do not change this. A local notification is scheduled
 and delivered by the phone itself — no push service, no token, no server
@@ -136,13 +180,23 @@ You also need an **Apple Developer Program membership — $99/year**, which
 Google's $25 one-off does not cover. On the Mac: `npm run ios`, set the
 signing team in Xcode, then Product → Archive → Distribute.
 
+Use `npm run ios` rather than opening `ios/App` in Xcode straight from a
+fresh clone. The iOS sources of the purchase plugin are generated by
+`npx cap sync` and are not in the repository (`ios/.gitignore` refuses
+`capacitor-cordova-ios-plugins`), so until a sync has run, Xcode cannot
+resolve `CordovaPluginPurchase` and the build stops before it starts.
+
 ### 6. Both consoles
 
-- Google Play: $25, once, ever. **New personal developer accounts must run a closed test with 12 testers for 14 continuous days before they can go to production** — start that clock early, it is the longest lead time on this whole list.
+- Google Play: $25, once, ever. **New personal developer accounts must run a closed test with 12 testers for 14 continuous days before they can go to production** — start that clock early, it is the longest lead time on this whole list. Checked 11 Sep 2026 against Play Console Help: still 12 testers for 14 continuous days, per app, for personal accounts made on or after 13 November 2023. An organization account is exempt, but it needs a D-U-N-S number, which is a wait of its own.
+- Fees: both stores keep 15% of the first USD 1 million a year. Google applies it by itself; Apple only once you enroll in the App Store Small Business Program, so enroll before the first sale rather than after.
 - Apple: $99/year, and a review that usually takes 24–48 hours.
 
-Upload from `shots/store/`: `play-phone/` for Play, `ios-6.7/` and
-`ios-ipad/` for Apple.
+Upload from `store/graphics/`: the files at the top of that folder are
+Play's 1080×1920, `ios-6.7/` and `ios-ipad/` are Apple's. `shots/store/`
+is an older tool's output and is two art passes behind — the animals in it
+are not the animals in the build. Re-run `node tools/store.js` after any
+change to the drawing code, and look at one before you upload five.
 
 ### 7. Tell me when the analytics has somewhere to go
 

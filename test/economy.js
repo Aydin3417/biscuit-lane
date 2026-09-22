@@ -47,7 +47,7 @@ require('./_modules.js').WITH_SAVE.forEach(f =>
 const X = vm.runInContext(
   '({ FOODS, TOYS, BOOSTERS, HATS, COLLARS, FURNITURE, ROOM_THEMES, KEEPSAKES, BADGES, giftFor,' +
   '   HEART_MAX, ECON, JAR, TREAT_PACKS, PASS, PASS_TRACK, passTier, SEASON_DAYS, isGate,' +
-  '   BREEDS, EYE_COLORS, GROOM })', ctx);
+  '   BREEDS, EYE_COLORS, GROOM, targetClear })', ctx);
 const E = X.ECON;
 
 /* the one number that still lives somewhere this cannot import, because
@@ -64,10 +64,42 @@ const winCoins = (stars, score) =>
   Math.round(E.winBase + stars * E.winPerStar + Math.floor(score / E.winPerScore));
 
 /* ---------- what a level is worth, and how often one is cleared ----------
-   Both from the difficulty run: the lane clears about 80% of the time
-   and three-stars about 40%, and a cleared level scores somewhere near
-   its three-star target. Six levels is a session. */
+
+   A cleared level scores somewhere near its three-star target, and
+   three-stars about 40% of the time. Six levels is a session.
+
+   HOW OFTEN ONE IS CLEARED IS THE LEVEL'S OWN NUMBER NOW. This used to be
+   one constant, eighty percent, for every level in the game — so a gate
+   and the relief after it cost the same, the heart wall was met at the
+   same rate on level 5 and level 300, and no change to the difficulty
+   curve could ever show up in this file. It reads targetClear(n) from
+   11-design.js, the number every level's move budget is fitted to (the
+   lane within its own fit, the run within four points on average). The
+   constant is kept for a replay, which is a level already beaten. */
 const CLEAR_RATE = .80;
+/* A PLAYER WHO FEEDS THEIR PET CLEARS MORE, and this one does: the loop
+   below buys kibble and stew every day. targetClear describes a bare pet.
+
+   How much more depends on where in the block the level sits, and it was
+   measured that way: bare and cared-for side by side, a third seed family,
+   twelve games a level. A pet keeps about half the losses of an ordinary
+   level and nearly two thirds of a gate, so care helps least exactly where
+   the wall is. Relief on the lane lost nothing at that sample, which is a
+   sample, so no share below .20 is taken. ECON_BARE=1 walks the bare pet. */
+const CARE_KEEPS = {
+  lane: { relief: .20, middle: .46, runup: .62, gate: .64 },
+  run:  { relief: .52, middle: .42, runup: .46, gate: .63 }
+};
+const BARE = process.env.ECON_BARE === "1";
+const clearAt = (n, farm) => {
+  if (farm) return CLEAR_RATE;
+  const bare = X.targetClear(n);
+  if (BARE) return bare;
+  const beat = ((n - 1) % 10) + 1;
+  const keeps = n < 61 ? CARE_KEEPS.lane : CARE_KEEPS.run;
+  const k = beat === 10 ? keeps.gate : beat === 1 ? keeps.relief : beat === 9 ? keeps.runup : keeps.middle;
+  return 1 - (1 - bare) * k;
+};
 const THREE_STAR = .40;
 let SESSION_LEVELS = 6;
 /* How the day is spread. Hearts refill on a wall clock, so six levels
@@ -88,6 +120,10 @@ const SCORE_TYPICAL = 24000;
    guess and is labelled as one; it is the number to replace first with
    something real once the game is in front of players. */
 const CLOSE_LOSS = .50;
+/* Of the levels carried on, how many five moves did not finish — which is
+   where the second, dearer offer appears. A guess like the one above it,
+   and the next number to replace with a real one. */
+const CARRY_FAILS = .30;
 
 /* ---------- the sinks ---------- */
 function catalogue() {
@@ -146,7 +182,7 @@ function run(days, farm, seed) {
      lives system does anything. */
   let hearts = X.HEART_MAX, dry = 0, lost = 0;
   /* offers made, and offers the player could not afford */
-  let wanted = 0, short = 0;
+  let wanted = 0, short = 0, wanted2 = 0, short2 = 0, continues2 = 0;
   const badgesPaid = {};
   let cleared = 0, threeStars = 0, replays = 0, satDay = 0;
   let bought = 0, boosters = 0;
@@ -250,7 +286,7 @@ function run(days, farm, seed) {
         }
       }
       hearts--;
-      if (rnd() >= CLEAR_RATE) {
+      if (rnd() >= clearAt(level, farm)) {
         /* a lost level. Near the end it is worth nine treats to carry
            on, and carrying on clears it — which is the whole reason the
            offer is only allowed to appear near the end. */
@@ -261,11 +297,26 @@ function run(days, farm, seed) {
           wanted++;
           if (treats >= E.continueTreats) {
             treats -= E.continueTreats; treatsOut += E.continueTreats; continues++;
+            /* five moves are not always enough, and when they are not the
+               second offer comes at the second price */
+            if (rnd() < CARRY_FAILS) {
+              wanted2++;
+              if (treats >= E.continueTreats2) {
+                treats -= E.continueTreats2; treatsOut += E.continueTreats2; continues2++;
+              } else { short2++; continue; }
+            }
           } else { short++; continue; }
         } else {
           continue;
         }
       }
+      /* WINNING GIVES THE HEART BACK. The game has done this since hearts
+         became "a brake on repeated failure" (60-ui.js, showWin): only a
+         level that beats you costs one. This file never learned it and
+         charged every attempt, so a player on twelve levels a day was
+         reported running dry sixty times a month when the game would
+         have let them play on. */
+      hearts = Math.min(X.HEART_MAX, hearts + 1);
       const three = rnd() < THREE_STAR;
       const stars = three ? 3 : 2;
       /* farming replays a level that is already cleared, which is where
@@ -276,7 +327,8 @@ function run(days, farm, seed) {
       if (farm) replays++;
       if (three) threeStars++;
       if (!farm) level++;
-      if (three) take(E.threeStarTreats);
+      /* a treat for three stars at a gate only; level has already moved on */
+      if (three) take(X.isGate(farm ? level : level - 1) ? E.threeStarTreatsGate : E.threeStarTreats);
       if (!farm && level % E.milestoneEvery === 0) take(E.milestoneTreats);
       /* stamps, on a first clear only — a replay pays none, which is
          what stops the track being finished on level three */
@@ -372,6 +424,7 @@ function run(days, farm, seed) {
   return {
     satDay, bought, boosters, coins, treats, level, pets, earned, spent, weeks, cleared, replays,
     treatsIn, treatsOut, continues, refills, jar, jarFills, dry, lost, wanted, short,
+    wanted2, short2, continues2,
     keeps, keepsSpent, keepShelfN: keepShelf.length,
     stamps, seasons, passTierEnd: Math.max(passTierEnd, X.passTier(stamps)),
     passCoins, passTreats, passGoods,
@@ -425,6 +478,9 @@ console.log('  hearts: ran out ' + r.dry + ' times, ' + r.lost + ' levels not pl
 console.log('  carry-on: offered ' + r.wanted + ', taken ' + r.continues + ', ' +
   r.short + ' turned down for want of treats (' +
   (r.wanted ? Math.round(r.short / r.wanted * 100) : 0) + '%)');
+console.log('  second:   offered ' + r.wanted2 + ', taken ' + r.continues2 + ', ' +
+  r.short2 + ' turned down for want of treats (' +
+  (r.wanted2 ? Math.round(r.short2 / r.wanted2 * 100) : 0) + '%)');
 console.log('  jar:    ' + r.jar + ' of ' + JARCAP + ', filled ' + r.jarFills + ' time(s)');
 /* The jar is the only offer in the game that a player earns rather than
    is shown, so the number worth knowing about it is not how much it
@@ -459,8 +515,8 @@ console.log('  book:   ' + r.stamps + ' stamps this season, tier ' +
 console.log('  book:   free column paid ' + (r.passCoins + r.passGoods) + ' coins and ' +
   r.passTreats + ' treats over ' + Math.max(1, r.seasons) + ' season(s)');
 console.log('  book:   the paid column would have held ' + r.passPaid +
-  ' treats, against ' + X.TREAT_PACKS.reduce((m, x) => Math.max(m, x.treats), 0) +
-  ' in the pack beside it');
+  ' treats, against ' + X.TREAT_PACKS.find(x => x.usd === X.PASS.usd).treats +
+  ' in the pack at its price');
 
 /* ---------- the same month at three appetites ----------
 
@@ -494,26 +550,25 @@ SESSION_LEVELS = wasLevels; SESSIONS = wasSessions;
    It is the design. Hearts only ever go down on a loss — winning returns
    the one it took, and quitting returns it too — so the drain is the
    loss rate, and somebody playing six levels a day across two sittings
-   loses about one. Five hearts and a twenty-five minute refill cannot
+   loses about one. Five hearts and a thirty minute refill cannot
    bind against that and are not meant to: a casual player meeting a wall
    twice a week is a casual player who stops.
 
-   The rows below it are where the meter lives, and they are not zero.
-   Somebody playing twelve levels a day meets it sixty times a month and
-   pays to get past it seven; at twenty-four it is ninety and nine. That
-   is the shape a lives system is supposed to have — invisible to
-   somebody dipping in, real to somebody who has found the game — and it
-   is also, not coincidentally, the shape of who ever pays for anything.
+   The rows below it used to be quoted here as sixty dry sittings a
+   month at twelve levels a day. That was this file charging a heart for
+   every attempt, when the game gives one back for every win; measured
+   with the game's own rule and each level's own clear rate, a player on
+   twelve levels a day almost never ran dry, and the only pressure left
+   anywhere in the game was the carry-on.
 
-   The same argument governs the treat column. Free treat income is
-   deliberately enough to cover an ordinary player's carry-ons and
-   deliberately not enough to cover an engaged one's: the carry-on
-   shortfall runs 21% in the first row and 45 to 59% in the others.
-   Cutting income until the first row went short as well would raise the
-   pressure on precisely the players least likely to pay and most likely
-   to leave. It has been considered twice now and refused twice; this
-   paragraph is here so it does not have to be considered a third time
-   from scratch. */
+   So the refusal that used to close this paragraph is reversed, on
+   purpose, by the owner's decision: the game is to earn the way the genre
+   does, in a dose. Free treats are paid at the walls rather than for
+   every three-star, the run is harder, a second carry-on costs more than
+   the first, and the larger packs, the welcome pack and the book carry
+   stretches of unlimited hearts. This table is how the dose is watched.
+   If the first row starts running dry, it is too strong for exactly the
+   players least likely to pay and most likely to leave. */
 
 let bad = 0;
 /* The two thresholds are judged on the medians, not on this one run:

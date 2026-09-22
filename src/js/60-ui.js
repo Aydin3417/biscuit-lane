@@ -62,12 +62,30 @@ function setScreen(name) {
 }
 
 /* ---------------- top bar ---------------- */
+/* fmtTime counts minutes and seconds, which is right for one heart and
+   wrong for three hours of them: "180:00" reads as a score */
+function fmtClock(ms) {
+  if (ms < 60 * MIN) return fmtTime(ms);
+  const s = Math.ceil(ms / 1000);
+  return Math.floor(s / 3600) + ':' + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+}
+/* "1 h", "30 min" — how long a stretch of unlimited hearts is */
+function durText(min) {
+  return min >= 60 && min % 60 === 0 ? T('dur_h', { n: min / 60 }) : T('dur_m', { n: min });
+}
 function syncPurse() {
   heartTick();
   const h = $('#chipHearts');
   const inT = heartsIn();
-  h.innerHTML = IC.heart + '<span class="num">' + SAVE.hearts + '</span>' +
-    (SAVE.hearts >= HEART_MAX ? '' : '<span class="sub num">' + fmtTime(inT) + '</span>');
+  if (heartsInfinite()) {
+    h.innerHTML = IC.heart + '<span class="num">∞</span><span class="sub num">' + fmtClock(infiniteLeft()) + '</span>';
+    h.title = T('inf_chip');
+    heartClockStart();
+  } else {
+    h.innerHTML = IC.heart + '<span class="num">' + SAVE.hearts + '</span>' +
+      (SAVE.hearts >= HEART_MAX ? '' : '<span class="sub num">' + fmtTime(inT) + '</span>');
+    h.title = '';
+  }
   $('#chipCoins').innerHTML = IC.coin + '<span class="num">' + fmtPurse(SAVE.coins) + '</span>';
   $('#chipTreats').innerHTML = IC.treat + '<span class="num">' + fmtPurse(SAVE.treats) + '</span>';
 }
@@ -95,11 +113,13 @@ function passChip(r) {
   if (!r) return '';
   if (r.coins) return `<span class="reward" style="color:var(--accent-strong)">${IC.coin}+${r.coins}</span>`;
   if (r.treats) return `<span class="reward" style="color:var(--plum)">${IC.treat}+${r.treats}</span>`;
+  if (r.infinite) return `<span class="reward" style="color:var(--rose)">${IC.heart}∞ ${durText(r.infinite)}</span>`;
   const named = r.food ? FOODS.find(x => x.id === r.food)
     : r.boost ? BOOSTERS.find(x => x.id === r.boost)
       : r.hat ? HATS.find(x => x.id === r.hat)
         : r.collar ? COLLARS.find(x => x.id === r.collar)
-          : r.keepsake ? KEEPSAKES.find(x => x.id === r.keepsake) : null;
+          : r.keepsake ? KEEPSAKES.find(x => x.id === r.keepsake)
+            : r.theme ? ROOM_THEMES.find(x => x.id === r.theme) : null;
   return `<span class="reward">${goodName(named || {})}</span>`;
 }
 
@@ -182,6 +202,7 @@ function passSheet() {
     $$('[data-take]', m.el).forEach(b => b.addEventListener('click', () => {
       const got = passClaim(+b.dataset.take, b.dataset.paid === '1');
       if (!got) return;
+      if (got.infinite) toast(T('inf_granted', { t: durText(got.infinite) }), 'heart');
       SFX.coin(); buzz(10); syncPurse();
       m.el.innerHTML = draw(); wire();
     }));
@@ -205,11 +226,21 @@ function passSheet() {
         buy.disabled = false;
         track('buy_fail', { why: r.why || 'unknown' });
         if (r.why === 'nostore') { storeShut(); return; }
+        if (r.why === 'pending') { toast(T('store_pending'), 'treat'); return; }
         if (r.why !== 'cancelled') { SFX.bad(); toast(T('store_failed'), 'treat'); }
         return;
       }
       track('buy_ok', { sku: PASS.sku });
-      grantPurchase('pass', 'pass');
+      /* Written into the save first, handed back to the store second.
+
+         The order is the whole point. A purchase the store has closed and
+         the save never recorded is money taken for nothing, and it can
+         never be claimed afterwards, because a consumed purchase is in
+         nobody's queue. The other way round, a kill between the two
+         leaves it open, the next launch finds it, and the transaction id
+         stops it paying twice. */
+      grantPurchase('pass', 'pass', r.receipt && r.receipt.transactionId);
+      BILLING.settle(r.receipt);
       SFX.win();
       toast(T('pass_bought'), 'check');
       m.el.innerHTML = draw(); wire();
@@ -861,7 +892,7 @@ function shopStyle() {
     </div>`;
   }).join('')}</div>
   <div class="sectitle"><h3>${T('shop_collars')}</h3></div>
-  <div class="grid3">${COLLARS.map(h => {
+  <div class="grid3">${COLLARS.filter(h => !h.book || SAVE.collars[h.id]).map(h => {
     const owned = !!SAVE.collars[h.id];
     const worn = pet && pet.collar === h.id;
     return `<div class="good ${worn ? 'owned' : ''}" style="padding:9px 7px">
@@ -903,7 +934,7 @@ function shopRoom() {
     </div>`;
   }).join('')}</div>
   <div class="sectitle"><h3>${T('shop_walls')}</h3></div>
-  <div class="grid2">${ROOM_THEMES.map(t => {
+  <div class="grid2">${ROOM_THEMES.filter(t => !t.book || SAVE.roomThemes[t.id]).map(t => {
     const owned = !!SAVE.roomThemes[t.id];
     const on = SAVE.room.theme === t.id;
     return `<div class="good ${on ? 'owned' : ''}">
@@ -921,6 +952,8 @@ function buyThing(id, kind) {
                   furniture: FURNITURE, theme: ROOM_THEMES, keepsake: KEEPSAKES };
   const item = table[kind].find(x => x.id === id);
   if (!item) return;
+  /* only ever given by the book; priced at nothing because it is not for sale */
+  if (item.book) return;
   /* one of a kind: taking the coins twice for a single hat is theft */
   const once = { toy: SAVE.toys, hat: SAVE.hats, collar: SAVE.collars,
                  furniture: SAVE.furniture, theme: SAVE.roomThemes,
@@ -1467,7 +1500,7 @@ function openLevelIntro(n) {
   const pet = activePet();
   const perks = perksFor(pet);
   let useMoves = false;
-  if (SAVE.hearts <= 0) { noHeartsSheet(); return; }
+  if (SAVE.hearts <= 0 && !heartsInfinite()) { noHeartsSheet(); return; }
   /* straight in, the first time through the opening levels. Everything
      the Start button does, in the same order — the heart is still spent,
      the screen still changes, and the level's own coach mark still
@@ -1557,10 +1590,11 @@ function openLevelIntro(n) {
    puts a line at the top saying what the treats would have done, because
    a store that opens without saying why it opened is an interruption.
 
-   Nothing in here can charge anything yet. When BILLING is not ready the
-   prices still show — they are what the thing will cost — and the button
-   says the shop is shut instead of pretending to take a card. */
-function treatStore(why) {
+   It charges only when a store is behind the build and has priced at
+   least one product. Until then BILLING is not ready and this opens the
+   sheet that says how treats are earned — the comment here used to say
+   the prices still showed, after the code had stopped showing them. */
+function treatStore(why, need) {
   const live = BILLING.ready();
   track('store_open', { why: why || 'chip', live: live });
   /* No store, nothing to sell. Three priced rows that all answer "the
@@ -1568,9 +1602,9 @@ function treatStore(why) {
      no, and stops trusting the next thing the game offers. Until a
      billing plugin is installed this says where treats come from, which
      is true and useful, and asks for nothing. */
-  if (!live) { earnTreatsSheet(why); return; }
+  if (!live) { earnTreatsSheet(why, need); return; }
   const j = jarState();
-  const reason = why === 'continue' ? T('store_why_continue', { n: ECON.continueTreats })
+  const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
     : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
   const tag = (sku, usd) => {
     const p = BILLING.price(sku, null);
@@ -1588,6 +1622,12 @@ function treatStore(why) {
     <h2>${T('store_t')}</h2>
     ${reason ? `<p><b style="color:var(--accent-strong)">${reason}</b></p>` : ''}
     <p style="color:var(--text-dim)">${T('store_s')}</p>
+    ${SAVE.starter && SAVE.starter.bought ? '' : `
+    <div class="offer" style="background:color-mix(in srgb,var(--accent) 12%, var(--surface-2))">
+      <span class="ot"><b>${T('store_starter_t')}</b>
+        <small>${T('store_starter_s', { n: STARTER.treats, m: STARTER.boosters.moves, h: STARTER.boosters.hammer, s: STARTER.boosters.shuffle, i: durText(STARTER.infinite) })}</small></span>
+      <button class="btn sm" data-pay="starter" data-kind="starter">${tag(STARTER.sku, STARTER.usd)}</button>
+    </div>`}
 
     ${!j.fill ? '' : jarFull()
       ? row('jar', 'jar', T('store_jar_t'), T('store_jar_full', { n: j.fill }),
@@ -1611,7 +1651,7 @@ function treatStore(why) {
 
     ${TREAT_PACKS.map(p => row(p.id, 'pack',
       T('store_pack', { n: p.treats }) + (p.best ? ' ★' : ''),
-      p[LANG] || p.en, tag(p.sku, p.usd))).join('')}
+      (p[LANG] || p.en) + (p.infinite ? ' · ' + T('inf_for', { t: durText(p.infinite) }) : ''), tag(p.sku, p.usd))).join('')}
 
     ${live ? `<button class="btn ghost wide" id="stRestore"
       style="font-size:var(--t-micro)">${T('store_restore')}</button>` : ''}
@@ -1626,6 +1666,7 @@ function treatStore(why) {
     const kind = b.dataset.kind;
     const id = b.dataset.pay;
     const sku = kind === 'pack' ? TREAT_PACKS.find(x => x.id === id).sku
+      : kind === 'starter' ? STARTER.sku
       : JAR.sku;
     b.disabled = true;
     track('buy_try', { sku: sku });
@@ -1634,15 +1675,18 @@ function treatStore(why) {
     if (!r.ok) {
       track('buy_fail', { why: r.why || 'unknown' });
       if (r.why === 'nostore') { storeShut(); return; }
+      if (r.why === 'pending') { toast(T('store_pending'), 'treat'); return; }
       if (r.why !== 'cancelled') { SFX.bad(); toast(T('store_failed'), 'treat'); }
       return;
     }
     track('buy_ok', { sku: sku });
-    const got = grantPurchase(kind, id);
+    /* grant, then close — the season book's button says why that way round */
+    const got = grantPurchase(kind, id, r.receipt && r.receipt.transactionId);
+    BILLING.settle(r.receipt);
     SFX.coin();
     syncPurse();
     m.close();
-    toast(T('store_thanks', { n: got }), 'treat');
+    toast(kind === 'starter' ? T('store_starter_thanks') : T('store_thanks', { n: got }), 'treat');
   }));
   /* The button called restore and then threw the answer away, which made
      it a button that did nothing at all — the store handed back a list
@@ -1654,7 +1698,10 @@ function treatStore(why) {
     rs.disabled = true;
     const r = await BILLING.restore();
     rs.disabled = false;
-    const n = r.ok ? claimOutstanding(r.skus) : 0;
+    const n = r.ok ? claimOutstanding(r.skus, r.receipts) : 0;
+    /* and close every one of them, including any the save already held —
+       those are the ones a kill left open after the treats were written */
+    if (r.ok) BILLING.settleAll(r.receipts);
     syncPurse();
     if (n) { SFX.coin(); m.close(); toast(T('store_restored', { n: n }), 'check'); }
     else toast(T('store_restore_none'), 'treat');
@@ -1665,9 +1712,9 @@ function treatStore(why) {
 
    Everything in here the player can act on today: play a level, take the
    walk, come back tomorrow. No prices, no buttons that refuse. */
-function earnTreatsSheet(why) {
+function earnTreatsSheet(why, need) {
   const j = jarState();
-  const reason = why === 'continue' ? T('store_why_continue', { n: ECON.continueTreats })
+  const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
     : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
   const line = (icon, text) => `
     <div class="goalItem">
@@ -1845,7 +1892,7 @@ function showWin() {
   const rate = first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
   const coins = Math.max(first ? 0 : 1, Math.round(base * rate));
   let treats = 0;
-  if (stars === 3 && prev < 3) treats += ECON.threeStarTreats;
+  if (stars === 3 && prev < 3) treats += isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats;
   if (first && n % ECON.milestoneEvery === 0) treats += ECON.milestoneTreats;
   /* and the jar takes its couple, on a replay as well: it is the one
      thing in the economy that is paid for time rather than progress,
@@ -1991,7 +2038,9 @@ function showLose() {
      kind of goal, in the reference sheet's own voice. */
   const worst = short.slice().sort((a, b) => (a.have / a.g.need) - (b.have / b.g.need))[0];
   const tip = worst ? T('lose_tip_' + worst.g.kind) : '';
-  const short2 = SAVE.treats < ECON.continueTreats;
+  /* the first carry-on at its price, the second at the higher one */
+  const price = (G.extras || 0) === 0 ? ECON.continueTreats : ECON.continueTreats2;
+  const short2 = SAVE.treats < price;
   const m = modal(`
     ${pet ? `<div class="winPet"><canvas data-body="${pet.breed}" data-coat="${pet.coat}"
       data-eye="${petEye(pet)}" data-hat="${pet.hat}" data-collar="${pet.collar}"
@@ -2013,14 +2062,14 @@ function showLose() {
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn primary" id="lRetry">${T('retry')}</button>
     </div>
-    ${G.usedExtra || !worthCarryingOn ? '' : `
+    ${(G.extras || 0) >= 2 || !worthCarryingOn ? '' : `
     <div class="offer">
       <span class="ot">
         <b>${T('lose_extra', { n: ECON.continueMoves })}</b>
-        <small>${short2 ? T('lose_extra_short', { n: ECON.continueTreats, have: SAVE.treats }) : T('lose_extra_sub', { n: ECON.continueTreats })}</small>
+        <small>${short2 ? T('lose_extra_short', { n: price, have: SAVE.treats }) : T('lose_extra_sub', { n: price })}</small>
       </span>
       <button class="btn sm" id="lExtra"${short2 ? ' style="opacity:.6"' : ''}>${T('shop_buy')}</button>
-    </div>` + (ADS.available('carry') ? `
+    </div>` + (!(G.extras || 0) && ADS.available('carry') ? `
     <div class="offer">
       <span class="ot">
         <b>${T('ad_watch', { n: ECON.continueMoves })}</b>
@@ -2035,10 +2084,10 @@ function showLose() {
   if (ex) ex.addEventListener('click', () => {
     /* short of treats is the one moment the player actually wants the
        jar, so it opens there rather than being told no by a toast */
-    if (SAVE.treats < ECON.continueTreats) { SFX.bad(); treatStore('continue'); return; }
-    SAVE.treats -= ECON.continueTreats; persist(true); syncPurse();
+    if (SAVE.treats < price) { SFX.bad(); treatStore('continue', price); return; }
+    SAVE.treats -= price; persist(true); syncPurse();
     m.close();
-    G.usedExtra = true;
+    G.extras = (G.extras || 0) + 1;
     G.over = false; G.busy = false;
     G.moves = ECON.continueMoves;
     syncHud();
@@ -2054,7 +2103,7 @@ function showLose() {
     const won = await ADS.show('carry');
     if (!won) { ad.disabled = false; SFX.bad(); return; }
     m.close();
-    G.usedExtra = true;
+    G.extras = (G.extras || 0) + 1;
     G.over = false; G.busy = false;
     G.moves = ECON.continueMoves;
     syncHud();

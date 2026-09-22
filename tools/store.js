@@ -81,7 +81,7 @@ const SHOTS = [
     file: '5-dusk',
     caption: { en: 'Day and Dusk, and it works in flight mode', tr: 'Gündüz ve Akşam, uçak modunda da çalışır' },
     go: async page => page.evaluate(() => {
-      BL.save.settings.theme = 'dusk'; BL.applyTheme(); BL.persist(true);
+      BL.save.settings.theme = 'dark'; BL.applyTheme(); BL.persist(true);
       BL.setScreen('home'); BL.renderHome();
     })
   }

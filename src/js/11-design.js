@@ -48,7 +48,7 @@ const RHYTHM = [
   -.07,   /* 7 */
   -.02,   /* 8  — a small step back before the run-up */
   -.09,   /* 9  — the run-up */
-  -.15    /* 10 — the gate */
+  -.18    /* 10 — the gate */
 ];
 
 /* Where the authored lane ends and the generator takes over. The lane is
@@ -59,7 +59,27 @@ const RUN_START = 61;
 /* The floor the run settles toward, and how fast it gets there. Ninety
    levels in it is most of the way down; it never reaches the floor, so
    there is always somewhere left to go. */
-const EASE_FROM = .78, EASE_TO = .61, EASE_OVER = 210;
+/* THE RUN WAS TUNED FOR A PET NOBODY PLAYS WITH.
+
+   Every number in this file describes a bare pet, and a player who feeds
+   theirs clears more: measured at nine games a level, the run went from
+   72% bare to 87% cared-for, and the lane from 86% to 94%. With a heart
+   returned on every win, that is a game in which nobody runs out and the
+   carry-on is mostly paid for with treats the player earned — so there
+   was almost nothing to sell, because there was almost nothing to want.
+
+   The run is harder by a dose. It opens at .70 instead of .78 and settles
+   toward .52 instead of .61, the gate asks .18 below the ease instead of
+   .15, and the floor comes down to .35. For a cared-for player that is an
+   estimated eight points: relief still near nine in ten, a gate near seven
+   in ten. Estimated, because the lift a pet gives is measured as an average
+   and a gate is not an average level; test/run-all.js measures the
+   cared-for run directly, and that is the number to believe.
+
+   The lane is untouched. The first sixty levels are where a new player
+   learns the game, and nothing should be sold there to somebody who is
+   still working out what a rocket is. */
+const EASE_FROM = .70, EASE_TO = .52, EASE_OVER = 210;
 
 /* Where the game opens, and how it bends down to meet EASE_FROM at the
    handoff. A bend of 1 would be a straight line and would spend the
@@ -71,7 +91,7 @@ const LANE_FROM = .93, LANE_BEND = 1.6;
 /* Never certain, never impossible. The lane is allowed to be gentler at
    both ends than the run: nobody should fail level one, and nobody
    should meet a 45% wall before they have met every mechanic. */
-const CLEAR_FLOOR = .45, CLEAR_CEIL = .88;
+const CLEAR_FLOOR = .35, CLEAR_CEIL = .88;
 const LANE_FLOOR = .58, LANE_CEIL = .97;
 
 /* A level that teaches a mechanic for the first time is not a test of

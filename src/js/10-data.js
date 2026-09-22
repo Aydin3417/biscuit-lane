@@ -286,20 +286,39 @@ const ECON = {
      where most of the excess was, and the seventh-day gift comes down by
      one. Three stars still pays: that one is for playing well, and it is
      the last treat income to touch. */
-  threeStarTreats: 1, milestoneTreats: 1, milestoneEvery: 10,
+  /* THREE STARS PAY A TREAT ON A GATE, AND ONLY THERE.
 
-  heartRefillMin: 25,
+     Re-measured with the game's own heart rule and each level's own clear
+     rate: free income still covered the carry-on often enough that the
+     offer was a formality for half the month, and three stars on an
+     ordinary level was the largest single source of it. A treat is the
+     currency that ends a wall, so it is paid at the walls: three-starring
+     a gate is the hardest thing in a block, and it still pays. */
+  threeStarTreats: 0, threeStarTreatsGate: 1, milestoneTreats: 1, milestoneEvery: 10,
+
+  /* thirty, which is the genre's number: a full set in two and a half
+     hours rather than two. It only matters to somebody who has lost five
+     levels, because a win gives its heart back. */
+  heartRefillMin: 30,
   /* the sinks. Nine treats to carry on is Candy Crush's number for the
      same offer, and at roughly five treats a day of free income it is a
      real decision rather than a formality — the old price was 2, which
      is not a decision, and 3 for a full set of hearts meant the wait
      never had to be waited. */
   continueTreats: 9, continueMoves: 5,
+  /* A second carry-on, at a higher price. Five moves is not always enough,
+     and the moment it is not is the moment a player most wants to finish
+     — so there is a second offer, once, and it costs what the genre
+     charges for the second: close to double. There is no third. */
+  continueTreats2: 16,
   /* Was twelve, against a player who is holding seven at the moment
      the pool empties — which made it not an offer but a wall with a
      price written on it. Nine is the carry-on price, and a player who
      has just been stopped should be looking at a number they recognise. */
-  heartRefillTreats: 9,
+  /* Twelve. Nine matched the carry-on so the number would be familiar,
+     but a full set of hearts is five attempts and a carry-on is one — they
+     were never the same size of thing. */
+  heartRefillTreats: 12,
   /* and the gate on the offer. An extra five moves at 20% of the goal
      is not an offer, it is a sale of a lost level — the player finds
      that out after paying, once, and then never trusts the button
@@ -357,10 +376,62 @@ function storeLink() {
    the player's own currency, and that is what gets shown — a hardcoded
    dollar figure is wrong in most of the world, and wrong by a lot in
    Turkey, where it also ages badly month to month. */
+/* THE TWO LARGER SIZES, and what they must not do.
+
+   The shop stopped at $4.99, which is a ceiling rather than a price
+   list. test/economy.js has a player on twenty-four levels a day
+   running dry and refilling ten times a month, and the only thing on
+   sale for them was the same paper bag again. So there are two more
+   sizes, and each gives more treats for the dollar than the one below
+   it — 20, 22, 24 and 26 — which is what makes a bigger size an honest
+   offer rather than a bigger bill. The star moves to the largest,
+   because that is where the best rate among the packs now is.
+
+   None of them reaches the jar. The jar is 33 a dollar and stays the
+   best rate in the game, for the reason written above it: those are
+   treats the player filled by playing, and a pack is only ever the
+   second-best way to get them. test/till.js holds all of this to the
+   arithmetic, so a price change that breaks it fails a test rather
+   than a promise. */
 const TREAT_PACKS = [
   { id: 'pocket', sku: 'treats_pocket_40', treats: 40, usd: '$1.99', en: 'Pocketful', tr: 'Bir avuç' },
-  { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı', best: true }
+  { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı' },
+  { id: 'tin', sku: 'treats_tin_240', treats: 240, usd: '$9.99', en: 'Biscuit tin', tr: 'Bisküvi kutusu', infinite: 60 },
+  { id: 'sack', sku: 'treats_sack_520', treats: 520, usd: '$19.99', en: 'Feed sack', tr: 'Mama çuvalı', best: true, infinite: 180 }
 ];
+
+/* ---------- the welcome pack ----------
+
+   Once per player, and the only thing in the shop with a limit on it.
+
+   The first purchase is the hard one. Somebody who has never paid for
+   anything in a game is being asked for a card by a stranger, and every
+   later offer is easier than that one — so the first offer is the best
+   one, and it says plainly what it is. Nothing in it expires, nothing
+   counts down, and it is shown only inside the treat sheet, which the
+   player opened themselves: at the chip, or at the lose card when they
+   were short for the carry-on. It is not a popup. A pack that ambushes
+   somebody on the map buys one sale and loses the second.
+
+   What is in it, and why that much. Sixty treats is thirty a dollar,
+   better than any pack and still short of the jar. The boosters are the
+   ones a stuck level wants — three +5 move starts, three hammers, two
+   shuffles — which is six hundred coins at shop prices, about ten
+   three-starred levels of income, handed over once. Generous on
+   purpose, and harmless for the same reason: there is one of it, and
+   the months after it are the months the economy file measures.
+
+   It is a consumable like everything else here, and "once" is kept by
+   the save rather than by the store: a reinstall is a new player and is
+   offered it again. */
+const STARTER = {
+  sku: 'starter_pack', usd: '$1.99',
+  treats: 60,
+  boosters: { moves: 3, hammer: 3, shuffle: 2 },
+  /* an hour in which a lost level costs no heart — the thing a first-week
+     player runs into first, handed over before they run into it */
+  infinite: 60
+};
 
 /* ---------- the season book ----------
 
@@ -368,10 +439,11 @@ const TREAT_PACKS = [
 
    Everything else the game charges for is bought at a moment of wanting
    something now: nine treats because the level was nearly won, three
-   pounds because the jar is full. Those moments are rare here on purpose
-   — a level is cleared four times in five and hearts never run dry — so
-   there was no third thing, and a shop whose whole stock is "you lost"
-   in a game people mostly win is a shop with nothing to sell.
+   pounds because the jar is full. Those moments were rare here on purpose
+   — a cared-for pet cleared the run nearly nine times in ten and hearts
+   never ran dry — and the run is harder by a dose now (11-design.js), but
+   a shop whose whole stock is "you lost" is still a thin shop, which is
+   why the book exists.
 
    The book is that third thing, and it is the format the genre settled
    on because it is the only one that pays for playing rather than for
@@ -422,35 +494,45 @@ const PASS_TRACK = [
      of stew is eaten, a hammer is thrown at a level and gone; a hundred
      coins sits in the purse and quietly shortens the game. Same number
      of tiers, same rhythm, about half the standing value. */
+  /* THE PAID COLUMN WAS A COLUMN OF THINGS THE SHOP ALREADY SOLD.
+
+     Its collars cost forty coins next door and its hats ninety and one
+     hundred and eighty, so apart from the treats it offered nothing a
+     player could not already have — and the treats came to 114 against
+     110 in the bag at the same price. Now it carries what money buys
+     nowhere else: three collars and two rooms that exist only here, and
+     two hours of unlimited hearts in three pieces. The last three treat
+     tiers go from eight to ten, so the column holds 120 and still beats
+     the pack beside it, which is the rule the book is sold under. */
   { free: { coins: 60 },                 paid: { treats: 3 } },
   { free: { food: 'kibble' },            paid: { treats: 3 } },
-  { free: { boost: 'shuffle' },          paid: { boost: 'shuffle' } },
+  { free: { boost: 'shuffle' },          paid: { infinite: 30 } },
   { free: { treats: 1 },                 paid: { treats: 4 } },
-  { free: { coins: 70 },                 paid: { collar: 'moss' } },
+  { free: { coins: 70 },                 paid: { collar: 'amber' } },
   { free: { food: 'tuna' },              paid: { treats: 4 } },
   { free: { food: 'kibble' },            paid: { treats: 4 } },
   { free: { boost: 'hammer' },           paid: { treats: 5 } },
-  { free: { coins: 75 },                 paid: { hat: 'beanie' } },
+  { free: { coins: 75 },                 paid: { theme: 'harbour' } },
   { free: { treats: 2 },                 paid: { treats: 5 } },
   { free: { food: 'kibble' },            paid: { treats: 5 } },
-  { free: { food: 'stew' },              paid: { boost: 'swap' } },
+  { free: { food: 'stew' },              paid: { infinite: 30 } },
   { free: { coins: 80 },                 paid: { treats: 5 } },
   { free: { boost: 'moves' },            paid: { treats: 6 } },
-  { free: { food: 'kibble' },            paid: { collar: 'sky' } },
+  { free: { food: 'kibble' },            paid: { collar: 'jade' } },
   { free: { treats: 1 },                 paid: { treats: 6 } },
   { free: { coins: 85 },                 paid: { treats: 6 } },
   { free: { food: 'tuna' },              paid: { keepsake: 'paw' } },
   { free: { food: 'kibble' },            paid: { treats: 6 } },
   { free: { coins: 90 },                 paid: { treats: 7 } },
-  { free: { boost: 'hammer' },           paid: { hat: 'chef' } },
+  { free: { boost: 'hammer' },           paid: { theme: 'meadow' } },
   { free: { treats: 2 },                 paid: { treats: 7 } },
   { free: { food: 'kibble' },            paid: { treats: 7 } },
   { free: { coins: 95 },                 paid: { treats: 7 } },
-  { free: { food: 'stew' },              paid: { collar: 'rose' } },
-  { free: { food: 'tuna' },              paid: { treats: 8 } },
-  { free: { coins: 100 },                paid: { treats: 8 } },
-  { free: { treats: 2 },                 paid: { treats: 8 } },
-  { free: { boost: 'shuffle' },          paid: { boost: 'moves' } },
+  { free: { food: 'stew' },              paid: { collar: 'starry' } },
+  { free: { food: 'tuna' },              paid: { treats: 10 } },
+  { free: { coins: 100 },                paid: { treats: 10 } },
+  { free: { treats: 2 },                 paid: { treats: 10 } },
+  { free: { boost: 'shuffle' },          paid: { infinite: 60 } },
   { free: { coins: 110 },                paid: { keepsake: 'photo' } }
 ];
 
@@ -543,7 +625,11 @@ function passBanked(stamps) {
    against a hundred and ten for two-thirds more is deliberately the best
    rate in the game, because the jar is the offer you earned and the
    packs are the offer you did not. */
-const JAR = { perLevel: 3, cap: 100, sku: 'treat_jar', usd: '$2.99' };
+/* Four a level now, which fills it in twenty-five levels rather than
+   thirty-four: the jar is the fairest offer in the game — treats the
+   player filled by playing — so it is the one that should come round most
+   often, rather than the one that comes round least. */
+const JAR = { perLevel: 4, cap: 100, sku: 'treat_jar', usd: '$2.99' };
 
 /* ---------- goods ---------- */
 const FOODS = [
@@ -559,10 +645,13 @@ const TOYS = [
   { id: 'puzzle', en: 'Puzzle box', tr: 'Bulmaca kutusu', cost: 165, joy: 42, art: 'puzzle', enDesc: 'Twenty minutes of quiet.', trDesc: 'Yirmi dakikalık sessizlik.' }
 ];
 const BOOSTERS = [
-  { id: 'moves', en: '+5 moves', tr: '+5 hamle', cost: 90, icon: 'plusmove', enDesc: 'Five extra moves before the level starts.', trDesc: 'Bölüm başlamadan beş hamle ekler.' },
-  { id: 'hammer', en: 'Hammer', tr: 'Çekiç', cost: 70, icon: 'hammer', enDesc: 'Smash any single tile or blocker.', trDesc: 'Tek bir taşı ya da engeli kırar.' },
-  { id: 'swap', en: 'Free swap', tr: 'Serbest takas', cost: 80, icon: 'swap', enDesc: 'Swap any two tiles, anywhere, for free.', trDesc: 'İstediğin iki taşı bedavaya değiştirir.' },
-  { id: 'shuffle', en: 'Shuffle', tr: 'Karıştır', cost: 60, icon: 'shuffle', enDesc: 'Reshuffle the board without spending a move.', trDesc: 'Hamle harcamadan tahtayı karıştırır.' }
+  /* Priced for the month in which coins stop having anywhere to go: the
+     catalogue runs out around day forty, and a booster that costs nothing
+     that matters is not a booster anybody decides to use. */
+  { id: 'moves', en: '+5 moves', tr: '+5 hamle', cost: 150, icon: 'plusmove', enDesc: 'Five extra moves before the level starts.', trDesc: 'Bölüm başlamadan beş hamle ekler.' },
+  { id: 'hammer', en: 'Hammer', tr: 'Çekiç', cost: 110, icon: 'hammer', enDesc: 'Smash any single tile or blocker.', trDesc: 'Tek bir taşı ya da engeli kırar.' },
+  { id: 'swap', en: 'Free swap', tr: 'Serbest takas', cost: 130, icon: 'swap', enDesc: 'Swap any two tiles, anywhere, for free.', trDesc: 'İstediğin iki taşı bedavaya değiştirir.' },
+  { id: 'shuffle', en: 'Shuffle', tr: 'Karıştır', cost: 100, icon: 'shuffle', enDesc: 'Reshuffle the board without spending a move.', trDesc: 'Hamle harcamadan tahtayı karıştırır.' }
 ];
 const HATS = [
   { id: 'none', en: 'No hat', tr: 'Yok', cost: 0, art: 'none' },
@@ -584,7 +673,14 @@ const COLLARS = [
   { id: 'moss',   en: 'Moss collar',    tr: 'Yosun tasma',   cost: 40,  hex: '#7A9463' },
   { id: 'sky',    en: 'Sky collar',     tr: 'Gök tasma',     cost: 40,  hex: '#6FA8D6' },
   { id: 'rose',   en: 'Rose collar',    tr: 'Gül tasma',     cost: 40,  hex: '#E09BB0' },
-  { id: 'silver', en: 'Silver collar',  tr: 'Gümüş tasma',   cost: 130, hex: '#B9C2CC' }
+  { id: 'silver', en: 'Silver collar',  tr: 'Gümüş tasma',   cost: 130, hex: '#B9C2CC' },
+  /* Three that are never for sale. The book's paid column used to carry
+     collars the shop sold for forty coins, which made it a column of
+     things the player could already have. These exist only there; the
+     shop lists them once owned, and buyThing refuses `book` outright. */
+  { id: 'amber',  en: 'Amber collar',   tr: 'Kehribar tasma', cost: 0, hex: '#E8923A', book: true },
+  { id: 'jade',   en: 'Jade collar',    tr: 'Yeşim tasma',    cost: 0, hex: '#2F9C7A', book: true },
+  { id: 'starry', en: 'Starry bandana', tr: 'Yıldızlı bandana', cost: 0, hex: '#3C4E8C', bandana: true, book: true }
 ];
 const FURNITURE = [
   { id: 'rug', en: 'Round rug', tr: 'Yuvarlak halı', cost: 80, slot: 'floor', enDesc: 'Warm spot by the window.', trDesc: 'Pencere önünde sıcak bir yer.' },
@@ -641,7 +737,10 @@ const ROOM_THEMES = [
   { id: 'plumroom',en: 'Damson',     tr: 'Mürdüm',      cost: 300, wall: '#C7B3D4', wall2: '#A894B8', floor: '#8E6C58' },
   { id: 'ink',     en: 'Ink',        tr: 'Mürekkep',    cost: 340, wall: '#3A4048', wall2: '#2B3037', floor: '#5A4C42' },
   { id: 'butter',  en: 'Buttermilk', tr: 'Ayran',       cost: 300, wall: '#F0DFB4', wall2: '#DCC694', floor: '#C0996B' },
-  { id: 'moss',    en: 'Moss',       tr: 'Yosun',       cost: 340, wall: '#9FB08A', wall2: '#849474', floor: '#7E6A4E' }
+  { id: 'moss',    en: 'Moss',       tr: 'Yosun',       cost: 340, wall: '#9FB08A', wall2: '#849474', floor: '#7E6A4E' },
+  /* two rooms only the book gives, for the same reason as the collars */
+  { id: 'harbour', en: 'Harbour',    tr: 'Liman',       cost: 0, wall: '#A9C6D4', wall2: '#8FAEBE', floor: '#8A6A52', book: true },
+  { id: 'meadow',  en: 'Meadow',     tr: 'Çayır',       cost: 0, wall: '#D2E1B8', wall2: '#B8CC99', floor: '#A47C54', book: true }
 ];
 
 /* How many baskets ride the board at once on a rescue level. A pup only

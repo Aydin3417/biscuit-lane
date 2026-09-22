@@ -18,7 +18,7 @@ const G = {
   petMood: 'idle', petMoodT: 0, blink: 0, blinkT: 1.5,
   compCtx: null, lastT: 0, raf: null,
   starTargets: [1, 2, 3], starsEarned: 0,
-  usedExtra: false,
+  extras: 0,                        /* carry-ons taken this attempt, at most two */
   cursor: null, keyMode: false,     /* keyboard play */
   creepTick: 0,
   epoch: 0,                         /* bumped by every startLevel */
@@ -60,7 +60,7 @@ function snapshotLevel() {
   return {
     n: G.n, day: G.n === DAILY_LEVEL ? dayNumber() : 0, reached: SAVE.reached,
     moves: G.moves, score: G.score, charge: G.charge, scoreMul: G.scoreMul,
-    usedExtra: G.usedExtra, rescued: G.rescued, creepTick: G.creepTick,
+    extras: G.extras || 0, rescued: G.rescued, creepTick: G.creepTick,
     pupQueue: B.pupQueue || 0, startedAt: G.startedAt, bestChain: G.bestChain,
     goals: G.goals.map(g => g.have),
     cells: B.cell.map(row => row.map(c => [c.hole ? 1 : 0, c.crate, c.mud, c.ice, c.bram, c.mole, c.moleT || 0,
@@ -317,7 +317,8 @@ function startLevel(n, opts) {
   G.sel = null; G.armed = null; G.armedFirst = null;
   G.particles = []; G.floats = []; G.beams = []; G.rings = [];
   G.rescued = res ? (res.rescued || 0) : 0;
-  G.usedExtra = res ? !!res.usedExtra : false;
+  /* a level kept before there could be a second carry-on says usedExtra */
+  G.extras = res ? (res.extras !== undefined ? res.extras : (res.usedExtra ? 1 : 0)) : 0;
   G.creepTick = res ? (res.creepTick || 0) : 0;
   G.lastPraise = 0;
   G.finale = false; G.finaleSkip = false;

@@ -115,12 +115,28 @@ const t0 = Date.now();
     await page.waitForTimeout(650);
     if (n <= 2) await shot('level' + n + '-card');
 
+    /* The opening levels have no card to press.
+
+       This looked for #liGo, found nothing on level one, reported "no
+       start button on the card" and broke out of the loop — so the tool
+       that exists to play the first five minutes had not played a level
+       since INTRO_FROM went in, and said so in a way that read like a
+       fault in the game. It is the opposite: below level 8, on a level
+       never cleared, openLevelIntro spends the heart and goes straight
+       to the board, because the first minute was made of text and that
+       was the fix. A bot that insists on the card is asking for the
+       thing that was deliberately taken away.
+
+       So: press the button if there is one, and otherwise accept a
+       level that is already running. Only a call that produced neither
+       is a problem worth reporting. */
     const started = await page.evaluate(() => {
       const b = document.querySelector('#liGo');
-      if (!b) return false;
-      b.click(); return true;
+      if (b) { b.click(); return 'card'; }
+      return BL.screen === 'game' ? 'straight in' : false;
     });
-    if (!started) { problems.push('level ' + n + ': no start button on the card'); break; }
+    if (!started) { problems.push('level ' + n + ': neither a start button nor a board'); break; }
+    if (started === 'straight in' && n === 1) log.push({ note: 'level 1: no card, straight to the board' });
     await page.waitForTimeout(1400);
 
     /* Dismiss whatever the level opened with before playing it.

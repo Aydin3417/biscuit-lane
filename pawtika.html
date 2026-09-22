@@ -1959,7 +1959,12 @@ const STRINGS = {
     earn_t: 'Treats',
     earn_s: 'Treats carry a level on and bring your hearts back. They are earned, not sold — there is no shop in this build.',
     earn_walk: 'The daily walk pays one, every day.',
-    earn_star: 'Three stars on a level you have not three-starred before.',
+    earn_star: 'Three stars on a gate you have not three-starred before.',
+    inf_for: '{t} of unlimited hearts',
+    inf_granted: 'Unlimited hearts for {t}',
+    inf_chip: 'Unlimited hearts',
+    dur_h: '{n} h',
+    dur_m: '{n} min',
     earn_gift: 'The basket on the step, on the fourth and seventh day of a streak.',
     earn_jar: 'The jar on the shelf is holding {n} of {c}.',
     store_why_continue: '{n} treats carries that level on.',
@@ -1969,6 +1974,9 @@ const STRINGS = {
     store_jar_full: 'Full. {n} treats waiting.',
     store_jar_open: 'Open it',
     store_pack: '{n} treats',
+    store_starter_t: 'Welcome pack — once',
+    store_starter_s: '{n} treats, {m} × +5 moves, {h} hammers, {s} shuffles and {i} of unlimited hearts — better value than any pack below, and sold only once.',
+    store_starter_thanks: 'Welcome pack unpacked — treats in the tin, boosters on the shelf',
     store_about: 'about {p}',
     store_restore: 'Restore a purchase',
     store_shut_t: 'The shop is not open yet',
@@ -1976,6 +1984,7 @@ const STRINGS = {
     win_replay: 'A level pays in full the first time through.',
     store_thanks: '{n} treats in the tin',
     store_failed: 'That did not go through. Nothing was charged.',
+    store_pending: 'The store is still waiting on that payment. It lands in your purse the first time the game opens after it clears.',
     store_restored: 'Restored. {n} back in your purse.',
     store_restore_none: 'Nothing outstanding — everything you have paid for is already here.',
 
@@ -2285,7 +2294,12 @@ const STRINGS = {
     earn_t: 'Ödüller',
     earn_s: 'Ödüller bölümü devam ettirir ve kalplerini geri getirir. Satın alınmaz, kazanılır — bu sürümde dükkan yok.',
     earn_walk: 'Günlük yürüyüş her gün bir tane verir.',
-    earn_star: 'Daha önce üç yıldız yapmadığın bir bölümü üç yıldızla bitir.',
+    earn_star: 'Daha önce üç yıldız yapmadığın bir kapıyı üç yıldızla bitir.',
+    inf_for: '{t} sınırsız can',
+    inf_granted: '{t} boyunca sınırsız can',
+    inf_chip: 'Sınırsız can',
+    dur_h: '{n} sa',
+    dur_m: '{n} dk',
     earn_gift: 'Kapıdaki sepet, serinin dördüncü ve yedinci gününde.',
     earn_jar: 'Raftaki kavanozda {c} ödülün {n} tanesi var.',
     store_why_continue: '{n} ödül o bölümü devam ettirir.',
@@ -2295,6 +2309,9 @@ const STRINGS = {
     store_jar_full: 'Doldu. {n} ödül bekliyor.',
     store_jar_open: 'Aç',
     store_pack: '{n} ödül',
+    store_starter_t: 'Hoş geldin paketi — bir kez',
+    store_starter_s: '{n} ödül, {m} × +5 hamle, {h} çekiç, {s} karıştırma ve {i} sınırsız can — aşağıdaki her paketten avantajlı, ve yalnızca bir kez satılır.',
+    store_starter_thanks: 'Hoş geldin paketi açıldı — ödüller kutuda, güçlendiriciler rafta',
     store_about: 'yaklaşık {p}',
     store_restore: 'Aldığımı geri yükle',
     store_shut_t: 'Dükkân henüz açık değil',
@@ -2302,6 +2319,7 @@ const STRINGS = {
     win_replay: 'Bölüm tam ödemesini ilk geçişte yapar.',
     store_thanks: 'Kutuya {n} ödül girdi',
     store_failed: 'İşlem geçmedi. Hiçbir ücret alınmadı.',
+    store_pending: 'Mağaza o ödemeyi hâlâ bekliyor. Ödeme geçtikten sonra oyunu ilk açtığında kesene düşer.',
     store_restored: 'Geri yüklendi. {n} şey kesene döndü.',
     store_restore_none: 'Bekleyen bir şey yok — ödediğin her şey zaten burada.',
 
@@ -2819,20 +2837,39 @@ const ECON = {
      where most of the excess was, and the seventh-day gift comes down by
      one. Three stars still pays: that one is for playing well, and it is
      the last treat income to touch. */
-  threeStarTreats: 1, milestoneTreats: 1, milestoneEvery: 10,
+  /* THREE STARS PAY A TREAT ON A GATE, AND ONLY THERE.
 
-  heartRefillMin: 25,
+     Re-measured with the game's own heart rule and each level's own clear
+     rate: free income still covered the carry-on often enough that the
+     offer was a formality for half the month, and three stars on an
+     ordinary level was the largest single source of it. A treat is the
+     currency that ends a wall, so it is paid at the walls: three-starring
+     a gate is the hardest thing in a block, and it still pays. */
+  threeStarTreats: 0, threeStarTreatsGate: 1, milestoneTreats: 1, milestoneEvery: 10,
+
+  /* thirty, which is the genre's number: a full set in two and a half
+     hours rather than two. It only matters to somebody who has lost five
+     levels, because a win gives its heart back. */
+  heartRefillMin: 30,
   /* the sinks. Nine treats to carry on is Candy Crush's number for the
      same offer, and at roughly five treats a day of free income it is a
      real decision rather than a formality — the old price was 2, which
      is not a decision, and 3 for a full set of hearts meant the wait
      never had to be waited. */
   continueTreats: 9, continueMoves: 5,
+  /* A second carry-on, at a higher price. Five moves is not always enough,
+     and the moment it is not is the moment a player most wants to finish
+     — so there is a second offer, once, and it costs what the genre
+     charges for the second: close to double. There is no third. */
+  continueTreats2: 16,
   /* Was twelve, against a player who is holding seven at the moment
      the pool empties — which made it not an offer but a wall with a
      price written on it. Nine is the carry-on price, and a player who
      has just been stopped should be looking at a number they recognise. */
-  heartRefillTreats: 9,
+  /* Twelve. Nine matched the carry-on so the number would be familiar,
+     but a full set of hearts is five attempts and a carry-on is one — they
+     were never the same size of thing. */
+  heartRefillTreats: 12,
   /* and the gate on the offer. An extra five moves at 20% of the goal
      is not an offer, it is a sale of a lost level — the player finds
      that out after paying, once, and then never trusts the button
@@ -2890,10 +2927,62 @@ function storeLink() {
    the player's own currency, and that is what gets shown — a hardcoded
    dollar figure is wrong in most of the world, and wrong by a lot in
    Turkey, where it also ages badly month to month. */
+/* THE TWO LARGER SIZES, and what they must not do.
+
+   The shop stopped at $4.99, which is a ceiling rather than a price
+   list. test/economy.js has a player on twenty-four levels a day
+   running dry and refilling ten times a month, and the only thing on
+   sale for them was the same paper bag again. So there are two more
+   sizes, and each gives more treats for the dollar than the one below
+   it — 20, 22, 24 and 26 — which is what makes a bigger size an honest
+   offer rather than a bigger bill. The star moves to the largest,
+   because that is where the best rate among the packs now is.
+
+   None of them reaches the jar. The jar is 33 a dollar and stays the
+   best rate in the game, for the reason written above it: those are
+   treats the player filled by playing, and a pack is only ever the
+   second-best way to get them. test/till.js holds all of this to the
+   arithmetic, so a price change that breaks it fails a test rather
+   than a promise. */
 const TREAT_PACKS = [
   { id: 'pocket', sku: 'treats_pocket_40', treats: 40, usd: '$1.99', en: 'Pocketful', tr: 'Bir avuç' },
-  { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı', best: true }
+  { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı' },
+  { id: 'tin', sku: 'treats_tin_240', treats: 240, usd: '$9.99', en: 'Biscuit tin', tr: 'Bisküvi kutusu', infinite: 60 },
+  { id: 'sack', sku: 'treats_sack_520', treats: 520, usd: '$19.99', en: 'Feed sack', tr: 'Mama çuvalı', best: true, infinite: 180 }
 ];
+
+/* ---------- the welcome pack ----------
+
+   Once per player, and the only thing in the shop with a limit on it.
+
+   The first purchase is the hard one. Somebody who has never paid for
+   anything in a game is being asked for a card by a stranger, and every
+   later offer is easier than that one — so the first offer is the best
+   one, and it says plainly what it is. Nothing in it expires, nothing
+   counts down, and it is shown only inside the treat sheet, which the
+   player opened themselves: at the chip, or at the lose card when they
+   were short for the carry-on. It is not a popup. A pack that ambushes
+   somebody on the map buys one sale and loses the second.
+
+   What is in it, and why that much. Sixty treats is thirty a dollar,
+   better than any pack and still short of the jar. The boosters are the
+   ones a stuck level wants — three +5 move starts, three hammers, two
+   shuffles — which is six hundred coins at shop prices, about ten
+   three-starred levels of income, handed over once. Generous on
+   purpose, and harmless for the same reason: there is one of it, and
+   the months after it are the months the economy file measures.
+
+   It is a consumable like everything else here, and "once" is kept by
+   the save rather than by the store: a reinstall is a new player and is
+   offered it again. */
+const STARTER = {
+  sku: 'starter_pack', usd: '$1.99',
+  treats: 60,
+  boosters: { moves: 3, hammer: 3, shuffle: 2 },
+  /* an hour in which a lost level costs no heart — the thing a first-week
+     player runs into first, handed over before they run into it */
+  infinite: 60
+};
 
 /* ---------- the season book ----------
 
@@ -2901,10 +2990,11 @@ const TREAT_PACKS = [
 
    Everything else the game charges for is bought at a moment of wanting
    something now: nine treats because the level was nearly won, three
-   pounds because the jar is full. Those moments are rare here on purpose
-   — a level is cleared four times in five and hearts never run dry — so
-   there was no third thing, and a shop whose whole stock is "you lost"
-   in a game people mostly win is a shop with nothing to sell.
+   pounds because the jar is full. Those moments were rare here on purpose
+   — a cared-for pet cleared the run nearly nine times in ten and hearts
+   never ran dry — and the run is harder by a dose now (11-design.js), but
+   a shop whose whole stock is "you lost" is still a thin shop, which is
+   why the book exists.
 
    The book is that third thing, and it is the format the genre settled
    on because it is the only one that pays for playing rather than for
@@ -2955,35 +3045,45 @@ const PASS_TRACK = [
      of stew is eaten, a hammer is thrown at a level and gone; a hundred
      coins sits in the purse and quietly shortens the game. Same number
      of tiers, same rhythm, about half the standing value. */
+  /* THE PAID COLUMN WAS A COLUMN OF THINGS THE SHOP ALREADY SOLD.
+
+     Its collars cost forty coins next door and its hats ninety and one
+     hundred and eighty, so apart from the treats it offered nothing a
+     player could not already have — and the treats came to 114 against
+     110 in the bag at the same price. Now it carries what money buys
+     nowhere else: three collars and two rooms that exist only here, and
+     two hours of unlimited hearts in three pieces. The last three treat
+     tiers go from eight to ten, so the column holds 120 and still beats
+     the pack beside it, which is the rule the book is sold under. */
   { free: { coins: 60 },                 paid: { treats: 3 } },
   { free: { food: 'kibble' },            paid: { treats: 3 } },
-  { free: { boost: 'shuffle' },          paid: { boost: 'shuffle' } },
+  { free: { boost: 'shuffle' },          paid: { infinite: 30 } },
   { free: { treats: 1 },                 paid: { treats: 4 } },
-  { free: { coins: 70 },                 paid: { collar: 'moss' } },
+  { free: { coins: 70 },                 paid: { collar: 'amber' } },
   { free: { food: 'tuna' },              paid: { treats: 4 } },
   { free: { food: 'kibble' },            paid: { treats: 4 } },
   { free: { boost: 'hammer' },           paid: { treats: 5 } },
-  { free: { coins: 75 },                 paid: { hat: 'beanie' } },
+  { free: { coins: 75 },                 paid: { theme: 'harbour' } },
   { free: { treats: 2 },                 paid: { treats: 5 } },
   { free: { food: 'kibble' },            paid: { treats: 5 } },
-  { free: { food: 'stew' },              paid: { boost: 'swap' } },
+  { free: { food: 'stew' },              paid: { infinite: 30 } },
   { free: { coins: 80 },                 paid: { treats: 5 } },
   { free: { boost: 'moves' },            paid: { treats: 6 } },
-  { free: { food: 'kibble' },            paid: { collar: 'sky' } },
+  { free: { food: 'kibble' },            paid: { collar: 'jade' } },
   { free: { treats: 1 },                 paid: { treats: 6 } },
   { free: { coins: 85 },                 paid: { treats: 6 } },
   { free: { food: 'tuna' },              paid: { keepsake: 'paw' } },
   { free: { food: 'kibble' },            paid: { treats: 6 } },
   { free: { coins: 90 },                 paid: { treats: 7 } },
-  { free: { boost: 'hammer' },           paid: { hat: 'chef' } },
+  { free: { boost: 'hammer' },           paid: { theme: 'meadow' } },
   { free: { treats: 2 },                 paid: { treats: 7 } },
   { free: { food: 'kibble' },            paid: { treats: 7 } },
   { free: { coins: 95 },                 paid: { treats: 7 } },
-  { free: { food: 'stew' },              paid: { collar: 'rose' } },
-  { free: { food: 'tuna' },              paid: { treats: 8 } },
-  { free: { coins: 100 },                paid: { treats: 8 } },
-  { free: { treats: 2 },                 paid: { treats: 8 } },
-  { free: { boost: 'shuffle' },          paid: { boost: 'moves' } },
+  { free: { food: 'stew' },              paid: { collar: 'starry' } },
+  { free: { food: 'tuna' },              paid: { treats: 10 } },
+  { free: { coins: 100 },                paid: { treats: 10 } },
+  { free: { treats: 2 },                 paid: { treats: 10 } },
+  { free: { boost: 'shuffle' },          paid: { infinite: 60 } },
   { free: { coins: 110 },                paid: { keepsake: 'photo' } }
 ];
 
@@ -3076,7 +3176,11 @@ function passBanked(stamps) {
    against a hundred and ten for two-thirds more is deliberately the best
    rate in the game, because the jar is the offer you earned and the
    packs are the offer you did not. */
-const JAR = { perLevel: 3, cap: 100, sku: 'treat_jar', usd: '$2.99' };
+/* Four a level now, which fills it in twenty-five levels rather than
+   thirty-four: the jar is the fairest offer in the game — treats the
+   player filled by playing — so it is the one that should come round most
+   often, rather than the one that comes round least. */
+const JAR = { perLevel: 4, cap: 100, sku: 'treat_jar', usd: '$2.99' };
 
 /* ---------- goods ---------- */
 const FOODS = [
@@ -3092,10 +3196,13 @@ const TOYS = [
   { id: 'puzzle', en: 'Puzzle box', tr: 'Bulmaca kutusu', cost: 165, joy: 42, art: 'puzzle', enDesc: 'Twenty minutes of quiet.', trDesc: 'Yirmi dakikalık sessizlik.' }
 ];
 const BOOSTERS = [
-  { id: 'moves', en: '+5 moves', tr: '+5 hamle', cost: 90, icon: 'plusmove', enDesc: 'Five extra moves before the level starts.', trDesc: 'Bölüm başlamadan beş hamle ekler.' },
-  { id: 'hammer', en: 'Hammer', tr: 'Çekiç', cost: 70, icon: 'hammer', enDesc: 'Smash any single tile or blocker.', trDesc: 'Tek bir taşı ya da engeli kırar.' },
-  { id: 'swap', en: 'Free swap', tr: 'Serbest takas', cost: 80, icon: 'swap', enDesc: 'Swap any two tiles, anywhere, for free.', trDesc: 'İstediğin iki taşı bedavaya değiştirir.' },
-  { id: 'shuffle', en: 'Shuffle', tr: 'Karıştır', cost: 60, icon: 'shuffle', enDesc: 'Reshuffle the board without spending a move.', trDesc: 'Hamle harcamadan tahtayı karıştırır.' }
+  /* Priced for the month in which coins stop having anywhere to go: the
+     catalogue runs out around day forty, and a booster that costs nothing
+     that matters is not a booster anybody decides to use. */
+  { id: 'moves', en: '+5 moves', tr: '+5 hamle', cost: 150, icon: 'plusmove', enDesc: 'Five extra moves before the level starts.', trDesc: 'Bölüm başlamadan beş hamle ekler.' },
+  { id: 'hammer', en: 'Hammer', tr: 'Çekiç', cost: 110, icon: 'hammer', enDesc: 'Smash any single tile or blocker.', trDesc: 'Tek bir taşı ya da engeli kırar.' },
+  { id: 'swap', en: 'Free swap', tr: 'Serbest takas', cost: 130, icon: 'swap', enDesc: 'Swap any two tiles, anywhere, for free.', trDesc: 'İstediğin iki taşı bedavaya değiştirir.' },
+  { id: 'shuffle', en: 'Shuffle', tr: 'Karıştır', cost: 100, icon: 'shuffle', enDesc: 'Reshuffle the board without spending a move.', trDesc: 'Hamle harcamadan tahtayı karıştırır.' }
 ];
 const HATS = [
   { id: 'none', en: 'No hat', tr: 'Yok', cost: 0, art: 'none' },
@@ -3117,7 +3224,14 @@ const COLLARS = [
   { id: 'moss',   en: 'Moss collar',    tr: 'Yosun tasma',   cost: 40,  hex: '#7A9463' },
   { id: 'sky',    en: 'Sky collar',     tr: 'Gök tasma',     cost: 40,  hex: '#6FA8D6' },
   { id: 'rose',   en: 'Rose collar',    tr: 'Gül tasma',     cost: 40,  hex: '#E09BB0' },
-  { id: 'silver', en: 'Silver collar',  tr: 'Gümüş tasma',   cost: 130, hex: '#B9C2CC' }
+  { id: 'silver', en: 'Silver collar',  tr: 'Gümüş tasma',   cost: 130, hex: '#B9C2CC' },
+  /* Three that are never for sale. The book's paid column used to carry
+     collars the shop sold for forty coins, which made it a column of
+     things the player could already have. These exist only there; the
+     shop lists them once owned, and buyThing refuses `book` outright. */
+  { id: 'amber',  en: 'Amber collar',   tr: 'Kehribar tasma', cost: 0, hex: '#E8923A', book: true },
+  { id: 'jade',   en: 'Jade collar',    tr: 'Yeşim tasma',    cost: 0, hex: '#2F9C7A', book: true },
+  { id: 'starry', en: 'Starry bandana', tr: 'Yıldızlı bandana', cost: 0, hex: '#3C4E8C', bandana: true, book: true }
 ];
 const FURNITURE = [
   { id: 'rug', en: 'Round rug', tr: 'Yuvarlak halı', cost: 80, slot: 'floor', enDesc: 'Warm spot by the window.', trDesc: 'Pencere önünde sıcak bir yer.' },
@@ -3174,7 +3288,10 @@ const ROOM_THEMES = [
   { id: 'plumroom',en: 'Damson',     tr: 'Mürdüm',      cost: 300, wall: '#C7B3D4', wall2: '#A894B8', floor: '#8E6C58' },
   { id: 'ink',     en: 'Ink',        tr: 'Mürekkep',    cost: 340, wall: '#3A4048', wall2: '#2B3037', floor: '#5A4C42' },
   { id: 'butter',  en: 'Buttermilk', tr: 'Ayran',       cost: 300, wall: '#F0DFB4', wall2: '#DCC694', floor: '#C0996B' },
-  { id: 'moss',    en: 'Moss',       tr: 'Yosun',       cost: 340, wall: '#9FB08A', wall2: '#849474', floor: '#7E6A4E' }
+  { id: 'moss',    en: 'Moss',       tr: 'Yosun',       cost: 340, wall: '#9FB08A', wall2: '#849474', floor: '#7E6A4E' },
+  /* two rooms only the book gives, for the same reason as the collars */
+  { id: 'harbour', en: 'Harbour',    tr: 'Liman',       cost: 0, wall: '#A9C6D4', wall2: '#8FAEBE', floor: '#8A6A52', book: true },
+  { id: 'meadow',  en: 'Meadow',     tr: 'Çayır',       cost: 0, wall: '#D2E1B8', wall2: '#B8CC99', floor: '#A47C54', book: true }
 ];
 
 /* How many baskets ride the board at once on a rescue level. A pup only
@@ -4465,7 +4582,7 @@ const RHYTHM = [
   -.07,   /* 7 */
   -.02,   /* 8  — a small step back before the run-up */
   -.09,   /* 9  — the run-up */
-  -.15    /* 10 — the gate */
+  -.18    /* 10 — the gate */
 ];
 
 /* Where the authored lane ends and the generator takes over. The lane is
@@ -4476,7 +4593,27 @@ const RUN_START = 61;
 /* The floor the run settles toward, and how fast it gets there. Ninety
    levels in it is most of the way down; it never reaches the floor, so
    there is always somewhere left to go. */
-const EASE_FROM = .78, EASE_TO = .61, EASE_OVER = 210;
+/* THE RUN WAS TUNED FOR A PET NOBODY PLAYS WITH.
+
+   Every number in this file describes a bare pet, and a player who feeds
+   theirs clears more: measured at nine games a level, the run went from
+   72% bare to 87% cared-for, and the lane from 86% to 94%. With a heart
+   returned on every win, that is a game in which nobody runs out and the
+   carry-on is mostly paid for with treats the player earned — so there
+   was almost nothing to sell, because there was almost nothing to want.
+
+   The run is harder by a dose. It opens at .70 instead of .78 and settles
+   toward .52 instead of .61, the gate asks .18 below the ease instead of
+   .15, and the floor comes down to .35. For a cared-for player that is an
+   estimated eight points: relief still near nine in ten, a gate near seven
+   in ten. Estimated, because the lift a pet gives is measured as an average
+   and a gate is not an average level; test/run-all.js measures the
+   cared-for run directly, and that is the number to believe.
+
+   The lane is untouched. The first sixty levels are where a new player
+   learns the game, and nothing should be sold there to somebody who is
+   still working out what a rocket is. */
+const EASE_FROM = .70, EASE_TO = .52, EASE_OVER = 210;
 
 /* Where the game opens, and how it bends down to meet EASE_FROM at the
    handoff. A bend of 1 would be a straight line and would spend the
@@ -4488,7 +4625,7 @@ const LANE_FROM = .93, LANE_BEND = 1.6;
 /* Never certain, never impossible. The lane is allowed to be gentler at
    both ends than the run: nobody should fail level one, and nobody
    should meet a 45% wall before they have met every mechanic. */
-const CLEAR_FLOOR = .45, CLEAR_CEIL = .88;
+const CLEAR_FLOOR = .35, CLEAR_CEIL = .88;
 const LANE_FLOOR = .58, LANE_CEIL = .97;
 
 /* A level that teaches a mechanic for the first time is not a test of
@@ -4688,59 +4825,59 @@ function budgetFor(kind, wantClear) {
    measured one level at a time: each was played at the budget the
    response curves gave it by the player who cannot see cascades
    (test/_solver.js), and the budget moved until the level landed on the
-   target 11-design.js draws for it. 80 games a point. A level with
+   target 11-design.js draws for it. 60 games a point. A level with
    no row here takes the budget the curves give it.
 
-   300 levels fitted, mean miss 4% at that
+   300 levels fitted, mean miss 3% at that
    sample size; 0 pinned at the floor (easier than drawn at six tenths of
-   their budget) and 0 at the ceiling (harder than drawn at twice it). */
+   their budget) and 1 at the ceiling (harder than drawn at twice it). */
 const RUN_MOVES = {
-  61: 10, 62: 23, 63: 48, 64: 35, 65: 36, 66: 33, 67: 35, 68: 36,
-  69: 32, 70: 27, 71: 18, 72: 22, 73: 11, 74: 33, 75: 42, 76: 29,
-  77: 34, 78: 16, 79: 30, 80: 29, 81: 18, 82: 36, 83: 22, 84: 32,
-  85: 39, 86: 16, 87: 43, 88: 34, 89: 36, 90: 25, 91: 16, 92: 26,
-  93: 16, 94: 33, 95: 45, 96: 28, 97: 32, 98: 25, 99: 30, 100: 22,
-  101: 39, 102: 42, 103: 32, 104: 23, 105: 35, 106: 30, 107: 31, 108: 37,
-  109: 32, 110: 37, 111: 40, 112: 38, 113: 34, 114: 37, 115: 35, 116: 31,
-  117: 35, 118: 28, 119: 11, 120: 35, 121: 40, 122: 54, 123: 35, 124: 35,
-  125: 39, 126: 36, 127: 33, 128: 32, 129: 31, 130: 31, 131: 14, 132: 15,
-  133: 37, 134: 28, 135: 38, 136: 28, 137: 34, 138: 29, 139: 12, 140: 29,
-  141: 12, 142: 44, 143: 48, 144: 31, 145: 19, 146: 39, 147: 32, 148: 33,
-  149: 21, 150: 30, 151: 37, 152: 60, 153: 35, 154: 42, 155: 42, 156: 31,
-  157: 11, 158: 27, 159: 25, 160: 26, 161: 35, 162: 89, 163: 36, 164: 42,
-  165: 38, 166: 17, 167: 42, 168: 37, 169: 29, 170: 35, 171: 38, 172: 35,
-  173: 12, 174: 34, 175: 35, 176: 29, 177: 37, 178: 33, 179: 32, 180: 33,
-  181: 40, 182: 38, 183: 13, 184: 39, 185: 33, 186: 33, 187: 19, 188: 24,
-  189: 31, 190: 39, 191: 41, 192: 36, 193: 13, 194: 32, 195: 37, 196: 33,
-  197: 27, 198: 34, 199: 39, 200: 22, 201: 37, 202: 17, 203: 37, 204: 36,
-  205: 21, 206: 29, 207: 29, 208: 38, 209: 26, 210: 33, 211: 17, 212: 20,
-  213: 38, 214: 31, 215: 19, 216: 32, 217: 31, 218: 48, 219: 26, 220: 11,
-  221: 11, 222: 40, 223: 25, 224: 21, 225: 34, 226: 21, 227: 30, 228: 38,
-  229: 29, 230: 27, 231: 41, 232: 15, 233: 19, 234: 29, 235: 24, 236: 32,
-  237: 11, 238: 18, 239: 35, 240: 26, 241: 33, 242: 30, 243: 16, 244: 26,
-  245: 12, 246: 28, 247: 14, 248: 12, 249: 11, 250: 25, 251: 43, 252: 37,
-  253: 22, 254: 38, 255: 39, 256: 19, 257: 30, 258: 30, 259: 34, 260: 36,
-  261: 9, 262: 35, 263: 31, 264: 34, 265: 31, 266: 29, 267: 36, 268: 29,
-  269: 27, 270: 30, 271: 38, 272: 34, 273: 12, 274: 31, 275: 32, 276: 33,
-  277: 11, 278: 28, 279: 31, 280: 20, 281: 39, 282: 27, 283: 16, 284: 24,
-  285: 13, 286: 32, 287: 29, 288: 22, 289: 10, 290: 33, 291: 38, 292: 19,
-  293: 31, 294: 27, 295: 32, 296: 26, 297: 45, 298: 31, 299: 33, 300: 15,
-  301: 17, 302: 37, 303: 23, 304: 31, 305: 27, 306: 26, 307: 30, 308: 37,
-  309: 28, 310: 26, 311: 47, 312: 31, 313: 16, 314: 12, 315: 29, 316: 32,
-  317: 26, 318: 31, 319: 14, 320: 28, 321: 15, 322: 35, 323: 34, 324: 36,
-  325: 29, 326: 13, 327: 35, 328: 32, 329: 14, 330: 16, 331: 38, 332: 35,
-  333: 33, 334: 28, 335: 13, 336: 31, 337: 23, 338: 32, 339: 37, 340: 11,
-  341: 37, 342: 40, 343: 38, 344: 12, 345: 47, 346: 33, 347: 22, 348: 44,
-  349: 34, 350: 39, 351: 35, 352: 31, 353: 33, 354: 14, 355: 22, 356: 29,
-  357: 31, 358: 32, 359: 32, 360: 26
+  61: 9, 62: 22, 63: 44, 64: 33, 65: 33, 66: 30, 67: 28, 68: 29,
+  69: 26, 70: 26, 71: 31, 72: 21, 73: 11, 74: 32, 75: 32, 76: 27,
+  77: 31, 78: 15, 79: 28, 80: 25, 81: 17, 82: 35, 83: 20, 84: 28,
+  85: 35, 86: 16, 87: 30, 88: 28, 89: 33, 90: 22, 91: 59, 92: 21,
+  93: 14, 94: 30, 95: 43, 96: 27, 97: 29, 98: 22, 99: 25, 100: 16,
+  101: 35, 102: 40, 103: 30, 104: 20, 105: 32, 106: 28, 107: 25, 108: 27,
+  109: 23, 110: 35, 111: 37, 112: 33, 113: 33, 114: 36, 115: 32, 116: 21,
+  117: 34, 118: 24, 119: 9, 120: 33, 121: 35, 122: 48, 123: 32, 124: 30,
+  125: 37, 126: 35, 127: 31, 128: 30, 129: 20, 130: 34, 131: 44, 132: 36,
+  133: 34, 134: 22, 135: 32, 136: 25, 137: 32, 138: 26, 139: 11, 140: 26,
+  141: 13, 142: 36, 143: 28, 144: 29, 145: 17, 146: 37, 147: 27, 148: 30,
+  149: 20, 150: 25, 151: 34, 152: 52, 153: 33, 154: 42, 155: 38, 156: 26,
+  157: 10, 158: 25, 159: 22, 160: 23, 161: 31, 162: 66, 163: 30, 164: 40,
+  165: 38, 166: 16, 167: 40, 168: 35, 169: 27, 170: 34, 171: 35, 172: 31,
+  173: 11, 174: 33, 175: 31, 176: 26, 177: 35, 178: 33, 179: 30, 180: 33,
+  181: 38, 182: 35, 183: 12, 184: 38, 185: 32, 186: 31, 187: 19, 188: 23,
+  189: 28, 190: 30, 191: 37, 192: 28, 193: 12, 194: 26, 195: 34, 196: 32,
+  197: 26, 198: 30, 199: 34, 200: 19, 201: 51, 202: 11, 203: 34, 204: 34,
+  205: 20, 206: 24, 207: 27, 208: 37, 209: 24, 210: 30, 211: 31, 212: 11,
+  213: 37, 214: 29, 215: 11, 216: 35, 217: 29, 218: 40, 219: 22, 220: 13,
+  221: 21, 222: 35, 223: 19, 224: 17, 225: 32, 226: 20, 227: 29, 228: 36,
+  229: 24, 230: 18, 231: 41, 232: 10, 233: 18, 234: 26, 235: 22, 236: 30,
+  237: 10, 238: 15, 239: 35, 240: 23, 241: 25, 242: 26, 243: 15, 244: 26,
+  245: 10, 246: 24, 247: 13, 248: 11, 249: 11, 250: 18, 251: 35, 252: 33,
+  253: 21, 254: 33, 255: 33, 256: 18, 257: 28, 258: 23, 259: 33, 260: 36,
+  261: 36, 262: 30, 263: 29, 264: 26, 265: 27, 266: 26, 267: 34, 268: 23,
+  269: 24, 270: 26, 271: 34, 272: 26, 273: 11, 274: 27, 275: 30, 276: 31,
+  277: 12, 278: 26, 279: 25, 280: 17, 281: 37, 282: 21, 283: 15, 284: 19,
+  285: 12, 286: 26, 287: 21, 288: 19, 289: 10, 290: 32, 291: 34, 292: 18,
+  293: 21, 294: 26, 295: 30, 296: 22, 297: 43, 298: 28, 299: 31, 300: 19,
+  301: 33, 302: 35, 303: 19, 304: 27, 305: 25, 306: 25, 307: 30, 308: 36,
+  309: 18, 310: 23, 311: 37, 312: 24, 313: 15, 314: 10, 315: 27, 316: 30,
+  317: 22, 318: 28, 319: 13, 320: 23, 321: 14, 322: 34, 323: 31, 324: 32,
+  325: 27, 326: 9, 327: 35, 328: 29, 329: 15, 330: 16, 331: 35, 332: 34,
+  333: 30, 334: 22, 335: 12, 336: 28, 337: 21, 338: 30, 339: 35, 340: 17,
+  341: 33, 342: 36, 343: 31, 344: 12, 345: 41, 346: 32, 347: 19, 348: 39,
+  349: 33, 350: 37, 351: 33, 352: 26, 353: 29, 354: 13, 355: 21, 356: 27,
+  357: 30, 358: 30, 359: 31, 360: 26
 };
 
 /* Levels whose budget could not reach the target on its own, so the
    work was changed as well: the goal is this many times what the
    generator would have asked for, before the budget above was fitted. */
 const RUN_WORK = {
-  81: 1.25, 93: 1.25, 119: 1.25, 132: 1.25, 173: 1.25, 183: 1.25, 193: 1.25, 202: 1.25,
-  212: 1.25, 215: 1.25, 232: 1.5, 273: 1.25, 285: 1.25, 326: 1.5
+  73: 1.25, 81: 1.25, 93: 1.25, 129: 0.85, 162: 0.55, 173: 1.25, 183: 1.25, 192: 0.85,
+  193: 1.25, 232: 1.25, 273: 1.25, 285: 1.25, 326: 1.25
 };
 
 /* the fitted budget for a level, or undefined when it was never fitted */
@@ -4816,6 +4953,16 @@ function freshSave() {
     pass: { season: -1, stamps: 0, paid: false, claimed: {} },
     /* asked once, ever — see maybeAskForAReview in 60-ui.js */
     rated: { asked: 0, said: 0 },
+    /* transactionId -> 1, for every store purchase already written into
+       this save. A purchase is handed back to the store only after it is
+       granted, so a kill between the two leaves it open and the next
+       launch reports it again; this is how that launch knows it has
+       already paid. */
+    granted: {},
+    /* the welcome pack is sold once per player — see STARTER in 10-data.js */
+    starter: { bought: false },
+    /* until when a lost level costs no heart — see heartsInfinite */
+    infiniteUntil: 0,
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
   };
 }
@@ -5040,6 +5187,9 @@ function loadSave() {
     SAVE.jar.fill = clamp(Math.round(+SAVE.jar.fill || 0), 0, JAR.cap);
     SAVE.keepsakes = Object.assign({}, d.keepsakes || {});
     SAVE.rated = Object.assign({ asked: 0, said: 0 }, d.rated || {});
+    SAVE.granted = Object.assign({}, d.granted || {});
+    SAVE.starter = Object.assign({ bought: false }, d.starter || {});
+    SAVE.infiniteUntil = +d.infiniteUntil || 0;
     SAVE.coats = Object.assign({}, d.coats || {});
     SAVE.eyes = Object.assign({}, d.eyes || {});
     SAVE.ads = Object.assign({ day: 0, used: {} }, d.ads || {});
@@ -5143,7 +5293,7 @@ let heartTimer = null;
 function heartClockStart() {
   if (heartTimer) return;
   heartTimer = setInterval(() => {
-    if (SAVE.hearts >= HEART_MAX) { heartClockStop(); EV.emit('purse'); return; }
+    if (SAVE.hearts >= HEART_MAX && !heartsInfinite()) { heartClockStop(); EV.emit('purse'); return; }
     heartTick();
     EV.emit('purse');
   }, 1000);
@@ -5160,12 +5310,34 @@ function heartsIn() {
 }
 function spendHeart() {
   heartTick();
+  if (heartsInfinite()) return true;
   if (SAVE.hearts <= 0) return false;
   heartClockStart();
   if (SAVE.hearts === HEART_MAX) SAVE.heartAt = now();
   SAVE.hearts--;
   persist();
   return true;
+}
+
+/* ---------- unlimited hearts ----------
+
+   A stretch of time in which starting a level costs nothing. It is sold
+   inside the larger packs and the welcome pack, and the book hands out
+   two hours of it in three pieces. Time stacks: a second hour bought
+   inside the first begins where the first ends, not where it was bought.
+
+   The heart count itself is left alone while it runs, so nothing that
+   was waiting on it — a regen clock, a reminder — has to learn about it;
+   spendHeart simply does not take one. */
+function heartsInfinite() {
+  return (SAVE.infiniteUntil || 0) > now();
+}
+function infiniteLeft() {
+  return Math.max(0, (SAVE.infiniteUntil || 0) - now());
+}
+function grantInfinite(minutes) {
+  if (!(minutes > 0)) return;
+  SAVE.infiniteUntil = Math.max(now(), SAVE.infiniteUntil || 0) + minutes * MIN;
 }
 
 /* ---------- pets ---------- */
@@ -5686,7 +5858,14 @@ function passWorthBuying() {
   const designed = PASS.tiers * PASS.per / SEASON_DAYS;
   const rate = gone >= 5 ? p.stamps / gone : designed;
   const projected = p.stamps + rate * left;
-  const pack = TREAT_PACKS.reduce((m, x) => Math.max(m, x.treats), 0);
+  /* the largest pack at or under the price of the book, which is the pack
+     beside it. This took the largest pack of all, which was the same one
+     while nothing cost more than the book; with a $19.99 size on sale no
+     season would ever have been worth buying, and the book would never have
+     been offered again. test/till.js caught it before it shipped. */
+  const price = s => parseFloat(String(s).replace(/[^0-9.]/g, ""));
+  const pack = TREAT_PACKS.filter(x => price(x.usd) <= price(PASS.usd))
+    .reduce((m, x) => Math.max(m, x.treats), 0);
   return passBanked(projected) >= pack;
 }
 
@@ -5725,6 +5904,8 @@ function grantReward(r) {
     if (SAVE.keepsakes[r.keepsake]) SAVE.treats += 20;
     else SAVE.keepsakes[r.keepsake] = keepsakeOf(r.keepsake);
   }
+  if (r.theme) { if (SAVE.roomThemes[r.theme]) SAVE.treats += 4; else SAVE.roomThemes[r.theme] = 1; }
+  if (r.infinite) grantInfinite(r.infinite);
 }
 
 /* ---------- granting ----------
@@ -5740,11 +5921,16 @@ function grantReward(r) {
    a sale. The treat store next to it had always tested `r.ok` and was
    never wrong. That is the argument for one door rather than two, and
    the book comes through this one now. */
-function grantPurchase(kind, id) {
+function grantPurchase(kind, id, txId) {
+  /* one transaction, one grant — see `granted` in freshSave */
+  if (txId && SAVE.granted && SAVE.granted[txId]) return 0;
+  const mark = () => { if (txId) (SAVE.granted || (SAVE.granted = {}))[txId] = 1; };
   if (kind === 'pack') {
     const p = TREAT_PACKS.find(x => x.id === id);
     if (!p) return 0;
     SAVE.treats += p.treats;
+    if (p.infinite) grantInfinite(p.infinite);
+    mark();
     persist(true);
     return p.treats;
   }
@@ -5754,6 +5940,7 @@ function grantPurchase(kind, id) {
     SAVE.treats += got;
     j.fill = 0;
     j.opened = (j.opened || 0) + 1;
+    mark();
     persist(true);
     return got;
   }
@@ -5761,8 +5948,24 @@ function grantPurchase(kind, id) {
     const p = passState();
     if (p.paid) return 0;              /* already theirs; a restore said so twice */
     p.paid = true;
+    mark();
     persist(true);
     return 1;
+  }
+  if (kind === 'starter') {
+    /* "Once" is the treat sheet's rule, not this function's. A purchase
+       that reached here was paid for and gets what it paid for, even in
+       the case nobody can reach — and a second report of the same sale
+       is the ledger's to refuse, above, not this branch's. */
+    SAVE.treats += STARTER.treats;
+    Object.keys(STARTER.boosters).forEach(k => {
+      SAVE.boosters[k] = (SAVE.boosters[k] || 0) + STARTER.boosters[k];
+    });
+    SAVE.starter = { bought: true };
+    if (STARTER.infinite) grantInfinite(STARTER.infinite);
+    mark();
+    persist(true);
+    return STARTER.treats;
   }
 
   return 0;
@@ -5778,19 +5981,28 @@ function grantPurchase(kind, id) {
 
    The store still knows. Consumables sit in its queue until the app
    claims them, so the fix is to ask on every launch and grant whatever
-   is outstanding. Nothing here can double-pay: a pack that has been
-   granted was consumed in the same breath and is no longer in the queue,
-   and the book checks `paid` before it sets it.
+   is outstanding. Nothing here can double-pay: every claim carries its
+   transaction id, a granted id goes into the save in the same write as
+   the treats, and the book checks `paid` before it sets it. The store
+   is told a purchase is closed only after that write.
 
    This is also the whole of what the "restore a purchase" button does,
    which is why the button and the boot call the same function. */
-function claimOutstanding(skus) {
+function claimOutstanding(skus, receipts) {
   let n = 0;
-  (skus || []).forEach(sku => {
+  /* With transactions, each is claimed by its id, which is what makes a
+     second report of the same purchase worth nothing. The bare list is
+     what a store with no ids would hand back, and what the tests pass. */
+  const claims = (receipts && receipts.length)
+    ? receipts.reduce((out, tx) => out.concat(((tx && tx.products) || [])
+        .map(p => ({ sku: p && p.id, tx: tx.transactionId }))), [])
+    : (skus || []).map(sku => ({ sku: sku, tx: null }));
+  claims.forEach(({ sku, tx }) => {
     const pack = TREAT_PACKS.find(p => p.sku === sku);
-    if (pack) { n += grantPurchase('pack', pack.id) ? 1 : 0; return; }
-    if (sku === JAR.sku) { n += grantPurchase('jar', 'jar') ? 1 : 0; return; }
-    if (sku === PASS.sku) { n += grantPurchase('pass', 'pass') ? 1 : 0; }
+    if (pack) { n += grantPurchase('pack', pack.id, tx) ? 1 : 0; return; }
+    if (sku === JAR.sku) { n += grantPurchase('jar', 'jar', tx) ? 1 : 0; return; }
+    if (sku === STARTER.sku) { n += grantPurchase('starter', 'starter', tx) ? 1 : 0; return; }
+    if (sku === PASS.sku) { n += grantPurchase('pass', 'pass', tx) ? 1 : 0; }
   });
   return n;
 }
@@ -6091,36 +6303,48 @@ const NOTIFY = {
    hearts — where the game has something the player wanted and could not
    have. That is the whole of it.
 
-   Nothing here can take money yet, and it says so rather than pretending
-   otherwise. A store needs a merchant account, products declared in the
-   Play Console, and a receipt somebody trusts; none of those exist. What
-   exists is the shape of it, so that wiring a billing plugin is a change
-   to one function rather than to the game.
+   WHAT IS BEHIND IT. cordova-plugin-purchase, which talks to Google Play
+   Billing and to StoreKit and to nobody else: no server of its own, no
+   account of its own, and no receipt sent anywhere, because no validator
+   is set. It was chosen over RevenueCat for exactly that reason.
+   RevenueCat is a service that sees every purchase, and privacy.html
+   and the listing say in two languages that nobody but the store does,
+   which is also what the data answers for both stores rest on. It was
+   chosen over
+   capacitor-plugin-cdv-purchase — the same code, packaged for Capacitor
+   — because that one is reached through an `import` and the shipped page
+   has none. This one puts `CdvPurchase` on window, which is how every
+   other native thing in this game is reached.
+
+   The version of this file before it guessed. It asked whatever it found
+   for `getProducts`, `purchase` and `restorePurchases`, and tried four
+   spellings of "consume", and no plugin in circulation answers to that
+   shape; the one the checklist named, @capacitor-community/in-app-purchases,
+   is not on npm at all. Installed, it would have found RevenueCat's
+   `Purchases`, called methods that are not there, and sold nothing
+   without an error anywhere. A seam written to fit any plugin fitted
+   none. This one is written against one plugin's type definitions.
+
+   Money still does not change hands until the products are declared in
+   the Play Console and App Store Connect. Until a store has answered
+   with a price for at least one of them, `ready()` is false and the shop
+   shows how treats are earned instead — so a build that ships before
+   its products do behaves exactly like the build that shipped before the
+   plugin did.
 */
-
-/* ---------- the seam ----------
-
-   One object, four questions, and exactly one place that would have to
-   change to make this real. `ready` is what the interface asks before it
-   offers anything: false means the buttons are shown but explain
-   themselves instead of lying.
-
-   A Capacitor billing plugin — @capacitor-community/in-app-purchases, or
-   RevenueCat's, they present the same three calls — would be picked up
-   here by name. Until one is installed this stays honest. */
 const BILLING = {
-  plugin: null,
+  store: null,             // CdvPurchase.store, once initialize has answered
   prices: {},              // sku -> localized price string, once a store answers
+  started: null,           // the one promise every caller waits on
+  waiting: {},             // sku -> the answer of the buy() open on it
+  owed: {},                // transactionId -> approved and not yet handed back
 
-  /* Whether money can actually change hands in this build. Checked at
-     call time rather than cached at load: the plugin arrives with the
-     native bridge, which is not up yet when this file is read. */
+  /* Whether money can actually change hands in this build: a store is up
+     and it has told us the price of something we sell. A plugin with no
+     products declared behind it is not a shop. Asked synchronously,
+     because the interface asks it before it draws a price. */
   ready() {
-    if (this.plugin) return true;
-    const P = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || null;
-    if (!P) return false;
-    this.plugin = P.InAppPurchases || P.Purchases || P.CdvPurchase || null;
-    return !!this.plugin;
+    return !!this.store && Object.keys(this.prices).length > 0;
   },
 
   /* the price to put on a button: whatever the store said, or the
@@ -6137,24 +6361,101 @@ const BILLING = {
      which in Turkey is not a rounding error, it is the wrong number in
      the wrong unit. One list, and every caller reads it. */
   skus() {
-    return TREAT_PACKS.map(p => p.sku).concat([JAR.sku, PASS.sku]);
+    return TREAT_PACKS.map(p => p.sku).concat([JAR.sku, PASS.sku, STARTER.sku]);
+  },
+
+  /* ---------- starting the store ----------
+
+     Once, and everybody waits on the same promise. A Cordova plugin is
+     usable after `deviceready`, which comes after this file is read and
+     after boot has already asked for prices. In a browser there is no
+     `cordova` at all, and this answers false straight away rather than
+     after the timeout, so the web build and the tests never sit waiting
+     on a store that was never there.
+
+     Every product is registered CONSUMABLE — store/LISTING.md says why
+     the season book is one too. */
+  boot() {
+    if (this.started) return this.started;
+    this.started = new Promise(resolve => {
+      const w = typeof window !== 'undefined' ? window : null;
+      if (!w || !w.cordova || typeof document === 'undefined') { resolve(false); return; }
+      let settled = false;
+      const done = v => { if (!settled) { settled = true; resolve(v); } };
+      const go = () => {
+        const C = w.CdvPurchase;
+        if (!C || !C.store) { done(false); return; }
+        const ios = !!(w.Capacitor && w.Capacitor.getPlatform && w.Capacitor.getPlatform() === 'ios');
+        const platform = ios ? C.Platform.APPLE_APPSTORE : C.Platform.GOOGLE_PLAY;
+        const S = C.store;
+        S.register(this.skus().map(id => ({ id: id, type: C.ProductType.CONSUMABLE, platform: platform })));
+        /* Arrival is `approved`, not `verified`. With no validator set the
+           plugin passes every receipt without looking at it — its own
+           source says "for backward compatibility, we consider that the
+           receipt is verified" — so waiting for `verified` would be
+           waiting on a formality, through a receipt type whose shape the
+           definitions do not make plain. `verify` is still called, so
+           the plugin's own bookkeeping runs its usual course. The day a
+           validator is set, arrival moves to `verified` and this comment
+           stops being true. */
+        S.when()
+          .productUpdated(p => this.learn(p))
+          .approved(tx => { this.arrived(tx); tx.verify(); })
+          .pending(tx => this.held(tx));
+        S.initialize([platform]).then(() => {
+          this.store = S;
+          this.skus().forEach(id => this.learn(S.get(id, platform)));
+          done(true);
+        }, () => done(false));
+      };
+      document.addEventListener('deviceready', go, false);
+      /* a bridge that never comes up is a store that is not there */
+      setTimeout(() => done(false), 12000);
+    });
+    return this.started;
+  },
+
+  /* a product the store has described: keep its price as the store wrote
+     it, in the player's currency and the player's number format */
+  learn(p) {
+    if (p && p.id && p.pricing && p.pricing.price) this.prices[p.id] = String(p.pricing.price);
+  },
+
+  /* A transaction the store has approved.
+
+     If a buy() is waiting on that product, this is its answer. If not,
+     it is money that arrived while nobody was asking — approved after
+     the app was killed, or a pending payment that has since cleared — and
+     it waits in `owed` for the next restore, which every launch makes. */
+  arrived(tx) {
+    if (!tx || tx.state === 'finished' || !tx.transactionId) return;
+    const mine = this.skus();
+    (tx.products || []).forEach(p => {
+      if (!p || mine.indexOf(p.id) < 0) return;
+      const open = this.waiting[p.id];
+      if (open) open({ ok: true, receipt: tx });
+      else this.owed[tx.transactionId] = tx;
+    });
+  },
+
+  /* A payment the store has accepted and not cleared: a carrier bill, a
+     payment method that settles later, a parent asked to approve. It is
+     not a sale yet, so nothing is granted and the sheet says so; when it
+     clears it comes back through `arrived`, and the launch after that
+     pays it. */
+  held(tx) {
+    ((tx && tx.products) || []).forEach(p => {
+      const open = p && this.waiting[p.id];
+      if (open) open({ ok: false, why: 'pending' });
+    });
   },
 
   /* Ask the store what these cost where the player is. Safe to call when
      no store exists — it resolves having done nothing. */
   async refresh() {
-    if (!this.ready()) return false;
-    try {
-      const skus = this.skus();
-      const r = await this.plugin.getProducts({ productIdentifiers: skus, productIds: skus });
-      const list = (r && (r.products || r.productList)) || [];
-      list.forEach(p => {
-        const id = p.productId || p.identifier || p.id;
-        const shown = p.priceString || p.localizedPrice || p.price;
-        if (id && shown) this.prices[id] = String(shown);
-      });
-      return true;
-    } catch (e) { return false; }
+    if (!(await this.boot())) return false;
+    this.skus().forEach(id => this.learn(this.store.get(id)));
+    return this.ready();
   },
 
   /* ---------- closing the transaction ----------
@@ -6172,53 +6473,79 @@ const BILLING = {
 
      Everything this game sells is a consumable. The packs and the jar
      are bought again and again by design; the season book is bought once
-     per season, and a season ends — so all three have to be handed back
-     to the store as used, or the second purchase is refused with
-     "already owned". There is no non-consumable in this game and that is
-     deliberate: it is the only product type that needs no account.
+     per season, and a season ends; the welcome pack is bought once per
+     player, and a reinstall is a new player — so every one of them has
+     to be handed back to the store as used, or the second purchase is
+     refused with "already owned". There is no non-consumable in this
+     game and that is deliberate: it is the only product type that needs
+     no account.
 
-     The four names below are the four ways the plugins in circulation
-     spell the same call. Trying each is not indecision, it is the same
-     bet `ready()` makes: this seam should fit whichever one gets
-     installed without the game learning its name. */
-  async settle(receipt, sku) {
-    if (!this.plugin || !receipt) return;
-    const id = receipt.transactionId || receipt.purchaseToken || receipt.token || sku;
-    const arg = { productIdentifier: sku, productId: sku, transactionId: id, purchaseToken: id };
-    const names = ['consumePurchase', 'finishTransaction', 'consume', 'acknowledgePurchase'];
-    for (const n of names) {
-      if (typeof this.plugin[n] !== 'function') continue;
-      try { await this.plugin[n](arg); return; } catch (e) { /* try the next spelling */ }
-    }
+     And it is the second half, never the first. The caller grants the
+     purchase and writes the save, and only then calls this. A
+     transaction closed before the treats are written is a charge that
+     can never be claimed, because a consumed purchase is in nobody's
+     queue. Closed after, the worst a kill can do is leave it open — and
+     the next launch finds it, closes it, and does not pay for it twice,
+     because the save kept its transaction id (`granted`, 15-save.js). */
+  async settle(tx) {
+    if (!tx || typeof tx.finish !== 'function') return;
+    try { await tx.finish(); } catch (e) { return; /* still open; the next launch closes it */ }
+    if (tx.transactionId) delete this.owed[tx.transactionId];
+  },
+  async settleAll(list) {
+    for (const tx of (list || [])) await this.settle(tx);
   },
 
   /* The purchase itself.
 
-     Resolves { ok: true } only when a store has said so. Everything else
-     — no plugin, a cancelled sheet, a network that went away — comes
-     back { ok: false, why } and the caller grants nothing. There is no
-     branch in here that credits an account without a receipt, in any
-     build, including this one: a stub that pays out is a stub somebody
-     ships by accident. */
+     Resolves { ok: true, receipt } only when a store has approved it.
+     Everything else — no store, a cancelled sheet, a payment still
+     pending, a network that went away — comes back { ok: false, why }
+     and the caller grants nothing. There is no branch in here that
+     credits an account without a receipt, in any build, including this
+     one: a stub that pays out is a stub somebody ships by accident.
+
+     `order` resolving is not the answer. It resolves when the store's
+     sheet is done with, and the purchase itself is approved through the
+     `approved` event, which can land just before that or just after. So
+     the answer is whichever comes first: approval, a pending payment, an
+     error from the order, or a minute of nothing — which is reported as
+     pending rather than failed, because a charge may still clear, and if
+     it does the next launch will find it.
+
+     A receipt is checked by whoever issued it. Locally that means the
+     store's own signature and nothing more, which is enough for a
+     single-player game with no leaderboard — the only person a forged
+     receipt cheats is the person holding the phone. It is not enough the
+     day this game keeps anything on a server, and that is the day a
+     validator is set. */
   async buy(sku) {
-    if (!this.ready()) return { ok: false, why: 'nostore' };
-    try {
-      const r = await this.plugin.purchase({ productIdentifier: sku, productId: sku });
-      if (!r || r.cancelled || r.responseCode === 1) return { ok: false, why: 'cancelled' };
-      /* A receipt is checked by whoever issued it. Locally that means
-         the plugin's own verification and nothing more, which is enough
-         for a single-player game with no leaderboard — the only person
-         a forged receipt cheats is the person holding the phone. It is
-         not enough the day this game keeps anything on a server, and
-         that is the day this call grows a second half. */
-      await this.settle(r, sku);
-      return { ok: true, receipt: r };
-    } catch (e) {
-      return { ok: false, why: 'failed' };
-    }
+    if (!(await this.boot()) || !this.ready()) return { ok: false, why: 'nostore' };
+    const product = this.store.get(sku);
+    const offer = product && product.getOffer && product.getOffer();
+    if (!offer) return { ok: false, why: 'nostore' };
+    if (this.waiting[sku]) return { ok: false, why: 'busy' };
+    const C = window.CdvPurchase;
+    return new Promise(resolve => {
+      let over = false;
+      const answer = r => {
+        if (over) return;
+        over = true;
+        if (this.waiting[sku] === answer) delete this.waiting[sku];
+        resolve(r);
+      };
+      this.waiting[sku] = answer;
+      offer.order().then(err => {
+        if (err && err.isError) {
+          answer({ ok: false, why: err.code === C.ErrorCode.PAYMENT_CANCELLED ? 'cancelled' : 'failed' });
+          return;
+        }
+        setTimeout(() => answer({ ok: false, why: 'pending' }), 60000);
+      }, () => answer({ ok: false, why: 'failed' }));
+    });
   },
 
-  /* What the store still says this player owns.
+  /* What the store still says this player is owed.
 
      Consumables do not survive being consumed, so on a healthy device
      this comes back empty and that is the correct answer — there is
@@ -6228,18 +6555,31 @@ const BILLING = {
      store saying yes and the save being written. Those sit in the queue
      until somebody claims them, and this is how they get claimed.
 
-     Returns the product ids, so the caller decides what each one is
-     worth. This file knows about receipts and nothing about treats. */
+     What is outstanding arrives through `approved` as the store starts
+     and again when it is asked to restore, and collects in `owed`; the
+     local receipts are read as well, for anything approved before this
+     file was listening. The transactions go back beside the product
+     ids, so the caller can claim each one by its id and then hand every
+     one of them back to the store — the ones the save already held
+     included, since those are exactly the ones a kill left open.
+
+     This file knows about receipts and nothing about treats. */
   async restore() {
-    if (!this.ready()) return { ok: false, why: 'nostore', skus: [] };
-    try {
-      const r = await this.plugin.restorePurchases({ productIds: this.skus() });
-      const list = (r && (r.purchases || r.transactions || r.results)) || [];
-      const skus = list
-        .map(p => p && (p.productId || p.productIdentifier || p.identifier || p.id))
-        .filter(Boolean);
-      return { ok: true, skus: skus, receipts: list };
-    } catch (e) { return { ok: false, why: 'failed', skus: [] }; }
+    if (!(await this.boot())) return { ok: false, why: 'nostore', skus: [], receipts: [] };
+    try { await this.store.restorePurchases(); } catch (e) { /* what already arrived still counts */ }
+    const mine = this.skus();
+    const ours = tx => ((tx && tx.products) || []).some(p => p && mine.indexOf(p.id) >= 0);
+    (this.store.localReceipts || []).forEach(r => ((r && r.transactions) || []).forEach(tx => {
+      if (tx && tx.state === 'approved' && tx.transactionId && !this.owed[tx.transactionId] && ours(tx)) {
+        this.owed[tx.transactionId] = tx;
+      }
+    }));
+    const receipts = Object.keys(this.owed).map(k => this.owed[k]);
+    const skus = [];
+    receipts.forEach(tx => (tx.products || []).forEach(p => {
+      if (p && mine.indexOf(p.id) >= 0) skus.push(p.id);
+    }));
+    return { ok: true, skus: skus, receipts: receipts };
   }
 };
 
@@ -12690,7 +13030,7 @@ const G = {
   petMood: 'idle', petMoodT: 0, blink: 0, blinkT: 1.5,
   compCtx: null, lastT: 0, raf: null,
   starTargets: [1, 2, 3], starsEarned: 0,
-  usedExtra: false,
+  extras: 0,                        /* carry-ons taken this attempt, at most two */
   cursor: null, keyMode: false,     /* keyboard play */
   creepTick: 0,
   epoch: 0,                         /* bumped by every startLevel */
@@ -12732,7 +13072,7 @@ function snapshotLevel() {
   return {
     n: G.n, day: G.n === DAILY_LEVEL ? dayNumber() : 0, reached: SAVE.reached,
     moves: G.moves, score: G.score, charge: G.charge, scoreMul: G.scoreMul,
-    usedExtra: G.usedExtra, rescued: G.rescued, creepTick: G.creepTick,
+    extras: G.extras || 0, rescued: G.rescued, creepTick: G.creepTick,
     pupQueue: B.pupQueue || 0, startedAt: G.startedAt, bestChain: G.bestChain,
     goals: G.goals.map(g => g.have),
     cells: B.cell.map(row => row.map(c => [c.hole ? 1 : 0, c.crate, c.mud, c.ice, c.bram, c.mole, c.moleT || 0,
@@ -12989,7 +13329,8 @@ function startLevel(n, opts) {
   G.sel = null; G.armed = null; G.armedFirst = null;
   G.particles = []; G.floats = []; G.beams = []; G.rings = [];
   G.rescued = res ? (res.rescued || 0) : 0;
-  G.usedExtra = res ? !!res.usedExtra : false;
+  /* a level kept before there could be a second carry-on says usedExtra */
+  G.extras = res ? (res.extras !== undefined ? res.extras : (res.usedExtra ? 1 : 0)) : 0;
   G.creepTick = res ? (res.creepTick || 0) : 0;
   G.lastPraise = 0;
   G.finale = false; G.finaleSkip = false;
@@ -16100,12 +16441,30 @@ function setScreen(name) {
 }
 
 /* ---------------- top bar ---------------- */
+/* fmtTime counts minutes and seconds, which is right for one heart and
+   wrong for three hours of them: "180:00" reads as a score */
+function fmtClock(ms) {
+  if (ms < 60 * MIN) return fmtTime(ms);
+  const s = Math.ceil(ms / 1000);
+  return Math.floor(s / 3600) + ':' + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+}
+/* "1 h", "30 min" — how long a stretch of unlimited hearts is */
+function durText(min) {
+  return min >= 60 && min % 60 === 0 ? T('dur_h', { n: min / 60 }) : T('dur_m', { n: min });
+}
 function syncPurse() {
   heartTick();
   const h = $('#chipHearts');
   const inT = heartsIn();
-  h.innerHTML = IC.heart + '<span class="num">' + SAVE.hearts + '</span>' +
-    (SAVE.hearts >= HEART_MAX ? '' : '<span class="sub num">' + fmtTime(inT) + '</span>');
+  if (heartsInfinite()) {
+    h.innerHTML = IC.heart + '<span class="num">∞</span><span class="sub num">' + fmtClock(infiniteLeft()) + '</span>';
+    h.title = T('inf_chip');
+    heartClockStart();
+  } else {
+    h.innerHTML = IC.heart + '<span class="num">' + SAVE.hearts + '</span>' +
+      (SAVE.hearts >= HEART_MAX ? '' : '<span class="sub num">' + fmtTime(inT) + '</span>');
+    h.title = '';
+  }
   $('#chipCoins').innerHTML = IC.coin + '<span class="num">' + fmtPurse(SAVE.coins) + '</span>';
   $('#chipTreats').innerHTML = IC.treat + '<span class="num">' + fmtPurse(SAVE.treats) + '</span>';
 }
@@ -16133,11 +16492,13 @@ function passChip(r) {
   if (!r) return '';
   if (r.coins) return `<span class="reward" style="color:var(--accent-strong)">${IC.coin}+${r.coins}</span>`;
   if (r.treats) return `<span class="reward" style="color:var(--plum)">${IC.treat}+${r.treats}</span>`;
+  if (r.infinite) return `<span class="reward" style="color:var(--rose)">${IC.heart}∞ ${durText(r.infinite)}</span>`;
   const named = r.food ? FOODS.find(x => x.id === r.food)
     : r.boost ? BOOSTERS.find(x => x.id === r.boost)
       : r.hat ? HATS.find(x => x.id === r.hat)
         : r.collar ? COLLARS.find(x => x.id === r.collar)
-          : r.keepsake ? KEEPSAKES.find(x => x.id === r.keepsake) : null;
+          : r.keepsake ? KEEPSAKES.find(x => x.id === r.keepsake)
+            : r.theme ? ROOM_THEMES.find(x => x.id === r.theme) : null;
   return `<span class="reward">${goodName(named || {})}</span>`;
 }
 
@@ -16220,6 +16581,7 @@ function passSheet() {
     $$('[data-take]', m.el).forEach(b => b.addEventListener('click', () => {
       const got = passClaim(+b.dataset.take, b.dataset.paid === '1');
       if (!got) return;
+      if (got.infinite) toast(T('inf_granted', { t: durText(got.infinite) }), 'heart');
       SFX.coin(); buzz(10); syncPurse();
       m.el.innerHTML = draw(); wire();
     }));
@@ -16243,11 +16605,21 @@ function passSheet() {
         buy.disabled = false;
         track('buy_fail', { why: r.why || 'unknown' });
         if (r.why === 'nostore') { storeShut(); return; }
+        if (r.why === 'pending') { toast(T('store_pending'), 'treat'); return; }
         if (r.why !== 'cancelled') { SFX.bad(); toast(T('store_failed'), 'treat'); }
         return;
       }
       track('buy_ok', { sku: PASS.sku });
-      grantPurchase('pass', 'pass');
+      /* Written into the save first, handed back to the store second.
+
+         The order is the whole point. A purchase the store has closed and
+         the save never recorded is money taken for nothing, and it can
+         never be claimed afterwards, because a consumed purchase is in
+         nobody's queue. The other way round, a kill between the two
+         leaves it open, the next launch finds it, and the transaction id
+         stops it paying twice. */
+      grantPurchase('pass', 'pass', r.receipt && r.receipt.transactionId);
+      BILLING.settle(r.receipt);
       SFX.win();
       toast(T('pass_bought'), 'check');
       m.el.innerHTML = draw(); wire();
@@ -16899,7 +17271,7 @@ function shopStyle() {
     </div>`;
   }).join('')}</div>
   <div class="sectitle"><h3>${T('shop_collars')}</h3></div>
-  <div class="grid3">${COLLARS.map(h => {
+  <div class="grid3">${COLLARS.filter(h => !h.book || SAVE.collars[h.id]).map(h => {
     const owned = !!SAVE.collars[h.id];
     const worn = pet && pet.collar === h.id;
     return `<div class="good ${worn ? 'owned' : ''}" style="padding:9px 7px">
@@ -16941,7 +17313,7 @@ function shopRoom() {
     </div>`;
   }).join('')}</div>
   <div class="sectitle"><h3>${T('shop_walls')}</h3></div>
-  <div class="grid2">${ROOM_THEMES.map(t => {
+  <div class="grid2">${ROOM_THEMES.filter(t => !t.book || SAVE.roomThemes[t.id]).map(t => {
     const owned = !!SAVE.roomThemes[t.id];
     const on = SAVE.room.theme === t.id;
     return `<div class="good ${on ? 'owned' : ''}">
@@ -16959,6 +17331,8 @@ function buyThing(id, kind) {
                   furniture: FURNITURE, theme: ROOM_THEMES, keepsake: KEEPSAKES };
   const item = table[kind].find(x => x.id === id);
   if (!item) return;
+  /* only ever given by the book; priced at nothing because it is not for sale */
+  if (item.book) return;
   /* one of a kind: taking the coins twice for a single hat is theft */
   const once = { toy: SAVE.toys, hat: SAVE.hats, collar: SAVE.collars,
                  furniture: SAVE.furniture, theme: SAVE.roomThemes,
@@ -17505,7 +17879,7 @@ function openLevelIntro(n) {
   const pet = activePet();
   const perks = perksFor(pet);
   let useMoves = false;
-  if (SAVE.hearts <= 0) { noHeartsSheet(); return; }
+  if (SAVE.hearts <= 0 && !heartsInfinite()) { noHeartsSheet(); return; }
   /* straight in, the first time through the opening levels. Everything
      the Start button does, in the same order — the heart is still spent,
      the screen still changes, and the level's own coach mark still
@@ -17595,10 +17969,11 @@ function openLevelIntro(n) {
    puts a line at the top saying what the treats would have done, because
    a store that opens without saying why it opened is an interruption.
 
-   Nothing in here can charge anything yet. When BILLING is not ready the
-   prices still show — they are what the thing will cost — and the button
-   says the shop is shut instead of pretending to take a card. */
-function treatStore(why) {
+   It charges only when a store is behind the build and has priced at
+   least one product. Until then BILLING is not ready and this opens the
+   sheet that says how treats are earned — the comment here used to say
+   the prices still showed, after the code had stopped showing them. */
+function treatStore(why, need) {
   const live = BILLING.ready();
   track('store_open', { why: why || 'chip', live: live });
   /* No store, nothing to sell. Three priced rows that all answer "the
@@ -17606,9 +17981,9 @@ function treatStore(why) {
      no, and stops trusting the next thing the game offers. Until a
      billing plugin is installed this says where treats come from, which
      is true and useful, and asks for nothing. */
-  if (!live) { earnTreatsSheet(why); return; }
+  if (!live) { earnTreatsSheet(why, need); return; }
   const j = jarState();
-  const reason = why === 'continue' ? T('store_why_continue', { n: ECON.continueTreats })
+  const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
     : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
   const tag = (sku, usd) => {
     const p = BILLING.price(sku, null);
@@ -17626,6 +18001,12 @@ function treatStore(why) {
     <h2>${T('store_t')}</h2>
     ${reason ? `<p><b style="color:var(--accent-strong)">${reason}</b></p>` : ''}
     <p style="color:var(--text-dim)">${T('store_s')}</p>
+    ${SAVE.starter && SAVE.starter.bought ? '' : `
+    <div class="offer" style="background:color-mix(in srgb,var(--accent) 12%, var(--surface-2))">
+      <span class="ot"><b>${T('store_starter_t')}</b>
+        <small>${T('store_starter_s', { n: STARTER.treats, m: STARTER.boosters.moves, h: STARTER.boosters.hammer, s: STARTER.boosters.shuffle, i: durText(STARTER.infinite) })}</small></span>
+      <button class="btn sm" data-pay="starter" data-kind="starter">${tag(STARTER.sku, STARTER.usd)}</button>
+    </div>`}
 
     ${!j.fill ? '' : jarFull()
       ? row('jar', 'jar', T('store_jar_t'), T('store_jar_full', { n: j.fill }),
@@ -17649,7 +18030,7 @@ function treatStore(why) {
 
     ${TREAT_PACKS.map(p => row(p.id, 'pack',
       T('store_pack', { n: p.treats }) + (p.best ? ' ★' : ''),
-      p[LANG] || p.en, tag(p.sku, p.usd))).join('')}
+      (p[LANG] || p.en) + (p.infinite ? ' · ' + T('inf_for', { t: durText(p.infinite) }) : ''), tag(p.sku, p.usd))).join('')}
 
     ${live ? `<button class="btn ghost wide" id="stRestore"
       style="font-size:var(--t-micro)">${T('store_restore')}</button>` : ''}
@@ -17664,6 +18045,7 @@ function treatStore(why) {
     const kind = b.dataset.kind;
     const id = b.dataset.pay;
     const sku = kind === 'pack' ? TREAT_PACKS.find(x => x.id === id).sku
+      : kind === 'starter' ? STARTER.sku
       : JAR.sku;
     b.disabled = true;
     track('buy_try', { sku: sku });
@@ -17672,15 +18054,18 @@ function treatStore(why) {
     if (!r.ok) {
       track('buy_fail', { why: r.why || 'unknown' });
       if (r.why === 'nostore') { storeShut(); return; }
+      if (r.why === 'pending') { toast(T('store_pending'), 'treat'); return; }
       if (r.why !== 'cancelled') { SFX.bad(); toast(T('store_failed'), 'treat'); }
       return;
     }
     track('buy_ok', { sku: sku });
-    const got = grantPurchase(kind, id);
+    /* grant, then close — the season book's button says why that way round */
+    const got = grantPurchase(kind, id, r.receipt && r.receipt.transactionId);
+    BILLING.settle(r.receipt);
     SFX.coin();
     syncPurse();
     m.close();
-    toast(T('store_thanks', { n: got }), 'treat');
+    toast(kind === 'starter' ? T('store_starter_thanks') : T('store_thanks', { n: got }), 'treat');
   }));
   /* The button called restore and then threw the answer away, which made
      it a button that did nothing at all — the store handed back a list
@@ -17692,7 +18077,10 @@ function treatStore(why) {
     rs.disabled = true;
     const r = await BILLING.restore();
     rs.disabled = false;
-    const n = r.ok ? claimOutstanding(r.skus) : 0;
+    const n = r.ok ? claimOutstanding(r.skus, r.receipts) : 0;
+    /* and close every one of them, including any the save already held —
+       those are the ones a kill left open after the treats were written */
+    if (r.ok) BILLING.settleAll(r.receipts);
     syncPurse();
     if (n) { SFX.coin(); m.close(); toast(T('store_restored', { n: n }), 'check'); }
     else toast(T('store_restore_none'), 'treat');
@@ -17703,9 +18091,9 @@ function treatStore(why) {
 
    Everything in here the player can act on today: play a level, take the
    walk, come back tomorrow. No prices, no buttons that refuse. */
-function earnTreatsSheet(why) {
+function earnTreatsSheet(why, need) {
   const j = jarState();
-  const reason = why === 'continue' ? T('store_why_continue', { n: ECON.continueTreats })
+  const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
     : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
   const line = (icon, text) => `
     <div class="goalItem">
@@ -17883,7 +18271,7 @@ function showWin() {
   const rate = first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
   const coins = Math.max(first ? 0 : 1, Math.round(base * rate));
   let treats = 0;
-  if (stars === 3 && prev < 3) treats += ECON.threeStarTreats;
+  if (stars === 3 && prev < 3) treats += isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats;
   if (first && n % ECON.milestoneEvery === 0) treats += ECON.milestoneTreats;
   /* and the jar takes its couple, on a replay as well: it is the one
      thing in the economy that is paid for time rather than progress,
@@ -18029,7 +18417,9 @@ function showLose() {
      kind of goal, in the reference sheet's own voice. */
   const worst = short.slice().sort((a, b) => (a.have / a.g.need) - (b.have / b.g.need))[0];
   const tip = worst ? T('lose_tip_' + worst.g.kind) : '';
-  const short2 = SAVE.treats < ECON.continueTreats;
+  /* the first carry-on at its price, the second at the higher one */
+  const price = (G.extras || 0) === 0 ? ECON.continueTreats : ECON.continueTreats2;
+  const short2 = SAVE.treats < price;
   const m = modal(`
     ${pet ? `<div class="winPet"><canvas data-body="${pet.breed}" data-coat="${pet.coat}"
       data-eye="${petEye(pet)}" data-hat="${pet.hat}" data-collar="${pet.collar}"
@@ -18051,14 +18441,14 @@ function showLose() {
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn primary" id="lRetry">${T('retry')}</button>
     </div>
-    ${G.usedExtra || !worthCarryingOn ? '' : `
+    ${(G.extras || 0) >= 2 || !worthCarryingOn ? '' : `
     <div class="offer">
       <span class="ot">
         <b>${T('lose_extra', { n: ECON.continueMoves })}</b>
-        <small>${short2 ? T('lose_extra_short', { n: ECON.continueTreats, have: SAVE.treats }) : T('lose_extra_sub', { n: ECON.continueTreats })}</small>
+        <small>${short2 ? T('lose_extra_short', { n: price, have: SAVE.treats }) : T('lose_extra_sub', { n: price })}</small>
       </span>
       <button class="btn sm" id="lExtra"${short2 ? ' style="opacity:.6"' : ''}>${T('shop_buy')}</button>
-    </div>` + (ADS.available('carry') ? `
+    </div>` + (!(G.extras || 0) && ADS.available('carry') ? `
     <div class="offer">
       <span class="ot">
         <b>${T('ad_watch', { n: ECON.continueMoves })}</b>
@@ -18073,10 +18463,10 @@ function showLose() {
   if (ex) ex.addEventListener('click', () => {
     /* short of treats is the one moment the player actually wants the
        jar, so it opens there rather than being told no by a toast */
-    if (SAVE.treats < ECON.continueTreats) { SFX.bad(); treatStore('continue'); return; }
-    SAVE.treats -= ECON.continueTreats; persist(true); syncPurse();
+    if (SAVE.treats < price) { SFX.bad(); treatStore('continue', price); return; }
+    SAVE.treats -= price; persist(true); syncPurse();
     m.close();
-    G.usedExtra = true;
+    G.extras = (G.extras || 0) + 1;
     G.over = false; G.busy = false;
     G.moves = ECON.continueMoves;
     syncHud();
@@ -18092,7 +18482,7 @@ function showLose() {
     const won = await ADS.show('carry');
     if (!won) { ad.disabled = false; SFX.bad(); return; }
     m.close();
-    G.usedExtra = true;
+    G.extras = (G.extras || 0) + 1;
     G.over = false; G.busy = false;
     G.moves = ECON.continueMoves;
     syncHud();
@@ -18898,7 +19288,7 @@ function boot() {
   $('#btnSettings').addEventListener('click', () => { audioResume(); openSettings(); });
   $('#btnQuit').innerHTML = IC.back;
   $('#btnQuit').addEventListener('click', () => { SFX.tap(); confirmQuit(); });
-  $('#chipHearts').addEventListener('click', () => { if (SAVE.hearts < HEART_MAX) noHeartsSheet(); });
+  $('#chipHearts').addEventListener('click', () => { if (SAVE.hearts < HEART_MAX && !heartsInfinite()) noHeartsSheet(); });
   /* the chip explained what treats were and then stopped, which was the
      right card back when there was nothing to do about it */
   $('#chipTreats').addEventListener('click', () => { SFX.tap(); treatStore(); });
@@ -18919,7 +19309,8 @@ function boot() {
      on every launch, it resolves before they notice. */
   BILLING.restore().then(r => {
     if (!r.ok || !r.skus.length) return;
-    const n = claimOutstanding(r.skus);
+    const n = claimOutstanding(r.skus, r.receipts);
+    BILLING.settleAll(r.receipts);
     if (!n) return;
     syncPurse();
     track('restore_claimed', { n: n });
@@ -18983,7 +19374,7 @@ function boot() {
       if (AMB.raf) { cancelAnimationFrame(AMB.raf); AMB.raf = null; }
     } else {
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
-      if (SAVE.hearts < HEART_MAX) heartClockStart();
+      if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
       if (SAVE.settings.music) musicStart();
       if (!AMB.raf && !reduceMotion()) { AMB.last = performance.now(); AMB.raf = requestAnimationFrame(motesLoop); }
       if (SCREEN === 'home') { renderHome(); roomLayout(); roomStart(); }
@@ -19012,7 +19403,7 @@ function boot() {
 
   /* a heart on its way back gets a second hand from the start, not only
      after the player spends one */
-  if (SAVE.hearts < HEART_MAX) heartClockStart();
+  if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
 
   /* first gesture starts the audio engine */
   const kick = () => { audioResume(); musicSync(); document.removeEventListener('pointerdown', kick); };
