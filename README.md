@@ -4176,3 +4176,123 @@ lane change would silently not arrive. And two of the numbers the economy
 file stands on are still guesses with names — how many losses are near
 misses, and how often five moves are not enough. The dose is a model
 until the analytics has somewhere to go and real players replace them.
+
+## The run past sixty dealt the same level four hundred times
+
+Counted straight off `levelDef` on 22 Sep 2026, levels 61 to 460: one mud
+level, no molehill, 81 of 87 score goals the same 16,200, every board
+8×9, 397 of 400 on six colours, and 319 carrying one goal where the lane
+had taught twenty-nine levels of two or three. The section above called
+"Something new at level seventy-six" described a mechanic the run had
+never dealt. The player who stays past sixty — the one this game earns
+from — was getting the thinnest part of it.
+
+**Mud and hills had budgets they could not lose on.** The response curve
+had a mud level clearing 92% at 0.55 of its 22 moves and a hill level 93%
+at 0.55 of 36. The generator picks a kind whose curve can reach the
+level's target, and no target in the run was above 88%, so neither kind
+was ever picked. A comment in `10-data.js` credited a widened window with
+fixing this; it had not been re-counted, and it had not. Played with the
+human solver on five maps, mud at 6, 8, 10 and 12 moves cleared 7, 23,
+53 and 70%; hills at 8, 11, 14 and 18 cleared 37, 57, 73 and 73%. The
+base budgets are 11 and 13 now, and the recalibrated curves reach 26–98%
+and 43–88%.
+
+**Kinds are dealt, not rolled.** A kind used to be drawn from whichever
+kinds could reach the target, so the kinds that could reach most targets
+won most draws: collect was 116 of 285 levels from 76 on. Each stretch of
+seven levels is now one shuffled deck of the seven kinds (six before the
+hills), and a level takes its card or the next one that can reach its
+target. Level 76 is always the first hill, because the tutorial for it
+waits on the first hill level and a mechanic held back to be the run's
+surprise should not be left to a shuffle.
+
+**Smaller things that were all the same.** Boards come in 8×9, 8×8, 7×9
+and 7×8, the common case still the first. A score goal varies a fifth
+either way. From the third tier a third of the obstacle levels also ask
+for one colour, sized as a guess at what the board hands over unchased
+(not measured; the fit prices it), so it changes the order of moves
+rather than becoming the level. The level
+after every gate deals five colours — a breather that looks and plays
+like one — except on mud, crate and hill levels, which the cascade
+clears by itself: a five-colour mud level measured 100% at eight moves
+and twice its work.
+
+**A number that had been measured by the other player.** Five-colour
+collect goals were sized at 5.4 targeted tiles a move, measured with the
+solver that could see cascades. The human one delivers 4.4, so a relief
+collect level cleared 2% at its own budget and the first fit answered
+with fifty-four-move breathers. It is 3.6 now, and the collect curve
+was measured again.
+
+**Counted again afterwards**, 61 to 460: mud 60, collect 58, rescue 58,
+score 58, bramble 57, mole 57, crate 52; the same kind twice running
+three times in 400 and never three times; 35 different score goals; 203
+boards at 8×9 and the rest spread over the other three sizes; 23 levels
+on five colours; 98 obstacle levels with a colour to gather as well. The first three hills are at
+76, 83 and 96.
+
+**Fitted, it is not as tidy as the run it replaced, and that is said
+rather than tuned away.** Mean miss 5% against the old 3%. Twenty-five
+levels sit at the fit's floor of eight moves and are easier than drawn —
+nearly all short mud and hill levels, the worst 338, a mud level meant
+for 53% that clears every time — and seven at the ceiling, harder than
+drawn: five hill levels between 40 and 55% against targets up to 74%,
+and 162, a bramble patch that needs 64 moves for 60% and needed its
+ceiling in the last fit too. Budgets across 61-360 run 9 moves at the
+tenth percentile, 24 at the median and 37 at the ninetieth. The floor
+is a thing to lower and the hills a thing to soften the next time the
+run is touched; neither is a wall today, because every pinned level
+errs toward the player except those seven.
+
+What this cost: every level from 61 to 360 was fitted again
+(`test/fit-run.js`, fifteen slices, twenty games a point, about an
+hour on sixteen cores), and every calibration curve was measured again,
+because board sizes and side goals change what all seven kinds do with a
+budget. The first fit was stopped part way: it was answering the
+five-colour collect goals with fifty-four-move levels, which is how the
+rate below the breathers was found.
+
+## The board was brown on brown, and the cat had no legs
+
+**The well the tiles sit in is aubergine.** It was #6B563A, and every
+blocker in the game is brown or green — planks, mud, a dark vine — so a
+crate was a slightly different brown and a board half covered in mud
+read as an empty one. Three wells were tried side by side on levels 4,
+14 and 22, the lane's first mud, bramble and crate boards: meadow green
+swallowed the bramble, which is the same green; linen merged with the
+frame and washed out the additive sparkles; aubergine kept every blocker
+and every tile apart and still sits warm beside the wood. The tray and
+cell caches are keyed on the board colours now, so a palette change
+paints them again instead of stamping the old ones. Dusk keeps its navy.
+
+**The walker stands where it can be seen.** The trail runs ten pixels
+under the tray so it disappears behind the frame, and the animal at the
+head of it started on that last pixel — at the opening of every level it
+stood with its legs cut off by the board, in every screenshot the store
+listing had.
+
+**The home screen.** The care card was four labelled bars above four
+buttons in the same four colours, the same four facts twice; each button
+carries its own bar now and the card is one row. On a day the basket is
+waiting there are three tiles under the level card, and they wrapped two
+and one with half a row of nothing beside the book; the basket, which is
+taken with one tap and gone, is the banner across the top now and the
+two that last all day share the row below.
+
+**The store shots** show a level in progress — a rocket each way and a
+bomb on the board, the first star lit, the goal half gathered — rather
+than a level before its first move. The fifth slot is a three-star win on
+a first clear rather than the home screen again in the dark. Every
+caption fits one line at a size a thumbnail can be read at, and the
+badge shelf is the one a player at level 34 would have earned by the
+game's own rules instead of all thirty-one. `node tools/look.js`
+photographs the three blocker boards, home and the lane in both palettes
+at one phone size, for the next time a colour is being chosen.
+
+Smaller: the Turkish season book said "30 kademeden 0." and says
+"Kademe 0/30" now; `privacy.html` has a doctype and a charset;
+`furEdge`, dead since the sticker pass, is gone. The animals' faces on
+the tiles were left at .52 of the tile. That was chosen against .715, .60
+and .42 side by side for the silhouette's sake, and nothing here argued
+it again.

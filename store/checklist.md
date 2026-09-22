@@ -260,3 +260,5 @@ Kept here so the list above stays a list of what is left.
 - **Six moods for six stretches**: the music loop follows the chapter, the way the scene does.
 - **The animals are stickers now**: rebuilt flat with a thick warm line, big eyes, breed markings on head, body, legs and tail, after three generated concept sheets all came back in that style. Still no image files; the sheets are the brief if an illustrator is ever hired.
 - **A save that cannot be read is kept**, not overwritten; a chain is felt as it deepens; the small print is 13px.
+- **The run deals every kind.** Past level 60 there was one mud level and no molehill in 400; now each of the seven kinds turns up about 57 times, on four board sizes, with varied score goals and a second goal on some obstacle levels. Refitted, mean miss 5%.
+- **A board you can read.** The well is aubergine instead of brown, so crates, mud and bramble stand off it; the walker above the board is no longer cut off at the legs; the home screen's care card is one row. Store shots redone: a level in progress, and a three-star win in the fifth slot instead of the home screen in the dark.

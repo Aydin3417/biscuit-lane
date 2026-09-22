@@ -144,7 +144,7 @@ let TRAY = { key: '', cv: null, w: 0, h: 0, m: 0 };
 function stampTray(c) {
   const pad = BOARD_PAD, m = Math.ceil(pad * 1.7);
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  const key = [G.boardW, G.boardH, PAL.dark ? 1 : 0, dpr].join('|');
+  const key = [G.boardW, G.boardH, PAL.boardBg, PAL.dark ? 1 : 0, dpr].join('|');
   if (TRAY.key !== key) {
     const w = Math.ceil(G.boardW + m * 2), h = Math.ceil(G.boardH + m * 2);
     const cv = document.createElement('canvas');

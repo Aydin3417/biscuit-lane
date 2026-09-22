@@ -1393,15 +1393,54 @@ function normaliseGoals(def) {
 /* the level the run stops repeating itself */
 const MOLE_FROM = 76;
 
+/* Mud and molehills were given budgets they could not lose on.
+
+   The curve in 12-curve.js had a mud level clearing 92% at 0.55 of its
+   22 moves and a hill level 93% at 0.55 of 36, so the lowest clear rate
+   either could be steered to sat above almost every target the run
+   draws, neither fitted, and 400 generated levels dealt one mud level
+   and no molehill at all. Played on 22 Sep 2026 (the human solver, five
+   maps, six games a budget): mud 6/8/10/12 moves cleared 7/23/53/70%,
+   hills 8/11/14/18 cleared 37/57/73/73%. The base budgets now sit where
+   1.0 of them is a coin flip, so the curve's window spans the run. */
 const GEN = {
-  mud:     { fill: .58, deep: .70, base: 8200,  moves: 22 },
+  mud:     { fill: .58, deep: .70, base: 8200,  moves: 11 },
   crate:   { fill: .46, deep: .38, base: 6400,  moves: 24 },
   bramble: { goal: n => 12 + n * 2, base: 11500, moves: 30 },
   collect: { base: 10500, moves: 30 },
   rescue:  { base: 10000, moves: 32 },
   score:   { base: 13400, moves: 30 },
-  mole:    { base: 9800,  moves: 36 }
+  mole:    { base: 9800,  moves: 13 }
 };
+
+/* The sizes a generated board comes in. Every generated level was 8x9,
+   against ten of the lane's sixty that are not; a smaller board cascades
+   less and reads differently at a glance, and the fitted budget prices
+   whatever difference that makes. 8x9 stays the common case. */
+const RUN_SIZES = [[8, 9], [8, 9], [8, 9], [8, 8], [7, 9], [7, 8]];
+
+/* Which kind of level the run deals next.
+
+   A kind used to be rolled from whichever kinds could reach the level's
+   target, and the kinds that could reach most targets won most rolls:
+   collect was 116 of 285 levels from 76 on, and a player could meet
+   the same goal four times running. Now the kinds are dealt like cards —
+   each stretch of seven (six before the hills arrive) is one shuffled
+   deck, and a level takes its card, or the next card that can reach its
+   target. Every kind turns up about once a week of play, and the same
+   goal twice in a row only where the target leaves no other choice. */
+function runDeck(kinds, block) {
+  const shuffle = b => {
+    const d = kinds.slice(), rr = mulberry(b * 104729 + 17);
+    for (let i = d.length - 1; i > 0; i--) { const j = Math.floor(rr() * (i + 1)); const t = d[i]; d[i] = d[j]; d[j] = t; }
+    return d;
+  };
+  const d = shuffle(block);
+  /* a deck that opens on the card the last one closed on would deal the
+     same kind twice across the seam */
+  if (block > 0 && d[0] === shuffle(block - 1)[d.length - 1]) { const t = d[0]; d[0] = d[1]; d[1] = t; }
+  return d;
+}
 
 /* Tiles a move is worth, measured by playing: a solver on a five-colour
    board clears about eleven a move, on six about nine. Everything the
@@ -1414,7 +1453,14 @@ const GEN = {
    cascades much further, so these are two measurements rather than one
    formula: 26 moves on five colours delivers the 146 that level 10 asks
    for; 30 moves on six delivers about 60. */
-const COLLECT_RATE = { 5: 5.4, 6: 2.0 };
+/* The five-colour rate was measured with the solver that could see
+   cascades. Re-measured on 22 Sep 2026 with the human one, on six
+   five-colour run boards at eight games a budget, it delivers 4.4 of
+   the two colours a move, and a collect goal built at 5.4 cleared 2% at
+   its own budget and needed 1.6 times it to clear 71% — the fit was
+   answering with fifty-four-move relief levels. At 3.6 the budget the
+   model gives lands near its target and a breather stays short. */
+const COLLECT_RATE = { 5: 3.6, 6: 2.0 };
 function collectPair(moves, types, tier) {
   const rate = COLLECT_RATE[types] || COLLECT_RATE[6];
   const total = Math.round(moves * rate * (.90 + tier * .05));
@@ -1531,26 +1577,53 @@ function levelDef(n, ref, forceKind) {
   const keyOf = k => (k === GK.BRAMBLE ? 'bramble' : k);
   const fits = kinds.filter(k => {
     const rng = budgetRange(keyOf(k));
-    /* Wider below than above. Measured with the player who cannot see
-       cascades, a mud level clears 93% at half its budget and a hill
-       level 93% at the same, so neither could fit any target under .88
-       and the run had two mud levels and no hills in three hundred —
-       the seventh mechanic, held back until level 76 on purpose, never
-       arrived. A kind that lands up to twelve points easier than the
-       target is a relief level that is a little kinder than drawn; a
-       kind that cannot reach the target from above is a wall. */
+    /* Wider below than above: a kind that lands up to twelve points
+       easier than the target is a relief level a little kinder than
+       drawn; a kind that cannot reach the target from above is a wall.
+
+       This widening was once credited with bringing mud and hills back
+       into the run. It did not — counted on 22 Sep 2026 the run still
+       dealt one mud level and no hill in 400, because both kinds cleared
+       over 90% at their lowest budget and no window this side of that
+       reaches them. What brought them back was their budgets (see GEN)
+       and the deck below. */
     return want >= rng[0] - .12 && want <= rng[1] + .05;
   });
-  const pool = fits.length ? fits : kinds;
+  const from = n >= MOLE_FROM ? MOLE_FROM : RUN_START;
+  const deck = runDeck(kinds, Math.floor((n - from) / kinds.length));
+  const at = (n - from) % kinds.length;
+  let dealt = deck[at];
+  for (let i = 0; i < deck.length; i++) {
+    const k = deck[(at + i) % deck.length];
+    if (fits.indexOf(k) >= 0) { dealt = k; break; }
+  }
+  /* The first level that can have a hill has one. The tutorial card for
+     it waits on the first molehill level the player meets, and a
+     mechanic held back to be the run's surprise should not then be left
+     to a shuffle. */
+  if (n === MOLE_FROM) dealt = GK.MOLE;
   /* a kind may be forced: test/calibrate.js measures how each kind answers
      its budget, and has to be able to build a mud level even while the
      curve it is about to replace says mud never fits */
-  const kind = forceKind || pool[Math.floor(r() * pool.length)];
+  const kind = forceKind || dealt;
+  r();                                  /* the roll the old pick spent, so the maps below keep their dice */
   const tier = Math.min(4, Math.floor((n - 40) / 12));
-  const h = 9, w = 8;
-  /* the early tiers deal one colour fewer, which is how the handcrafted
-     lane eases a player in — not by asking for less */
-  const types = tier <= 1 ? 5 : 6;
+  const size = RUN_SIZES[Math.floor(mulberry(n * 3571)() * RUN_SIZES.length)];
+  const w = size[0], h = size[1];
+  /* The early tiers deal one colour fewer, which is how the handcrafted
+     lane eases a player in — not by asking for less. Past them, so does
+     the level straight after every gate: a five-colour board cascades
+     far further than a six, so the breather the rhythm draws there looks
+     and plays like one instead of being the same board with more moves
+     on it. (Keyed to the beat rather than to the target: past level 150
+     the ease has fallen far enough that no target in the run is above
+     .8, and a threshold on the number dealt four such levels in 400.) */
+  /* Not for the goals the cascade does for you. A mud level on five
+     colours measured 100% at eight moves and twice its work, which is no
+     level at all — mud, crates and hills are cleared by what falls, and
+     five colours make everything fall. */
+  const relief = n % BLOCK === 1 && [GK.MUD, GK.CRATE, GK.MOLE].indexOf(kind) < 0;
+  const types = tier <= 1 || relief ? 5 : 6;
   const key = kind === GK.BRAMBLE ? 'bramble' : kind;
 
   /* ---- how hard this level is meant to be, and how to get there ----
@@ -1769,7 +1842,12 @@ function levelDef(n, ref, forceKind) {
   const goals = [];
   let base;
   if (kind === GK.SCORE) {
-    base = GEN.score.base + tier * 700;
+    /* Eighty-one of the run's eighty-seven score goals were the same
+       16,200, because the tier stops climbing at level 88 and nothing
+       else moved the number. The fitted budget answers whatever the goal
+       is, so the goal is free to vary; it varies by a fifth either way,
+       in hundreds, and the stars are priced off it as before. */
+    base = Math.round((GEN.score.base + tier * 700) * (.8 + r() * .4) / 100) * 100;
     goals.push([GK.SCORE, 0, base]);
   } else if (kind === GK.COLLECT) {
     const a = Math.floor(r() * types);
@@ -1802,6 +1880,24 @@ function levelDef(n, ref, forceKind) {
   } else {
     goals.push([GK.BRAMBLE, 0, Math.round(GEN.bramble.goal(tier) * workMult)]);
     base = GEN.bramble.base + tier * 400;
+  }
+
+  /* A second thing to do.
+
+     Twenty-nine of the lane's sixty levels carry two or three goals and
+     319 of the run's 400 carried one, so the lane taught the player to
+     juggle and the run stopped asking. From the third tier, a third of
+     the obstacle levels also want one colour gathered, sized at 1.3 a
+     move of the model's budget on six colours (1.7 on five) and then
+     taken down a fifth. That is a guess at what the board hands over
+     without being chased, not a measurement; it is meant to tip the
+     order of moves rather than become the level, and the fit prices
+     whatever it actually does. The fitted budget prices it with everything else,
+     and the work multiplier scales it, so a level the fit had to ease
+     eases here too. */
+  if (tier >= 2 && kind !== GK.SCORE && kind !== GK.COLLECT && r() < .34) {
+    const perMove = types === 5 ? 1.7 : 1.3;
+    goals.push([GK.COLLECT, Math.floor(r() * types), Math.max(10, Math.round(modelMoves * perMove * .8 * workMult))]);
   }
 
   /* The star targets are a score, and score is earned per move — a level

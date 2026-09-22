@@ -47,24 +47,44 @@ const SIZES = [
 const SHOTS = [
   {
     file: '1-board',
-    caption: { en: 'The faces you match are your own animals', tr: 'Eşleştirdiğin yüzler senin hayvanların' },
+    /* Every caption fits one line. At the size a store thumbnail is
+       read, a two-line caption was also tall enough to cover the score
+       bar, which is the one thing on the board shot that says a game is
+       in progress. */
+    caption: { en: 'Match your own animals', tr: 'Kendi hayvanlarını eşleştir' },
     /* A collect level rather than a bramble one: the hero shot should
        show the animals, and a board webbed with cut brambles shows the
        webbing. */
     go: async page => page.evaluate(() => {
       BL.startLevel(12, { perks: [] }); BL.setScreen('game'); BL.layoutBoard();
     }),
-    settle: true
+    settle: true,
+    /* A board photographed before its first move says nothing about
+       what the game does: score 0, every star dark, every tile plain.
+       The first five shots all showed a game at rest. This one is
+       seven moves in — a rocket each way and a bomb on the board, the
+       first star lit, the goal half gathered and the pet half charged —
+       which is the state a player actually spends their time in. */
+    after: async page => page.evaluate(() => {
+      const G = BL.game;
+      const SP = BL.SP;
+      const spots = [[2, 1, SP.ROW], [4, 5, SP.BOMB], [6, 2, SP.COL], [5, 6, SP.ROW]];
+      spots.forEach(([r, c, sp]) => { const cell = G.B.cell[r] && G.B.cell[r][c]; if (cell && cell.tile) cell.tile.sp = sp; });
+      G.moves = Math.max(4, G.moves - 7);
+      G.score = Math.round((G.starTargets[0] + G.starTargets[1]) / 2);
+      G.goals.forEach(g => { g.have = Math.round(g.need * .55); });
+      G.charge = 62;
+      BL.syncStars(); BL.syncGoals(); BL.syncHud();
+    })
   },
   {
     file: '2-room',
-    caption: { en: 'One of them is waiting upstairs', tr: 'Biri üst katta seni bekliyor' },
+    caption: { en: 'Then look after them upstairs', tr: 'Sonra üst katta onlara bak' },
     go: async page => page.evaluate(() => { BL.setScreen('home'); BL.renderHome(); })
   },
   {
     file: '3-lane',
-    caption: { en: 'Sixty levels down a country road, then a lane that keeps going',
-               tr: 'Kır yolunda altmış bölüm, sonra devam eden bir sokak' },
+    caption: { en: 'A country lane that keeps going', tr: 'Hiç bitmeyen bir kır yolu' },
     go: async page => page.evaluate(() => {
       BL.setScreen('map');
       const w = document.getElementById('mapWrap');
@@ -74,16 +94,40 @@ const SHOTS = [
   },
   {
     file: '4-family',
-    caption: { en: 'Six to bring home, each with its own move', tr: 'Eve götürülecek altı can, her birinin kendi hamlesi' },
+    caption: { en: 'Six pets, six special moves', tr: 'Altı dost, altı özel hamle' },
     go: async page => page.evaluate(() => { BL.setScreen('family'); BL.renderFamily(); })
   },
   {
-    file: '5-dusk',
-    caption: { en: 'Day and Dusk, and it works in flight mode', tr: 'Gündüz ve Akşam, uçak modunda da çalışır' },
+    /* This was the home screen again, in the dark palette: one of five
+       slots spent on a screen the listing had already shown. Dusk is a
+       line in the description; the moment a level is won is not
+       anywhere else in the listing, and it is the moment the game is
+       built around. Shot in Dusk, so the palette is still seen. */
+    file: '5-win',
+    caption: { en: 'Three stars, one happy cat', tr: 'Üç yıldız, bir mutlu kedi' },
     go: async page => page.evaluate(() => {
       BL.save.settings.theme = 'dark'; BL.applyTheme(); BL.persist(true);
-      BL.setScreen('home'); BL.renderHome();
-    })
+      /* the next level, not a replay: a replay pays a fraction, and the
+         card said +15 under three stars */
+      BL.startLevel(BL.save.reached, { perks: [] }); BL.setScreen('game'); BL.layoutBoard();
+    }),
+    settle: true,
+    after: async page => {
+      await page.evaluate(() => {
+        const G = BL.game;
+        G.score = G.starTargets[2] + 1840;
+        G.moves = 0;
+        BL.syncStars(); BL.syncHud();
+        G.starsEarned = 3;
+        BL.showWin();
+      });
+      /* the card focuses its first button for the keyboard, and a focus
+         ring photographed is a ring round a button nobody pressed */
+      await page.waitForTimeout(400);
+      await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+      await page.waitForTimeout(3200);
+    },
+    keepModals: true
   }
 ];
 
@@ -97,7 +141,10 @@ async function caption(page, text) {
     Object.assign(el.style, {
       position: 'fixed', left: '0', right: '0', top: '0', zIndex: '9999',
       padding: '18px 22px 20px', textAlign: 'center',
-      font: '800 21px/1.25 Grandstander, sans-serif',
+      /* 21px was sized for the phone and read as small print in the
+         store's own thumbnail row, which shows a shot at about a third
+         of its height: 26 is the smallest that survives that */
+      font: '800 26px/1.2 Grandstander, sans-serif',
       color: 'var(--text)',
       /* solid, not a fade: a gradient let the moves counter ghost through
          it, which reads as a rendering fault rather than as a caption */
@@ -106,6 +153,12 @@ async function caption(page, text) {
       pointerEvents: 'none'
     });
     document.body.appendChild(el);
+    /* one line, as large as the width allows: the iPhone shot is 430
+       wide and the Turkish lines run a third longer than the English */
+    el.style.whiteSpace = 'nowrap';
+    for (let px = 26; px > 17 && el.scrollWidth > el.clientWidth; px--) {
+      el.style.fontSize = px + 'px';
+    }
   }, text);
 }
 
@@ -121,7 +174,15 @@ async function setup(page) {
   await page.evaluate(() => {
     const S = BL.save;
     S.reached = 34; S.coins = 1240; S.treats = 11;
-    BL.BADGES.forEach(b => S.badges[b.id] = 1);
+    /* The shelf a player at level 34 would actually have, earned by the
+       game's own rules from a plausible history. "31 of 31" read as a
+       save somebody had edited, which it was; picking every third badge
+       instead put "Perfectionist" on the shelf beside a locked "Clear ten
+       levels", which no player could ever have. */
+    const bs = Object.assign({}, S.stats || {});
+    Object.assign(bs, { played: 41, cleared: 33, bestCombo: 6, tilesPopped: 5400, rescued: 12, cared: 60, biggestClear: 28 });
+    S.stats = bs;
+    BL.checkBadges();
     for (let i = 1; i < 34; i++) S.stars[i] = 2 + (i % 2);
     S.toys = { yarn: 1, tennis: 1 }; S.food = { kibble: 5, tuna: 2 };
     S.furniture = { rug: 1, plant: 1, shelf: 1, lamp: 1 };
@@ -188,7 +249,9 @@ const clear = page => page.evaluate(() => {
         await page.evaluate(() => { BL.fast = false; });
         await page.waitForTimeout(220);
       }
-      await clear(page);
+      if (shot.after) { await shot.after(page); await page.waitForTimeout(300); }
+      if (shot.keepModals) await page.evaluate(() => { const c = document.getElementById('_cap'); if (c) c.remove(); });
+      else await clear(page);
       await caption(page, shot.caption[lang]);
       await page.waitForTimeout(180);
       const file = path.join(dir, lang + '-' + shot.file + '.png');

@@ -909,7 +909,7 @@ function drawGrime(c, s, t, spec) {
    ============================================================ */
 const bedCache = new Map();
 function cellSprite(px, odd) {
-  const key = Math.round(px) + '|' + (odd ? 1 : 0) + '|' + (PAL.dark ? 'd' : 'l');
+  const key = Math.round(px) + '|' + (odd ? 1 : 0) + '|' + PAL.boardCell + '|' + (PAL.dark ? 'd' : 'l');
   let cv = bedCache.get(key);
   if (cv) return cv;
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
@@ -1703,7 +1703,13 @@ function drawLevelScene() {
     const walker = typeof activePet === 'function' ? activePet() : null;
     if (walker && walked < .995) {
       const u = clamp(1 - walked, .04, 1);
-      const wy = y0 + span * (u * u * .5 + u * .5);
+      /* The trail runs ten pixels under the tray so it disappears behind
+         the frame rather than stopping at a ruled line, and the walker
+         used to start on its last pixel: at the opening of every level
+         the animal stood with its legs cut off by the tray, which read
+         as a layering fault in every screenshot. It stands on the last
+         bit of lane that can be seen. */
+      const wy = Math.min(y0 + span * (u * u * .5 + u * .5), by - 7);
       const wx = cxAt(u);
       /* the same perspective the prints use, so it stands on them */
       const ws = (18 + u * 40);

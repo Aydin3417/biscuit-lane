@@ -271,14 +271,17 @@ function renderHome() {
   $('#petStage').textContent = stageName(pet);
 
   const perks = perksFor(pet);
-  /* the stat's colour belongs to its icon and its bar, so the row reads
-     as one thing. Four flat bars in four unrelated primaries read as a
-     settings screen. */
-  const stat = (key, val, col, ic) => `
-    <div class="stat" style="--tint:${col}">
-      <div class="lb">${IC[ic]}<span>${T(key)}</span><span class="v">${Math.round(val)}</span></div>
-      <div class="bar"><i style="width:${clamp(val, 0, 100)}%"></i></div>
-    </div>`;
+  /* Each care button carries the bar it fills.
+
+     The care card was four labelled bars and, under them, four buttons
+     in the same four colours — the same four facts said twice, and the
+     tallest thing on the screen the app opens on. Every button answers
+     exactly one bar (feed, fullness; play, joy; wash, clean; sleep,
+     energy), so the bar now sits in its button and the card is one row.
+     The number is still there for a screen reader, and on the family
+     screen for anybody who wants it. */
+  const meter = val => `<i class="meter" aria-hidden="true"><i style="width:${clamp(val, 0, 100)}%"></i></i>`;
+  const said = (key, val) => `aria-label="${T(key)} ${Math.round(val)}"`;
 
   const foodCount = FOODS.reduce((a, f) => a + (SAVE.food[f.id] || 0), 0);
   const bondPct = (pet.bondXp / bondNeed(pet.bond)) * 100;
@@ -350,21 +353,15 @@ function renderHome() {
 
     <div class="card pad16" style="display:flex;flex-direction:column;gap:13px">
       <div class="sectitle"><h3>${T('home_care')}</h3><span class="hint">${moodLine(pet)}</span></div>
-      <div class="stats">
-        ${stat('st_food', pet.food, 'var(--accent)', 'bowl')}
-        ${stat('st_joy', pet.joy, 'var(--rose)', 'heart')}
-        ${stat('st_clean', pet.clean, 'var(--sky)', 'bath')}
-        ${stat('st_energy', pet.energy, 'var(--sage)', 'bolt')}
-      </div>
       <div class="careRow">
-        <button class="care ${pet.food < 55 ? 'hot' : ''} ${foodCount ? '' : 'dim'}" id="careFeed" style="--tint:var(--accent)">
-          ${IC.bowl}<span>${T('care_feed')}</span><span class="cost">${foodCount}</span></button>
-        <button class="care ${pet.joy < 55 ? 'hot' : ''} ${pet.asleep ? 'dim' : ''}" id="carePlay" style="--tint:var(--rose)">
-          ${IC.ball}<span>${T('care_play')}</span><span class="cost">−${pet.energy < 25 ? 3 : 8} ${T('st_energy').toLowerCase()}</span></button>
-        <button class="care ${pet.clean < 55 ? 'hot' : ''} ${pet.asleep ? 'dim' : ''}" id="careWash" style="--tint:var(--sky)">
-          ${IC.bath}<span>${T('care_wash')}</span><span class="cost">&nbsp;</span></button>
-        <button class="care ${(pet.energy < 30 && !pet.asleep) || (pet.asleep && pet.energy >= 95) ? 'hot' : ''}" id="careSleep" style="--tint:var(--sage)">
-          ${pet.asleep ? IC.sun : IC.moon}<span>${pet.asleep ? T('care_wake') : T('care_sleep')}</span><span class="cost">&nbsp;</span></button>
+        <button class="care ${pet.food < 55 ? 'hot' : ''} ${foodCount ? '' : 'dim'}" id="careFeed" style="--tint:var(--accent)" ${said('st_food', pet.food)}>
+          ${IC.bowl}<span>${T('care_feed')}</span>${meter(pet.food)}<span class="cost">${foodCount}</span></button>
+        <button class="care ${pet.joy < 55 ? 'hot' : ''} ${pet.asleep ? 'dim' : ''}" id="carePlay" style="--tint:var(--rose)" ${said('st_joy', pet.joy)}>
+          ${IC.ball}<span>${T('care_play')}</span>${meter(pet.joy)}<span class="cost">−${pet.energy < 25 ? 3 : 8} ${T('st_energy').toLowerCase()}</span></button>
+        <button class="care ${pet.clean < 55 ? 'hot' : ''} ${pet.asleep ? 'dim' : ''}" id="careWash" style="--tint:var(--sky)" ${said('st_clean', pet.clean)}>
+          ${IC.bath}<span>${T('care_wash')}</span>${meter(pet.clean)}<span class="cost">&nbsp;</span></button>
+        <button class="care ${(pet.energy < 30 && !pet.asleep) || (pet.asleep && pet.energy >= 95) ? 'hot' : ''}" id="careSleep" style="--tint:var(--sage)" ${said('st_energy', pet.energy)}>
+          ${pet.asleep ? IC.sun : IC.moon}<span>${pet.asleep ? T('care_wake') : T('care_sleep')}</span>${meter(pet.energy)}<span class="cost">&nbsp;</span></button>
       </div>
       <div style="font-size:var(--t-micro);color:var(--text-faint);text-align:center">${T('home_care_hint')}</div>
     </div>

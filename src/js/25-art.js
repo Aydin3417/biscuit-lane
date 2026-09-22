@@ -319,29 +319,6 @@ function specOfPet(p) {
 }
 
 
-/* ---------------- full body (sitting) ---------------- */
-
-/* Little tufts along an edge — the difference between a shape and
-   an animal. Angles are in radians around the given centre. */
-function furEdge(c, cx, cy, rx, ry, a0, a1, n, len, col) {
-  c.fillStyle = col;
-  for (let i = 0; i < n; i++) {
-    const t = i / (n - 1 || 1);
-    const a = lerp(a0, a1, t);
-    const wob = .82 + Math.sin(i * 2.4) * .3;
-    const x = cx + Math.cos(a) * rx, y = cy + Math.sin(a) * ry;
-    const nx = Math.cos(a), ny = Math.sin(a);
-    const tx = -ny, ty = nx;
-    const L = len * wob;
-    c.beginPath();
-    c.moveTo(x + tx * L * .55, y + ty * L * .55);
-    c.quadraticCurveTo(x + nx * L * 1.25, y + ny * L * 1.25, x - tx * L * .55, y - ty * L * .55);
-    c.closePath();
-    c.fill();
-  }
-}
-
-
 /* ============================================================
    THE ANIMALS, DRAWN AS STICKERS
    ============================================================
@@ -1356,9 +1333,10 @@ function paintMole(c, s, hp) {
 function paintCrate(c, s, hp) {
   /* a real crate: four planks, iron corners, nails, and damage
      that only shows once you have already hit it. */
-  /* The well behind these is #6B563A. At the old browns a crate was a
-     slightly different shade of the board rather than a thing sitting on
-     it, and half a board of them read as a hole. */
+  /* The well behind these was #6B563A (it is aubergine now, see
+     --board-bg). At the old browns a crate was a slightly different
+     shade of the board rather than a thing sitting on it, and half a
+     board of them read as a hole. */
   const wood = hp > 1 ? '#A6713F' : '#C69257';
   c.save();
   c.shadowColor = rgba('#000000', PAL.dark ? .45 : .22);

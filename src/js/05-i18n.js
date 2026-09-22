@@ -601,7 +601,7 @@ const STRINGS = {
     ad_watch_sub: '{t} ödül yerine kısa bir video, günde bir kez.',
     ad_go: 'İzle',
     pass_t: 'Sezon defteri',
-    pass_sub: '{c} kademeden {n}. · {d} gün kaldı',
+    pass_sub: 'Kademe {n}/{c} · {d} gün kaldı',
     pass_ready: '{n} ödül hazır',
     pass_stamps: '{c} damganın {n} tanesi',
     pass_free: 'Herkese',

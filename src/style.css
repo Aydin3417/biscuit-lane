@@ -74,9 +74,19 @@
   --edge-lo:       inset 0 -1px 0 rgba(70,45,20,.06);
   --surface-lit:   linear-gradient(180deg, #FFFDF8 0%, var(--surface) 34%, #FBF3E7 100%);
   --glow:          radial-gradient(120% 90% at 50% 8%, rgba(255,225,170,.85), rgba(255,225,170,0) 62%);
-  --board-bg:      #6B563A;
-  --board-cell:    rgba(255,244,225,.085);
-  --board-cell-2:  rgba(255,244,225,.035);
+  /* The well the tiles sit in is aubergine, not brown.
+
+     It was #6B563A, and every blocker in the game is brown or green:
+     crates are planks, mud is mud, the bramble is a dark vine. On a
+     brown well a crate was a slightly different brown and half a board
+     of mud read as an empty board. Tried side by side on levels 4, 14
+     and 22 (mud, bramble, crates): meadow green lost the bramble, which
+     is the same green; linen merged with the frame and washed out the
+     additive sparkles; aubergine kept every blocker and every tile
+     apart, and stays warm beside the wood. */
+  --board-bg:      #3E3449;
+  --board-cell:    rgba(255,240,250,.11);
+  --board-cell-2:  rgba(255,240,250,.04);
   --scrim:         rgba(44,33,24,.44);
   --stage:         radial-gradient(140% 100% at 50% -10%, #FFF6E6 0%, #F0DCC1 42%, #DCC3A2 100%);
 }
@@ -149,7 +159,7 @@
   --shadow-2:0 10px 34px rgba(70,45,20,.16);
   --shadow-pop:0 18px 50px rgba(70,45,20,.26);
   --glow:radial-gradient(120% 90% at 50% 8%, rgba(255,225,170,.85), rgba(255,225,170,0) 62%);
-  --board-bg:#6B563A; --board-cell:rgba(255,244,225,.085); --board-cell-2:rgba(255,244,225,.035);
+  --board-bg:#3E3449; --board-cell:rgba(255,240,250,.11); --board-cell-2:rgba(255,240,250,.04);
   --scrim:rgba(44,33,24,.44);
   --stage:radial-gradient(140% 100% at 50% -10%, #FFF6E6 0%, #F0DCC1 42%, #DCC3A2 100%);
 }
@@ -503,6 +513,11 @@ canvas{ max-width:100%; }
     color-mix(in srgb,var(--tint,var(--accent)) 11%, var(--surface)));
 }
 .care .cost{ font-size:var(--t-nano); color:var(--text-faint); font-weight:600; }
+/* the bar the button fills, inside the button */
+.care .meter{ display:block; width:74%; height:5px; margin:3px 0 1px; border-radius:3px;
+  background:color-mix(in srgb,var(--tint,var(--accent)) 16%, var(--line-soft)); overflow:hidden; }
+.care .meter > i{ display:block; height:100%; border-radius:3px;
+  background:linear-gradient(90deg, color-mix(in srgb,var(--tint) 72%, var(--surface)), var(--tint)); }
 .care[disabled]{ opacity:.4; }
 /* looks unavailable, still takes the tap so it can say why */
 .care.dim{ opacity:.45; }
@@ -938,6 +953,21 @@ canvas{ max-width:100%; }
 .todayRow:has(.todayTile:only-child) .todayTile .dt,
 .todayRow:has(.todayTile:only-child) .todayTile .gt{ flex:1 1 auto; width:auto; }
 .todayRow:has(.todayTile:only-child) .todayTile .btn{ width:auto; margin-top:0; }
+/* Three at once — the basket on a day it is waiting, beside the walk
+   and the book — used to wrap as two and one, and the book sat alone
+   under the others with half a row of nothing beside it. The basket is
+   the one that is taken with a tap and gone, so it becomes the banner
+   across the top and the two that last all day share the row below. */
+/* two columns, not auto-fit: a banner spanning every track keeps all of
+   them alive, and on a 540-wide screen the pair below sat in two of
+   three columns with the third empty */
+.todayRow:has(> .todayTile:nth-child(3)){ grid-template-columns:1fr 1fr; }
+.todayRow:has(> .todayTile:nth-child(3)) > .todayTile:first-child{
+  grid-column:1 / -1; flex-direction:row; align-items:center; gap:12px; padding:10px 13px;
+}
+.todayRow:has(> .todayTile:nth-child(3)) > .todayTile:first-child .gi{ width:26px; height:26px; }
+.todayRow:has(> .todayTile:nth-child(3)) > .todayTile:first-child .gt{ flex:1 1 auto; width:auto; }
+.todayRow:has(> .todayTile:nth-child(3)) > .todayTile:first-child .btn{ width:auto; margin-top:0; }
 .dailyCard{ border-color:color-mix(in srgb,var(--sage) 45%, var(--line-soft)); }
 .dailyCard .di{ color:var(--sage); }
 
