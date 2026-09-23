@@ -185,8 +185,8 @@ async function setup(page) {
     BL.checkBadges();
     for (let i = 1; i < 34; i++) S.stars[i] = 2 + (i % 2);
     S.toys = { yarn: 1, tennis: 1 }; S.food = { kibble: 5, tuna: 2 };
-    S.furniture = { rug: 1, plant: 1, shelf: 1, lamp: 1 };
-    S.room = { theme: 'oat', placed: ['rug', 'plant', 'shelf', 'lamp'] };
+    S.furniture = { rug: 1, shelf: 1, armchair: 1, basket: 1, tower: 1 };
+    S.room = { theme: 'oat', placed: ['rug', 'shelf', 'armchair', 'basket', 'tower'] };
     S.pets.forEach(p => { p.bond = 9; p.food = 88; p.joy = 84; p.clean = 90; p.energy = 80; p.asleep = false; });
     BL.persist(true);
   });

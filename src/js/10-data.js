@@ -690,7 +690,10 @@ const FURNITURE = [
   { id: 'tower', en: 'Cat tower', tr: 'Kedi kulesi', cost: 260, slot: 'right', enDesc: 'The high ground.', trDesc: 'Yüksek mevzi.' },
   { id: 'window', en: 'Bird feeder', tr: 'Kuş yemliği', cost: 190, slot: 'wall', enDesc: 'Television for pets.', trDesc: 'Hayvanlar için televizyon.' },
   { id: 'basket', en: 'Toy basket', tr: 'Oyuncak sepeti', cost: 100, slot: 'left', enDesc: 'Everything ends up on the floor anyway.', trDesc: 'Nasılsa hepsi yere dökülüyor.' },
-  { id: 'poster', en: 'Framed print', tr: 'Çerçeveli baskı', cost: 110, slot: 'wall', enDesc: 'A very good dog, painted badly.', trDesc: 'Çok iyi bir köpek, kötü çizilmiş.' }
+  { id: 'poster', en: 'Framed print', tr: 'Çerçeveli baskı', cost: 110, slot: 'wall', enDesc: 'A very good dog, painted badly.', trDesc: 'Çok iyi bir köpek, kötü çizilmiş.' },
+  /* the first piece that is a picture rather than a drawing (art/,
+     tools/art-embed.js); its own slot, against the wall on the left */
+  { id: 'armchair', en: 'Armchair', tr: 'Koltuk', cost: 220, slot: 'chair', enDesc: 'Theirs now. It was never really yours.', trDesc: 'Artık onun. Zaten hiç senin olmadı.' }
 ];
 /* ---------- keepsakes ----------
 

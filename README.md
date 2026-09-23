@@ -4296,3 +4296,45 @@ Smaller: the Turkish season book said "30 kademeden 0." and says
 the tiles were left at .52 of the tile. That was chosen against .715, .60
 and .42 side by side for the silhouette's sake, and nothing here argued
 it again.
+
+## The first pictures
+
+Everything on the screen was drawn in code, and the parts that looked
+cheapest were the parts nothing moves in: the lane above the board and
+the furniture in the room. Those are the parts a picture can do and a
+drawing cannot do better, so a trial set was generated with Gemini, in
+the game's own sticker style, with two store shots attached as the
+reference: a backdrop for the first stretch of the lane, an empty room,
+and a sheet of three pieces of furniture.
+
+**What went in.** The lane picture replaces the drawn lane for the
+Doorstep and the Allotments (`drawLanePicture` in `26-scene.js`): drawn
+full width with its foot under the tray, the sky above it its own top row
+stretched up so a tall phone gets more sky rather than a seam, and the
+walker placed along the picture's own path (`LANE_PATH`, read off the
+picture) rather than along the drawn lane's bend. Dusk is the same
+picture under a cool multiply until there is a dusk picture. The cat
+tower and the toy basket are pictures now, falling back to their drawn
+routines until the picture has decoded, and the armchair is new — the
+first piece of furniture that exists only as a picture, 220 coins, in a
+slot of its own against the wall.
+
+**What did not.** The empty room was generated and left out. The drawn
+room already has what the picture could not: clouds that drift across the
+window, day and night in it, the lamp's warmth, and the room themes the
+shop sells, which recolour the wall. A picture of a room would have
+removed four features to look about the same.
+
+**What it costs.** `tools/art-cut.js` keys the white out of a generated
+sheet and cuts it into one picture per thing; `tools/art-embed.js`
+re-encodes everything in `art/` as WebP and writes it into
+`src/js/03-art.js` as data URIs, the way the logo already was, so the
+game still fetches nothing and still works in flight mode. The lane is 34
+KB, the three pieces 47 KB between them. The sources are in `art/src/`.
+
+**The animals stay drawn.** Character sheets were generated for all six
+breeds, as a brief rather than as art: the animal on the board, in the
+room and on the lane is the one the player chose, in the coat and eye
+colour they chose or bought, with a hat, a collar, six moods, a blink
+and a tail, and none of that survives being a picture. The sheets are
+in `art/sheets/` for the drawing to be brought closer to.

@@ -176,6 +176,8 @@ function drawRoom(c, W, H, o) {
     o.pet && o.pet.name, o.pet && specOfPet(o.pet));
   /* the feeder hangs against the window frame, not in mid-air */
   if (has('window')) drawFeeder(c, winX + winW * .04, winY + winH * .62, winW * .28, t);
+  /* against the wall, behind everything that stands on the floor */
+  if (has('armchair')) drawArmchair(c, W * .27, floorY + (H - floorY) * .16, H * .28);
   if (has('rug')) drawRug(c, W * .5, floorY + (H - floorY) * .55, W * .58, (H - floorY) * .52, { wall2: wallB });
   if (has('plant')) drawFern(c, W * .10, floorY + (H - floorY) * .28, H * .17, t);
   if (has('basket')) drawBasket(c, W * .35, floorY + (H - floorY) * .30, W * .13);
@@ -607,7 +609,32 @@ function drawLamp(c, x, y, s, warmth, t) {
   c.restore();
 }
 
+/* A generated picture for a room piece, centred on x with its foot on y
+   and h tall, under the same contact shadow the drawn pieces have. It
+   answers false until the picture has decoded, so the caller draws its
+   own for that frame. In Dusk the picture is dimmed to sit in the room's
+   own evening rather than glowing out of it. */
+function drawPiecePicture(c, key, x, y, h) {
+  const im = typeof artImage === 'function' ? artImage(key) : null;
+  if (!im) return false;
+  const w = h * im.naturalWidth / im.naturalHeight;
+  c.save();
+  c.fillStyle = rgba('#000000', .16);
+  ellipse(c, x, y - h * .012, w * .44, h * .045); c.fill();
+  if (PAL.dark) c.filter = 'brightness(.74) saturate(.85)';
+  c.drawImage(im, x - w / 2, y - h, w, h);
+  c.restore();
+  return true;
+}
+
+/* The armchair only exists as a picture: it came with the first
+   generated sheet and has no drawn routine behind it. */
+function drawArmchair(c, x, y, h) {
+  drawPiecePicture(c, 'cut-armchair', x, y, h);
+}
+
 function drawTower(c, x, y, w, h) {
+  if (drawPiecePicture(c, 'cut-tower', x, y, h * 1.14)) return;
   c.save();
   c.translate(x, y);
   c.fillStyle = rgba('#000000', .18);
@@ -670,6 +697,7 @@ function drawFeeder(c, x, y, s, t) {
 }
 
 function drawBasket(c, x, y, w) {
+  if (drawPiecePicture(c, 'cut-basket', x, y, w * .95)) return;
   const h = w * .68;
   c.save();
   c.translate(x, y);
@@ -1850,4 +1878,67 @@ function drawLevelScene() {
   ellipse(c, W / 2, by + bh - 4, bw * .46, 12);
   c.fill();
   c.restore();
+
+  drawLanePicture(c, W, by, topBand, stretch, dark);
 }
+
+/* Where the lane runs in each picture, as fractions of it: the centre of
+   the path from where it leaves the bottom edge to where it vanishes,
+   read off the picture by eye. The walker is placed along this instead
+   of along the drawn lane, whose bend is its own. */
+const LANE_PATH = {
+  'lane-doorstep': [[.95, .60], [.84, .53], [.72, .44], [.62, .40], [.54, .47], [.47, .53], [.42, .50]]
+};
+
+/* A picture over the drawn lane, where the stretch has one.
+
+   A trial (see README, "The first pictures"): one backdrop generated in
+   the game's own sticker style, laid over the band above the tray. It is
+   drawn full width with its foot tucked under the frame, and the sky
+   above it is its own top row stretched up, so a tall phone gets more of
+   the same sky rather than a seam. Dusk is the day picture under a cool
+   multiply until there is a dusk picture. The walker is drawn again on
+   top, on the picture's own path, walking up it as the goals come in. */
+function drawLanePicture(c, W, by, topBand, stretch, dark) {
+  const key = 'lane-' + (stretch === 'allot' ? 'doorstep' : stretch);
+  const im = typeof artImage === 'function' ? artImage(key) : null;
+  if (!im || topBand < 60) return;
+  const iw = im.naturalWidth, ih = im.naturalHeight;
+  const s = W / iw, dh = ih * s;
+  const foot = by + 10, top = foot - dh;
+  c.save();
+  if (top > 0) c.drawImage(im, 0, 0, iw, 2, 0, 0, W, top + 1);
+  c.drawImage(im, 0, top, W, dh);
+  if (dark) {
+    c.globalCompositeOperation = 'multiply';
+    c.fillStyle = '#4A5878';
+    c.fillRect(0, 0, W, foot);
+    c.globalCompositeOperation = 'source-over';
+    c.fillStyle = rgba('#0E1624', .25);
+    c.fillRect(0, 0, W, foot);
+  }
+  c.restore();
+
+  const walker = typeof activePet === 'function' ? activePet() : null;
+  const pts = LANE_PATH[key];
+  const walked = sceneProgress();
+  if (!walker || !pts || walked >= .995) return;
+  /* u runs 0 at the foot of the picture to 1 at the vanishing point */
+  const u = clamp(walked, 0, .96) * (pts.length - 1);
+  const i = Math.min(pts.length - 2, Math.floor(u)), f = u - i;
+  const fy = lerp(pts[i][0], pts[i + 1][0], f), fx = lerp(pts[i][1], pts[i + 1][1], f);
+  const wy = Math.min(top + fy * dh, by - 7), wx = fx * W;
+  /* smaller as it goes, by how far up the picture it has got */
+  const ws = 22 + 36 * clamp((fy - .40) / .55, 0, 1);
+  c.save();
+  c.translate(wx, wy + 2);
+  c.globalAlpha = dark ? .3 : .22;
+  c.fillStyle = '#000000';
+  ellipse(c, 0, 0, ws * .34, ws * .12); c.fill();
+  c.globalAlpha = 1;
+  c.translate(0, -ws * .93);
+  drawBody(c, specOfPet(walker), ws, { mouth: 'smile', tail: Math.sin(walked * 9) * .6 });
+  c.restore();
+}
+/* a picture that finished decoding after the lane was painted paints it again */
+EV.on('repaint', () => { if (typeof SCREEN !== 'undefined' && SCREEN === 'game') drawLevelScene(); });

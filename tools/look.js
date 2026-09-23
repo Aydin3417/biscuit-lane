@@ -22,8 +22,8 @@ async function setup(page) {
     const S = BL.save;
     S.reached = 34; S.coins = 1240; S.treats = 11;
     for (let i = 1; i < 34; i++) S.stars[i] = 2 + (i % 2);
-    S.furniture = { rug: 1, plant: 1, shelf: 1, lamp: 1 };
-    S.room = { theme: 'oat', placed: ['rug', 'plant', 'shelf', 'lamp'] };
+    S.furniture = { rug: 1, shelf: 1, armchair: 1, basket: 1, tower: 1 };
+    S.room = { theme: 'oat', placed: ['rug', 'shelf', 'armchair', 'basket', 'tower'] };
     S.pets.forEach(p => { p.bond = 9; p.food = 62; p.joy = 84; p.clean = 70; p.energy = 45; p.asleep = false; });
     BL.persist(true);
   });

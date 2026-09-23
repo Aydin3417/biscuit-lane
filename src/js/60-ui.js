@@ -731,6 +731,7 @@ function drawFurniturePreview(c, id, px) {
     case 'tower': drawTower(c, cx, base, px * .5, px * .62); break;
     case 'window': drawFeeder(c, cx, px * .42, px * .42, 0); break;
     case 'basket': drawBasket(c, cx, px * .66, px * .5); break;
+    case 'armchair': drawArmchair(c, cx, base, px * .62); break;
     /* the three keepsakes preview against the animal you have now, which
        is the honest preview: it is what you would be buying a picture of */
     case 'photo': drawPhoto(c, cx, px * .46, px * .46,
