@@ -176,13 +176,17 @@ function drawRoom(c, W, H, o) {
     o.pet && o.pet.name, o.pet && specOfPet(o.pet));
   /* the feeder hangs against the window frame, not in mid-air */
   if (has('window')) drawFeeder(c, winX + winW * .04, winY + winH * .62, winW * .28, t);
-  /* against the wall, behind everything that stands on the floor */
-  if (has('armchair')) drawArmchair(c, W * .27, floorY + (H - floorY) * .16, H * .28);
+  /* the pictured pieces, from the table: what hangs on the wall first */
+  const pics = placed.map(roomThing).filter(f => f && f.at);
+  pics.filter(f => f.wall).forEach(f => drawPiecePicture(c, 'cut-' + f.id, W * f.at[0], floorY * f.at[1] + H * f.at[2], H * f.at[2], f));
   if (has('rug')) drawRug(c, W * .5, floorY + (H - floorY) * .55, W * .58, (H - floorY) * .52, { wall2: wallB });
   if (has('plant')) drawFern(c, W * .10, floorY + (H - floorY) * .28, H * .17, t);
   if (has('basket')) drawBasket(c, W * .35, floorY + (H - floorY) * .30, W * .13);
   if (has('tower')) drawTower(c, W * .78, floorY + (H - floorY) * .62, W * .21, H * .32);
   if (has('lamp')) drawLamp(c, W * .95, floorY + (H - floorY) * .34, H * .32, lamp, t);
+  /* and what stands on the floor, back to front */
+  pics.filter(f => !f.wall).sort((a, b) => a.at[1] - b.at[1])
+    .forEach(f => drawPiecePicture(c, 'cut-' + f.id, W * f.at[0], floorY + (H - floorY) * f.at[1], H * f.at[2]));
 
   /* ---- the pet ---- */
   if (o.pet) {
@@ -614,23 +618,34 @@ function drawLamp(c, x, y, s, warmth, t) {
    answers false until the picture has decoded, so the caller draws its
    own for that frame. In Dusk the picture is dimmed to sit in the room's
    own evening rather than glowing out of it. */
-function drawPiecePicture(c, key, x, y, h) {
+function drawPiecePicture(c, key, x, y, h, o) {
   const im = typeof artImage === 'function' ? artImage(key) : null;
   if (!im) return false;
   const w = h * im.naturalWidth / im.naturalHeight;
   c.save();
-  c.fillStyle = rgba('#000000', .16);
-  ellipse(c, x, y - h * .012, w * .44, h * .045); c.fill();
-  if (PAL.dark) c.filter = 'brightness(.74) saturate(.85)';
+  /* what hangs on the wall casts nothing on the floor */
+  if (!(o && o.wall)) {
+    c.fillStyle = rgba('#000000', .16);
+    ellipse(c, x, y - h * .012, w * .44, h * .045); c.fill();
+  }
+  if (PAL.dark && !(o && o.glow)) c.filter = 'brightness(.74) saturate(.85)';
   c.drawImage(im, x - w / 2, y - h, w, h);
+  c.filter = 'none';
+  /* a light that is on after dark: the picture's own bulbs again, added,
+     under a warm haze, so the string reads as lit rather than drawn */
+  if (PAL.dark && o && o.glow) {
+    c.globalCompositeOperation = 'lighter';
+    c.globalAlpha = .35;
+    c.drawImage(im, x - w / 2, y - h, w, h);
+    c.globalAlpha = 1;
+    const g = c.createRadialGradient(x, y - h * .5, 0, x, y - h * .5, w * .6);
+    g.addColorStop(0, rgba('#FFC46B', .22));
+    g.addColorStop(1, rgba('#FFC46B', 0));
+    c.fillStyle = g;
+    c.fillRect(x - w, y - h * 2, w * 2, h * 3);
+  }
   c.restore();
   return true;
-}
-
-/* The armchair only exists as a picture: it came with the first
-   generated sheet and has no drawn routine behind it. */
-function drawArmchair(c, x, y, h) {
-  drawPiecePicture(c, 'cut-armchair', x, y, h);
 }
 
 function drawTower(c, x, y, w, h) {
@@ -1887,27 +1902,48 @@ function drawLevelScene() {
    read off the picture by eye. The walker is placed along this instead
    of along the drawn lane, whose bend is its own. */
 const LANE_PATH = {
-  'lane-doorstep': [[.95, .60], [.84, .53], [.72, .44], [.62, .40], [.54, .47], [.47, .53], [.42, .50]]
+  'lane-doorstep': [[.95, .60], [.84, .53], [.72, .44], [.62, .40], [.54, .47], [.47, .53], [.42, .50]],
+  'lane-allot':    [[.95, .50], [.82, .49], [.68, .48], [.56, .50], [.47, .52], [.41, .50]],
+  'lane-common':   [[.95, .52], [.82, .53], [.68, .45], [.60, .41], [.52, .48], [.45, .52], [.41, .50]],
+  'lane-canal':    [[.95, .52], [.82, .52], [.68, .43], [.60, .40], [.52, .49], [.44, .52], [.39, .52]],
+  'lane-orchard':  [[.95, .50], [.80, .49], [.65, .50], [.52, .50], [.42, .49], [.33, .50]],
+  /* home stops at the gate: the walk is over when it is through it */
+  'lane-home':     [[.95, .42], [.82, .45], [.70, .49], [.58, .50], [.50, .48], [.44, .49]]
 };
 
 /* A picture over the drawn lane, where the stretch has one.
 
-   A trial (see README, "The first pictures"): one backdrop generated in
-   the game's own sticker style, laid over the band above the tray. It is
-   drawn full width with its foot tucked under the frame, and the sky
-   above it is its own top row stretched up, so a tall phone gets more of
-   the same sky rather than a seam. Dusk is the day picture under a cool
+   One backdrop per stretch, generated in the game's own sticker style
+   (see README, "The first pictures"), laid over the band above the tray.
+   It is drawn full width with its foot tucked under the frame, and the
+   sky above it is the average colour of its own top rows, so a tall
+   phone gets more of the same sky rather than a seam. Stretching the top
+   row itself was tried first and its per-column noise became streaks. Dusk is the day picture under a cool
    multiply until there is a dusk picture. The walker is drawn again on
    top, on the picture's own path, walking up it as the goals come in. */
+function skyOfPicture(im) {
+  if (im._sky) return im._sky;
+  const t = document.createElement('canvas');
+  t.width = 1; t.height = 1;
+  const x = t.getContext('2d');
+  x.drawImage(im, 0, 0, im.naturalWidth, 6, 0, 0, 1, 1);
+  const d = x.getImageData(0, 0, 1, 1).data;
+  im._sky = 'rgb(' + d[0] + ',' + d[1] + ',' + d[2] + ')';
+  return im._sky;
+}
+
 function drawLanePicture(c, W, by, topBand, stretch, dark) {
-  const key = 'lane-' + (stretch === 'allot' ? 'doorstep' : stretch);
+  const key = 'lane-' + stretch;
   const im = typeof artImage === 'function' ? artImage(key) : null;
   if (!im || topBand < 60) return;
   const iw = im.naturalWidth, ih = im.naturalHeight;
   const s = W / iw, dh = ih * s;
   const foot = by + 10, top = foot - dh;
   c.save();
-  if (top > 0) c.drawImage(im, 0, 0, iw, 2, 0, 0, W, top + 1);
+  if (top > 0) {
+    c.fillStyle = skyOfPicture(im);
+    c.fillRect(0, 0, W, top + 1);
+  }
   c.drawImage(im, 0, top, W, dh);
   if (dark) {
     c.globalCompositeOperation = 'multiply';

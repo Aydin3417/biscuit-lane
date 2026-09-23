@@ -691,9 +691,25 @@ const FURNITURE = [
   { id: 'window', en: 'Bird feeder', tr: 'Kuş yemliği', cost: 190, slot: 'wall', enDesc: 'Television for pets.', trDesc: 'Hayvanlar için televizyon.' },
   { id: 'basket', en: 'Toy basket', tr: 'Oyuncak sepeti', cost: 100, slot: 'left', enDesc: 'Everything ends up on the floor anyway.', trDesc: 'Nasılsa hepsi yere dökülüyor.' },
   { id: 'poster', en: 'Framed print', tr: 'Çerçeveli baskı', cost: 110, slot: 'wall', enDesc: 'A very good dog, painted badly.', trDesc: 'Çok iyi bir köpek, kötü çizilmiş.' },
-  /* the first piece that is a picture rather than a drawing (art/,
-     tools/art-embed.js); its own slot, against the wall on the left */
-  { id: 'armchair', en: 'Armchair', tr: 'Koltuk', cost: 220, slot: 'chair', enDesc: 'Theirs now. It was never really yours.', trDesc: 'Artık onun. Zaten hiç senin olmadı.' }
+  /* The pieces below are pictures rather than drawings (art/,
+     tools/art-embed.js), and each says where it stands: `at` is
+     [x as a share of the room's width, y as a share of the floor from
+     the skirting (0) to the front edge (1), height as a share of the
+     room]. A `wall` piece puts its top edge y of the way down from the
+     ceiling to the skirting instead. Two new slots came with them: `bed`, on the floor
+     to the front right, and `top`, across the top of the wall. */
+  { id: 'armchair', en: 'Armchair', tr: 'Koltuk', cost: 220, slot: 'chair', at: [.27, .16, .28], enDesc: 'Theirs now. It was never really yours.', trDesc: 'Artık onun. Zaten hiç senin olmadı.' },
+  { id: 'beanbag', en: 'Beanbag', tr: 'Armut koltuk', cost: 160, slot: 'chair', at: [.27, .22, .19], enDesc: 'Shaped like whoever sat in it last.', trDesc: 'Son oturanın şeklini alır.' },
+  { id: 'rocker', en: 'Rocking chair', tr: 'Sallanan sandalye', cost: 240, slot: 'chair', at: [.27, .14, .31], enDesc: 'Creaks at exactly the wrong moment.', trDesc: 'Tam yanlış anda gıcırdar.' },
+  { id: 'cactus', en: 'Cactus', tr: 'Kaktüs', cost: 70, slot: 'left', at: [.11, .30, .17], enDesc: 'The one plant nobody chews twice.', trDesc: 'Kimsenin iki kez kemirmediği bitki.' },
+  { id: 'toychest', en: 'Toy chest', tr: 'Oyuncak sandığı', cost: 150, slot: 'left', at: [.34, .32, .16], enDesc: 'Tidy for about four minutes.', trDesc: 'Yaklaşık dört dakika toplu durur.' },
+  { id: 'monstera', en: 'Monstera', tr: 'Deve tabanı', cost: 180, slot: 'right', at: [.89, .40, .38], enDesc: 'Grows a leaf every time you look away.', trDesc: 'Arkanı döndükçe bir yaprak çıkarır.' },
+  { id: 'bookcase', en: 'Bookcase', tr: 'Kitaplık', cost: 200, slot: 'right', at: [.86, .20, .36], enDesc: 'The top shelf is already taken.', trDesc: 'En üst raf çoktan kapıldı.' },
+  { id: 'fishbowl', en: 'Fishbowl', tr: 'Akvaryum', cost: 210, slot: 'right', at: [.90, .36, .26], enDesc: 'The only show everyone agrees on.', trDesc: 'Herkesin anlaştığı tek dizi.' },
+  { id: 'petbed', en: 'Pet bed', tr: 'Minder yatak', cost: 130, slot: 'bed', at: [.70, .86, .13], enDesc: 'Ignored in favour of the box it came in.', trDesc: 'Geldiği kutu uğruna görmezden gelinir.' },
+  { id: 'kennel', en: 'Kennel', tr: 'Kulübe', cost: 260, slot: 'bed', at: [.66, .30, .27], enDesc: 'Indoors, which is rather the point.', trDesc: 'İçeride, bütün mesele de bu.' },
+  { id: 'bunting', en: 'Bunting', tr: 'Flama', cost: 90, slot: 'top', wall: true, at: [.5, .16, .14], enDesc: 'Every day is a small occasion.', trDesc: 'Her gün küçük bir kutlama.' },
+  { id: 'lights', en: 'Fairy lights', tr: 'Peri ışıkları', cost: 120, slot: 'top', wall: true, glow: true, at: [.5, .15, .12], enDesc: 'Best after dark.', trDesc: 'En güzeli hava kararınca.' }
 ];
 /* ---------- keepsakes ----------
 

@@ -4309,8 +4309,9 @@ and a sheet of three pieces of furniture.
 
 **What went in.** The lane picture replaces the drawn lane for the
 Doorstep and the Allotments (`drawLanePicture` in `26-scene.js`): drawn
-full width with its foot under the tray, the sky above it its own top row
-stretched up so a tall phone gets more sky rather than a seam, and the
+full width with its foot under the tray, the sky above it the average
+colour of its own top rows so a tall phone gets more sky rather than a
+seam, and the
 walker placed along the picture's own path (`LANE_PATH`, read off the
 picture) rather than along the drawn lane's bend. Dusk is the same
 picture under a cool multiply until there is a dusk picture. The cat
@@ -4338,3 +4339,16 @@ room and on the lane is the one the player chose, in the coat and eye
 colour they chose or bought, with a hat, a collar, six moods, a blink
 and a tail, and none of that survives being a picture. The sheets are
 in `art/sheets/` for the drawing to be brought closer to.
+
+**The full set.** Five more backdrops followed, one for each stretch — the
+Allotments, the Common, the Canal Path, the Old Orchard and Home Again,
+which ends at the garden gate — and eleven more pieces of furniture:
+beanbag, rocking chair, cactus, toy chest, monstera, bookcase, fishbowl,
+pet bed, kennel, bunting and fairy lights, which glow after dark. The
+pictured pieces say where they stand in the table itself (`at` in
+`FURNITURE`), so a new one is a row and a picture, not a routine; two
+slots came with them, `bed` and `top`. Everything the shop sells, bought
+once, went from 15,503 coins to 17,533. Chrome allows gemini.google.com
+one download per tab, so the set came down as one tall picture and was
+cut apart here; the source is `art/src/set-2.png`, and the lane pictures
+are Gemini's 1024-wide previews rather than full size.

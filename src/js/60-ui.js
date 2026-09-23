@@ -719,6 +719,15 @@ function paintArtCanvases(root) {
 function drawFurniturePreview(c, id, px) {
   const th = ROOM_THEMES.find(x => x.id === SAVE.room.theme) || ROOM_THEMES[0];
   const cx = px / 2, base = px * .78;
+  const pic = roomThing(id);
+  if (pic && pic.at) {
+    /* as tall as the box allows, unless that makes it wider than it */
+    const im = typeof artImage === 'function' ? artImage('cut-' + id) : null;
+    const k = im ? im.naturalWidth / im.naturalHeight : 1;
+    const h = Math.min(px * .66, px * .84 / k);
+    drawPiecePicture(c, 'cut-' + id, cx, px * .5 + h / 2, h);
+    return;
+  }
   c.save();
   switch (id) {
     case 'rug': drawRug(c, cx, px * .62, px * .84, px * .34, th); break;
@@ -731,7 +740,6 @@ function drawFurniturePreview(c, id, px) {
     case 'tower': drawTower(c, cx, base, px * .5, px * .62); break;
     case 'window': drawFeeder(c, cx, px * .42, px * .42, 0); break;
     case 'basket': drawBasket(c, cx, px * .66, px * .5); break;
-    case 'armchair': drawArmchair(c, cx, base, px * .62); break;
     /* the three keepsakes preview against the animal you have now, which
        is the honest preview: it is what you would be buying a picture of */
     case 'photo': drawPhoto(c, cx, px * .46, px * .46,
