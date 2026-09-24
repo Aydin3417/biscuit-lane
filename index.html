@@ -11913,14 +11913,26 @@ function drawLanePicture(c, W, by, topBand, stretch, dark) {
   const im = typeof artImage === 'function' ? artImage(key) : null;
   if (!im || topBand < 60) return;
   const iw = im.naturalWidth, ih = im.naturalHeight;
-  const s = W / iw, dh = ih * s;
+  /* Grown to fill most of the band, not just its width.
+
+     Drawn full width, a 21:9 picture is about 165 pixels tall on a
+     390-wide phone, and the band above the tray is about 370: played
+     through as a new player (tools/firstrun.js) the first board opened
+     under two hundred pixels of flat cream, which read as a screen that
+     had not finished loading. So the picture is scaled until it covers
+     three quarters of the band and cropped at the sides about the middle,
+     where every lane in the set runs; what is lost is a little of the
+     scenery at the edges, what is kept is the lane. A wide screen, where
+     width already wins, draws it exactly as before. */
+  const s = Math.max(W / iw, (topBand + 10) * .76 / ih), dh = ih * s, dw = iw * s;
+  const ox = (W - dw) / 2;
   const foot = by + 10, top = foot - dh;
   c.save();
   if (top > 0) {
     c.fillStyle = skyOfPicture(im);
     c.fillRect(0, 0, W, top + 1);
   }
-  c.drawImage(im, 0, top, W, dh);
+  c.drawImage(im, ox, top, dw, dh);
   if (dark) {
     c.globalCompositeOperation = 'multiply';
     c.fillStyle = '#4A5878';
@@ -11939,9 +11951,9 @@ function drawLanePicture(c, W, by, topBand, stretch, dark) {
   const u = clamp(walked, 0, .96) * (pts.length - 1);
   const i = Math.min(pts.length - 2, Math.floor(u)), f = u - i;
   const fy = lerp(pts[i][0], pts[i + 1][0], f), fx = lerp(pts[i][1], pts[i + 1][1], f);
-  const wy = Math.min(top + fy * dh, by - 7), wx = fx * W;
+  const wy = Math.min(top + fy * dh, by - 7), wx = ox + fx * dw;
   /* smaller as it goes, by how far up the picture it has got */
-  const ws = 22 + 36 * clamp((fy - .40) / .55, 0, 1);
+  const ws = (22 + 36 * clamp((fy - .40) / .55, 0, 1)) * clamp(s * iw / W, 1, 1.35);
   c.save();
   c.translate(wx, wy + 2);
   c.globalAlpha = dark ? .3 : .22;
