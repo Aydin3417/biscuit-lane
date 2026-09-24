@@ -4352,3 +4352,21 @@ once, went from 15,503 coins to 17,533. Chrome allows gemini.google.com
 one download per tab, so the set came down as one tall picture and was
 cut apart here; the source is `art/src/set-2.png`, and the lane pictures
 are Gemini's 1024-wide previews rather than full size.
+
+## The dogs were wearing spectacles
+
+The character sheets were asked for as a brief, and the first thing they
+said was about eyes. Every dog in the game had its brown iris lifted
+until it parted from the pupil — the rule that keeps a brown-eyed cat
+from having two holes for eyes — and on a dog that left a pale ring round
+a black disc: the beagle, the retriever and the pug looked out through a
+pair of glasses. All three dog sheets drew one deep brown with two
+catchlights and nothing else. A dog's eye is that now, a little smaller
+so it sits at the weight the old one did, with the colour the player
+chose or bought kept as a crescent low in the eye, so grooming still
+shows. The pug's eye patches were half-transparent and its wrinkles two
+long nested arcs, which with the head's outline read as a target wearing
+goggles; the patches are solid and the wrinkles are three short creases,
+and its closed eyes are drawn in the coat colour so they do not vanish
+into the patch. `tools/art-gate.js`: 39/39, frames 1.1-1.2 ms, nothing
+throws.

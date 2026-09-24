@@ -11,10 +11,11 @@
    JSON with required fields; "the palette is warm and inviting" cannot
    be expressed in this schema.
 
-   What does NOT come back is art. There are no image files in this game
-   and there never will be — the reason is in DIRECTION.md, and it is
-   arithmetic rather than taste. Gemini directs; the drawing is Canvas
-   code and stays that way.
+   What does NOT come back is art. The animals are Canvas code and stay
+   that way — the reason is in DIRECTION.md, and it is arithmetic rather
+   than taste. The backdrops and the furniture are pictures now (art/,
+   README "The first pictures"), generated separately and by hand; this
+   tool still only judges.
 
      node tools/shots.js look          take the pictures first
      node tools/art-direct.js          then ask

@@ -564,16 +564,20 @@ function drawMarkings(c, spec, s) {
     c.fillStyle = spec.point || spec.fur2;
     ellipse(c, 0, .12 * s, .34 * s, .32 * s); c.fill();
   } else if (b.mark === 'mask') {
-    /* a pug: the black muzzle, a ring round each eye, and the wrinkles */
+    /* a pug: the black muzzle, a dark patch round each eye, and the
+       wrinkles. The patches were half-transparent and the wrinkles two
+       long arcs nested one inside the other, which with the head's own
+       outline read as a target with a pair of goggles on it; the
+       character sheet has solid patches and three short creases. */
     const look = lookOf(spec);
     c.fillStyle = spec.fur2;
     ellipse(c, 0, .26 * s, .25 * s, .21 * s); c.fill();
-    c.fillStyle = rgba(spec.fur2, .55);
-    [-1, 1].forEach(sx => { ellipse(c, sx * look.x * s, look.y * s, look.r * s * 1.4, look.r * s * 1.45); c.fill(); });
-    c.strokeStyle = rgba(spec.fur2, .7); c.lineWidth = .035 * s;
+    [-1, 1].forEach(sx => { ellipse(c, sx * look.x * s, look.y * s + .01 * s, look.r * s * 1.30, look.r * s * 1.34); c.fill(); });
+    c.strokeStyle = rgba(spec.fur2, .75); c.lineWidth = .03 * s; c.lineCap = 'round';
     c.beginPath();
-    c.moveTo(-.16 * s, -.26 * s); c.quadraticCurveTo(0, -.36 * s, .16 * s, -.26 * s);
-    c.moveTo(-.11 * s, -.16 * s); c.quadraticCurveTo(0, -.25 * s, .11 * s, -.16 * s);
+    c.moveTo(-.05 * s, -.30 * s); c.quadraticCurveTo(0, -.335 * s, .05 * s, -.30 * s);
+    c.moveTo(-.17 * s, -.24 * s); c.quadraticCurveTo(-.12 * s, -.28 * s, -.07 * s, -.245 * s);
+    c.moveTo(.17 * s, -.24 * s); c.quadraticCurveTo(.12 * s, -.28 * s, .07 * s, -.245 * s);
     c.stroke();
   }
   /* every dog but the pug has a lighter muzzle, and so does a cat
@@ -607,13 +611,17 @@ function drawEye(c, x, y, r, spec, o, side) {
   const cat = spec.breed.species === 'cat';
   const dx = (o.eyeDir ? o.eyeDir[0] : 0) * r * .26;
   const dy = (o.eyeDir ? o.eyeDir[1] : 0) * r * .26;
-  const rx = r, ry = r * 1.10 * (1 - blink * .92);
+  /* a dog's button eye reads bigger than a cat's iris at the same size,
+     so it is drawn a little smaller to sit at the same weight */
+  const rx = cat ? r : r * .86, ry = rx * 1.10 * (1 - blink * .92);
   c.save();
   c.translate(x, y);
   c.rotate(look.tilt * (side || 1));
   if (blink > .82) {
-    /* shut: one line, curving down, the way a drawn eye closes */
-    c.strokeStyle = featureInk(spec);
+    /* shut: one line, curving down, the way a drawn eye closes — in the
+       coat's own colour on a pug, whose eye sits in a black patch that
+       a dark line disappears into */
+    c.strokeStyle = spec.breed.mark === 'mask' ? shade(spec.fur, .1) : featureInk(spec);
     c.lineWidth = r * .22; c.lineCap = 'round';
     c.beginPath();
     c.moveTo(-rx * .78, 0);
@@ -622,8 +630,39 @@ function drawEye(c, x, y, r, spec, o, side) {
     c.restore();
     return;
   }
+  /* A dog's eye is a dark, wet button, not an iris round a pupil.
+
+     It was drawn the cat's way, and a brown iris lifted until it parted
+     from the pupil left a pale ring round a black disc on every dog —
+     the beagle, the retriever and the pug looked out through a pair of
+     spectacles. All six character sheets generated as a brief for the
+     animals (art/sheets/) drew the dogs the same way instead: one deep
+     brown, two catchlights, and nothing else. The colour the player
+     chose or bought is kept, as a crescent low in the eye where light
+     comes through, so a blue-eyed pup is still blue-eyed. */
+  if (!cat) {
+    const deep = mix(spec.eyes, '#1A100C', .62);
+    c.fillStyle = deep;
+    eyePath(c, rx, ry, look.almond); c.fill();
+    c.save();
+    eyePath(c, rx, ry, look.almond); c.clip();
+    c.fillStyle = rgba(shade(spec.eyes, .18), .75);
+    ellipse(c, dx, dy + ry * .62, rx * .78, ry * .42); c.fill();
+    c.fillStyle = deep;
+    ellipse(c, dx, dy + ry * .30, rx * .74, ry * .52); c.fill();
+    c.fillStyle = '#FFFFFF';
+    ellipse(c, dx - rx * .28, dy - ry * .34, rx * .34, ry * .30); c.fill();
+    c.fillStyle = rgba('#FFFFFF', .92);
+    ellipse(c, dx + rx * .30, dy + ry * .22, rx * .14, ry * .13); c.fill();
+    c.restore();
+    c.strokeStyle = inkLine(spec);
+    c.lineWidth = r * .18; c.lineJoin = 'round';
+    eyePath(c, rx, ry, look.almond); c.stroke();
+    c.restore();
+    return;
+  }
   /* the iris is the eye. A dark iris is lifted until it parts from
-     the pupil, or a brown-eyed dog has two holes for eyes. */
+     the pupil, or a brown-eyed cat has two holes for eyes. */
   let iris = spec.eyes;
   const irgb = hex2rgb(iris);
   const ilum = (irgb[0] * .299 + irgb[1] * .587 + irgb[2] * .114) / 255;
