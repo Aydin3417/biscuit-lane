@@ -1218,9 +1218,21 @@ function drawGuideHand(c, x, y, s, press, alpha) {
    tree. A lane lined with one silhouette repeated at three sizes reads
    as a tiled background; a second shape and a second green is enough to
    stop the eye noticing the repeat. */
+/* The lane's props as pictures (art/prop-*.png), when they have decoded.
+
+   The map is the screen a player sees between every level, and beside
+   the generated lane pictures and the chest its trees, cottages and
+   gates were flat shapes from an earlier pass. Each prop keeps its drawn
+   routine as the fallback and the pictures are sized to stand where the
+   drawing stood: the foot on y, about as tall as the drawing reached. */
+function propPicture(c, key, x, y, h) {
+  return drawPiecePicture(c, key, x, y, h);
+}
+
 function drawTree(c, x, y, s, t) {
-  c.save(); c.translate(x, y);
   const kind = Math.floor(mulberry(Math.round(x) * 131 + Math.round(y))() * 2);
+  if (propPicture(c, kind ? 'prop-tree2' : 'prop-tree', x, y, s * (kind ? 1.75 : 1.55))) return;
+  c.save(); c.translate(x, y);
   const sway = Math.sin(t * .7 + x * .01) * .03;
   c.fillStyle = rgba('#2A1E12', .18);
   ellipse(c, 0, 0, s * .5, s * .12); c.fill();
@@ -1258,6 +1270,7 @@ function drawTree(c, x, y, s, t) {
   c.restore();
 }
 function drawBush(c, x, y, s) {
+  if (propPicture(c, 'prop-bush', x, y + s * .45, s * 1.05)) return;
   c.save(); c.translate(x, y);
   c.fillStyle = PAL.dark ? '#2C4433' : '#5E9B6E';
   ellipse(c, 0, 0, s * .7, s * .5); c.fill();
@@ -1282,6 +1295,7 @@ function drawBush(c, x, y, s) {
    Drawn in the fence's own hand — the same two colours, the same round
    caps, the same weight of line — because it is the same fence. */
 function drawGateway(c, x, y, s, open) {
+  if (propPicture(c, open ? 'prop-gate-open' : 'prop-gate', x, y + 2, s * .78)) return;
   /* Wood, not fence-cream. The first version borrowed the fence's own
      colours, and a fence reads at that weight because it is a repeated
      row of pales — a texture. One gate at the same weight is three pale
@@ -1344,6 +1358,7 @@ function drawFence(c, x, y, s) {
   c.restore();
 }
 function drawCottage(c, x, y, s, seed) {
+  if (propPicture(c, 'prop-cottage', x, y, s * 1.12)) return;
   const r = mulberry(seed * 331);
   const roof = ['#B4685E', '#7E8FA8', '#8E7A63'][Math.floor(r() * 3)];
   c.save(); c.translate(x, y);
@@ -1362,6 +1377,16 @@ function drawCottage(c, x, y, s, seed) {
   c.restore();
 }
 function drawLampPost(c, x, y, s, warmth, t) {
+  if (propPicture(c, 'prop-lamp', x, y, s * 1.05)) {
+    /* the light is still the lamp's own, laid over the picture */
+    if (warmth > .05) {
+      const ly = y - s * .9, g = c.createRadialGradient(x, ly, 0, x, ly, s * .9);
+      g.addColorStop(0, rgba('#FFD98A', .55 * warmth)); g.addColorStop(1, rgba('#FFD98A', 0));
+      c.save(); c.globalCompositeOperation = 'lighter'; c.fillStyle = g;
+      c.fillRect(x - s, ly - s, s * 2, s * 2); c.restore();
+    }
+    return;
+  }
   /* At map scale this was a hairline pole with a pale trapezoid over it,
      both the colour of the sky behind them: two thin shapes that read as
      a broken picture rather than as a lamp. It is drawn with weight now

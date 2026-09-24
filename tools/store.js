@@ -266,6 +266,53 @@ const clear = page => page.evaluate(() => {
   const fg = await browser.newPage({ viewport: { width: 1024, height: 500 }, deviceScaleFactor: 1 });
   await fg.goto(at('/pawtika.html'), { waitUntil: 'load' });
   await setup(fg);
+  /* A generated scene behind it, when there is one (art/src/banner.png):
+     the lane, the cottage and the light, in the style the game's own
+     backdrops are in. Everything that says what the game is stays the
+     game's — the animal is drawn by its drawing code, the tiles are its
+     tiles, the name is set in its font — so the banner cannot show
+     something the game does not have. */
+  const bannerFile = path.join(__dirname, '..', 'art', 'src', 'banner.png');
+  if (fs.existsSync(bannerFile)) {
+    const bg = 'data:image/png;base64,' + fs.readFileSync(bannerFile).toString('base64');
+    await fg.evaluate(async bg => {
+      document.body.innerHTML = '<canvas id="fg" width="1024" height="500"></canvas>';
+      document.body.style.margin = '0';
+      const c = document.getElementById('fg').getContext('2d');
+      const im = new Image(); im.src = bg; await im.decode();
+      /* cover, anchored low so the lane stays in */
+      const k = Math.max(1024 / im.naturalWidth, 500 / im.naturalHeight);
+      const w = im.naturalWidth * k, h = im.naturalHeight * k;
+      c.drawImage(im, (1024 - w) / 2, 500 - h, w, h);
+      /* a soft cream wash behind the words, so they read on any scene */
+      const g = c.createLinearGradient(0, 0, 560, 0);
+      g.addColorStop(0, 'rgba(251,243,229,.92)'); g.addColorStop(.7, 'rgba(251,243,229,.55)'); g.addColorStop(1, 'rgba(251,243,229,0)');
+      c.fillStyle = g; c.fillRect(0, 0, 560, 500);
+      c.fillStyle = '#2C2118';
+      c.font = '800 76px Grandstander, sans-serif';
+      c.textBaseline = 'alphabetic';
+      c.fillText('Pawtika', 58, 170);
+      c.fillStyle = '#5E4B3A';
+      c.font = '600 28px Karla, sans-serif';
+      c.fillText('Match the faces of the pets', 62, 222);
+      c.fillText('you take home.', 62, 258);
+      /* three of its tiles, as the promise of the board */
+      [2, 0, 1].forEach((t, i) => {
+        c.save(); c.translate(100 + i * 96, 350); BL.paintTile(c, t, 0, 84, false); c.restore();
+      });
+      /* and the animal itself, standing on the lane */
+      const pet = BL.activePet();
+      if (pet) { c.save(); c.translate(700, 250); BL.drawBody(c, BL.specOfPet(pet), 190, { mouth: 'open', mood: 'happy', breath: .3 }); c.restore(); }
+    }, bg);
+    await fg.waitForTimeout(700);
+    await fg.screenshot({ path: path.join(OUT, 'feature-graphic.png') });
+    console.log('  feature-graphic.png (scene)');
+    await fg.close();
+    await browser.close();
+    if (srv && srv.stop) srv.stop();
+    console.log('\n' + OUT);
+    return;
+  }
   await fg.evaluate(() => {
     /* Drawn in the page so it uses the game's own palette, its own tile
        silhouettes and its own animal drawing code — the banner and the

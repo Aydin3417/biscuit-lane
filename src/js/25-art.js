@@ -3,6 +3,38 @@
    All drawing happens in a normalised space centred on 0,0.
    ============================================================ */
 
+/* The purse's three icons as pictures (art/icon-*.png), when there are
+   any. Every place in the interface that shows a heart, a coin or a treat
+   does it through IC, and every CSS rule that sizes one sizes an svg; so
+   the picture goes into the page once, as a <symbol>, and IC hands out an
+   svg that uses it. Same slot, same size rules, one copy of the bytes. */
+function usePictureIcons() {
+  if (typeof ART_SRC === 'undefined' || typeof document === 'undefined' || !document.body) return;
+  const keys = ['heart', 'coin', 'treat'].filter(k => ART_SRC['icon-' + k]);
+  if (!keys.length) return;
+  const NS = 'http://www.w3.org/2000/svg';
+  const defs = document.createElementNS(NS, 'svg');
+  defs.setAttribute('aria-hidden', 'true');
+  defs.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
+  keys.forEach(k => {
+    const sym = document.createElementNS(NS, 'symbol');
+    sym.setAttribute('id', 'pic-' + k);
+    sym.setAttribute('viewBox', '0 0 24 24');
+    const im = document.createElementNS(NS, 'image');
+    im.setAttribute('href', ART_SRC['icon-' + k].src);
+    im.setAttribute('width', '24'); im.setAttribute('height', '24');
+    im.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    sym.appendChild(im);
+    defs.appendChild(sym);
+    IC[k] = '<svg viewBox="0 0 24 24" class="pic"><use href="#pic-' + k + '"/></svg>';
+  });
+  document.body.insertBefore(defs, document.body.firstChild);
+}
+if (typeof document !== 'undefined') {
+  if (document.body) usePictureIcons();
+  else document.addEventListener('DOMContentLoaded', usePictureIcons);
+}
+
 /* palette read from CSS so canvases follow the Day/Dusk theme */
 let PAL = {};
 function readPalette() {

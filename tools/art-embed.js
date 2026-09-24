@@ -35,12 +35,13 @@ const QUALITY = .84;
     const mime = /\.png$/i.test(f) ? 'image/png' : /\.webp$/i.test(f) ? 'image/webp' : 'image/jpeg';
     const src = 'data:' + mime + ';base64,' + buf.toString('base64');
     const key = f.replace(/\.[a-z]+$/i, '');
-    const keyOut = /^furniture-/.test(key) || /^cut-/.test(key);
-    const res = await page.evaluate(async ({ src, MAX, QUALITY, keyOut }) => {
+    const keyOut = /^(furniture|cut|prop|icon)-/.test(key);
+    const res = await page.evaluate(async ({ src, MAX, QUALITY, keyOut, isIcon }) => {
       const im = new Image();
       im.src = src;
       await im.decode();
-      const k = Math.min(1, MAX / im.naturalWidth);
+      /* an icon is shown at twenty-odd pixels: 128 is plenty at 3x */
+      const k = Math.min(1, (isIcon ? 128 : MAX) / Math.max(im.naturalWidth, isIcon ? im.naturalHeight : 0));
       const w = Math.round(im.naturalWidth * k), h = Math.round(im.naturalHeight * k);
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
@@ -59,7 +60,7 @@ const QUALITY = .84;
         x.putImageData(d, 0, 0);
       }
       return { w, h, uri: c.toDataURL('image/webp', QUALITY) };
-    }, { src, MAX, QUALITY, keyOut });
+    }, { src, MAX, QUALITY, keyOut, isIcon: /^icon-/.test(key) });
     out[key] = res;
     console.log('  ' + f + ' -> ' + res.w + 'x' + res.h + ', ' + Math.round(res.uri.length * .75 / 1024) + ' KB');
   }
