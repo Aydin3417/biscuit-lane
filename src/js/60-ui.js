@@ -299,6 +299,7 @@ function renderHome() {
         <b>${T('lvl_intro', { n: nextN })}</b>
         <small>${nextDef.goals.map(g => goalLine({ kind: g[0], arg: g[1], need: g[2] })).join(' · ')}</small>
         ${nextBest ? `<span class="pill info ph-best">${IC.star}${T('map_best', { n: fmt(nextBest) })}</span>` : ''}
+        ${SAVE.winRun > 0 && !SAVE.stars[nextN] ? `<span class="pill warn ph-best">${IC.flame}${T('run_on', { n: SAVE.winRun })}</span>` : ''}
       </span>
       <span class="btn primary ph-go">${IC.play}${T('tab_play')}</span>
     </button>`;
@@ -1500,6 +1501,14 @@ function paintGoalIcons(root) {
    player could act on — boosters below 8 are not yet owned, and the
    perks are applied whether or not the card lists them. */
 const INTRO_FROM = 8;
+/* what a run of n puts on the board, in words */
+function runGiftLine(n, gate) {
+  const g = winRunGifts(n, gate);
+  if (!g.length) return T('run_gift_none');
+  const rockets = g.filter(x => x === 'rocket').length, bombs = g.filter(x => x === 'bomb').length;
+  if (bombs) return T('run_gift_rb', { r: rockets, b: bombs });
+  return T(rockets === 1 ? 'run_gift_r1' : 'run_gift_r', { r: rockets });
+}
 function openLevelIntro(n) {
   heartTick();
   const def = levelDef(n);
@@ -1531,6 +1540,10 @@ function openLevelIntro(n) {
     ${def.gate ? `<div class="goalItem gateNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('gate_t')}</b>${T('gate_s')}</span>
+    </div>` : ''}
+    ${n !== DAILY_LEVEL && !SAVE.stars[n] && SAVE.winRun > 0 ? `<div class="goalItem runNote">
+      <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
+      <span class="t"><b>${T('run_on', { n: SAVE.winRun })}</b>${runGiftLine(SAVE.winRun, def.gate)}</span>
     </div>` : ''}
     ${firstTreats ? `<div class="goalItem" style="background:color-mix(in srgb,var(--plum) 12%, var(--surface-2))">
       <span style="width:32px;display:grid;place-items:center;color:var(--plum)">${IC.treat}</span>
@@ -1859,6 +1872,7 @@ function showWin() {
      book is for getting further, and a track farmable on level three
      would be a track finished on the first evening. */
   if (first) {
+    SAVE.winRun = (SAVE.winRun || 0) + 1;
     passStamp('clear');
     if (stars >= 3) passStamp('threeStar');
     if (isGate(n)) passStamp('gate');
@@ -2047,6 +2061,17 @@ function showLose() {
   /* the first carry-on at its price, the second at the higher one */
   const price = (G.extras || 0) === 0 ? ECON.continueTreats : ECON.continueTreats2;
   const short2 = SAVE.treats < price;
+  /* A new level lost ends the run, and the card says so before the
+     player chooses, because the carry-on is what keeps it: the run is
+     put down now and picked back up if they carry on. Put down rather
+     than left standing, so a player who closes the app on this card has
+     lost it the way everybody else does. */
+  if (!SAVE.stars[G.n] && SAVE.winRun > 0) {
+    G.runAtRisk = SAVE.winRun;
+    SAVE.winRun = 0;
+    persist(true);
+  }
+  const keepRun = () => { if (G.runAtRisk) { SAVE.winRun = G.runAtRisk; G.runAtRisk = 0; persist(true); } };
   const m = modal(`
     ${pet ? `<div class="winPet"><canvas data-body="${pet.breed}" data-coat="${pet.coat}"
       data-eye="${petEye(pet)}" data-hat="${pet.hat}" data-collar="${pet.collar}"
@@ -2064,6 +2089,10 @@ function showLose() {
     </div>
     ${tip ? `<p style="font-size:var(--t-micro);color:var(--text-dim);margin-top:-4px"><b style="color:var(--text)">${T('lose_why')}:</b> ${tip}</p>` : ''}
     ${pet ? `<p>${T('lose_petline', { name: pet.name })}</p>` : ''}
+    ${G.runAtRisk ? `<div class="goalItem runNote">
+      <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
+      <span class="t"><b>${T('run_lost', { n: G.runAtRisk })}</b>${(G.extras || 0) < 2 && worthCarryingOn ? T('run_lost_keep') : ''}</span>
+    </div>` : ''}
     <div class="row">
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn primary" id="lRetry">${T('retry')}</button>
@@ -2091,7 +2120,7 @@ function showLose() {
     /* short of treats is the one moment the player actually wants the
        jar, so it opens there rather than being told no by a toast */
     if (SAVE.treats < price) { SFX.bad(); treatStore('continue', price); return; }
-    SAVE.treats -= price; persist(true); syncPurse();
+    SAVE.treats -= price; keepRun(); persist(true); syncPurse();
     m.close();
     G.extras = (G.extras || 0) + 1;
     G.over = false; G.busy = false;
@@ -2108,6 +2137,7 @@ function showLose() {
     ad.disabled = true;
     const won = await ADS.show('carry');
     if (!won) { ad.disabled = false; SFX.bad(); return; }
+    keepRun();
     m.close();
     G.extras = (G.extras || 0) + 1;
     G.over = false; G.busy = false;
@@ -2141,9 +2171,13 @@ function leaveLevel() {
 }
 function confirmQuit() {
   if (G.over) { leaveLevel(); return; }
+  /* walking away from a new level once it has been played is losing it,
+     as far as the run is concerned; before the first move it is not */
+  const ends = G.n !== DAILY_LEVEL && !SAVE.stars[G.n] && SAVE.winRun > 0 && G.moves < G.def.moves;
   const m = modal(`
     <h2>${T('g_quit_t')}</h2>
     <p>${T('g_quit_s')}</p>
+    ${ends ? `<p style="color:var(--rose)"><b>${T('run_quit', { n: SAVE.winRun })}</b></p>` : ''}
     <div class="row">
       <button class="btn primary" id="qNo">${T('g_quit_no')}</button>
       <button class="btn ghost" id="qYes">${T('g_quit_yes')}</button>
@@ -2153,6 +2187,7 @@ function confirmQuit() {
   $('#qYes', m.el).addEventListener('click', () => {
     m.close();
     track('level_quit', { n: G.n, left: G.moves });
+    if (ends) SAVE.winRun = 0;
     SAVE.hearts = Math.min(HEART_MAX, SAVE.hearts + 1);
     persist(true);
     leaveLevel();

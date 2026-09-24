@@ -1077,6 +1077,13 @@ canvas{ max-width:100%; }
   border:1px solid color-mix(in srgb,var(--rose) 30%, transparent);
 }
 
+/* the win streak, on the level card and on the lose card: warm rather
+   than the gate's rose, because it is a good thing to have */
+.runNote{
+  background:color-mix(in srgb,var(--accent) 13%, var(--surface-2));
+  border:1px solid color-mix(in srgb,var(--accent) 34%, transparent);
+}
+
 /* ---------- the season book ---------- */
 /* Three columns: which tier, what everybody gets, what the book adds.
    It scrolls inside its own box rather than making the sheet thirty

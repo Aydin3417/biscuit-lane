@@ -62,7 +62,7 @@ const X = vm.runInContext(
   '   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,' +
   '   commonType, shuffleTypes, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,' +
   '   moleCount, moleTick, moleHit, MOLE_EVERY,' +
-'   targetClear, isGate, budgetFor, budgetRange, LEVELS })', ctx);
+'   targetClear, isGate, budgetFor, budgetRange, LEVELS, winRunGifts })', ctx);
 const {
   makeBoard, findMatches, specialFor, settle, hasMove, allMoves, canSwap,
   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,
@@ -430,6 +430,23 @@ function playLevel(n, seed, defOverride) {
       const cell = spots[(Math.random() * spots.length) | 0];
       cell.tile.sp = Math.random() < .5 ? SP.ROW : SP.COL;
     }
+  }
+  /* STREAK=n puts the win-run gifts on the board the way the game does
+     (winRunGifts in 10-data.js), so a streak's effect on a level can be
+     measured rather than guessed at: test/streak.js */
+  const run = +process.env.STREAK || 0;
+  if (run) {
+    const gifts = X.winRunGifts(run, X.isGate(n));
+    const spots = [];
+    for (let rr = 0; rr < B.h; rr++) for (let cc = 0; cc < B.w; cc++) {
+      const cell = B.cell[rr][cc];
+      if (cell && cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && cell.ice === 0) spots.push(cell);
+    }
+    gifts.forEach(g => {
+      if (!spots.length) return;
+      const cell = spots.splice((Math.random() * spots.length) | 0, 1)[0];
+      cell.tile.sp = g === 'bomb' ? SP.BOMB : (Math.random() < .5 ? SP.ROW : SP.COL);
+    });
   }
   const scoreMul = perked ? 1.12 : 1;
   let moves = def.moves + (+process.env.BONUS || 0) + (perked ? 4 : 0), score = 0, used = 0;

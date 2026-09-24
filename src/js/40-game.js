@@ -353,6 +353,27 @@ function startLevel(n, opts) {
       G.B.cell[r][c].tile.sp = Math.random() < .5 ? SP.ROW : SP.COL;
     }
   }
+  /* The win streak's gifts, on a level not yet cleared: a rocket, two,
+     then two and a bomb (WIN_RUN). Placed on plain tiles away from the
+     pet's own rocket, and remembered so the HUD and the card can say
+     what the run brought. */
+  G.runGifts = [];
+  G.runAtRisk = 0;
+  if (!res && n !== DAILY_LEVEL && !SAVE.stars[n] && SAVE.winRun > 0) {
+    const spots = [];
+    eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && cell.ice === 0) spots.push([r, c]); });
+    winRunGifts(SAVE.winRun, isGate(n)).forEach(g => {
+      if (!spots.length) return;
+      const [r, c] = spots.splice(Math.floor(Math.random() * spots.length), 1)[0];
+      G.B.cell[r][c].tile.sp = g === 'bomb' ? SP.BOMB : (Math.random() < .5 ? SP.ROW : SP.COL);
+      G.runGifts.push(g);
+    });
+  }
+  /* said on the board too: the opening levels skip the card that says it */
+  if (G.runGifts.length) {
+    const ep = G.epoch;
+    setTimeout(() => { if (G.epoch === ep && !G.over && SAVE.winRun > 0) toast(T('run_on', { n: SAVE.winRun }), 'flame'); }, 900);
+  }
   buildGoalChips();
   /* Built here rather than by the caller. Four separate places started a
      level and each had to remember to build the star track afterwards;

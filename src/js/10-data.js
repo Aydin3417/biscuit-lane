@@ -259,7 +259,13 @@ const ECON = {
      curve paid about 113 coins for a three-starred level and the whole
      catalogue is 10,023, so a month of ordinary play bought everything
      the game sells twice over and kept 13,826 in change. */
-  winBase: 18, winPerStar: 12, winPerScore: 2600,
+  /* Down by a sixth on 25 Sep 2026, with the shelf halved (BADGES): a new
+     player played through by tools/firstrun.js held 1,657 coins after ten
+     levels and five minutes, a second animal in the first session and
+     all six by day 14 in test/economy.js, and a month ended with four
+     thousand coins and nothing left to spend them on. See README, "The
+     money meant nothing by the second week". */
+  winBase: 15, winPerStar: 10, winPerScore: 2600,
   /* and what it pays the second time. A cleared level paid full price
      forever, which made the best coin-per-minute in the game "replay
      level 3", and made every price downstream a fiction. Beating your
@@ -631,6 +637,41 @@ function passBanked(stamps) {
    often, rather than the one that comes round least. */
 const JAR = { perLevel: 4, cap: 100, sku: 'treat_jar', usd: '$2.99' };
 
+/* ---------- a run of good days ----------
+
+   The win streak, the mechanic the genre's leaders settled on: clear a
+   new level and the next one starts with something already on the
+   board, clear that and it starts with more, lose and it is gone. It is
+   the one reward that is about the next level rather than the last, and
+   the loss it puts on the table is what makes the carry-on a real
+   decision — which is why a carry-on bought keeps the run alive.
+
+   Only a level cleared for the first time adds to it; a replay can
+   neither build it nor break it, or the fastest way to a full run would
+   be level three, four times. The daily walk is outside it for the same
+   reason it is outside the stars.
+
+   Measured before it was switched on (test/streak.js, levels 61-160,
+   eight games a level, bare pet), clear rate by beat at runs 0 to 3:
+   relief 73/79/84/90%, middle 70/70/76/80%, run-up 57/64/65/65%, gate
+   46/59/65/71%. The gate was the problem: at a full run the wall at the
+   end of every block was gone. So a gate is given one gift fewer than
+   the run has earned. Measured again with that rule, the gate reads
+   44/43/53/73% and is still the hardest level in its block at every
+   run; the 73 against 65 is inside the noise of eighty games. The lane
+   (1-60) moves less, 84% bare to 92% at a full run, because it was
+   already easy. How often a player arrives at a gate on a full run is
+   the product of the three first-try clears before it, about a third at
+   the run's own rates, which is what keeps this a reward rather than a
+   retune of every level. */
+const WIN_RUN = [
+  [],
+  ['rocket'],
+  ['rocket', 'rocket'],
+  ['rocket', 'rocket', 'bomb']
+];
+function winRunGifts(run, gate) { return WIN_RUN[clamp((run || 0) - (gate ? 1 : 0), 0, WIN_RUN.length - 1)]; }
+
 /* ---------- goods ---------- */
 const FOODS = [
   { id: 'kibble', en: 'Kibble', tr: 'Mama', cost: 12, food: 26, joy: 2, art: 'kibble', enDesc: 'The everyday stuff.', trDesc: 'Günlük mama.' },
@@ -806,31 +847,36 @@ const TRAIT_AT_CARE = 3;
 /* ---------- the shelf ----------
    Each one reads straight off the save, so nothing has to be recorded
    twice. `at` returns the current figure, `of` the figure that earns it. */
+/* Every coin figure on the shelf was halved on 25 Sep 2026. The shelf
+   paid 6,000 coins in all, more than a quarter of a month's income, and
+   the early badges all land in the first session: ten levels in, the
+   first clear, ten clears, ten three-stars and two thousand tiles had
+   paid about a thousand coins between them. The treats are unchanged. */
 const BADGES = [
   {
     id: 'first', icon: 'paw', fam: 'lane', en: 'First one home', tr: 'İlk geçiş',
     enDesc: 'Clear a level.', trDesc: 'Bir bölüm geç.',
-    of: 1, at: s => s.stats.cleared, coins: 40
+    of: 1, at: s => s.stats.cleared, coins: 20
   },
   {
     id: 'ten', icon: 'play', fam: 'lane', en: 'Getting the hang of it', tr: 'Eli alıştı',
     enDesc: 'Clear ten levels.', trDesc: 'On bölüm geç.',
-    of: 10, at: s => s.stats.cleared, coins: 120
+    of: 10, at: s => s.stats.cleared, coins: 60
   },
   {
     id: 'thirty', icon: 'home', fam: 'lane', en: 'Lane regular', tr: 'Sokağın müdavimi',
     enDesc: 'Clear thirty levels.', trDesc: 'Otuz bölüm geç.',
-    of: 30, at: s => s.stats.cleared, coins: 300, treats: 2
+    of: 30, at: s => s.stats.cleared, coins: 150, treats: 2
   },
   {
     id: 'star3', icon: 'star', fam: 'star', en: 'Perfectionist', tr: 'Mükemmeliyetçi',
     enDesc: 'Take three stars from a level.', trDesc: 'Bir bölümden üç yıldız al.',
-    of: 1, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 60
+    of: 1, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 30
   },
   {
     id: 'star3x10', icon: 'sparkle', fam: 'star', en: 'Ten perfect runs', tr: 'On kusursuz geçiş',
     enDesc: 'Three-star ten levels.', trDesc: 'On bölümü üç yıldızla geç.',
-    of: 10, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 250, treats: 2
+    of: 10, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 130, treats: 2
   },
   {
     /* Six, not five, and forty tiles, not thirty.
@@ -845,72 +891,72 @@ const BADGES = [
        which is rare enough to be noticed and common enough to arrive. */
     id: 'combo5', icon: 'flame', fam: 'feat', en: 'Snowball', tr: 'Çığ',
     enDesc: 'Set off a six-chain cascade.', trDesc: 'Altı zincirlik bir çığ başlat.',
-    of: 6, at: s => s.stats.bestCombo, coins: 80
+    of: 6, at: s => s.stats.bestCombo, coins: 40
   },
   {
     id: 'combo8', icon: 'bolt', fam: 'feat', en: 'Avalanche', tr: 'Heyelan',
     enDesc: 'Set off an eight-chain cascade.', trDesc: 'Sekiz zincirlik bir çığ başlat.',
-    of: 8, at: s => s.stats.bestCombo, coins: 220, treats: 1
+    of: 8, at: s => s.stats.bestCombo, coins: 110, treats: 1
   },
   {
     id: 'big30', icon: 'hammer', fam: 'feat', en: 'One good move', tr: 'Tek iyi hamle',
     enDesc: 'Clear forty tiles in a single move.', trDesc: 'Tek hamlede kırk taş temizle.',
-    of: 40, at: s => s.stats.biggestClear, coins: 150
+    of: 40, at: s => s.stats.biggestClear, coins: 80
   },
   {
     id: 'pop2k', icon: 'shuffle', fam: 'feat', en: 'Two thousand faces', tr: 'İki bin yüz',
     enDesc: 'Clear two thousand tiles in total.', trDesc: 'Toplam iki bin taş temizle.',
-    of: 2000, at: s => s.stats.tilesPopped, coins: 200
+    of: 2000, at: s => s.stats.tilesPopped, coins: 100
   },
   {
     id: 'rescue10', icon: 'heart', fam: 'lane', en: 'Ten walked home', tr: 'On tanesi evde',
     enDesc: 'Walk ten baskets to the door.', trDesc: 'On sepeti kapıya götür.',
-    of: 10, at: s => s.stats.rescued, coins: 180, treats: 1
+    of: 10, at: s => s.stats.rescued, coins: 90, treats: 1
   },
   {
     id: 'family2', icon: 'paw', fam: 'family', en: 'Company', tr: 'Arkadaş',
     enDesc: 'Adopt a second pet.', trDesc: 'İkinci bir hayvan sahiplen.',
-    of: 2, at: s => s.pets.length, coins: 100
+    of: 2, at: s => s.pets.length, coins: 50
   },
   {
     id: 'family4', icon: 'home', fam: 'family', en: 'A full house', tr: 'Ev doldu',
     enDesc: 'Have four pets at home.', trDesc: 'Evde dört hayvan olsun.',
-    of: 4, at: s => s.pets.length, coins: 300, treats: 2
+    of: 4, at: s => s.pets.length, coins: 150, treats: 2
   },
   {
     id: 'family6', icon: 'crown', fam: 'family', en: 'Everybody', tr: 'Herkes burada',
     enDesc: 'Adopt every breed on the lane.', trDesc: 'Sokaktaki her cinsi sahiplen.',
-    of: 6, at: s => s.pets.length, coins: 600, treats: 5
+    of: 6, at: s => s.pets.length, coins: 300, treats: 5
   },
   {
     id: 'bond5', icon: 'heart', fam: 'family', en: 'Inseparable', tr: 'Ayrılmaz',
     enDesc: 'Reach bond level five with any pet.', trDesc: 'Bir hayvanla beşinci bağ seviyesine ulaş.',
-    of: 5, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 160
+    of: 5, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 80
   },
   {
     id: 'bond12', icon: 'star', fam: 'family', en: 'Grown up together', tr: 'Birlikte büyüdük',
     enDesc: 'Reach bond level twelve.', trDesc: 'On ikinci bağ seviyesine ulaş.',
-    of: 12, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 400, treats: 3
+    of: 12, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 200, treats: 3
   },
   {
     id: 'care100', icon: 'bowl', fam: 'care', en: 'Devoted', tr: 'Kendini adamış',
     enDesc: 'Look after your pets a hundred times.', trDesc: 'Hayvanlarınla yüz kez ilgilen.',
-    of: 100, at: s => s.stats.cared, coins: 250, treats: 1
+    of: 100, at: s => s.stats.cared, coins: 130, treats: 1
   },
   {
     id: 'streak7', icon: 'flame', fam: 'care', en: 'A week of it', tr: 'Bir hafta boyunca',
     enDesc: 'Come back seven days running.', trDesc: 'Yedi gün üst üste gel.',
-    of: 7, at: s => s.streak, coins: 220, treats: 3
+    of: 7, at: s => s.streak, coins: 110, treats: 3
   },
   {
     id: 'walk7', icon: 'ball', fam: 'care', en: 'Seven walks', tr: 'Yedi yürüyüş',
     enDesc: 'Finish the daily walk seven days running.', trDesc: 'Günlük yürüyüşü yedi gün üst üste bitir.',
-    of: 7, at: s => (s.daily && s.daily.streak) || 0, coins: 300, treats: 3
+    of: 7, at: s => (s.daily && s.daily.streak) || 0, coins: 150, treats: 3
   },
   {
     id: 'decor', icon: 'brush', fam: 'care', en: 'Interior decorator', tr: 'İç mimar',
     enDesc: 'Own five things for the room.', trDesc: 'Oda için beş eşyan olsun.',
-    of: 5, at: s => Object.keys(s.furniture || {}).length, coins: 180
+    of: 5, at: s => Object.keys(s.furniture || {}).length, coins: 90
   },
   /* the catalogue was eight pieces when the badge above was written, so
      five was most of it; at twenty, a house that is actually full is a
@@ -918,7 +964,7 @@ const BADGES = [
   {
     id: 'fullhouse', icon: 'brush', fam: 'care', en: 'A full house', tr: 'Dolu bir ev',
     enDesc: 'Own fifteen things for the room.', trDesc: 'Oda için on beş eşyan olsun.',
-    of: 15, at: s => Object.keys(s.furniture || {}).length, coins: 400, treats: 3
+    of: 15, at: s => Object.keys(s.furniture || {}).length, coins: 200, treats: 3
   },
 
   /* ---- the second tier ----
@@ -935,7 +981,7 @@ const BADGES = [
   {
     id: 'chain7', icon: 'star', fam: 'lane', en: 'One thing led to another', tr: 'Biri diğerini getirdi',
     enDesc: 'Reach a seven-deep cascade.', trDesc: 'Yedi kademelik bir zincir yakala.',
-    of: 7, at: s => s.stats.bestCombo, coins: 80,  treats: 1
+    of: 7, at: s => s.stats.bestCombo, coins: 40,  treats: 1
   },
   {
     id: 'lane60', icon: 'home', fam: 'lane', en: 'The whole lane', tr: 'Yolun sonu',
@@ -943,32 +989,32 @@ const BADGES = [
     /* only the authored sixty count: a player deep into the generated
        run has more keys than that and would otherwise be handed this
        for levels it is not about */
-    of: 60, at: s => Object.keys(s.stars || {}).filter(k => +k <= 60).length, coins: 200, treats: 2
+    of: 60, at: s => Object.keys(s.stars || {}).filter(k => +k <= 60).length, coins: 100, treats: 2
   },
   {
     id: 'run100', icon: 'play', fam: 'lane', en: 'Past the hundred', tr: 'Yüzü geçti',
     enDesc: 'Reach level one hundred.', trDesc: 'Yüzüncü bölüme ulaş.',
-    of: 100, at: s => s.reached, coins: 150, treats: 2
+    of: 100, at: s => s.reached, coins: 80, treats: 2
   },
   {
     id: 'star30', icon: 'star', fam: 'lane', en: 'Thirty perfect', tr: 'Otuz kusursuz',
     enDesc: 'Three-star thirty levels.', trDesc: 'Otuz bölümü üç yıldızla bitir.',
-    of: 30, at: s => Object.keys(s.stars || {}).filter(k => s.stars[k] >= 3).length, coins: 120, treats: 1
+    of: 30, at: s => Object.keys(s.stars || {}).filter(k => s.stars[k] >= 3).length, coins: 60, treats: 1
   },
   {
     id: 'pop50k', icon: 'paw', fam: 'lane', en: 'Fifty thousand faces', tr: 'Elli bin yüz',
     enDesc: 'Clear fifty thousand tiles.', trDesc: 'Elli bin taş patlat.',
-    of: 50000, at: s => s.stats.tilesPopped, coins: 100, treats: 1
+    of: 50000, at: s => s.stats.tilesPopped, coins: 50, treats: 1
   },
   {
     id: 'rescue50', icon: 'ball', fam: 'lane', en: 'Nobody left behind', tr: 'Kimse geride kalmadı',
     enDesc: 'Bring fifty puppies safely down.', trDesc: 'Elli yavruyu sağ salim indir.',
-    of: 50, at: s => s.stats.rescued, coins: 90,  treats: 1
+    of: 50, at: s => s.stats.rescued, coins: 50,  treats: 1
   },
   {
     id: 'family3', icon: 'paw', fam: 'care', en: 'A full house', tr: 'Kalabalık ev',
     enDesc: 'Have three animals at home.', trDesc: 'Evde üç hayvanın olsun.',
-    of: 3, at: s => (s.pets || []).length, coins: 100, treats: 1
+    of: 3, at: s => (s.pets || []).length, coins: 50, treats: 1
   },
   {
     /* This carried the id `family6`, the same as the crown badge above,
@@ -979,27 +1025,27 @@ const BADGES = [
        the care family should be about. */
     id: 'allcared', icon: 'home', fam: 'care', en: 'All six home', tr: 'Altısı da evde',
     enDesc: 'Six animals, every one of them fed today.', trDesc: 'Altı hayvan, hepsi bugün yedirilmiş.',
-    of: 6, at: s => (s.pets || []).filter(p => p.food >= 60).length, coins: 200, treats: 3
+    of: 6, at: s => (s.pets || []).filter(p => p.food >= 60).length, coins: 100, treats: 3
   },
   {
     id: 'grown2', icon: 'flame', fam: 'care', en: 'Raised them right', tr: 'İyi büyüttün',
     enDesc: 'Raise two animals to grown.', trDesc: 'İki hayvanı yetişkinliğe getir.',
-    of: 2, at: s => (s.pets || []).filter(p => p && p.bond >= 12).length, coins: 120, treats: 1
+    of: 2, at: s => (s.pets || []).filter(p => p && p.bond >= 12).length, coins: 60, treats: 1
   },
   {
     id: 'traits2', icon: 'brush', fam: 'care', en: 'Two of a kind', tr: 'İki ayrı karakter',
     enDesc: 'Settle two animals into a character.', trDesc: 'İki hayvanın karakteri belli olsun.',
-    of: 2, at: s => (s.pets || []).filter(p => p && p.trait).length, coins: 80,  treats: 1
+    of: 2, at: s => (s.pets || []).filter(p => p && p.trait).length, coins: 40,  treats: 1
   },
   {
     id: 'care300', icon: 'bath', fam: 'care', en: 'Never once forgotten', tr: 'Hiç unutulmadı',
     enDesc: 'Look after them three hundred times.', trDesc: 'Onlara üç yüz kez bak.',
-    of: 300, at: s => s.stats.cared, coins: 100, treats: 1
+    of: 300, at: s => s.stats.cared, coins: 50, treats: 1
   },
   {
     id: 'streak30', icon: 'flame', fam: 'care', en: 'A month of it', tr: 'Bir ay boyunca',
     enDesc: 'Come back thirty days running.', trDesc: 'Otuz gün üst üste gel.',
-    of: 30, at: s => s.streak, coins: 150, treats: 3
+    of: 30, at: s => s.streak, coins: 80, treats: 3
   }
 ];
 function badgeName(b) { return LANG === 'tr' ? b.tr : b.en; }

@@ -71,6 +71,8 @@ function freshSave() {
     starter: { bought: false },
     /* until when a lost level costs no heart — see heartsInfinite */
     infiniteUntil: 0,
+    /* the win streak: first clears in a row, see WIN_RUN */
+    winRun: 0,
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
   };
 }
@@ -298,6 +300,7 @@ function loadSave() {
     SAVE.granted = Object.assign({}, d.granted || {});
     SAVE.starter = Object.assign({ bought: false }, d.starter || {});
     SAVE.infiniteUntil = +d.infiniteUntil || 0;
+    SAVE.winRun = Math.max(0, +d.winRun || 0);
     SAVE.coats = Object.assign({}, d.coats || {});
     SAVE.eyes = Object.assign({}, d.eyes || {});
     SAVE.ads = Object.assign({ day: 0, used: {} }, d.ads || {});

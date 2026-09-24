@@ -4390,3 +4390,38 @@ fifteen pieces, because five was most of an eight-piece catalogue and is
 a quarter of a twenty-piece one. None of the reminder paths can be
 exercised in a browser — there is no plugin behind the seam there — so
 they need the emulator or a phone before release.
+
+## A run of good days, and money that meant something again
+
+**The win streak.** The mechanic every leader in the genre has: clear a
+new level and the next starts with a rocket on the board; two in a row,
+two rockets; three or more, two rockets and a bomb. Lose a new level and
+the run is gone — the lose card says so before the player chooses, and a
+carry-on keeps it, which makes the nine-treat offer a real decision for
+the first time. Only a first clear counts, so a replay neither builds it
+nor breaks it; walking out of a new level after a move ends it, and the
+quit dialog says that too. It is `WIN_RUN` in `10-data.js`, `SAVE.winRun`,
+and a browser test.
+
+It was measured before it was switched on (`test/streak.js`, bare pet,
+eight games a level). Levels 61-160, clear rate at runs 0/1/2/3: relief
+73/88/91/93%, middle 70/73/78/82%, run-up 59/63/75/76%, gate 44/43/53/73%.
+The first measurement had a full run take the gate from 46% to 71%, so a
+gate gets one gift fewer than the run has earned. The lane moves less,
+84% to 92%, because it was already easy. Reaching a gate on a full run
+means three first-try clears in a row before it, about a third of the
+time, so the difficulty the levels were fitted to is still what most
+attempts meet.
+
+**The money.** A new player played through by `tools/firstrun.js` held
+1,657 coins after ten levels and five minutes, and in `test/economy.js` a
+month of ordinary play ended with nearly four thousand coins and nothing
+left to spend them on. The shelf paid 6,000 coins in all, much of it in
+the first session, and is halved; a cleared level pays a sixth less (54
+coins at three stars rather than 63). Measured the same way afterwards:
+the month earns 17,821 coins against 21,768 and ends holding 804 rather
+than 3,945, the catalogue of 17,533 is bought by the end of the month
+instead of by day 21, and coins still buy something the player does not
+have. Treats were not touched: the carry-on was already short for a
+quarter to three quarters of players depending on how much they play,
+and the streak now gives it a reason.

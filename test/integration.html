@@ -1433,6 +1433,52 @@ async function run() {
     return 'markup stripped, blanks named, 14 characters';
   });
 
+  /* ---- the win streak ---- */
+  await test('a win streak puts its gifts down, is lost with the level, and a carry-on keeps it', async () => {
+    const S = BL.save, G = BL.game, SP = BL.SP;
+    const clearModals = () => { const m = D.getElementById('modals'); if (m) m.innerHTML = ''; D.querySelectorAll('.veil').forEach(v => v.remove()); };
+    const specials = () => { let k = 0; G.B.cell.forEach(row => row.forEach(c => { if (c.tile && c.tile.sp !== SP.NONE) k++; })); return k; };
+    /* a tired pet, so its own rocket does not muddy the count */
+    const pet = BL.activePet(); if (pet) pet.energy = 10;
+    const n = 23;                        /* a middle level, not a gate */
+    delete S.stars[n]; S.reached = Math.max(S.reached, n);
+    S.winRun = 3; S.treats = 50;
+    BL.startLevel(n, { perks: [] }); BL.setScreen('game');
+    await sleep(120);
+    assert(G.runGifts.length === 3, 'a run of 3 put down ' + G.runGifts.length + ' gifts');
+    assert(specials() >= 3, 'only ' + specials() + ' specials on the board');
+    /* a gate gets one fewer */
+    delete S.stars[30]; S.winRun = 3;
+    BL.startLevel(30, { perks: [] }); await sleep(80);
+    assert(G.runGifts.length === 2, 'a gate on a run of 3 put down ' + G.runGifts.length);
+    /* losing it puts the run down, and the card says so */
+    S.winRun = 3;
+    BL.startLevel(n, { perks: [] }); await sleep(80);
+    /* nine tenths done, so the carry-on is worth offering */
+    G.goals.forEach((g, i) => { g.have = i === 0 ? g.need : Math.floor(g.need * .9); });
+    G.moves = 0; G.over = true;
+    BL.showLose(); await sleep(60);
+    assert(S.winRun === 0, 'the run was still ' + S.winRun + ' on the lose card');
+    assert(D.querySelector('.runNote'), 'the lose card did not mention the run');
+    const ex = D.getElementById('lExtra');
+    assert(ex, 'no carry-on offered on a level worth carrying on');
+    ex.click(); await sleep(60);
+    assert(S.winRun === 3, 'a carry-on did not keep the run: ' + S.winRun);
+    clearModals();
+    /* and a first clear adds one */
+    delete S.stars[n];
+    G.n = n; G.score = G.starTargets[2] + 1; G.starsEarned = 3;
+    BL.showWin(); await sleep(60);
+    assert(S.winRun === 4, 'a first clear left the run at ' + S.winRun);
+    clearModals();
+    /* a replay neither builds it nor breaks it */
+    G.n = n; BL.showWin(); await sleep(40);
+    assert(S.winRun === 4, 'a replay moved the run to ' + S.winRun);
+    clearModals();
+    S.winRun = 0;
+    return '3 gifts, 2 on a gate, lost and kept, +1 on a first clear';
+  });
+
   BL.fast = false;
   try { W.localStorage.clear(); } catch (e) { }
   const s = document.getElementById('summary');
