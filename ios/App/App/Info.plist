@@ -67,6 +67,16 @@
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 	</array>
+	<!-- Portrait-only on iPad is allowed only for an app that asks for the
+	     whole screen; without this key App Store Connect refuses the upload
+	     for not supporting Split View in every orientation. -->
+	<key>UIRequiresFullScreen</key>
+	<true/>
+	<!-- No encryption beyond what iOS itself does for HTTPS to the store,
+	     which is exempt; saying so here skips the export question on every
+	     build. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 </dict>
