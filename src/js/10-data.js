@@ -912,6 +912,14 @@ const BADGES = [
     enDesc: 'Own five things for the room.', trDesc: 'Oda için beş eşyan olsun.',
     of: 5, at: s => Object.keys(s.furniture || {}).length, coins: 180
   },
+  /* the catalogue was eight pieces when the badge above was written, so
+     five was most of it; at twenty, a house that is actually full is a
+     month of coins and worth a shelf of its own */
+  {
+    id: 'fullhouse', icon: 'brush', fam: 'care', en: 'A full house', tr: 'Dolu bir ev',
+    enDesc: 'Own fifteen things for the room.', trDesc: 'Oda için on beş eşyan olsun.',
+    of: 15, at: s => Object.keys(s.furniture || {}).length, coins: 400, treats: 3
+  },
 
   /* ---- the second tier ----
 

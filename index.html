@@ -2108,6 +2108,8 @@ const STRINGS = {
     note_hearts_s: 'A full set, waiting on the doormat.',
     note_walk_t: 'Nobody has been out today',
     note_walk_s: 'The walk is still there, and it pays.',
+    note_missed_t: '{name} is sitting by the door',
+    note_missed_s: 'Three days is a long time on the other side of a door.',
     set_data: 'Share play data', set_data_s: 'Anonymous counts of levels played and errors hit. Never your pet, never your name.',
     set_haptics: 'Vibration', set_haptics_s: 'Only on phones that support it.',
     set_theme: 'Light', set_theme_s: 'Morning or evening on the lane.',
@@ -2128,6 +2130,8 @@ const STRINGS = {
     daily_miss: 'Miss two days running and it starts at one again.',
     nh_notify: 'Tell me when they are back',
     nh_notify_ok: 'You will hear when the hearts are full.',
+    dw_notify: 'Remind me about the walk',
+    dw_notify_ok: 'A nudge on the mornings you have not been out.',
     daily_tomorrow: 'Tomorrow: {what}',
     daily_today: 'Today: {what}',
     daily_n_treats: '{n} treats',
@@ -2440,6 +2444,8 @@ const STRINGS = {
     note_hearts_s: 'Tam takım, kapının önünde bekliyor.',
     note_walk_t: 'Bugün kimse dışarı çıkmadı',
     note_walk_s: 'Yürüyüş hâlâ orada, ve ödemesi var.',
+    note_missed_t: '{name} kapının önünde oturuyor',
+    note_missed_s: 'Kapının öbür yanında üç gün, uzun bir zaman.',
     set_data: 'Oyun verisi paylaş', set_data_s: 'Oynanan bölümlerin ve karşılaşılan hataların anonim sayıları. Ne evcil hayvanın, ne adın.',
     set_haptics: 'Titreşim', set_haptics_s: 'Sadece destekleyen telefonlarda.',
     set_theme: 'Işık', set_theme_s: 'Sokakta sabah mı, akşam mı?',
@@ -2459,6 +2465,8 @@ const STRINGS = {
     daily_miss: 'Üst üste iki gün atlarsan seri bire döner.',
     nh_notify: 'Dolunca haber ver',
     nh_notify_ok: 'Kalpler dolunca haber gelecek.',
+    dw_notify: 'Yürüyüşü bana hatırlat',
+    dw_notify_ok: 'Dışarı çıkmadığın sabahlar küçük bir hatırlatma gelecek.',
     daily_tomorrow: 'Yarın: {what}',
     daily_today: 'Bugün: {what}',
     daily_n_treats: '{n} ödül',
@@ -3538,6 +3546,14 @@ const BADGES = [
     id: 'decor', icon: 'brush', fam: 'care', en: 'Interior decorator', tr: 'İç mimar',
     enDesc: 'Own five things for the room.', trDesc: 'Oda için beş eşyan olsun.',
     of: 5, at: s => Object.keys(s.furniture || {}).length, coins: 180
+  },
+  /* the catalogue was eight pieces when the badge above was written, so
+     five was most of it; at twenty, a house that is actually full is a
+     month of coins and worth a shelf of its own */
+  {
+    id: 'fullhouse', icon: 'brush', fam: 'care', en: 'A full house', tr: 'Dolu bir ev',
+    enDesc: 'Own fifteen things for the room.', trDesc: 'Oda için on beş eşyan olsun.',
+    of: 15, at: s => Object.keys(s.furniture || {}).length, coins: 400, treats: 3
   },
 
   /* ---- the second tier ----
@@ -6338,7 +6354,7 @@ const NOTIFY = {
   /* Fixed ids rather than generated ones: scheduling the same id twice
      replaces rather than stacks, which is what makes "cancel and
      reschedule on every heart tick" safe to call as often as it likes. */
-  ids: { hearts: 1001, walk: 1002 },
+  ids: { hearts: 1001, walk: 1002, missed: 1003 },
   asked: false,
 
   ready() {
@@ -6425,9 +6441,9 @@ const NOTIFY = {
     } catch (e) { }
   },
 
-  /* ---------- the two ----------
+  /* ---------- the three ----------
 
-     Both are recomputed rather than remembered, and both are cancelled
+     All are recomputed rather than remembered, and all are cancelled
      before they are set, so the state of the queue is a function of the
      save rather than a history of what this function has done. Called
      whenever the game is put down, which is the only moment either
@@ -6438,7 +6454,7 @@ const NOTIFY = {
      looking at cannot disagree. */
   async sync() {
     if (!this.ready()) return;
-    if (!this.on()) { this.cancel('hearts'); this.cancel('walk'); return; }
+    if (!this.on()) { this.cancel('hearts'); this.cancel('walk'); this.cancel('missed'); return; }
 
     this.cancel('hearts');
     if (SAVE.hearts <= 0) {
@@ -6477,6 +6493,29 @@ const NOTIFY = {
     d.setHours(10, 0, 0, 0);
     if (d.getTime() <= Date.now() || dailyState().done) d.setDate(d.getDate() + 1);
     this.at('walk', d.getTime(), T('note_walk_t'), T('note_walk_s'));
+
+    /* The one for somebody who has stopped coming.
+
+       The two above only ever reached a player who was still playing:
+       hearts ran dry for almost nobody, and the walk reminder is one
+       morning, the morning after. A player who closed the game on a
+       Tuesday and did not open it again heard nothing from it after
+       Wednesday, which is exactly when a game is forgotten.
+
+       This is three days from the last time the game was put down, at
+       six in the evening, and it is about the animal rather than about
+       the game: the room is the part of this game nobody else has, and
+       "your pet is waiting" is the only reminder here that is true in a
+       way a player might care about. Every launch pushes it three days
+       further out, so somebody who plays every day or every other day
+       never sees it; it is one notification per lapse, never a series. */
+    this.cancel('missed');
+    const pet = typeof activePet === 'function' ? activePet() : null;
+    if (pet) {
+      const m = new Date(Date.now() + 3 * 86400000);
+      m.setHours(18, 0, 0, 0);
+      this.at('missed', m.getTime(), T('note_missed_t', { name: pet.name }), T('note_missed_s'));
+    }
   }
 };
 
@@ -18978,6 +19017,19 @@ function showDailyResult(won) {
   const stars = won ? Math.max(1, G.starsEarned) : 0;
   const pet = activePet();
   if (won) { SFX.win(); } else { SFX.lose(); }
+  /* The second place the game offers its reminders, and the one most
+     players will actually reach.
+
+     The first is the out-of-hearts sheet, and measured (test/economy.js)
+     a player on six levels a day runs out of hearts no times a month and
+     one on twelve no times either — so the offer, and every reminder
+     behind it, reached almost nobody. Having just walked for the first
+     time is the other moment the answer is obviously yes: the walk is a
+     daily thing, it pays, and a reminder about it is a reminder about
+     something the player has just chosen to do. Same rule as the hearts
+     sheet: the game asks in its own words, once, and the system dialog
+     comes only after the player presses it. */
+  const offer = won && reward.first && NOTIFY.ready() && !SAVE.settings.notify && !SAVE.notifyAsked;
   const m = modal(`
     <div class="starsRow">${[0, 1, 2].map(i => `<span class="s pop" style="color:${i < stars ? 'var(--accent)' : 'var(--text-faint)'}">${i < stars ? IC.star : IC.starOut}</span>`).join('')}</div>
     <h2>${won ? T('win_t') : T('lose_t')}</h2>
@@ -18991,7 +19043,19 @@ function showDailyResult(won) {
       <button class="btn ghost" id="dwHome">${T('to_map')}</button>
       <button class="btn primary" id="dwAgain">${T('daily_walk_again')}</button>
     </div>
+    ${offer ? `<button class="btn wide" id="dwNotify" style="margin-top:4px">${T('dw_notify')}</button>` : ''}
   `, { dismissable: false });
+  const nb = $('#dwNotify', m.el);
+  if (nb) nb.addEventListener('click', () => {
+    nb.disabled = true;
+    SAVE.notifyAsked = true;
+    persist(true);
+    NOTIFY.ask().then(ok => {
+      NOTIFY.sync();
+      if (ok) toast(T('dw_notify_ok'), 'paw');
+      if (nb.isConnected) nb.remove();
+    });
+  });
   $('#dwHome', m.el).addEventListener('click', () => {
     m.close(); gameLoopStop(); G.over = true; setScreen('home'); renderHome(); syncPurse();
   });

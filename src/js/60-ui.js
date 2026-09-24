@@ -2255,6 +2255,19 @@ function showDailyResult(won) {
   const stars = won ? Math.max(1, G.starsEarned) : 0;
   const pet = activePet();
   if (won) { SFX.win(); } else { SFX.lose(); }
+  /* The second place the game offers its reminders, and the one most
+     players will actually reach.
+
+     The first is the out-of-hearts sheet, and measured (test/economy.js)
+     a player on six levels a day runs out of hearts no times a month and
+     one on twelve no times either — so the offer, and every reminder
+     behind it, reached almost nobody. Having just walked for the first
+     time is the other moment the answer is obviously yes: the walk is a
+     daily thing, it pays, and a reminder about it is a reminder about
+     something the player has just chosen to do. Same rule as the hearts
+     sheet: the game asks in its own words, once, and the system dialog
+     comes only after the player presses it. */
+  const offer = won && reward.first && NOTIFY.ready() && !SAVE.settings.notify && !SAVE.notifyAsked;
   const m = modal(`
     <div class="starsRow">${[0, 1, 2].map(i => `<span class="s pop" style="color:${i < stars ? 'var(--accent)' : 'var(--text-faint)'}">${i < stars ? IC.star : IC.starOut}</span>`).join('')}</div>
     <h2>${won ? T('win_t') : T('lose_t')}</h2>
@@ -2268,7 +2281,19 @@ function showDailyResult(won) {
       <button class="btn ghost" id="dwHome">${T('to_map')}</button>
       <button class="btn primary" id="dwAgain">${T('daily_walk_again')}</button>
     </div>
+    ${offer ? `<button class="btn wide" id="dwNotify" style="margin-top:4px">${T('dw_notify')}</button>` : ''}
   `, { dismissable: false });
+  const nb = $('#dwNotify', m.el);
+  if (nb) nb.addEventListener('click', () => {
+    nb.disabled = true;
+    SAVE.notifyAsked = true;
+    persist(true);
+    NOTIFY.ask().then(ok => {
+      NOTIFY.sync();
+      if (ok) toast(T('dw_notify_ok'), 'paw');
+      if (nb.isConnected) nb.remove();
+    });
+  });
   $('#dwHome', m.el).addEventListener('click', () => {
     m.close(); gameLoopStop(); G.over = true; setScreen('home'); renderHome(); syncPurse();
   });

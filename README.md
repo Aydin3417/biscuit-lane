@@ -4370,3 +4370,23 @@ goggles; the patches are solid and the wrinkles are three short creases,
 and its closed eyes are drawn in the coat colour so they do not vanish
 into the patch. `tools/art-gate.js`: 39/39, frames 1.1-1.2 ms, nothing
 throws.
+
+## The reminders reached almost nobody
+
+The only place the game offered its reminders was the out-of-hearts
+sheet, and by `test/economy.js` a player on six or twelve levels a day
+runs out of hearts no times a month — so the offer, and both reminders
+behind it, reached almost nobody. The first daily walk is now the second
+place it is offered: a button on the result card, the same wording-first
+rule as the hearts sheet, the system dialog only after it is pressed.
+There is a third reminder too, the only one for somebody who has stopped
+coming: three days after the game was last put down, at six in the
+evening, "Marlow is sitting by the door". Every launch pushes it three
+days further out, so it is one notification per lapse and never a
+series. `privacy.html` said "two notifications, and only two" and says
+three now; the store listing had "no artwork except the logo" and says
+what is drawn and what is a picture. A second room badge asks for
+fifteen pieces, because five was most of an eight-piece catalogue and is
+a quarter of a twenty-piece one. None of the reminder paths can be
+exercised in a browser — there is no plugin behind the seam there — so
+they need the emulator or a phone before release.

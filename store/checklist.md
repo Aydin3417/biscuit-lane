@@ -29,7 +29,7 @@ password, a payment method or a Mac, and none of those are mine to have.
 | **Purchases wired to a real plugin** — `cordova-plugin-purchase`, straight to Play Billing and StoreKit; release AAB builds with it | `17-billing.js`, `package.json` |
 | **Granted before closed, and never paid twice** — transaction ids kept in the save | `15-save.js`, `test/till.js` |
 | **The save survives the OS**, mirrored to native Preferences | `src/js/15-save.js` |
-| **Two reminders**, asked for at the out-of-hearts moment only | `src/js/16-notify.js` |
+| **Three reminders** (hearts back, the walk, and one "your animal is waiting" after three days away), offered at the out-of-hearts moment and after the first daily walk | `src/js/16-notify.js` |
 | **A review prompt**, once ever, after a three-star clear | `60-ui.js`, `maybeAskForAReview` |
 | Grooming: every coat and eye colour buyable, per animal | `10-data.js` `GROOM`, `60-ui.js` `groomSheet` |
 | The economy re-measured with the season book in it | `test/economy.js` |
@@ -124,7 +124,7 @@ store's transaction number, in the save, on the device. Read the store's
 own guidance on "purchase history" when you fill the form in, and answer
 from that — I have not had the form in front of me.
 
-The two reminders do not change this. A local notification is scheduled
+The three reminders do not change this. A local notification is scheduled
 and delivered by the phone itself — no push service, no token, no server
 — so nothing about them is collected or shared. Play will still ask you
 to tick the notifications permission on the Android form; that is a
@@ -230,7 +230,7 @@ None of these blocks release. All of them decide whether the people you
 pay to acquire are still there on day seven.
 
 1. **Make the tiles animals.** Six shapes, six colours, one shared face. It is the reason the game reads as a reskin in a screenshot.
-2. **More furniture.** Grooming bought the catalogue two more weeks — it runs dry around day 41 now rather than day 23 — but the room is still eight objects, and it is the screen a player looks at between every level. This is the one thing on the list I would not do without you looking at it: every piece is a hand-drawn path and the house style is yours.
+2. ~~**More furniture.**~~ Done 24 Sep 2026: the room has twenty pieces now, twelve of them generated pictures in the house style (README, "The first pictures"); the catalogue went from 15,503 coins to 17,533.
 3. **Read the counters before changing anything else.** `BL.TRACK.dump()` on a device, or wire the sink. Everything above this line is measured against a simulation; none of it is measured against people.
 
 ---

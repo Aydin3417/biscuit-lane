@@ -54,7 +54,7 @@ const NOTIFY = {
   /* Fixed ids rather than generated ones: scheduling the same id twice
      replaces rather than stacks, which is what makes "cancel and
      reschedule on every heart tick" safe to call as often as it likes. */
-  ids: { hearts: 1001, walk: 1002 },
+  ids: { hearts: 1001, walk: 1002, missed: 1003 },
   asked: false,
 
   ready() {
@@ -141,9 +141,9 @@ const NOTIFY = {
     } catch (e) { }
   },
 
-  /* ---------- the two ----------
+  /* ---------- the three ----------
 
-     Both are recomputed rather than remembered, and both are cancelled
+     All are recomputed rather than remembered, and all are cancelled
      before they are set, so the state of the queue is a function of the
      save rather than a history of what this function has done. Called
      whenever the game is put down, which is the only moment either
@@ -154,7 +154,7 @@ const NOTIFY = {
      looking at cannot disagree. */
   async sync() {
     if (!this.ready()) return;
-    if (!this.on()) { this.cancel('hearts'); this.cancel('walk'); return; }
+    if (!this.on()) { this.cancel('hearts'); this.cancel('walk'); this.cancel('missed'); return; }
 
     this.cancel('hearts');
     if (SAVE.hearts <= 0) {
@@ -193,5 +193,28 @@ const NOTIFY = {
     d.setHours(10, 0, 0, 0);
     if (d.getTime() <= Date.now() || dailyState().done) d.setDate(d.getDate() + 1);
     this.at('walk', d.getTime(), T('note_walk_t'), T('note_walk_s'));
+
+    /* The one for somebody who has stopped coming.
+
+       The two above only ever reached a player who was still playing:
+       hearts ran dry for almost nobody, and the walk reminder is one
+       morning, the morning after. A player who closed the game on a
+       Tuesday and did not open it again heard nothing from it after
+       Wednesday, which is exactly when a game is forgotten.
+
+       This is three days from the last time the game was put down, at
+       six in the evening, and it is about the animal rather than about
+       the game: the room is the part of this game nobody else has, and
+       "your pet is waiting" is the only reminder here that is true in a
+       way a player might care about. Every launch pushes it three days
+       further out, so somebody who plays every day or every other day
+       never sees it; it is one notification per lapse, never a series. */
+    this.cancel('missed');
+    const pet = typeof activePet === 'function' ? activePet() : null;
+    if (pet) {
+      const m = new Date(Date.now() + 3 * 86400000);
+      m.setHours(18, 0, 0, 0);
+      this.at('missed', m.getTime(), T('note_missed_t', { name: pet.name }), T('note_missed_s'));
+    }
   }
 };
