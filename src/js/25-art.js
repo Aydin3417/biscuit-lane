@@ -136,10 +136,25 @@ function coatLum(hexc) {
 function darkCoat(spec) { return coatLum(spec.fur) < .30; }
 /* A treat, drawn small enough to sit on a map node. Same shape as the
    icon in the top bar so the two read as the same thing. */
-/* A treasure chest, the sticker way: flat wood, brass bands and a lock,
+/* A treasure chest. Drawn, the sticker way — flat wood, brass bands, a lock,
    the warm line round everything. `open` tips the lid back and lets the
    light out. Centred on x, its foot on y, s wide. */
 function drawChest(c, x, y, s, open) {
+  /* The picture, when it has decoded (art/cut-chest*.png, generated in
+     the house style after the drawn one below was judged not good enough
+     to be the thing a player walks ten levels towards). The drawing is
+     the fallback for the first frame. */
+  const im = typeof artImage === 'function' ? artImage(open ? 'cut-chest-open' : 'cut-chest') : null;
+  if (im) {
+    const w = s * (open ? 1.28 : 1.18), h = w * im.naturalHeight / im.naturalWidth;
+    c.save();
+    c.fillStyle = rgba('#000000', PAL.dark ? .35 : .18);
+    ellipse(c, x, y, w * .42, w * .08); c.fill();
+    if (PAL.dark && !open) c.filter = 'brightness(.85)';
+    c.drawImage(im, x - w / 2, y - h, w, h);
+    c.restore();
+    return;
+  }
   const ink = '#4A2E16', h = s * .62;
   c.save();
   c.translate(x, y);

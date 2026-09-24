@@ -4444,3 +4444,9 @@ entry that decided to show nothing take the turn anyway, so the sheet
 behind it never opened. The queue now moves on until something is on
 screen. A browser test holds the chest to opening once, and not on a
 replay.
+
+The drawn chest was judged not good enough for the thing a player walks
+ten levels towards, and it is a pair of generated pictures now — closed,
+with a heart-shaped lock with a paw on it, and open, full of coins and
+biscuits (`art/src/chest-sheet.png`, 59 KB between them). `drawChest`
+draws the picture once it has decoded and its old paths until then.
