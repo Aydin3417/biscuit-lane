@@ -300,6 +300,7 @@ function renderHome() {
         <small>${nextDef.goals.map(g => goalLine({ kind: g[0], arg: g[1], need: g[2] })).join(' · ')}</small>
         ${nextBest ? `<span class="pill info ph-best">${IC.star}${T('map_best', { n: fmt(nextBest) })}</span>` : ''}
         ${SAVE.winRun > 0 && !SAVE.stars[nextN] ? `<span class="pill warn ph-best">${IC.flame}${T('run_on', { n: SAVE.winRun })}</span>` : ''}
+        ${(() => { const k = nextChest(nextN) - nextN; return `<span class="pill info ph-best">${IC.gift}${k === 0 ? T('chest_here') : T(k === 1 ? 'chest_in1' : 'chest_in', { n: k })}</span>`; })()}
       </span>
       <span class="btn primary ph-go">${IC.play}${T('tab_play')}</span>
     </button>`;
@@ -1501,6 +1502,16 @@ function paintGoalIcons(root) {
    player could act on — boosters below 8 are not yet owned, and the
    perks are applied whether or not the card lists them. */
 const INTRO_FROM = 8;
+/* the next gate whose chest has not been opened, at or after n */
+function nextChest(n) {
+  const g = Math.ceil(Math.max(1, n) / ECON.milestoneEvery) * ECON.milestoneEvery;
+  return SAVE.stars[g] ? g + ECON.milestoneEvery : g;
+}
+/* what a chest holds, in words */
+function chestLine(ch) {
+  const b = BOOSTERS.find(x => x.id === ch.booster);
+  return T('chest_holds', { c: ch.coins, t: ch.treats, b: goodName(b) });
+}
 /* what a run of n puts on the board, in words */
 function runGiftLine(n, gate) {
   const g = winRunGifts(n, gate);
@@ -1545,9 +1556,9 @@ function openLevelIntro(n) {
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('run_on', { n: SAVE.winRun })}</b>${runGiftLine(SAVE.winRun, def.gate)}</span>
     </div>` : ''}
-    ${firstTreats ? `<div class="goalItem" style="background:color-mix(in srgb,var(--plum) 12%, var(--surface-2))">
-      <span style="width:32px;display:grid;place-items:center;color:var(--plum)">${IC.treat}</span>
-      <span class="t"><b>${T('lvl_first_treats', { n: firstTreats })}</b></span>
+    ${firstTreats ? `<div class="goalItem runNote">
+      <span style="width:32px;display:grid;place-items:center;color:var(--accent-strong)">${IC.gift}</span>
+      <span class="t"><b>${T('chest_on_card')}</b>${chestLine(gateChest(n))}</span>
     </div>` : ''}
     <div class="goalList">
       ${def.goals.map(g => `<div class="goalItem">${goalIconHtml(g[0], g[1])}<span class="t"><b>${goalLine({ kind: g[0], arg: g[1], need: g[2] })}</b></span></div>`).join('')}
@@ -1913,7 +1924,14 @@ function showWin() {
   const coins = Math.max(first ? 0 : 1, Math.round(base * rate));
   let treats = 0;
   if (stars === 3 && prev < 3) treats += isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats;
-  if (first && n % ECON.milestoneEvery === 0) treats += ECON.milestoneTreats;
+  /* the chest at a gate: its treat is counted on the card like any other,
+     its coins and booster are shown when it opens, after the card */
+  const chest = first && n % ECON.milestoneEvery === 0 ? gateChest(n) : null;
+  if (chest) {
+    treats += chest.treats;
+    SAVE.coins += chest.coins;
+    SAVE.boosters[chest.booster] = (SAVE.boosters[chest.booster] || 0) + 1;
+  }
   /* and the jar takes its couple, on a replay as well: it is the one
      thing in the economy that is paid for time rather than progress,
      which is exactly why it is the offer I trust */
@@ -2005,8 +2023,47 @@ function showWin() {
      holding a sheet that would otherwise surface behind whatever
      closes next */
   const later = fn => modalQueue.push(() => { if (closedByHand) fn(); });
+  if (chest) later(() => chestModal(chest));
   if (grew) later(() => stageUpModal(pet));
   if (wonBadges.length) later(() => badgeModal(wonBadges));
+}
+/* The chest, opened. Shut for a beat and shaking, then open with what
+   was in it: the half second of not knowing is most of what a chest is. */
+function chestModal(ch) {
+  const b = BOOSTERS.find(x => x.id === ch.booster);
+  const m = modal(`
+    <div class="chestPop"><canvas id="chCv" width="150" height="130"></canvas></div>
+    <h2>${T('chest_t')}</h2>
+    <div class="rewardRow chestLoot" style="opacity:0">
+      <span class="reward" style="color:var(--accent-strong)">${IC.coin}+${ch.coins}</span>
+      <span class="reward" style="color:var(--plum)">${IC.treat}+${ch.treats}</span>
+      <span class="reward" style="color:var(--sage)">${IC[b.icon]}${goodName(b)}</span>
+    </div>
+    <p style="color:var(--text-dim)">${T('chest_next', { n: ECON.milestoneEvery })}</p>
+    <button class="btn primary wide" id="chOk">${T('ok')}</button>
+  `);
+  const cv = $('#chCv', m.el);
+  const draw = (open, wob) => {
+    const c = fitCanvas(cv, 150, 130);
+    if (!c) return;
+    c.clearRect(0, 0, 150, 130);
+    c.save(); c.translate(75, 118); c.rotate(wob || 0); drawChest(c, 0, 0, 96, open); c.restore();
+  };
+  draw(false, 0);
+  const t0 = performance.now(), shake = reduceMotion() ? 0 : 700;
+  const tick = t => {
+    if (!cv.isConnected) return;
+    const k = t - t0;
+    if (k < shake) { draw(false, Math.sin(k / 38) * .08 * (1 - k / shake)); requestAnimationFrame(tick); return; }
+    draw(true, 0);
+    SFX.win();
+    buzz(HAP.win);
+    const loot = $('.chestLoot', m.el);
+    if (loot) { loot.style.transition = 'opacity .35s'; loot.style.opacity = '1'; }
+  };
+  requestAnimationFrame(tick);
+  syncPurse();
+  $('#chOk', m.el).addEventListener('click', m.close);
 }
 function showLose() {
   say(T('a11y_failed'), true);

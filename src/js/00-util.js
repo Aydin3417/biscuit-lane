@@ -333,10 +333,15 @@ let modalStack = [];
 const modalQueue = [];
 
 /* the next sheet in line takes the screen, if nothing else holds it */
+/* An entry may decide not to show anything (the win card's followers do,
+   when the card was not closed by one of its own buttons); it used to
+   take the turn anyway, and the chest queued behind it never opened. So
+   the line moves on until something is on screen or nothing is left. */
 function modalPromoteNext() {
-  if (sheetIsOpen()) return;
-  const next = modalQueue.shift();
-  if (next) next();
+  while (!sheetIsOpen() && modalQueue.length) {
+    const next = modalQueue.shift();
+    if (next) next();
+  }
 }
 
 function modal(html, opts) {

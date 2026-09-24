@@ -806,15 +806,17 @@ function drawMapNode(c, n) {
      This read `n % 5` while the payout is `ECON.milestoneEvery`, which is
      ten: levels 5, 15, 25 wore a treat that was never paid. The map asks
      the same table the win sheet pays from now. */
-  if (unlocked && !cleared && n.n % ECON.milestoneEvery === 0) {
-    const bx = n.x + R * .78, by = n.y - R * .78, br = R * .46;
-    c.fillStyle = rgba('#2A1E12', PAL.dark ? .5 : .25);
-    ellipse(c, bx, by + R * .07, br, br); c.fill();
-    c.fillStyle = PAL.surface;
-    ellipse(c, bx, by, br, br); c.fill();
-    c.strokeStyle = rgba(PAL.accent, .9); c.lineWidth = R * .075;
-    ellipse(c, bx, by, br, br); c.stroke();
-    drawTreatPip(c, bx, by, R * .24);
+  /* It is a chest now (gateChest in 10-data.js), shown on every gate not
+     yet cleared — locked ones too, because the point of a chest on a map
+     is that it can be seen from several levels away — and it bobs once
+     the player is inside its block. */
+  if (!cleared && n.n % ECON.milestoneEvery === 0) {
+    const near = SAVE.reached > n.n - ECON.milestoneEvery;
+    const bob = near ? Math.abs(Math.sin(performance.now() / 420)) * 3 : 0;
+    /* on the inside of the bend, clear of the node, large enough to read
+       as a chest from the bottom of the screen */
+    const side = n.x < MAP.w / 2 ? 1 : -1;
+    drawChest(c, n.x + side * R * 2.1, n.y + R * .55 - bob, R * 1.6, false);
   }
 
   /* stars */

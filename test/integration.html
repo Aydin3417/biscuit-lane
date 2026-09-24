@@ -1479,6 +1479,33 @@ async function run() {
     return '3 gifts, 2 on a gate, lost and kept, +1 on a first clear';
   });
 
+  /* ---- the chest at the gate ---- */
+  await test('a gate cleared for the first time opens its chest once, and a replay does not', async () => {
+    const S = BL.save, G = BL.game;
+    const clearModals = () => { const m = D.getElementById('modals'); if (m) m.innerHTML = ''; D.querySelectorAll('.veil').forEach(v => v.remove()); };
+    const n = 40;
+    delete S.stars[n]; S.reached = Math.max(S.reached, n);
+    const ch = BL.gateChest(n);
+    const c0 = S.coins, t0 = S.treats, b0 = S.boosters[ch.booster] || 0;
+    BL.startLevel(n, { perks: [] }); await sleep(80);
+    G.n = n; G.score = G.starTargets[0] + 1; G.starsEarned = 1;
+    BL.showWin(); await sleep(60);
+    assert((S.boosters[ch.booster] || 0) === b0 + 1, 'the chest booster did not arrive');
+    assert(S.treats >= t0 + ch.treats, 'the chest treat did not arrive');
+    assert(S.coins >= c0 + ch.coins, 'the chest coins did not arrive');
+    const btn = D.getElementById('wMap'); if (btn) btn.click();
+    /* the card fades for 300ms before the next sheet takes the screen */
+    for (let i = 0; i < 20 && !D.getElementById('chCv'); i++) await sleep(60);
+    assert(D.getElementById('chCv'), 'the chest sheet did not open after the card');
+    clearModals();
+    const b1 = S.boosters[ch.booster];
+    BL.startLevel(n, { perks: [] }); await sleep(60);
+    G.n = n; BL.showWin(); await sleep(60);
+    assert(S.boosters[ch.booster] === b1, 'a replay opened the chest again');
+    clearModals();
+    return ch.coins + ' coins, ' + ch.treats + ' treat, a ' + ch.booster + ', once';
+  });
+
   BL.fast = false;
   try { W.localStorage.clear(); } catch (e) { }
   const s = document.getElementById('summary');

@@ -412,7 +412,7 @@ window.BL = {
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
   simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY, petRig, syncGoals, drawLevelScene,
   castOf, castBreed, castSlot, castName, castRebuild, slotGem, slotBreed,
-  popScale, popAlpha, showWin, showLose, bestHint, hintScore, drawLogo, syncStars, syncHud, SP,
+  popScale, popAlpha, showWin, showLose, bestHint, hintScore, drawLogo, syncStars, syncHud, SP, chestModal, gateChest,
   /* render entry points, so a frame can be forced without rAF */
   renderGame, renderRoom, drawMap, layoutBoard, mapLayout, roomLayout, applyTheme,
   paintTile, paintCrate, paintMud, paintPup, paintGood, drawFace, drawBody,

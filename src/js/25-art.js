@@ -136,6 +136,47 @@ function coatLum(hexc) {
 function darkCoat(spec) { return coatLum(spec.fur) < .30; }
 /* A treat, drawn small enough to sit on a map node. Same shape as the
    icon in the top bar so the two read as the same thing. */
+/* A treasure chest, the sticker way: flat wood, brass bands and a lock,
+   the warm line round everything. `open` tips the lid back and lets the
+   light out. Centred on x, its foot on y, s wide. */
+function drawChest(c, x, y, s, open) {
+  const ink = '#4A2E16', h = s * .62;
+  c.save();
+  c.translate(x, y);
+  c.lineJoin = 'round';
+  c.lineWidth = Math.max(1.4, s * .07);
+  c.strokeStyle = ink;
+  c.fillStyle = rgba('#000000', PAL.dark ? .35 : .18);
+  ellipse(c, 0, 0, s * .56, s * .1); c.fill();
+  c.fillStyle = '#B9733A';
+  rr(c, -s / 2, -h * .62, s, h * .62, s * .08); c.fill(); c.stroke();
+  c.fillStyle = rgba('#7A4520', .35);
+  c.fillRect(-s / 2 + s * .04, -h * .2, s - s * .08, h * .14);
+  if (open) {
+    const gr = s * .62, gy = -h * .7;
+    const g = c.createRadialGradient(0, gy, 0, 0, gy, gr);
+    g.addColorStop(0, rgba('#FFE9A8', .95)); g.addColorStop(1, rgba('#FFE9A8', 0));
+    c.fillStyle = g; c.fillRect(-gr, gy - gr, gr * 2, gr * 2);
+    c.fillStyle = '#C98446';
+    rr(c, -s / 2, -h * 1.22, s, h * .52, s * .12); c.fill(); c.stroke();
+  } else {
+    c.fillStyle = '#C98446';
+    c.beginPath();
+    c.moveTo(-s / 2, -h * .62);
+    c.quadraticCurveTo(-s / 2, -h * 1.08, 0, -h * 1.08);
+    c.quadraticCurveTo(s / 2, -h * 1.08, s / 2, -h * .62);
+    c.closePath(); c.fill(); c.stroke();
+  }
+  const top = open ? .62 : 1.02;
+  c.fillStyle = '#E7B53C';
+  [-s * .36, s * .26].forEach(bx => {
+    c.fillRect(bx, -h * top, s * .1, h * top);
+    c.strokeRect(bx, -h * top, s * .1, h * top);
+  });
+  if (!open) { rr(c, -s * .1, -h * .78, s * .2, s * .22, s * .04); c.fill(); c.stroke(); }
+  c.restore();
+}
+
 function drawTreatPip(c, x, y, r) {
   c.save();
   c.translate(x, y);

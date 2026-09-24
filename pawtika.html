@@ -1077,6 +1077,8 @@ canvas{ max-width:100%; }
 @keyframes winPetIn{ from{ transform:translateY(9px) scale(.72); opacity:0 } to{ transform:none; opacity:1 } }
 /* once the stars are in, the animal jumps for them; the card used to
    hold a body drawn once and left there while the numbers came up */
+.chestPop{ display:grid; place-items:center; margin-top:-4px; }
+.chestPop canvas{ width:150px; height:130px; }
 .winPet canvas.hop{ animation:winHop .72s cubic-bezier(.3,1.3,.5,1) both; }
 @keyframes winHop{ 0%{transform:none} 28%{transform:translateY(-16px) scale(1.05,.97)} 52%{transform:translateY(0) scale(.98,1.03)} 74%{transform:translateY(-7px)} 100%{transform:none} }
 .winPet canvas.sag{ animation:winSag .6s ease-out both; }
@@ -1649,10 +1651,15 @@ let modalStack = [];
 const modalQueue = [];
 
 /* the next sheet in line takes the screen, if nothing else holds it */
+/* An entry may decide not to show anything (the win card's followers do,
+   when the card was not closed by one of its own buttons); it used to
+   take the turn anyway, and the chest queued behind it never opened. So
+   the line moves on until something is on screen or nothing is left. */
 function modalPromoteNext() {
-  if (sheetIsOpen()) return;
-  const next = modalQueue.shift();
-  if (next) next();
+  while (!sheetIsOpen() && modalQueue.length) {
+    const next = modalQueue.shift();
+    if (next) next();
+  }
 }
 
 function modal(html, opts) {
@@ -2232,7 +2239,13 @@ const STRINGS = {
     daily_walk_again: 'Walk it again',
     daily_first: 'First time round today',
     win_bond: 'bond',
-    lvl_first_treats: 'First clear here pays {n} treats.',
+    chest_t: 'The chest at the gate',
+    chest_next: 'The next one is {n} levels down the lane.',
+    chest_on_card: 'A chest waits at this gate',
+    chest_holds: '{c} coins, {t} treat, {b}.',
+    chest_here: 'Chest on this level',
+    chest_in1: 'Chest in 1 level',
+    chest_in: 'Chest in {n} levels',
     aria_settings: 'Settings',
     aria_quit: 'Leave level',
     aria_ability: 'Your pet’s move',
@@ -2573,7 +2586,13 @@ const STRINGS = {
     daily_walk_again: 'Bir daha yürü',
     daily_first: 'Bugünkü ilk tur',
     win_bond: 'bağ',
-    lvl_first_treats: 'Burayı ilk geçiş {n} ödül kazandırır.',
+    chest_t: 'Kapıdaki sandık',
+    chest_next: 'Bir sonraki, yolun {n} bölüm ilerisinde.',
+    chest_on_card: 'Bu kapıda bir sandık var',
+    chest_holds: '{c} altın, {t} ikram, {b}.',
+    chest_here: 'Sandık bu bölümde',
+    chest_in1: 'Sandığa 1 bölüm',
+    chest_in: 'Sandığa {n} bölüm',
     aria_settings: 'Ayarlar',
     aria_quit: 'Bölümden çık',
     aria_ability: 'Dostunun hamlesi',
@@ -2958,7 +2977,7 @@ const ECON = {
      ordinary level was the largest single source of it. A treat is the
      currency that ends a wall, so it is paid at the walls: three-starring
      a gate is the hardest thing in a block, and it still pays. */
-  threeStarTreats: 0, threeStarTreatsGate: 1, milestoneTreats: 1, milestoneEvery: 10,
+  threeStarTreats: 0, threeStarTreatsGate: 1, milestoneTreats: 1, milestoneEvery: 10, chestCoins: 40,
 
   /* thirty, which is the genre's number: a full set in two and a half
      hours rather than two. It only matters to somebody who has lost five
@@ -3294,6 +3313,28 @@ function passBanked(stamps) {
    player filled by playing — so it is the one that should come round most
    often, rather than the one that comes round least. */
 const JAR = { perLevel: 4, cap: 100, sku: 'treat_jar', usd: '$2.99' };
+
+/* ---------- the chest at the gate ----------
+
+   Every tenth level already paid a treat the first time through, and the
+   map marked it with a treat pip the size of a star. The genre's leaders
+   put a chest on the map instead, a few levels ahead of the player where
+   it can be seen coming, because "two more levels to the chest" is the
+   sentence that turns one more level into three.
+
+   The treat stays — the chest holds it — and adds a booster and a few
+   coins. The booster rotates through the four so a player meets each of
+   them for free before being asked to buy one. The coins are few on
+   purpose: the economy was cut on 25 Sep 2026 because coins meant
+   nothing, and forty a block is under one cleared level's worth. */
+const CHEST_BOOSTERS = ['hammer', 'shuffle', 'moves', 'swap'];
+function gateChest(n) {
+  return {
+    coins: ECON.chestCoins,
+    treats: ECON.milestoneTreats,
+    booster: CHEST_BOOSTERS[Math.floor(n / ECON.milestoneEvery - 1) % CHEST_BOOSTERS.length]
+  };
+}
 
 /* ---------- a run of good days ----------
 
@@ -8089,6 +8130,47 @@ function coatLum(hexc) {
 function darkCoat(spec) { return coatLum(spec.fur) < .30; }
 /* A treat, drawn small enough to sit on a map node. Same shape as the
    icon in the top bar so the two read as the same thing. */
+/* A treasure chest, the sticker way: flat wood, brass bands and a lock,
+   the warm line round everything. `open` tips the lid back and lets the
+   light out. Centred on x, its foot on y, s wide. */
+function drawChest(c, x, y, s, open) {
+  const ink = '#4A2E16', h = s * .62;
+  c.save();
+  c.translate(x, y);
+  c.lineJoin = 'round';
+  c.lineWidth = Math.max(1.4, s * .07);
+  c.strokeStyle = ink;
+  c.fillStyle = rgba('#000000', PAL.dark ? .35 : .18);
+  ellipse(c, 0, 0, s * .56, s * .1); c.fill();
+  c.fillStyle = '#B9733A';
+  rr(c, -s / 2, -h * .62, s, h * .62, s * .08); c.fill(); c.stroke();
+  c.fillStyle = rgba('#7A4520', .35);
+  c.fillRect(-s / 2 + s * .04, -h * .2, s - s * .08, h * .14);
+  if (open) {
+    const gr = s * .62, gy = -h * .7;
+    const g = c.createRadialGradient(0, gy, 0, 0, gy, gr);
+    g.addColorStop(0, rgba('#FFE9A8', .95)); g.addColorStop(1, rgba('#FFE9A8', 0));
+    c.fillStyle = g; c.fillRect(-gr, gy - gr, gr * 2, gr * 2);
+    c.fillStyle = '#C98446';
+    rr(c, -s / 2, -h * 1.22, s, h * .52, s * .12); c.fill(); c.stroke();
+  } else {
+    c.fillStyle = '#C98446';
+    c.beginPath();
+    c.moveTo(-s / 2, -h * .62);
+    c.quadraticCurveTo(-s / 2, -h * 1.08, 0, -h * 1.08);
+    c.quadraticCurveTo(s / 2, -h * 1.08, s / 2, -h * .62);
+    c.closePath(); c.fill(); c.stroke();
+  }
+  const top = open ? .62 : 1.02;
+  c.fillStyle = '#E7B53C';
+  [-s * .36, s * .26].forEach(bx => {
+    c.fillRect(bx, -h * top, s * .1, h * top);
+    c.strokeRect(bx, -h * top, s * .1, h * top);
+  });
+  if (!open) { rr(c, -s * .1, -h * .78, s * .2, s * .22, s * .04); c.fill(); c.stroke(); }
+  c.restore();
+}
+
 function drawTreatPip(c, x, y, r) {
   c.save();
   c.translate(x, y);
@@ -16791,15 +16873,17 @@ function drawMapNode(c, n) {
      This read `n % 5` while the payout is `ECON.milestoneEvery`, which is
      ten: levels 5, 15, 25 wore a treat that was never paid. The map asks
      the same table the win sheet pays from now. */
-  if (unlocked && !cleared && n.n % ECON.milestoneEvery === 0) {
-    const bx = n.x + R * .78, by = n.y - R * .78, br = R * .46;
-    c.fillStyle = rgba('#2A1E12', PAL.dark ? .5 : .25);
-    ellipse(c, bx, by + R * .07, br, br); c.fill();
-    c.fillStyle = PAL.surface;
-    ellipse(c, bx, by, br, br); c.fill();
-    c.strokeStyle = rgba(PAL.accent, .9); c.lineWidth = R * .075;
-    ellipse(c, bx, by, br, br); c.stroke();
-    drawTreatPip(c, bx, by, R * .24);
+  /* It is a chest now (gateChest in 10-data.js), shown on every gate not
+     yet cleared — locked ones too, because the point of a chest on a map
+     is that it can be seen from several levels away — and it bobs once
+     the player is inside its block. */
+  if (!cleared && n.n % ECON.milestoneEvery === 0) {
+    const near = SAVE.reached > n.n - ECON.milestoneEvery;
+    const bob = near ? Math.abs(Math.sin(performance.now() / 420)) * 3 : 0;
+    /* on the inside of the bend, clear of the node, large enough to read
+       as a chest from the bottom of the screen */
+    const side = n.x < MAP.w / 2 ? 1 : -1;
+    drawChest(c, n.x + side * R * 2.1, n.y + R * .55 - bob, R * 1.6, false);
   }
 
   /* stars */
@@ -17167,6 +17251,7 @@ function renderHome() {
         <small>${nextDef.goals.map(g => goalLine({ kind: g[0], arg: g[1], need: g[2] })).join(' · ')}</small>
         ${nextBest ? `<span class="pill info ph-best">${IC.star}${T('map_best', { n: fmt(nextBest) })}</span>` : ''}
         ${SAVE.winRun > 0 && !SAVE.stars[nextN] ? `<span class="pill warn ph-best">${IC.flame}${T('run_on', { n: SAVE.winRun })}</span>` : ''}
+        ${(() => { const k = nextChest(nextN) - nextN; return `<span class="pill info ph-best">${IC.gift}${k === 0 ? T('chest_here') : T(k === 1 ? 'chest_in1' : 'chest_in', { n: k })}</span>`; })()}
       </span>
       <span class="btn primary ph-go">${IC.play}${T('tab_play')}</span>
     </button>`;
@@ -18368,6 +18453,16 @@ function paintGoalIcons(root) {
    player could act on — boosters below 8 are not yet owned, and the
    perks are applied whether or not the card lists them. */
 const INTRO_FROM = 8;
+/* the next gate whose chest has not been opened, at or after n */
+function nextChest(n) {
+  const g = Math.ceil(Math.max(1, n) / ECON.milestoneEvery) * ECON.milestoneEvery;
+  return SAVE.stars[g] ? g + ECON.milestoneEvery : g;
+}
+/* what a chest holds, in words */
+function chestLine(ch) {
+  const b = BOOSTERS.find(x => x.id === ch.booster);
+  return T('chest_holds', { c: ch.coins, t: ch.treats, b: goodName(b) });
+}
 /* what a run of n puts on the board, in words */
 function runGiftLine(n, gate) {
   const g = winRunGifts(n, gate);
@@ -18412,9 +18507,9 @@ function openLevelIntro(n) {
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('run_on', { n: SAVE.winRun })}</b>${runGiftLine(SAVE.winRun, def.gate)}</span>
     </div>` : ''}
-    ${firstTreats ? `<div class="goalItem" style="background:color-mix(in srgb,var(--plum) 12%, var(--surface-2))">
-      <span style="width:32px;display:grid;place-items:center;color:var(--plum)">${IC.treat}</span>
-      <span class="t"><b>${T('lvl_first_treats', { n: firstTreats })}</b></span>
+    ${firstTreats ? `<div class="goalItem runNote">
+      <span style="width:32px;display:grid;place-items:center;color:var(--accent-strong)">${IC.gift}</span>
+      <span class="t"><b>${T('chest_on_card')}</b>${chestLine(gateChest(n))}</span>
     </div>` : ''}
     <div class="goalList">
       ${def.goals.map(g => `<div class="goalItem">${goalIconHtml(g[0], g[1])}<span class="t"><b>${goalLine({ kind: g[0], arg: g[1], need: g[2] })}</b></span></div>`).join('')}
@@ -18780,7 +18875,14 @@ function showWin() {
   const coins = Math.max(first ? 0 : 1, Math.round(base * rate));
   let treats = 0;
   if (stars === 3 && prev < 3) treats += isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats;
-  if (first && n % ECON.milestoneEvery === 0) treats += ECON.milestoneTreats;
+  /* the chest at a gate: its treat is counted on the card like any other,
+     its coins and booster are shown when it opens, after the card */
+  const chest = first && n % ECON.milestoneEvery === 0 ? gateChest(n) : null;
+  if (chest) {
+    treats += chest.treats;
+    SAVE.coins += chest.coins;
+    SAVE.boosters[chest.booster] = (SAVE.boosters[chest.booster] || 0) + 1;
+  }
   /* and the jar takes its couple, on a replay as well: it is the one
      thing in the economy that is paid for time rather than progress,
      which is exactly why it is the offer I trust */
@@ -18872,8 +18974,47 @@ function showWin() {
      holding a sheet that would otherwise surface behind whatever
      closes next */
   const later = fn => modalQueue.push(() => { if (closedByHand) fn(); });
+  if (chest) later(() => chestModal(chest));
   if (grew) later(() => stageUpModal(pet));
   if (wonBadges.length) later(() => badgeModal(wonBadges));
+}
+/* The chest, opened. Shut for a beat and shaking, then open with what
+   was in it: the half second of not knowing is most of what a chest is. */
+function chestModal(ch) {
+  const b = BOOSTERS.find(x => x.id === ch.booster);
+  const m = modal(`
+    <div class="chestPop"><canvas id="chCv" width="150" height="130"></canvas></div>
+    <h2>${T('chest_t')}</h2>
+    <div class="rewardRow chestLoot" style="opacity:0">
+      <span class="reward" style="color:var(--accent-strong)">${IC.coin}+${ch.coins}</span>
+      <span class="reward" style="color:var(--plum)">${IC.treat}+${ch.treats}</span>
+      <span class="reward" style="color:var(--sage)">${IC[b.icon]}${goodName(b)}</span>
+    </div>
+    <p style="color:var(--text-dim)">${T('chest_next', { n: ECON.milestoneEvery })}</p>
+    <button class="btn primary wide" id="chOk">${T('ok')}</button>
+  `);
+  const cv = $('#chCv', m.el);
+  const draw = (open, wob) => {
+    const c = fitCanvas(cv, 150, 130);
+    if (!c) return;
+    c.clearRect(0, 0, 150, 130);
+    c.save(); c.translate(75, 118); c.rotate(wob || 0); drawChest(c, 0, 0, 96, open); c.restore();
+  };
+  draw(false, 0);
+  const t0 = performance.now(), shake = reduceMotion() ? 0 : 700;
+  const tick = t => {
+    if (!cv.isConnected) return;
+    const k = t - t0;
+    if (k < shake) { draw(false, Math.sin(k / 38) * .08 * (1 - k / shake)); requestAnimationFrame(tick); return; }
+    draw(true, 0);
+    SFX.win();
+    buzz(HAP.win);
+    const loot = $('.chestLoot', m.el);
+    if (loot) { loot.style.transition = 'opacity .35s'; loot.style.opacity = '1'; }
+  };
+  requestAnimationFrame(tick);
+  syncPurse();
+  $('#chOk', m.el).addEventListener('click', m.close);
 }
 function showLose() {
   say(T('a11y_failed'), true);
@@ -20046,7 +20187,7 @@ window.BL = {
   traitChargeScale, traitCoinScale, traitMoveBonus, traitDecayScale, BADGES, TRAITS,
   simulatePet, carePlay, careWash, careSleep, moodOf, DECAY, SLEEPY, petRig, syncGoals, drawLevelScene,
   castOf, castBreed, castSlot, castName, castRebuild, slotGem, slotBreed,
-  popScale, popAlpha, showWin, showLose, bestHint, hintScore, drawLogo, syncStars, syncHud, SP,
+  popScale, popAlpha, showWin, showLose, bestHint, hintScore, drawLogo, syncStars, syncHud, SP, chestModal, gateChest,
   /* render entry points, so a frame can be forced without rAF */
   renderGame, renderRoom, drawMap, layoutBoard, mapLayout, roomLayout, applyTheme,
   paintTile, paintCrate, paintMud, paintPup, paintGood, drawFace, drawBody,

@@ -4425,3 +4425,22 @@ instead of by day 21, and coins still buy something the player does not
 have. Treats were not touched: the carry-on was already short for a
 quarter to three quarters of players depending on how much they play,
 and the streak now gives it a reason.
+
+## A chest at the gate
+
+Every tenth level paid a treat the first time through, and the map marked
+it with a treat pip the size of a star. It is a chest now, drawn beside
+every gate not yet cleared, locked ones included, and it bobs once the
+player is inside its block; the home screen's level card says how many
+levels away it is. Cleared, it holds the same treat plus 40 coins and a
+booster that rotates through hammer, shuffle, +5 moves and free swap, so
+each is met free before one is offered for sale. It opens in its own
+sheet after the win card: shut and shaking for a beat, then open.
+
+In `test/economy.js` it adds about 460 coins a month — a month of ordinary
+play ends holding 1,223 rather than 804, still under the catalogue. Found
+on the way: the queue of sheets that wait behind the win card let an
+entry that decided to show nothing take the turn anyway, so the sheet
+behind it never opened. The queue now moves on until something is on
+screen. A browser test holds the chest to opening once, and not on a
+replay.

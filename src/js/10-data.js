@@ -300,7 +300,7 @@ const ECON = {
      ordinary level was the largest single source of it. A treat is the
      currency that ends a wall, so it is paid at the walls: three-starring
      a gate is the hardest thing in a block, and it still pays. */
-  threeStarTreats: 0, threeStarTreatsGate: 1, milestoneTreats: 1, milestoneEvery: 10,
+  threeStarTreats: 0, threeStarTreatsGate: 1, milestoneTreats: 1, milestoneEvery: 10, chestCoins: 40,
 
   /* thirty, which is the genre's number: a full set in two and a half
      hours rather than two. It only matters to somebody who has lost five
@@ -636,6 +636,28 @@ function passBanked(stamps) {
    player filled by playing — so it is the one that should come round most
    often, rather than the one that comes round least. */
 const JAR = { perLevel: 4, cap: 100, sku: 'treat_jar', usd: '$2.99' };
+
+/* ---------- the chest at the gate ----------
+
+   Every tenth level already paid a treat the first time through, and the
+   map marked it with a treat pip the size of a star. The genre's leaders
+   put a chest on the map instead, a few levels ahead of the player where
+   it can be seen coming, because "two more levels to the chest" is the
+   sentence that turns one more level into three.
+
+   The treat stays — the chest holds it — and adds a booster and a few
+   coins. The booster rotates through the four so a player meets each of
+   them for free before being asked to buy one. The coins are few on
+   purpose: the economy was cut on 25 Sep 2026 because coins meant
+   nothing, and forty a block is under one cleared level's worth. */
+const CHEST_BOOSTERS = ['hammer', 'shuffle', 'moves', 'swap'];
+function gateChest(n) {
+  return {
+    coins: ECON.chestCoins,
+    treats: ECON.milestoneTreats,
+    booster: CHEST_BOOSTERS[Math.floor(n / ECON.milestoneEvery - 1) % CHEST_BOOSTERS.length]
+  };
+}
 
 /* ---------- a run of good days ----------
 

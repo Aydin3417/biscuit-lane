@@ -329,7 +329,7 @@ function run(days, farm, seed) {
       if (!farm) level++;
       /* a treat for three stars at a gate only; level has already moved on */
       if (three) take(X.isGate(farm ? level : level - 1) ? E.threeStarTreatsGate : E.threeStarTreats);
-      if (!farm && level % E.milestoneEvery === 0) take(E.milestoneTreats);
+      if (!farm && level % E.milestoneEvery === 0) { take(E.milestoneTreats); coins += E.chestCoins; earned += E.chestCoins; }
       /* stamps, on a first clear only — a replay pays none, which is
          what stops the track being finished on level three */
       if (!farm) {
