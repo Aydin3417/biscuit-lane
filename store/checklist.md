@@ -12,7 +12,7 @@ password, a payment method or a Mac, and none of those are mine to have.
 | --- | --- |
 | iOS platform added, portrait-locked, arm64, bundle `com.pawtika.game` | `ios/` |
 | Android platform, portrait-locked, hardware back button handled | `android/` |
-| Version aligned at **1.1.0 (build 2)** across Android, iOS and the crash reports | `build.gradle`, `project.pbxproj`, `15-save.js` |
+| Version aligned at **1.2.0 (build 3)** across Android, iOS and the crash reports | `build.gradle`, `project.pbxproj`, `15-save.js` |
 | App icon and launch image for iOS, drawn from the game's own logo | `tools/icon.js` → `ios/App/App/Assets.xcassets/` |
 | Android launcher icons, 5 densities, adaptive + legacy + round | `tools/icon.js` → `android/.../mipmap-*` |
 | Store screenshots: Play phone 1080×1920, iPhone 6.7" 1290×2796, iPad 12.9" 2048×2732, EN + TR | `store/graphics/` (`node tools/store.js`) |
@@ -112,27 +112,13 @@ to publish without it.
 
 ### 3. Answer the data questions
 
-With this build, both answers are the simple ones:
-
-- **Play → Data safety: "No data collected, no data shared."** True today: the telemetry has no sink and makes no network request.
-- **Apple → App Privacy: "Data Not Collected."** Same reason.
-
-Purchases do not change what the app itself does: the plugin has no
-server and no validator is set, so nothing about a purchase leaves the
-phone except through the store's own sheet, and the game keeps only the
-store's transaction number, in the save, on the device. Read the store's
-own guidance on "purchase history" when you fill the form in, and answer
-from that — I have not had the form in front of me.
-
-The three reminders do not change this. A local notification is scheduled
-and delivered by the phone itself — no push service, no token, no server
-— so nothing about them is collected or shared. Play will still ask you
-to tick the notifications permission on the Android form; that is a
-permission declaration, not a data declaration.
-
-The fonts are inside the page, so the game fetches nothing at all while
-it plays. If you later attach a telemetry sink, both answers change and
-the privacy policy has to be rewritten first.
+Since 30 Sep 2026 the build carries rewarded videos (Google AdMob) and,
+once the server is up, anonymous play data and purchase checks. The
+simple "no data" answers stop being true. The exact answers, table by
+table, are in `store/LISTING.md` under "Data safety (Play Console)" and
+"App Store privacy", and `privacy.html` already says all of it in both
+languages. Push the branch GitHub Pages serves so the live page matches
+before you submit.
 
 ### 4. Android signing
 
@@ -192,22 +178,45 @@ resolve `CordovaPluginPurchase` and the build stops before it starts.
 - Fees: both stores keep 15% of the first USD 1 million a year. Google applies it by itself; Apple only once you enroll in the App Store Small Business Program, so enroll before the first sale rather than after.
 - Apple: $99/year, and a review that usually takes 24–48 hours.
 
+**App Store screenshots are in `store/slides/screenshots/` since 3 Oct 2026** (seven slides, 1320×2868, English and Turkish; `store/slides/README.md` has the order and the claims checked against the build). The app targets iPhone only now, so no iPad set is needed. `store/graphics/` below is still what Google Play takes.
+
 Upload from `store/graphics/`: the files at the top of that folder are
-Play's 1080×1920, `ios-6.7/` and `ios-ipad/` are Apple's. `shots/store/`
+Play's 1080×1920, `ios-6.7/` and `ios-ipad/` are the older plain Apple sets. `shots/store/`
 is an older tool's output and is two art passes behind — the animals in it
 are not the animals in the build. Re-run `node tools/store.js` after any
 change to the drawing code, and look at one before you upload five.
 
-### 7. Tell me when the analytics has somewhere to go
+### 7. The server is up (analytics and purchase checks)
 
-The counters run and the crash handler is live, but with no sink the
-events only sit on the device. When you have picked somewhere for them —
-your own endpoint, a Supabase table, anything that accepts a POST — it is
-one function in `18-telemetry.js` and I will wire it, along with the
-privacy policy and store answers that have to change with it.
+Done 3 Oct 2026: schema, views and both functions are deployed to the Supabase project `emkdfbpzlreozepcoykn` and `BACKEND` points at it (server/README.md has what was checked). Left for you: for Google Play purchase checks, set `GOOGLE_SERVICE_ACCOUNT` or `GOOGLE_PLAY_PUBLIC_KEY` under Edge Functions -> Secrets (Apple needs nothing); and fill in the App Privacy / Data safety forms as store/LISTING.md says, since data now leaves the phone. The paragraph below is how it stood before.
 
-Until then you can read any device by hand: open the game, and in the
-console `BL.TRACK.dump()` gives you everything it has seen.
+### 7-old. Put the server up (analytics and purchase checks)
+
+Written and waiting in `server/`: an events table with ready-made
+views (level funnel, D1 to D30 retention, monetisation, onboarding,
+errors), and a `verify-purchase` function that asks Apple or Google
+before any treat is granted. I could not create the project: your
+Supabase account already has its two free projects active (the limit is
+per owner, across organizations). Pause one you do not use, or put this
+one on a paid plan, then follow `server/README.md`: four commands, then
+the URL and publishable key into `BACKEND` in `src/js/10-data.js`.
+Apple needs nothing more; Google Play verification wants a service
+account or the licensing key as a secret (same README).
+
+Until then the events wait on the phone, and a purchase is granted on
+the store's word, which is how the game behaved before. On a debug
+build, `localStorage.setItem('pawtika-debug','1')` brings `BL` back for
+`BL.TRACK.dump()`; the store build no longer exposes it.
+
+### 7b. AdMob
+
+Done 3 Oct 2026: both apps and both **Rewarded** units exist in AdMob (account `ca-app-pub-3062307440336080`), the unit ids are in `AD_UNITS` (`src/js/19-ads.js`), the app ids are in `ios/App/App/Info.plist` and `android/app/src/main/AndroidManifest.xml`, the content rating is G on both and the EU consent message is published.
+
+Still yours:
+
+1. **Payments profile** in AdMob (address, bank, tax form). Ads serve in a limited way until it is complete.
+2. **Add your own phone as a test device** (AdMob -> Settings -> Test devices) before you install a build, and never tap a real ad on it: clicks on your own ads are what gets an account closed. In a debug build `localStorage.setItem('pawtika-debug','1')` switches the game to Google's test units instead.
+3. **After the app is live:** link each AdMob app to its store listing (Apps -> App settings), and publish `app-ads.txt` with the line `google.com, pub-3062307440336080, DIRECT, f08c47fec0942fa0` at the root of the developer website given to the stores.
 
 ---
 
@@ -236,6 +245,14 @@ pay to acquire are still there on day seven.
 ---
 
 ## Done since the last pass
+
+### 30 Sep 2026: store readiness (see AUDIT-2026-09-30.md and README, "Ready for the store")
+
+- Heart farm closed (quit and win only return a heart the attempt paid); bomb + plain tile no longer a super-combo; wins are saved before the fireworks; dead boards always get a move; kill-mid-cascade undo closed; restore and settle only pay verified or granted transactions; the game clock cannot be turned back; `window.BL` off in the store build.
+- iOS `Package.swift` had Windows backslash paths and could not have built on a Mac; `npm run sync` now fixes them (`tools/spm-paths.js`).
+- First minute: no text card before the first move, one card per level at most, badges on the win card, sticky Start on the level card, settings aligned, hint aware of every goal.
+- Economy tightened by about a third, coin purse (treats into coins), carry-on offered from half the goal, rewarded video in four capped places.
+- Version **1.2.0 (build 3)** across iOS, Android and the crash reports.
 
 Kept here so the list above stays a list of what is left.
 

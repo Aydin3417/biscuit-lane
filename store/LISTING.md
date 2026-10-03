@@ -12,11 +12,20 @@ The graphics are generated: `node tools/store.js`.
 Google Play allows 30 characters, the App Store 30.
 
 ```
-Pawtika
+Pawtika: Match & Raise Pets
 ```
+[27] — and in the Turkish listings:
 
-Turkish stores take the same name. It is a coined word rather than a
-phrase, so there is nothing in it to translate.
+```
+Pawtika: Eşleştir ve Büyüt
+```
+[26]
+
+The name was the bare word until 3 Oct 2026. A coined word is found only
+by somebody who already knows it; both stores weigh the title above every
+other field, so the words people actually type go after the colon. The
+icon on the phone still says Pawtika (CFBundleDisplayName, app_name), and
+the coined word itself is the same in every language.
 
 One thing for whoever writes the Turkish copy: the name takes back-vowel
 suffixes. *Pawtika'da*, *Pawtika'yı*, *Pawtika'nın* — never *Pawtika'de*.
@@ -87,10 +96,10 @@ lane and the furniture are hand-finished pictures inside the app itself,
 so nothing is ever downloaded: it is small, it opens instantly, and it
 works with the phone in flight mode from the very first launch.
 
-QUIET ABOUT YOU
-No accounts. No advertising. No analytics. Nothing is collected and
-nothing is sent — your animals and your progress live on your phone and
-nowhere else.
+NOTHING INTERRUPTS YOU
+No accounts, and no ad ever breaks into a level or a menu. When you
+want three more moves, a heart or double coins, you can choose to watch
+a short video. Your animals and your progress live on your phone.
 
 Day and Dusk, English and Turkish, and a symbol on every tile for anybody
 who would rather not tell them apart by colour.
@@ -139,9 +148,10 @@ eşyalar uygulamanın içinde duran, elle bitirilmiş resimler; hiçbir şey
 indirilmiyor: küçük, anında açılıyor ve daha ilk açılıştan itibaren
 telefon uçak modundayken çalışıyor.
 
-SENİN HAKKINDA SESSİZ
-Hesap yok. Reklam yok. Analitik yok. Hiçbir şey toplanmıyor ve hiçbir yere
-gönderilmiyor — hayvanların ve ilerlemen yalnızca telefonunda duruyor.
+HİÇBİR ŞEY SENİ KESMEZ
+Hesap yok, hiçbir reklam bir bölümü ya da menüyü bölmez. Üç hamle, bir
+kalp ya da iki kat altın istediğinde, istersen kısa bir video izlersin.
+Hayvanların ve ilerlemen telefonunda duruyor.
 
 Gündüz ve Akşam, İngilizce ve Türkçe, ve renkten ayırt etmek istemeyenler
 için her taşta bir sembol.
@@ -162,29 +172,52 @@ unchanged — it is inside Apple's 4000 and says nothing Android-specific.
 **Name** (30 max)
 
 ```
-Pawtika
+Pawtika: Match & Raise Pets
 ```
+[27]
 
 **Subtitle** (30 max)
 
 ```
-Match three, raise the animals
+Cute Cat & Dog Puzzle Game
 ```
-[30]
+[26] — no word here repeats the name: Apple indexes name, subtitle and
+keywords together, and a repeated word buys nothing. "Game" is here on
+purpose: "cat game", "dog game", "pet game" and "puzzle game" are what
+people type, and Apple joins words across the fields to make them.
 
 **Promotional text** (170 max, changeable without review)
 
 ```
-Sixty hand-built levels, six animals to adopt, and a pet whose move you charge by matching their face. No ads, no interruptions, and it plays entirely offline.
+Sixty hand-built levels, six animals to adopt, and a pet whose move you charge by matching their face. No forced ads, and it plays entirely offline.
 ```
-[159]
+[148]
 
 **Keywords** (100 max, comma-separated, no spaces)
 
 ```
-match3,puzzle,pet,cat,dog,animal,cute,casual,offline,tiles,swap,adopt,cozy,brain,relax
+3,three,matching,kitten,puppy,kitty,animal,adopt,cozy,offline,relax,casual,tile,swap,home,decor,care
 ```
-[85]
+[100] — singular only (Apple indexes the plural itself), commas with no
+spaces, and nothing already in the name or subtitle. "3" and "three"
+join "match" in the name to cover "match 3" and "match three".
+
+**English (U.K.) — add this localisation too.** Same name, subtitle,
+description and screenshots as English (U.S.), but its own keyword
+field. The Turkish storefront indexes Turkish, English (U.K.) and French;
+the U.K. one indexes its own. So this field is a second hundred
+characters in both, for the price of a copy and paste:
+
+```
+brain,teaser,logic,level,collect,paw,room,dress,feed,grow,sim,family,fun,easy,wifi,rescue,virtual
+```
+[97]
+
+**Spanish (Mexico), optional.** The U.S. storefront also indexes the
+Spanish (Mexico) localisation, so the same trick gives the U.S. a second
+keyword field. Worth doing only once somebody can write the Spanish name
+and subtitle properly; a machine-translated listing costs more in
+conversion than the keywords earn.
 
 **Description**
 
@@ -195,26 +228,36 @@ Use the Play full description above, unchanged. It is within Apple's
 
 ## App Store — Türkçe
 
+**Ad** (30 max)
+
+```
+Pawtika: Eşleştir ve Büyüt
+```
+[26]
+
 **Altyazı** (30 max)
 
 ```
-Eşleştir, dostunu büyüt
+Kedi Köpek Eşleştirme Oyunu
 ```
-[23]
+[27] — Turkish is searched in the exact form typed, and the App Store
+does not stem it: "eşleştirme oyunu", "kedi oyunu" and "köpek oyunu" are
+the searches, so those forms are the ones written out.
 
 **Tanıtım metni** (170 max)
 
 ```
-Elle kurulmuş altmış bölüm, sahiplenilecek altı hayvan ve yüzünü eşleştirerek hamlesini doldurduğun bir dost. Reklam yok, kesinti yok, tamamen çevrimdışı.
+Elle kurulmuş altmış bölüm, sahiplenilecek altı hayvan ve yüzünü eşleştirerek hamlesini doldurduğun bir dost. Zorla reklam yok, çevrimdışı oynanır.
 ```
-[153]
+[147]
 
 **Anahtar kelimeler** (100 max)
 
 ```
-eşleştirme,bulmaca,evcil,kedi,köpek,hayvan,sevimli,çevrimdışı,taş,sahiplen,rahatlatıcı,zeka
+bulmaca,oyunları,evcil,hayvan,patlatma,üçlü,yavru,sahiplen,bakım,sevimli,zeka,internetsiz,pati,besle
 ```
-[92]
+[100] — "patlatma" and "internetsiz" are how Turkish players name the
+genre and the offline wish ("şeker patlatma", "internetsiz oyunlar").
 
 ---
 
@@ -225,11 +268,27 @@ eşleştirme,bulmaca,evcil,kedi,köpek,hayvan,sevimli,çevrimdışı,taş,sahipl
 Answer the form like this. Every answer is checked against the code in
 `privacy.html`, which links to it.
 
+Revised 30 Sep 2026: the game now carries rewarded videos (Google
+AdMob) and, once `BACKEND` is filled in, anonymous play data and
+purchase checks (server/README.md). Answer the form like this:
+
 | Question | Answer |
 |---|---|
-| Does your app collect or share any required user data types? | **No** |
-| Is all user data encrypted in transit? | Not applicable — no data leaves the device |
-| Do you provide a way for users to request data deletion? | Not applicable — deleting the app deletes everything; Settings also has "Start over" |
+| Does your app collect or share any required user data types? | **Yes** |
+| Is all user data encrypted in transit? | **Yes** (HTTPS only) |
+| Do you provide a way for users to request data deletion? | **Yes**: email, see privacy.html; the Settings switch stops collection |
+| Contains ads? | **Yes** (rewarded video only, opened by the player) |
+
+Data types:
+
+| Type | Collected / Shared | Why | Optional? |
+|---|---|---|---|
+| Device or other IDs (advertising id) | Collected and **shared with Google AdMob** | Advertising | Only when a video is asked for; iOS asks first |
+| App activity → App interactions | Collected, not shared | Analytics | Yes, Settings → Share play data |
+| App info and performance → Crash logs, Diagnostics | Collected, not shared | Analytics | Yes, the same switch |
+| Financial info → Purchase history | Collected, not shared (transaction id only) | Fraud prevention | No, only on purchase |
+
+None of it is linked to a name, email or account, because there are none.
 
 The three reminders do not change any of this. A local notification is
 scheduled and delivered by the phone itself — no push service, no token,
@@ -244,10 +303,43 @@ give, `/pawtika/privacy.html`, is a 404 — GitHub Pages serves a project
 site under the repository name, and the repository is `biscuit-lane`.
 Both stores fetch the URL, and both would have refused it.
 
+## What the App Store reads for search (checked 3 Oct 2026)
+
+- **Indexed:** the name, the subtitle, the keyword field, in-app purchase
+  display names and in-app event names. The name weighs most, then the
+  subtitle.
+- **Not indexed on iOS:** the description and the promotional text. They
+  are written to persuade, not to rank. (Google Play is the opposite: it
+  reads the description.)
+- **Screenshot captions** have been read since June 2025. Measured by
+  others, they reinforce words already in the name and subtitle rather
+  than rank on their own, so the first three captions repeat those words:
+  "Match 3 with your own pets", "Adopt and raise cats and dogs", "Hundreds
+  of puzzle levels" (tools/store.js).
+- **In-app purchase display names** (30 max), since they are indexed:
+  Pocketful of Pet Treats, Paper Bag of Pet Treats, Biscuit Tin of Pet
+  Treats, Feed Sack of Pet Treats, Pet Welcome Pack, Pet Treat Jar,
+  Season Book.
+
+## App Store privacy ("nutrition label")
+
+App Store Connect → App Privacy. Data **used to track you**: Device ID
+(the advertising identifier, only if the player allows tracking when
+asked). Data **not linked to you**: Usage Data (Product Interaction,
+Advertising Data), Diagnostics (Crash Data, Other Diagnostic Data),
+Purchases (Purchase History). No contact info, no location, no user
+content. Tracking domains are declared by Google's SDK in its own
+privacy manifest.
+
+The age rating questionnaire now answers "Contains ads: yes" as well,
+and the App Store listing must not say "no ads" anywhere.
+
 ## Content rating
 
 - No violence, no language, no gambling, no user-generated content, no
-  social features, no location, no advertising.
+  social features, no location. **Ads: yes**, rewarded video only, which the
+  player opens themselves (declare it; Google's content filters in the
+  AdMob console should be set to "G" / general audiences).
 - In-app purchases: **yes** — digital goods only (treats, and the paid
   column of a season book). Nothing bought is randomised: no loot boxes,
   no paid draws. The daily basket is free and cannot be bought.
@@ -326,3 +418,10 @@ not automated.
    serves the repository root, so pushing it is enough).
 5. **In-app products** — the plugin is installed and wired. Create the seven
    consumables above in each console; nothing in the build changes.
+6. **AdMob** — apps, rewarded units, G rating and the EU consent message
+   are done and the ids are in the build (3 Oct 2026). Left: the payments
+   profile, your phone as a test device, and after launch the store link
+   and `app-ads.txt` (store/checklist.md, 7b).
+7. **Server** — see server/README.md: a Supabase project (the free plan
+   allows two active ones per account), four commands, then `BACKEND` in
+   `src/js/10-data.js`.

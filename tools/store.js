@@ -51,7 +51,10 @@ const SHOTS = [
        read, a two-line caption was also tall enough to cover the score
        bar, which is the one thing on the board shot that says a game is
        in progress. */
-    caption: { en: 'Match your own animals', tr: 'Kendi hayvanlarını eşleştir' },
+    /* The first three captions carry the words of the store name and
+       subtitle: the App Store has read screenshot text since June 2025,
+       and it counts for words the listing already uses. */
+    caption: { en: 'Match 3 with your own pets', tr: 'Kendi hayvanlarınla eşleştir' },
     /* A collect level rather than a bramble one: the hero shot should
        show the animals, and a board webbed with cut brambles shows the
        webbing. */
@@ -79,12 +82,12 @@ const SHOTS = [
   },
   {
     file: '2-room',
-    caption: { en: 'Then look after them upstairs', tr: 'Sonra üst katta onlara bak' },
+    caption: { en: 'Adopt and raise cats and dogs', tr: 'Kedi ve köpek sahiplen, büyüt' },
     go: async page => page.evaluate(() => { BL.setScreen('home'); BL.renderHome(); })
   },
   {
     file: '3-lane',
-    caption: { en: 'A country lane that keeps going', tr: 'Hiç bitmeyen bir kır yolu' },
+    caption: { en: 'Hundreds of puzzle levels', tr: 'Yüzlerce bulmaca bölümü' },
     go: async page => page.evaluate(() => {
       BL.setScreen('map');
       const w = document.getElementById('mapWrap');
