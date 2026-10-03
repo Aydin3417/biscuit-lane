@@ -10,6 +10,13 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
 
+        <!-- AdMob, rewarded video only (src/js/19-ads.js). The app id of
+             "Pawtika" (Android) in AdMob; its rewarded unit is
+             AD_UNITS.android. Without it the SDK stops the app at launch. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3062307440336080~9228416424"/>
+
         <!-- Pawtika is played the tall way up: the web build puts a
              rotate gate over the screen when it is not. On a device the
              gate should never be reachable, so the activity is locked

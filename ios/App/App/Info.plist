@@ -79,5 +79,23 @@
 	<false/>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- AdMob, rewarded video only (src/js/19-ads.js). The app id of
+	     "Pawtika" (iOS) in AdMob; its rewarded unit is AD_UNITS.ios.
+	     Without this key the SDK refuses to start. -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3062307440336080~6761949460</string>
+	<!-- Apple's tracking prompt, shown the first time a player asks for a
+	     video and never at launch. -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Pawtika only shows a video when you ask for one. Allowing tracking lets those videos be more relevant to you; saying no changes nothing else in the game.</string>
+	<!-- Google's own attribution network, which AdMob needs to credit an
+	     install from an ad. Mediation partners would add theirs here. -->
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+	</array>
 </dict>
 </plist>
