@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <title>Pawtika — Privacy</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Pawtika collects nothing, sends nothing and has no accounts. This page says exactly what that means.">
+<meta name="description" content="What Pawtika stores, what it sends, and what you can switch off.">
 <style>
   :root{
     --bg:#F6EADA; --surface:#FFFAF2; --line:#DCC7AC;
@@ -42,168 +42,215 @@
 
 <main>
   <h1>Privacy</h1>
-  <p class="sub">Pawtika · last updated 7 September 2026</p>
+  <p class="sub">Pawtika · last updated 30 September 2026</p>
 
   <div class="card">
-    <p class="lead"><b>Pawtika does not collect anything, does not send
-    anything anywhere, and has no accounts.</b></p>
-    <p>That is the whole policy. The rest of this page is only the detail
-    behind it, because a one-line privacy policy is usually hiding
-    something and this one is not.</p>
+    <p class="lead"><b>Pawtika has no accounts and never asks who you are.</b>
+    It shows a video only when you ask for one, it sends anonymous
+    counts of how the game is played, and it checks purchases with your
+    app store.</p>
+    <p>This page explains each of those, and what you can switch off.</p>
   </div>
 
   <h2>What the game stores</h2>
-  <p>Your progress — the levels you have cleared, your animals and their
-  names, what you have bought, your settings — is saved on your own
-  device and nowhere else. Deleting the app deletes it. There is no
-  backup, no sync and no server that has ever seen it.</p>
+  <p>Your progress (the levels you have cleared, your animals and their
+  names, what you have bought, your settings) is saved on your device.
+  Like most apps, it may also be included in your phone&rsquo;s own
+  backup (Google or iCloud) if you have backups turned on. That backup
+  belongs to you and your phone&rsquo;s maker; the game has no copy of
+  it. &ldquo;Start over&rdquo; in Settings erases the save from the
+  device.</p>
 
-  <h2>What the game sends</h2>
-  <p>Nothing. There is no analytics, no advertising and no third-party
-  SDK of any kind. The game does not have a server, so there is nowhere
-  for anything to go.</p>
-  <p>The game does keep a short diagnostic note to itself &mdash; which
-  level was started, how it ended, and the message from any error it hits
-  &mdash; so that a fault can be described if you ever report one. It is
-  stored on your own device beside your save, it holds the last three
-  hundred of these and drops the oldest, and it is <b>never sent</b>.
-  Your animals&rsquo; names and anything else you typed are not in it.
-  Deleting the app removes it, &ldquo;Start over&rdquo; in Settings
-  removes it, and the switch in Settings turns it off &mdash; which empties
-  what is there and stops anything further being <i>written</i>, not
-  merely stopping it being sent.</p>
-  <p>Everything you see is drawn and every sound is synthesised as the
-  game runs, and the one picture in it &mdash; the logo &mdash; is inside
-  the page. Nothing is fetched over the network while you play. It works
-  with the phone in flight mode from the first launch.</p>
+  <h2>Anonymous play data</h2>
+  <p>To find out which levels are too hard and where the game breaks,
+  it sends short, anonymous records to the game&rsquo;s own server:
+  which level was started, how it ended, how many moves were left,
+  which booster was used, whether a purchase went through, and the
+  message of any error it hit. Each record carries a random number made
+  up by the game on your phone, the app version and whether it is iPhone
+  or Android. That&rsquo;s all.</p>
+  <p>It never includes your animals&rsquo; names or anything you typed,
+  and it never includes an advertising id, a device id, your location
+  or your contacts. It is not sold or shared, and it is not used to
+  advertise to you. It is kept for 18 months and then deleted.</p>
+  <p><b>You can turn it off</b> in Settings (&ldquo;Share play data&rdquo;).
+  Turning it off deletes what is waiting on the phone and stops anything
+  more being recorded.</p>
+  <p>The server is a Supabase project (Supabase Inc.) hosted in the
+  European Union.</p>
+
+  <h2>Videos (advertising)</h2>
+  <p>You can choose to watch a short video for a reward, like three more
+  moves, a heart or double coins. There are no other ads: nothing ever
+  interrupts a level or a menu. The videos come from <b>Google AdMob</b>.
+  When you ask for one, Google receives your device&rsquo;s advertising
+  identifier (if your phone allows it), your IP address and basic
+  device information, so that it can show a video and count it. Google
+  handles this under its own policy:
+  <a href="https://policies.google.com/technologies/partner-sites">how Google uses information from apps that use its services</a>.</p>
+  <ul>
+    <li>On iPhone, the first time you ask for a video, your phone asks
+    whether apps may track you. If you say no, videos are still shown,
+    just not personalised.</li>
+    <li>In the European Economic Area, the UK and some US states, Google
+    shows a consent form first, and you can say no there too.</li>
+    <li>If you never ask for a video, no request is made to Google.</li>
+  </ul>
 
   <h2>Purchases</h2>
-  <p>If you buy something in the game, the purchase is handled entirely by
-  your app store — Google Play or the App Store. They tell the game that a
-  purchase succeeded and nothing else. Your name, your card and your
-  billing address never reach us, because there is no “us” for them to
-  reach: no server, no database, no account.</p>
-  <p>For each purchase the game keeps the store&rsquo;s transaction number
-  in your save, on your device, so that one purchase can never be counted
-  twice. It is not sent anywhere.</p>
+  <p>Purchases are made through your app store (Google Play or the App
+  Store). Your name, card and billing address never reach the game.
+  To make sure a purchase is genuine, the game sends the store&rsquo;s
+  receipt to the game&rsquo;s server, which asks Apple or Google to
+  confirm it and keeps only the transaction number, the product and the
+  random number above, so the same purchase can&rsquo;t be counted
+  twice.</p>
 
   <h2>Reminders</h2>
-  <p>The game can send you three notifications, and only three: that your
-  hearts have come back after you ran out, that the day’s walk has gone
-  untaken, and — once, if you have not opened the game for three days —
-  that your animal is waiting. It offers them when you first run out of
-  hearts or finish your first daily walk, asks your phone only if you
-  press that button, and you can turn them off in Settings at any time.</p>
-  <p>These are scheduled by your own phone and delivered by it. There is
-  no push service, no notification token and no server involved, and
-  nothing about them leaves your device.</p>
+  <p>The game can send three notifications: when your hearts are back
+  after running out, when the day&rsquo;s walk is untaken, and once if
+  you haven&rsquo;t played for three days. It only asks after you press
+  its own button, and you can turn them off in Settings. They are
+  scheduled by your phone, and no push service is involved.</p>
 
   <h2>Permissions</h2>
   <ul>
-    <li><b>Vibration</b> — for the small taps you feel when tiles clear.
-    You can switch it off in Settings.</li>
-    <li><b>Notifications</b> — for the three reminders above, and only if
-    you agree when asked. Declining changes nothing else about the game.</li>
-    <li><b>Internet</b> — used only so the app store can confirm a
-    purchase. The game itself never requests anything over the network.</li>
+    <li><b>Vibration</b>: small taps when tiles clear. You can switch it
+    off in Settings.</li>
+    <li><b>Notifications</b>: the three reminders above, and only if you
+    agree.</li>
+    <li><b>Tracking (iPhone)</b>: asked only when you first ask for a
+    video. Saying no changes nothing else.</li>
+    <li><b>Internet</b>: for the store, the videos you ask for and the
+    anonymous play data.</li>
   </ul>
 
   <h2>Children</h2>
-  <p>The game is suitable for all ages. Because it collects no data at
-  all, there is nothing to treat differently for a child than for anyone
-  else, and nothing that could be shared with anybody.</p>
+  <p>The game is suitable for all ages but is not directed at children
+  under 13. If you believe a child has used it and want their play data
+  deleted, write to us with the approximate date and we will remove the
+  records.</p>
+
+  <h2>Your rights</h2>
+  <p>Under the GDPR and Turkey&rsquo;s KVKK you can ask for your
+  anonymous data to be deleted or exported. Turning off &ldquo;Share
+  play data&rdquo; stops collection at once. To delete what has already
+  been sent, email us.</p>
 
   <h2>Changes</h2>
-  <p>If this ever stops being true — if a version adds anything that
-  leaves your device — this page will say so before that version ships,
-  and the date at the top will change.</p>
+  <p>If a version changes anything on this page, the page will say so
+  before that version ships, and the date at the top will change.</p>
 
   <h2>Contact</h2>
-  <p>Questions about any of this:
-  <a href="mailto:emreomer2001@gmail.com">emreomer2001@gmail.com</a></p>
+  <p><a href="mailto:emreomer2001@gmail.com">emreomer2001@gmail.com</a></p>
 
   <hr>
 
   <div lang="tr">
     <h1>Gizlilik</h1>
-    <p class="sub">Pawtika · son güncelleme 7 Eylül 2026</p>
+    <p class="sub">Pawtika · son güncelleme 30 Eylül 2026</p>
 
     <div class="card">
-      <p class="lead"><b>Pawtika hiçbir veri toplamaz, hiçbir yere bir
-      şey göndermez ve hesap açtırmaz.</b></p>
-      <p>Politikanın tamamı bu. Aşağısı yalnızca ayrıntısı — çünkü tek
-      satırlık gizlilik politikaları genellikle bir şey saklar, bu ise
-      saklamıyor.</p>
+      <p class="lead"><b>Pawtika hesap açtırmaz ve kim olduğunu hiç
+      sormaz.</b> Video yalnızca sen istediğinde gelir, oyunun nasıl
+      oynandığına dair anonim sayımlar gönderilir ve satın almalar
+      mağazanla doğrulanır.</p>
+      <p>Bu sayfa her birini ve neyi kapatabileceğini anlatır.</p>
     </div>
 
     <h2>Oyun neyi saklıyor</h2>
-    <p>İlerlemen — geçtiğin bölümler, hayvanların ve adları, aldıkların,
-    ayarların — yalnızca kendi cihazında tutulur. Uygulamayı silersen
-    silinir. Yedek yok, eşitleme yok ve bunu görmüş bir sunucu hiç olmadı.</p>
+    <p>İlerlemen (geçtiğin bölümler, hayvanların ve adları, aldıkların,
+    ayarların) cihazında saklanır. Çoğu uygulamada olduğu gibi,
+    yedekleme açıksa telefonunun kendi yedeğine (Google ya da iCloud)
+    girebilir. O yedek sana ve telefon üreticine aittir; oyunda bir
+    kopyası yoktur. Ayarlar&rsquo;daki &ldquo;Baştan başla&rdquo;
+    kaydı cihazdan siler.</p>
 
-    <h2>Oyun ne gönderiyor</h2>
-    <p>Hiçbir şey. Analitik yok, reklam yok, üçüncü taraf bir SDK yok.
-    Oyunun sunucusu yok; gidecek bir yer de yok.</p>
-    <p>Oyun kendine kısa bir teşhis notu tutuyor &mdash; hangi bölüm
-    başladı, nasıl bitti ve karşılaştığı bir hatanın mesajı &mdash; bir
-    gün arıza bildirirsen anlatılabilsin diye. Kaydının yanında, senin
-    cihazında duruyor; son üç yüz kaydı tutar, eskisini atar ve
-    <b>hiçbir yere gönderilmez</b>. Hayvanlarının adları ya da yazdığın
-    başka bir şey içinde yok. Uygulamayı silmek onu da siler,
-    Ayarlar&rsquo;daki &ldquo;Baştan başla&rdquo; siler, ve
-    Ayarlar&rsquo;daki anahtar kapatıldığında var olanı boşaltıp
-    yenisinin <i>yazılmasını</i> durdurur &mdash; yalnızca
-    gönderilmesini değil.</p>
-    <p>Gördüğün her şey çalışma anında çiziliyor, her ses sentezleniyor;
-    yani oynarken görsel, yazı tipi ya da ses bile indirmiyor. İlk
-    açılıştan itibaren telefon uçak modundayken çalışır.</p>
+    <h2>Anonim oyun verisi</h2>
+    <p>Hangi bölümlerin fazla zor olduğunu ve oyunun nerede bozulduğunu
+    görmek için oyun, kendi sunucusuna kısa ve anonim kayıtlar gönderir:
+    hangi bölüm başladı, nasıl bitti, kaç hamle kaldı, hangi yardımcı
+    kullanıldı, satın alma tamamlandı mı ve bir hatanın mesajı. Her
+    kayıtta oyunun telefonunda uydurduğu rastgele bir sayı, sürüm
+    numarası ve iPhone mu Android mi olduğu bulunur. Hepsi bu.</p>
+    <p>Hayvanlarının adları ya da yazdığın hiçbir şey, reklam kimliği,
+    cihaz kimliği, konum ya da rehber asla içinde olmaz. Satılmaz,
+    paylaşılmaz, sana reklam göstermek için kullanılmaz. 18 ay
+    saklanır, sonra silinir.</p>
+    <p><b>Ayarlar&rsquo;dan kapatabilirsin</b> (&ldquo;Oyun verisi
+    paylaş&rdquo;). Kapatınca telefonda bekleyenler silinir ve yenisi
+    kaydedilmez.</p>
+    <p>Sunucu, Avrupa Birliği&rsquo;nde barındırılan bir Supabase
+    (Supabase Inc.) projesidir.</p>
+
+    <h2>Videolar (reklam)</h2>
+    <p>İstersen kısa bir video izleyip ödül alabilirsin: üç hamle, bir
+    kalp ya da iki kat altın. Başka reklam yoktur: hiçbir şey bir
+    bölümü ya da menüyü kesmez. Videolar <b>Google AdMob</b>&rsquo;dan
+    gelir. Bir video istediğinde Google, video gösterip sayabilmek için
+    cihazının reklam kimliğini (telefonun izin veriyorsa), IP adresini
+    ve temel cihaz bilgisini alır. Google bunu kendi politikasına göre
+    işler:
+    <a href="https://policies.google.com/technologies/partner-sites?hl=tr">Google&rsquo;ın, hizmetlerini kullanan uygulamalardan gelen bilgileri nasıl kullandığı</a>.</p>
+    <ul>
+      <li>iPhone&rsquo;da ilk video isteğinde telefonun, uygulamaların
+      seni izlemesine izin verip vermediğini sorar. Hayır dersen video
+      yine gelir, yalnızca kişiselleştirilmez.</li>
+      <li>Avrupa Ekonomik Alanı&rsquo;nda, Birleşik Krallık&rsquo;ta ve
+      bazı ABD eyaletlerinde Google önce bir onay formu gösterir; orada
+      da hayır diyebilirsin.</li>
+      <li>Hiç video istemezsen Google&rsquo;a hiçbir istek gitmez.</li>
+    </ul>
 
     <h2>Satın almalar</h2>
-    <p>Oyun içinde bir şey satın alırsan, işlemi tümüyle uygulama mağazan
-    yürütür — Google Play ya da App Store. Oyuna yalnızca satın almanın
-    başarılı olduğu bilgisi gelir, başka hiçbir şey. Adın, kartın ve fatura
-    adresin bize ulaşmaz; çünkü ulaşacağı bir “biz” yok: sunucu yok,
-    veritabanı yok, hesap yok.</p>
-    <p>Oyun her satın almanın mağaza işlem numarasını, aynı satın alma iki
-    kez sayılmasın diye cihazındaki kaydında tutar. Hiçbir yere
-    gönderilmez.</p>
+    <p>Satın almalar uygulama mağazan (Google Play ya da App Store)
+    üzerinden yapılır. Adın, kartın ve fatura adresin oyuna asla
+    ulaşmaz. Satın almanın gerçek olduğundan emin olmak için oyun,
+    mağazanın makbuzunu oyunun sunucusuna gönderir; sunucu Apple&rsquo;a
+    ya da Google&rsquo;a sorar ve aynı satın alma iki kez sayılmasın diye
+    yalnızca işlem numarasını, ürünü ve yukarıdaki rastgele sayıyı
+    saklar.</p>
 
     <h2>Hatırlatmalar</h2>
-    <p>Oyun sana iki bildirim gönderebilir, yalnızca iki tane: canların
-    bittikten sonra geri geldiğini, ve günün yürüyüşünün yapılmadan
-    geçtiğini. İznini ilk kez canın bittiğinde ister, daha önce asla, ve
-    istediğin an Ayarlar’dan kapatabilirsin.</p>
-    <p>Bunları kendi telefonun zamanlar ve kendi telefonun gösterir.
-    Ortada bir push servisi, bir bildirim anahtarı ya da bir sunucu yok;
-    bunlara dair hiçbir şey cihazından çıkmaz.</p>
+    <p>Oyun üç bildirim gönderebilir: kalplerin bittikten sonra geri
+    geldiğinde, günün yürüyüşü yapılmadıysa, ve üç gün oynamadıysan bir
+    kez. Yalnızca kendi düğmesine bastıktan sonra sorar, Ayarlar&rsquo;dan
+    kapatabilirsin. Bildirimleri telefonun kendisi zamanlar; bir push
+    servisi yoktur.</p>
 
     <h2>İzinler</h2>
     <ul>
-      <li><b>Titreşim</b> — taşlar temizlenirken hissettiğin küçük
-      dokunuşlar için. Ayarlardan kapatabilirsin.</li>
-      <li><b>Bildirimler</b> — yukarıdaki iki hatırlatma için, ve yalnızca
-      sorulduğunda kabul edersen. Reddetmen oyunda başka hiçbir şeyi
-      değiştirmez.</li>
-      <li><b>İnternet</b> — yalnızca uygulama mağazasının bir satın almayı
-      doğrulaması için. Oyunun kendisi ağdan hiçbir şey istemez.</li>
+      <li><b>Titreşim</b>: taşlar patlarken küçük dokunuşlar.
+      Ayarlar&rsquo;dan kapatılabilir.</li>
+      <li><b>Bildirimler</b>: yukarıdaki üç hatırlatma, yalnızca kabul
+      edersen.</li>
+      <li><b>İzleme (iPhone)</b>: yalnızca ilk kez video istediğinde
+      sorulur. Hayır demek başka hiçbir şeyi değiştirmez.</li>
+      <li><b>İnternet</b>: mağaza, istediğin videolar ve anonim oyun verisi
+      için.</li>
     </ul>
 
     <h2>Çocuklar</h2>
-    <p>Oyun her yaş için uygundur. Hiçbir veri toplamadığı için, bir çocuk
-    ile bir yetişkin arasında farklı davranılacak bir şey ve paylaşılacak
-    bir bilgi yoktur.</p>
+    <p>Oyun her yaşa uygundur ama 13 yaş altındaki çocuklara yönelik
+    değildir. Bir çocuğun kullandığını düşünüyor ve oyun verisinin
+    silinmesini istiyorsan, yaklaşık tarihle bize yaz; kayıtları
+    sileriz.</p>
+
+    <h2>Hakların</h2>
+    <p>KVKK ve GDPR kapsamında anonim verinin silinmesini ya da bir
+    kopyasını isteyebilirsin. &ldquo;Oyun verisi paylaş&rdquo;
+    anahtarını kapatmak toplamayı hemen durdurur; gönderilmiş olanın
+    silinmesi için bize e-posta at.</p>
 
     <h2>Değişiklikler</h2>
-    <p>Bu doğru olmaktan çıkarsa — bir sürüm cihazından çıkan bir şey
-    eklerse — bu sayfa o sürüm yayınlanmadan önce bunu yazar ve üstteki
-    tarih değişir.</p>
+    <p>Bir sürüm bu sayfadaki herhangi bir şeyi değiştirirse, sayfa o
+    sürüm yayınlanmadan önce bunu yazar ve üstteki tarih değişir.</p>
 
     <h2>İletişim</h2>
-    <p>Buradaki her şeyle ilgili sorular için:
-    <a href="mailto:emreomer2001@gmail.com">emreomer2001@gmail.com</a></p>
+    <p><a href="mailto:emreomer2001@gmail.com">emreomer2001@gmail.com</a></p>
   </div>
 
   <hr>
-  <footer>Pawtika — every cat, every dog and every sound is drawn and
-  synthesised in code. Not one image or audio file.</footer>
+  <footer>Pawtika: every cat, every dog and every sound is drawn and
+  synthesised in code.</footer>
 </main>

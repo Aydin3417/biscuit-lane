@@ -1,0 +1,12 @@
+# Supabase CLI configuration for Pawtika's server (see server/README.md).
+# Only what differs from the defaults is written here.
+project_id = "emkdfbpzlreozepcoykn"
+
+# Both functions are called from the game with the project's publishable
+# key, which is not a JWT, so the gateway's JWT check is off and each
+# function validates its own input instead. Neither reads anything back.
+[functions.track]
+verify_jwt = false
+
+[functions.verify-purchase]
+verify_jwt = false
