@@ -224,31 +224,6 @@ function drawChest(c, x, y, s, open) {
   c.restore();
 }
 
-function drawTreatPip(c, x, y, r) {
-  c.save();
-  c.translate(x, y);
-  c.rotate(-.5);
-  c.fillStyle = '#F3E2C4';
-  c.strokeStyle = rgba('#6B4A22', .75);
-  c.lineWidth = r * .30;
-  c.lineJoin = 'round';
-  const w = r * 1.5, h = r * .62, k = r * .52;
-  c.beginPath();
-  ellipse(c, -w / 2, -h / 2, k, k);
-  c.fill(); c.stroke();
-  c.beginPath();
-  ellipse(c, -w / 2, h / 2, k, k);
-  c.fill(); c.stroke();
-  c.beginPath();
-  ellipse(c, w / 2, -h / 2, k, k);
-  c.fill(); c.stroke();
-  c.beginPath();
-  ellipse(c, w / 2, h / 2, k, k);
-  c.fill(); c.stroke();
-  rr(c, -w / 2, -h / 2, w, h, h * .5);
-  c.fill(); c.stroke();
-  c.restore();
-}
 
 /* whichever of dark or cream reads better on a given fill */
 function inkOn(hex) { return coatLum(hex) > .45 ? '#22271C' : '#FFFFFF'; }

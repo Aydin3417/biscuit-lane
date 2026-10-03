@@ -4450,3 +4450,124 @@ ten levels towards, and it is a pair of generated pictures now — closed,
 with a heart-shaped lock with a paw on it, and open, full of coins and
 biscuits (`art/src/chest-sheet.png`, 59 KB between them). `drawChest`
 draws the picture once it has decoded and its old paths until then.
+
+## Ready for the store, measured on a phone first
+
+On 30 Sep 2026 the whole game was played on an emulated Pixel 7 with real
+touch swipes — onboarding, levels 1 to 14, every tab — and read end to end
+beside it. The audit is in `AUDIT-2026-09-30.md`. Everything below is what
+came of it, in the order it mattered.
+
+**A heart printed on every exit.** Quitting gave a heart back, and so did
+winning, and neither asked whether one had been taken. The daily walk
+costs nothing, so opening it and walking away paid a heart: on the phone
+an empty purse went 2 → 3 → 4 → 5 in half a minute, and every level
+cleared inside a stretch of paid unlimited hearts refilled the purse the
+same way. An attempt now carries `SAVE.heartHeld`, set only when
+`spendHeart` actually took one, and only that heart comes back — on a win,
+or on a quit before the first move. A quit after it costs the heart, which
+is what every game in the genre does and what the quit sheet now says. The
+loop that printed hearts leaves the purse at 2.
+
+**A bomb beside anything was the bomb-and-rocket blast.** `comboOf` read
+"a bomb and anything", so a bomb swapped with a plain tile was legal with
+no match in it and cleared three rows and three columns. Nothing else in
+the game — `swapMakesMatch`, `hasMove`, the hint, the solver every budget
+was fitted with — thought that was a move. It needs a match now, like a
+rocket; the difficulty the budgets were measured at is the difficulty the
+game has.
+
+**A win lost to the fireworks.** The clear was written by the win card,
+four or five seconds after the goal was met, and `checkEnd` had already
+dropped the resume snapshot. Killed in that window the level came back
+uncleared with its heart spent. `commitWin` writes the result the moment
+the goal is met and `settleWin` only adds what the finale earned; a kill
+is answered on the next launch with "Level N counted as cleared".
+
+**Smaller holes, all found by trying.** A board that forty shuffles could
+not fix sat there with no move to spend (`ensureMove` re-deals colours,
+then drops a rainbow). Swiping the app away mid-cascade undid the move and
+rerolled the refill (the snapshot is written with the move already paid).
+Restore paid any locally approved receipt, and `settleAll` closed store
+transactions the save had refused to grant. Vault conflicts were settled
+by the wall clock (a write counter decides now). The clock itself could be
+turned back to stretch paid unlimited hearts (`now()` never runs backwards
+past `SAVE.maxSeen`, bar a gap of more than three days, which is taken as
+a repaired clock). The hammer was spent on molehills and pups for nothing.
+Android's back button closed the lose card and left a dead board.
+`window.BL` is gone from the store build.
+
+**The first minute.** Level one opened with two cards of text before the
+first move, and thirteen levels produced nine badge sheets. The swap is
+shown by the hand now with one line that fades, the pet is introduced on
+the next attempt, no level opens with more than one card, and badges are a
+line on the win card. The level card's buttons ride its bottom edge: on an
+iPhone SE Start had been below the screen from level ten on. Settings rows
+are the width of the card. Stars carry the pet's multipliers, because
+thirteen clears out of thirteen had been three stars. Numbers are Turkish
+in Turkish, English counts have singulars, and the flashes respect reduced
+motion.
+
+**The hint was blind to half the goals.** It scored collect, mud and
+crates, and on a crate it read `openCell`, which is null for a crate, so
+even that bonus never fired. Followed move for move it lost level 14 at
+11 of 18 brambles, a level the solver clears every time. It weighs
+brambles, pups and molehills now, as the solver's human policy does.
+
+**The money, by the owner's call: tight but fair.** A month of ordinary
+play earned 18,285 coins against a 17,533-coin catalogue. Level pay, the
+walk, the gift ladder, the chest and the shelf are cut by about a third,
+boosters cost half as much again, the carry-on is offered from half the
+goal rather than seven tenths, and treats can be turned into coins
+(`COIN_PURSES`, opened from the coin chip or any purchase the player could
+not afford). `test/economy.js`: 12,942 coins earned in the month, 12,678
+still to buy at the end of it, treats spent as fast as they arrive, and a
+casual player still never runs dry of hearts.
+
+**Rewarded video, and only rewarded video.** AdMob through
+`@capacitor-community/admob`: three moves on the lose card (nine treats
+buy five), a heart on the empty-hearts sheet, double coins on a first
+clear, two treats in the earn sheet, each capped per day. Google's consent
+form where the law asks for one; Apple's tracking prompt the first time a
+video is asked for, never at launch. On iOS the plugin's show call
+resolves only when a reward is earned — closed early, it never returns —
+so a video is judged by its events. The real ids went in on 3 Oct 2026
+(two apps and two rewarded units in AdMob, content rating G, the EU
+consent message published); with `AD_UNITS` empty every video button is
+simply not drawn, which is still how the web build behaves.
+
+**One server.** (Deployed on 3 Oct 2026 to a Supabase project of its own; `BACKEND` points at it, and a browser on localhost stays silent unless asked, so the suites do not write to it.) `server/` holds a Supabase
+project's worth of backend — an events table with ready-made funnel,
+retention and monetisation views, and a `verify-purchase` function that
+asks Apple or Google before anything is granted. The account's two free
+projects were both in use, so it is written and not deployed;
+`server/README.md` is four commands. `privacy.html`, the listing and the
+data-safety answers now say all of this, and no longer say "no backup".
+
+**The iOS project could not have built.** `npx cap sync` on Windows wrote
+`Package.swift` with backslash paths, which Xcode reads as file names.
+`tools/spm-paths.js` rewrites them, and `npm run sync` runs it.
+
+**Baskets that had somewhere to go.** A rescue basket was placed in rows
+two to four of eight, three to five drops from the door, and a basket
+drops whenever anything beneath it clears. Level 7, which teaches the
+goal, was won in three moves of twenty-seven on the phone and in two by
+the solver. Baskets start in the top three rows now, the solver deals and
+re-queues them exactly as the game does (it had been queuing one per
+basket home, so late in a rescue it played with baskets the game never
+deals), and level 7 takes a median of fourteen moves instead of eleven.
+
+That moved every rescue budget, and measuring the lane on a third seed
+family had already shown the rest drifting — level 15 at 70% against an
+intended 87, level 38 at 100% against 78, level 39 a wall at 60%. So all
+sixty were refitted: a binary search on the budget, 100 games a step,
+seeds `n*50021 + g*7331`, until each level clears at its `want`. Fifty-one
+budgets moved; level 7 went to 36 (baskets from the top are a longer
+walk, and it is still meant to be won nineteen times in twenty), 16 and
+32 gained six moves each, 38 and 58 lost three and four. The 44 rescue
+levels of the generated run were refitted with `test/fit-run.js` the same
+day. `tuned-lane.json` holds the new budgets, so `apply-lane` does not put
+the old ones back.
+On a rescue board the win streak's rockets now lie flat: a vertical one
+under a basket walked it home in one move, and with a streak running
+level 7 had fallen from a median of fifteen moves to eight (eleven now).

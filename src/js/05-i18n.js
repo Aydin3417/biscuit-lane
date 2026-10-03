@@ -93,6 +93,8 @@ const STRINGS = {
     lvl_charges: 'Charged by',
     g_quit_t: 'Leave the level?',
     g_quit_s: 'You keep the heart. Progress on this level is lost.',
+    g_quit_lose: 'This costs the heart you started with.',
+    g_quit_free: 'Progress on this level is lost.',
     g_quit_yes: 'Leave', g_quit_no: 'Keep playing',
     g_shuffle: 'No moves left — shuffling',
     g_booster_pick: 'Tap a tile',
@@ -161,7 +163,11 @@ const STRINGS = {
     shop_buy: 'Buy', shop_owned: 'Owned', shop_wear: 'Wear', shop_worn: 'Worn', 
     shop_place: 'Put in room', shop_placed: 'In room',
     shop_have: 'x{n} in the cupboard',
-    shop_poor: 'Not enough coins',
+    purse_t: 'Coins for treats',
+    purse_s: 'Turn treats into coins for the room, the shop and the next animal. Bigger sizes give more for each treat.',
+    purse_need: '{n} more coins for that.',
+    purse_done: '+{n} coins',
+    store_why_coins: 'That size costs {n} treats.',
     shop_bought: 'Bought {item}',
     shop_treats_t: 'Treats',
     shop_treats_s: 'Everything on this page is bought with coins you earned. Treats come from daily baskets, three-star clears and milestones.',
@@ -211,7 +217,8 @@ const STRINGS = {
     set_reset_confirm: 'Delete everything?',
     set_reset_confirm_s: 'Your pets, coins and every level you cleared. This cannot be undone.',
     set_reset_yes: 'Delete it all', set_reset_no: 'Keep my pets',
-    set_credits: 'Everything here — every cat, dog, sound and biscuit — is drawn and synthesised in code. No audio files, and no pictures but the logo.',
+    set_credits: 'Every cat, dog, sound and biscuit here is drawn and synthesised in code — no audio files. The rooms and lanes behind them are painted.',
+    set_privacy: 'Privacy policy',
 
     /* daily */
     daily_t: 'Left on the step',
@@ -267,6 +274,8 @@ const STRINGS = {
     a11y_state: '{moves} moves left, score {score}. {goals}',
     a11y_goal_line: '{label}, {have} of {need}',
     a11y_cleared: 'Level cleared with {stars} stars.',
+    win_kept: 'Level {n} counted as cleared, rewards included.',
+    win_badges: 'For the shelf: {names}',
     a11y_failed: 'Out of moves.',
     a11y_ready: '{name} is ready. Press P.',
     a11y_help_t: 'Playing by keyboard',
@@ -281,7 +290,9 @@ const STRINGS = {
     trait_none: 'Still working out who they are.',
     trait_pending: 'A trait settles past bond {n}, once you have looked after them the same way {c} times.',
     ad_watch: '{n} more moves',
-    ad_watch_sub: 'A short video instead of {t} treats, once a day.',
+    ad_heart: 'Watch a video for a heart',
+    ad_double: 'Watch a video: +{n} more',
+    ad_watch_sub: 'A short video instead of {t} treats.',
     ad_go: 'Watch',
     pass_t: 'The season book',
     pass_sub: 'Tier {n} of {c} · {d} days left',
@@ -448,6 +459,8 @@ const STRINGS = {
     lvl_charges: 'Hamlesini dolduran',
     g_quit_t: 'Bölümden çıkılsın mı?',
     g_quit_s: 'Kalbin sende kalır. Bu bölümdeki ilerleme silinir.',
+    g_quit_lose: 'Başlarken harcadığın kalp geri gelmez.',
+    g_quit_free: 'Bu bölümdeki ilerleme silinir.',
     g_quit_yes: 'Çık', g_quit_no: 'Devam et',
     g_shuffle: 'Hamle kalmadı — karıştırılıyor',
     g_booster_pick: 'Bir taşa dokun',
@@ -513,7 +526,11 @@ const STRINGS = {
     shop_buy: 'Al', shop_owned: 'Sende', shop_wear: 'Tak', shop_worn: 'Takılı', 
     shop_place: 'Odaya koy', shop_placed: 'Odada',
     shop_have: 'Dolapta {n} tane',
-    shop_poor: 'Altın yetmiyor',
+    purse_t: 'Ödülle altın',
+    purse_s: 'Ödülleri oda, dükkân ve yeni hayvan için altına çevir. Büyük boylar ödül başına daha çok altın verir.',
+    purse_need: 'Bunun için {n} altın daha lazım.',
+    purse_done: '+{n} altın',
+    store_why_coins: 'O boy {n} ödül tutuyor.',
     shop_bought: '{item} alındı',
     shop_treats_t: 'Ödüller',
     shop_treats_s: 'Bu sayfadaki her şey kazandığın altınla alınır. Ödüller günlük sepetten, üç yıldızlı geçişlerden ve bölüm hediyelerinden gelir.',
@@ -561,7 +578,8 @@ const STRINGS = {
     set_reset_confirm: 'Her şey silinsin mi?',
     set_reset_confirm_s: 'Hayvanların, altının ve geçtiğin bölümler. Geri dönüşü yok.',
     set_reset_yes: 'Hepsini sil', set_reset_no: 'Vazgeçtim',
-    set_credits: 'Buradaki her şey — her kedi, her köpek, her ses — kodla çiziliyor ve sentezleniyor. Ses dosyası yok; logo dışında görsel de yok.',
+    set_credits: 'Buradaki her kedi, her köpek, her ses kodla çiziliyor ve sentezleniyor — ses dosyası yok. Arkadaki oda ve yollar boyama.',
+    set_privacy: 'Gizlilik politikası',
 
     daily_t: 'Kapıya bırakılmış',
     daily_s: 'Serinin {n}. günü.',
@@ -614,6 +632,8 @@ const STRINGS = {
     a11y_state: '{moves} hamle kaldı, puan {score}. {goals}',
     a11y_goal_line: '{label}, {have} / {need}',
     a11y_cleared: 'Bölüm {stars} yıldızla geçildi.',
+    win_kept: '{n}. bölüm geçilmiş sayıldı, ödülleri verildi.',
+    win_badges: 'Rafa eklendi: {names}',
     a11y_failed: 'Hamle bitti.',
     a11y_ready: '{name} hazır. P tuşuna bas.',
     a11y_help_t: 'Klavyeyle oynamak',
@@ -628,7 +648,9 @@ const STRINGS = {
     trait_none: 'Kim olduğunu henüz bulmaya çalışıyor.',
     trait_pending: 'Karakteri {n}. bağ seviyesinden sonra, ona {c} kez aynı şekilde baktığında belli olur.',
     ad_watch: '{n} hamle daha',
-    ad_watch_sub: '{t} ödül yerine kısa bir video, günde bir kez.',
+    ad_heart: 'Video izle, bir kalp al',
+    ad_double: 'Video izle: +{n} daha',
+    ad_watch_sub: '{t} ödül yerine kısa bir video.',
     ad_go: 'İzle',
     pass_t: 'Sezon defteri',
     pass_sub: 'Kademe {n}/{c} · {d} gün kaldı',
@@ -745,8 +767,23 @@ function petDative(name) {
   return LANG === 'tr' ? name + trDative(name) : name;
 }
 
+/* The singular, where a language has one. Every count in STRINGS was
+   written for many, so a level cleared with one star said "with 1
+   stars", a last move said "1 moves", and a chest one level away was
+   "in 1 levels". Turkish does not inflect a noun after a number, so it
+   needs no entries here; a third language that does gets a table of its
+   own, keyed the same way. */
+const ONE = {
+  en: {
+    lvl_moves: '{n} move', goal_crate: 'Break {n} crate', goal_mud: 'Clean {n} muddy tile',
+    goal_bramble: 'Cut back {n} bramble', a11y_cleared: 'Level cleared with {stars} star.',
+    chest_in: 'Chest in {n} level', a11y_mole: 'a molehill, {n} move until it pushes earth up',
+    perk_moves: '+{n} move'
+  }
+};
 function T(key, vars) {
-  let s = (STRINGS[LANG] && STRINGS[LANG][key]) || STRINGS.en[key] || key;
+  const single = vars && (vars.n === 1 || vars.stars === 1) && ONE[LANG] && ONE[LANG][key];
+  let s = single || (STRINGS[LANG] && STRINGS[LANG][key]) || STRINGS.en[key] || key;
   if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
   return s;
 }

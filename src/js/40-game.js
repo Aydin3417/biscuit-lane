@@ -59,7 +59,7 @@ function snapshotLevel() {
   const B = G.B;
   return {
     n: G.n, day: G.n === DAILY_LEVEL ? dayNumber() : 0, reached: SAVE.reached,
-    moves: G.moves, score: G.score, charge: G.charge, scoreMul: G.scoreMul,
+    moves: G.moves, made: G.made, targets: G.starTargets, score: G.score, charge: G.charge, scoreMul: G.scoreMul,
     extras: G.extras || 0, rescued: G.rescued, creepTick: G.creepTick,
     pupQueue: B.pupQueue || 0, startedAt: G.startedAt, bestChain: G.bestChain,
     goals: G.goals.map(g => g.have),
@@ -295,7 +295,10 @@ function startLevel(n, opts) {
   musicMood(n === DAILY_LEVEL ? SAVE.reached : n);
   const res = opts.resume || null;
   G.startedAt = res ? (res.startedAt || now()) : now();
-  track('level_start', { n: n, moves: G.def.moves, tries: (SAVE.stats.played || 0), resumed: !!res });
+  /* which attempt at this level, not how many levels ever: the number a
+     wall shows up in is attempts per level */
+  if (!res && n > 0) { if (!SAVE.tries) SAVE.tries = {}; SAVE.tries[n] = (SAVE.tries[n] || 0) + 1; }
+  track('level_start', { n: n, moves: G.def.moves, attempt: n > 0 ? ((SAVE.tries && SAVE.tries[n]) || 1) : 0, tries: (SAVE.stats.played || 0), resumed: !!res });
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
   if (res) restoreBoard(G.B, res);
@@ -311,6 +314,9 @@ function startLevel(n, opts) {
   });
   if (opts.extraMoves && !res) moves += opts.extraMoves;
   G.moves = moves;
+  /* moves actually played, which is what quitting asks about; a level
+     kept before this was counted had been played, or it was not kept */
+  G.made = res ? (res.made !== undefined ? res.made : 1) : 0;
   G.score = res ? (res.score || 0) : 0;
   G.chain = 0; G.bestChain = res ? (res.bestChain || 0) : 0; G.bestShown = false;
   G.over = false; G.busy = true;
@@ -322,7 +328,15 @@ function startLevel(n, opts) {
   G.creepTick = res ? (res.creepTick || 0) : 0;
   G.lastPraise = 0;
   G.finale = false; G.finaleSkip = false;
-  G.starTargets = starTargets(G.def);
+  G.won = null;                       /* the committed result of a win, see commitWin */
+  /* Stars were set against a bare pet, and a looked-after one brings
+     +12% score and two or three moves that the finale turns into
+     fireworks. Played with the pet the game gives a new player, thirteen
+     clears out of thirteen were three stars — including one finished
+     with a single move left — so a star said nothing. The targets carry
+     the same multipliers the score does now. */
+  const boost = G.scoreMul * Math.max(1, G.moves / Math.max(1, G.def.moves));
+  G.starTargets = res && res.targets ? res.targets.slice() : starTargets(G.def).map(v => Math.round(v * boost));
   G.starsEarned = 0;
   /* -1 rather than 0, so the first sync of a level always paints the
      lane once — a level that starts with a goal already partly met
@@ -365,7 +379,10 @@ function startLevel(n, opts) {
     winRunGifts(SAVE.winRun, isGate(n)).forEach(g => {
       if (!spots.length) return;
       const [r, c] = spots.splice(Math.floor(Math.random() * spots.length), 1)[0];
-      G.B.cell[r][c].tile.sp = g === 'bomb' ? SP.BOMB : (Math.random() < .5 ? SP.ROW : SP.COL);
+      /* on a rescue board a vertical rocket under a basket walks it home
+         in one move — with a streak running, level 7 went from a median
+         of fifteen moves to eight — so there the gift lies flat */
+      G.B.cell[r][c].tile.sp = g === 'bomb' ? SP.BOMB : (G.pupsWanted || Math.random() < .5 ? SP.ROW : SP.COL);
       G.runGifts.push(g);
     });
   }
@@ -405,9 +422,19 @@ function startLevel(n, opts) {
 /* Baskets start in the upper middle rather than the very top row: from
    row 0 a basket needs the whole column to clear beneath it before it
    reaches the door, which measured at ~11 moves each. */
+/* THE BASKETS START AT THE TOP.
+
+   They were put in rows two to four of eight, three to five drops from
+   the door, and a drop happens whenever anything under them clears —
+   which on a board this size is most moves. Level 7, the level that
+   teaches rescue, was won in three moves of twenty-seven on a phone and
+   in two by the solver: the goal finished itself before the player had
+   found out what it was. From the top three rows a basket has a real
+   distance to travel and a column worth choosing, and the budgets were
+   refitted for it (see README, "Baskets that had somewhere to go"). */
 function placePup(B) {
   const spots = [];
-  const from = Math.min(2, B.h - 1), to = Math.min(5, B.h);
+  const from = 0, to = Math.min(3, B.h);
   /* every candidate cell, not the first per column — taking the first
      lined all the baskets up along one row. Columns that already hold a
      basket are skipped so they arrive spread out rather than stacked. */
@@ -610,6 +637,7 @@ function armBooster(id) {
   if (!(SAVE.boosters[id] > 0)) return;
   if (id === 'shuffle') {
     SAVE.boosters[id]--; persist();
+    track('booster_use', { id: id, n: G.n });
     syncBoosterBar();
     SFX.select();
     doShuffle();
@@ -624,7 +652,14 @@ async function useHammer(r, c) {
   const _ep = levelEpoch();
   const cell = G.B.cell[r][c];
   if (!cell || cell.hole) return false;
+  /* A molehill has no tile and a basket is not a tile the blast will
+     touch, so the hammer used to be spent on either and do nothing — a
+     booster people pay for, gone with no effect. Refused before it is
+     taken now; it stays armed for a tile that will break. */
+  const breaks = cell.crate > 0 || cell.ice > 0 || (cell.tile && cell.tile.type !== PUP);
+  if (!breaks) { SFX.bad(); if (cell.tile) cell.tile.jiggle = .8; return false; }
   SAVE.boosters.hammer--; persist();
+  track('booster_use', { id: 'hammer', n: G.n });
   G.armed = null; syncBoosterBar();
   G.busy = true;
   SFX.crate();
@@ -642,6 +677,7 @@ async function useHammer(r, c) {
 async function useFreeSwap(a, b) {
   const _ep = levelEpoch();
   SAVE.boosters.swap--; persist();
+  track('booster_use', { id: 'swap', n: G.n });
   G.armed = null; G.armedFirst = null; syncBoosterBar();
   G.busy = true;
   const ca = G.B.cell[a[0]][a[1]], cb = G.B.cell[b[0]][b[1]];
@@ -662,8 +698,8 @@ async function doShuffle() {
   eachCell(G.B, cell => { if (cell.tile) cell.tile.jiggle = 1; });
   await wait(180);
   if (stale(_ep)) return;
-  let guard = 0;
-  do { shuffleTypes(G.B); } while (!hasMove(G.B) && guard++ < 40);
+  shuffleTypes(G.B);
+  ensureMove(G.B);
   eachCell(G.B, (cell, r, c) => {
     if (cell.tile) {
       cell.tile.x = c + rnd(-.4, .4); cell.tile.y = r + rnd(-.4, .4);
@@ -1211,6 +1247,10 @@ function busyWatch(dt) {
     if (!cell.tile) return;
     cell.tile.tw = null; cell.tile.x = c; cell.tile.y = r;
   });
+  /* and whatever was in flight is over: its chain would otherwise wake
+     from its next wait and run creep, moles and checkEnd a second time
+     alongside this one */
+  G.epoch++;
   G.busy = false; G.spending = false; G.sel = null;
   syncHud();
   resolveBoard(null).then(() => { if (!G.over) checkEnd(); });
@@ -1225,8 +1265,8 @@ async function doShuffleQuiet() {
   const _ep = levelEpoch();
   await wait(260);
   if (stale(_ep)) return;
-  let guard = 0;
-  do { shuffleTypes(G.B); } while (!hasMove(G.B) && guard++ < 40);
+  shuffleTypes(G.B);
+  ensureMove(G.B);
   eachCell(G.B, (cell, r, c) => {
     if (cell.tile) { cell.tile.x = c + rnd(-.5, .5); cell.tile.y = r + rnd(-.5, .5); setTarget(cell.tile, c, r, .34, E.back); }
   });
@@ -1249,7 +1289,17 @@ function comboOf(a, b) {
   }
   if ((A === SP.ROW || A === SP.COL) && (Bp === SP.ROW || Bp === SP.COL)) return 'cross';
   if (A === SP.BOMB && Bp === SP.BOMB) return 'bigbomb';
-  if (A === SP.BOMB || Bp === SP.BOMB) return 'rowbomb';
+  /* A bomb and a rocket, and only that pair. This line used to read
+     "a bomb and anything", which reached a bomb beside a plain tile too:
+     the swap was legal with no match in it, and it cleared three rows
+     and three columns — the bomb-and-rocket blast — out of one special.
+     Found by playing level 9 on a phone, 30 Sep 2026. Nothing else in
+     the game agreed it was a move (swapMakesMatch, hasMove, the hint,
+     the solver every budget was fitted with), so every bomb on the board
+     was a free nuke the difficulty numbers had never seen. A bomb beside
+     a plain tile needs a match now, like a rocket does. */
+  if ((A === SP.BOMB && (Bp === SP.ROW || Bp === SP.COL)) ||
+      (Bp === SP.BOMB && (A === SP.ROW || A === SP.COL))) return 'rowbomb';
   return null;
 }
 async function runCombo(kind, a, b) {
@@ -1376,6 +1426,7 @@ async function creepBrambles() {
 
 function spendMove() {
   G.moves = Math.max(0, G.moves - 1);
+  G.made = (G.made || 0) + 1;
   /* the last three moves get their own low note */
   if (G.moves > 0 && G.moves <= 3) SFX.tension(1 - (G.moves - 1) / 3);
   const el = $('#movesBox');
@@ -1393,6 +1444,9 @@ async function tryMove(a, b) {
   const ta = ca.tile, tb = cb.tile;
   const combo = comboOf(ta, tb);
   const legal = combo || swapMakesMatch(G.B, a, b);
+  /* the board as it was, to be written with this move already paid for:
+     see below, after spendMove */
+  const before = legal ? snapshotLevel() : null;
 
   swapTiles(G.B, a, b);
   setTarget(ta, b[1], b[0], .17);
@@ -1417,6 +1471,14 @@ async function tryMove(a, b) {
     return;
   }
   spendMove();
+  /* The level was only written once a move had finished cascading, so
+     swiping the app away mid-cascade brought back the board from before
+     the move with the move unspent — and a reseeded refill, which made
+     it a free undo and a free reroll. Reproduced on a phone, 30 Sep 2026.
+     The move is charged the moment it is played now: a kill mid-cascade
+     resumes the old board one move poorer, which is what the player
+     would have had if the phone had not rung. */
+  if (before) { before.moves = G.moves; before.made = G.made; SAVE.inLevel = before; persist(true); }
   if (combo) await runCombo(combo, a, b);
   else await resolveBoard([a, b]);
   if (stale(_ep)) return;
@@ -1665,12 +1727,12 @@ function checkEnd() {
   if (G.over) return;
   if (goalsMet()) {
     if (scoreOnlyLevel() && G.moves > 0) { keepLevel(); return; }      /* keep going for the stars */
-    G.over = true; dropLevel(); finishWin(); return;
+    G.over = true; dropLevel(); EV.emit('goal'); finishWin(); return;
   }
   if (G.moves <= 0) {
     G.over = true;
     dropLevel();
-    if (scoreOnlyLevel() && goalsMet()) finishWin(); else finishLose();
+    if (scoreOnlyLevel() && goalsMet()) { EV.emit('goal'); finishWin(); } else finishLose();
     return;
   }
   /* still going: this is the board the next launch will find */
@@ -2079,7 +2141,9 @@ function renderGame(dt) {
   /* white flash on the big ones */
   if (G.flash > 0) {
     c.save();
-    c.globalAlpha = G.flash * .5;
+    /* reduced motion took the shake and the zoom out and left the
+       full-board white flash in; with it on, the flash is a glow */
+    c.globalAlpha = G.flash * (reduceMotion() ? .08 : .5);
     c.fillStyle = '#FFFFFF';
     c.fillRect(0, 0, G.cw, G.ch);
     c.restore();
@@ -2118,6 +2182,8 @@ function hintScore(a, b) {
   if (ca.tile.sp !== SP.NONE && cb.tile.sp !== SP.NONE) return 180;
   let best = 0, wanted = 0;
   const collect = G.goals.filter(g => g.kind === GK.COLLECT && g.have < g.need).map(g => g.arg);
+  const open = k => G.goals.some(g => g.kind === k && g.have < g.need);
+  const want = { bramble: open(GK.BRAMBLE), mole: open(GK.MOLE), rescue: open(GK.RESCUE) };
   /* The swap happens on the live board, so putting it back is not
      optional and not conditional. Anything thrown in between would
      otherwise leave two tiles transposed with no move having been made. */
@@ -2138,10 +2204,23 @@ function hintScore(a, b) {
         if (!cell) return;
         if (cell.mud) wanted += 3;
         if (cell.tile && collect.indexOf(cell.tile.type) >= 0) wanted += 1;
-        /* a match beside a crate is what breaks the crate */
+        /* The hint knew three goals — collect, mud, crate — and pointed
+           at any tidy three on every other kind of board. Followed move
+           for move on a phone, it lost level 14 at 11 of 18 brambles,
+           a level the solver clears every time. The four it did not
+           know are weighted as test/_solver.js's human policy weighs
+           them, since that is the player every budget was fitted to. */
+        if (want.bramble && cell.bram > 0) wanted += 4;
         [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(d => {
-          const nb = openCell(G.B, r2 + d[0], c2 + d[1]);
-          if (nb && nb.crate) wanted += 2;
+          const nb = G.B.cell[r2 + d[0]] && G.B.cell[r2 + d[0]][c2 + d[1]];
+          if (!nb || nb.hole) return;
+          /* a match beside a crate is what breaks the crate. This read
+             openCell, which answers null for a crate cell, so the bonus
+             had never once fired. */
+          if (nb.crate) wanted += 2;
+          if (want.mole && nb.mole > 0) wanted += 4;
+          /* a basket rides down on whatever is cleared beneath it */
+          if (want.rescue && d[0] === -1 && nb.tile && nb.tile.type === PUP) wanted += 6;
         });
       });
     });

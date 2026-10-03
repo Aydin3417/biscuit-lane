@@ -86,14 +86,53 @@ function fillBoard(B) {
     cell.tile = mkTile(t);
     cell.tile.x = c; cell.tile.y = r; cell.tile.tx = c; cell.tile.ty = r;
   });
-  let guard = 0;
-  while (!hasMove(B) && guard++ < 40) shuffleTypes(B);
+  ensureMove(B);
 }
 function wouldMatch(B, r, c, t) {
   const g = (rr2, cc) => { const cell = openCell(B, rr2, cc); return cell && cell.tile ? cell.tile.type : -9; };
   if (g(r, c - 1) === t && g(r, c - 2) === t) return true;
   if (g(r - 1, c) === t && g(r - 2, c) === t) return true;
   return false;
+}
+/* A BOARD THAT ALWAYS HAS A MOVE.
+
+   Every shuffle in the game was "permute the colours, up to forty
+   times, until there is a move" — and then carry on whether there was
+   one or not. A permutation keeps the colour count and cannot touch the
+   tiles under ice, the specials or the pups, so a board choked by ice
+   and crates can have no arrangement with a move in it, and the level
+   then sat there: no move to make, so none to spend, so never won and
+   never lost. The solver's copy of the loop simply never ended.
+
+   Forty permutations still come first, because they keep the board the
+   player was looking at. Then the plain tiles are dealt fresh colours,
+   which changes the count. And if even that finds nothing — a board so
+   blocked that no two swappable tiles can ever line up — one plain tile
+   becomes a rainbow, which is legal beside anything it can trade with.
+   Returns whether the board now has a move. */
+function ensureMove(B) {
+  let guard = 0;
+  while (!hasMove(B) && guard++ < 40) shuffleTypes(B);
+  for (let k = 0; k < 40 && !hasMove(B); k++) {
+    eachCell(B, cell => {
+      if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE) cell.tile.type = Math.floor(B.rng() * B.types);
+    });
+    clearAccidental(B);
+  }
+  if (hasMove(B)) return true;
+  const spots = [];
+  eachCell(B, cell => { if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && !cell.ice) spots.push(cell); });
+  if (spots.length) spots[Math.floor(B.rng() * spots.length)].tile.sp = SP.RAIN;
+  return hasMove(B);
+}
+function clearAccidental(B) {
+  let guard = 0;
+  while (findMatches(B).length && guard++ < 60) {
+    findMatches(B).forEach(g => {
+      const cell = B.cell[g.cells[0][0]][g.cells[0][1]];
+      if (cell.tile && cell.tile.type >= 0) cell.tile.type = (cell.tile.type + 1 + Math.floor(B.rng() * (B.types - 1))) % B.types;
+    });
+  }
 }
 function shuffleTypes(B) {
   const list = [];

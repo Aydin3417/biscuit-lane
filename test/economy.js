@@ -548,7 +548,8 @@ SESSION_LEVELS = wasLevels; SESSIONS = wasSessions;
    lives system doing nothing, and it has been read that way before.
 
    It is the design. Hearts only ever go down on a loss — winning returns
-   the one it took, and quitting returns it too — so the drain is the
+   the one it took, and quitting before the first move does (since
+   30 Sep 2026 a quit after it costs the heart) — so the drain is the
    loss rate, and somebody playing six levels a day across two sittings
    loses about one. Five hearts and a thirty minute refill cannot
    bind against that and are not meant to: a casual player meeting a wall

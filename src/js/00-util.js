@@ -10,7 +10,34 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => Math.floor(rnd(a, b + 1));
 const pick = a => a[Math.floor(Math.random() * a.length)];
-const now = () => Date.now();
+/* THE GAME'S CLOCK NEVER RUNS BACKWARDS.
+
+   Every timed thing — hearts, unlimited-heart hours, the gift, the walk —
+   reads the phone's clock, and the phone's clock is a setting. Put
+   forward, it refilled the hearts; put back, nothing noticed, so it could
+   be done again at once. And the unlimited hours sold in the larger packs
+   end at a timestamp, so turning the clock back stretched a paid hour
+   for as long as the player liked.
+
+   So the game keeps the latest time it has seen (SAVE.maxSeen, written
+   with every save) and never reports anything earlier: a clock put back
+   finds the game waiting where it was until real time catches up. Going
+   forward still works — only a server can refuse that — but it now costs
+   the same stretch of frozen time on the way back. A clock that was set
+   years ahead by mistake would freeze the game for years, so a gap of
+   more than three days is taken as a repaired clock and trusted. */
+/* a phone or tablet with no keyboard or mouse: the keyboard help is
+   noise there */
+function touchOnly() {
+  try { return matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches; } catch (e) { return false; }
+}
+let CLOCK_FLOOR = 0;
+const now = () => { const t = Date.now(); return t >= CLOCK_FLOOR || CLOCK_FLOOR - t > 3 * 86400000 ? t : CLOCK_FLOOR; };
+function clockSeen(t) {
+  const real = Date.now();
+  CLOCK_FLOOR = (t - real > 3 * 86400000) ? real : Math.max(CLOCK_FLOOR, t || 0);
+  return CLOCK_FLOOR;
+}
 const HOUR = 3600000, MIN = 60000, DAY = 86400000;
 
 /* seeded RNG so a level always builds the same board */
@@ -290,7 +317,7 @@ function icon(name, cls) { return `<span class="i ${cls || ''}" aria-hidden="tru
 
 /* ---------- toast ---------- */
 let toastTimers = [];
-function toast(msg, ic) {
+function toast(msg, ic, ms) {
   const el = document.createElement('div');
   el.className = 'toast';
   el.innerHTML = (ic ? IC[ic] : '') + '<span>' + msg + '</span>';
@@ -298,7 +325,7 @@ function toast(msg, ic) {
   const t = setTimeout(() => {
     el.classList.add('out');
     setTimeout(() => el.remove(), 320);
-  }, 1900);
+  }, ms || 1900);
   toastTimers.push(t);
   const kids = $$('#toasts .toast');
   if (kids.length > 3) kids[0].remove();
@@ -387,7 +414,7 @@ function modal(html, opts) {
   };
 
   const api = {
-    el: sheet, veil,
+    el: sheet, veil, dismissable: opts.dismissable !== false,
     close() {
       if (closed) return;
       closed = true;
@@ -509,9 +536,15 @@ const HAP = {
 };
 
 /* ---------- number formatting ---------- */
+/* Numbers were written the American way in both languages, so a Turkish
+   player read 12,345 as twelve and a bit and 1.6k as a sixteenth of
+   something. The locale follows the language; see setLang and boot. */
+let NUM_LOCALE = 'en-US';
+function numLocale(lang) { NUM_LOCALE = lang === 'tr' ? 'tr-TR' : 'en-US'; }
+const decimalMark = () => NUM_LOCALE === 'tr-TR' ? ',' : '.';
 function fmt(n) {
   n = Math.round(n);
-  return n >= 10000 ? n.toLocaleString('en-US') : String(n);
+  return n >= 10000 ? n.toLocaleString(NUM_LOCALE) : String(n);
 }
 /* The purse, which has a width budget the score does not.
 
@@ -528,9 +561,9 @@ function fmtPurse(n) {
      stops being shorter. */
   if (n < 999500) {
     const k = n / 1000;
-    return (k < 100 ? +k.toFixed(1) : Math.round(k)) + 'k';
+    return String(k < 100 ? +k.toFixed(1) : Math.round(k)).replace('.', decimalMark()) + 'k';
   }
-  return +(n / 1000000).toFixed(1) + 'M';
+  return String(+(n / 1000000).toFixed(1)).replace('.', decimalMark()) + 'M';
 }
 /* A bond figure as a player should read it. One decimal at most, and
    none when the number is whole: .34 shows as 0.3 so petting visibly did

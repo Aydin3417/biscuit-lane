@@ -21,7 +21,7 @@ function freshSave() {
     install: 0,               // random, made on first boot, forgotten with the save
     coins: 120,
     treats: 6,
-    hearts: HEART_MAX,
+    hearts: HEART_MAX, heartHeld: false,
     heartAt: now(),
     stars: {},                 // levelNumber -> 1..3
     scores: {},                // levelNumber -> best score seen there
@@ -86,7 +86,7 @@ const SAVE_VERSION = 2;
 /* what a build calls itself when it reports anything. Bumped by hand,
    with android/app/build.gradle's versionName, so a crash from an old
    install is not read as one from the current one. */
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 
 function migrate(d) {
   const v = d.v || 1;
@@ -274,9 +274,19 @@ function vaultRecover(mirror) {
   if (!mirror) return;
   let here = null;
   try { here = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { here = null; }
-  const theirs = +mirror.lastSeen || 0;
-  const ours = here ? (+here.lastSeen || 0) : -1;
-  if (theirs <= ours) return;
+  /* Which copy is newer was decided by lastSeen, the wall clock at the
+     last write. A phone whose clock ran ahead stamped the vault in the
+     future, and once the clock was put right the genuinely newer local
+     save lost to it on the next launch — progress rolled back. The write
+     count only ever goes up; the clock breaks ties, and saves from before
+     the count existed. */
+  const tw = +mirror.writes || 0, ow = here ? (+here.writes || 0) : -1;
+  if (tw || ow > 0) { if (tw <= ow) return; }
+  else {
+    const theirs = +mirror.lastSeen || 0;
+    const ours = here ? (+here.lastSeen || 0) : -1;
+    if (theirs <= ours) return;
+  }
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(mirror)); } catch (e) { }
 }
 
@@ -288,6 +298,8 @@ function loadSave() {
     const d = migrate(JSON.parse(raw));
     const base = freshSave();
     SAVE = Object.assign(base, d);
+    /* before anything below asks the time: see CLOCK_FLOOR, 00-util.js */
+    SAVE.maxSeen = clockSeen(+SAVE.maxSeen || 0);
     SAVE.settings = Object.assign(freshSave().settings, d.settings || {});
     SAVE.room = Object.assign({ theme: 'oat', placed: [] }, d.room || {});
     SAVE.stats = Object.assign(freshSave().stats, d.stats || {});
@@ -362,6 +374,9 @@ function persist(immediate) {
   const doIt = () => {
     saveTimer = null;
     SAVE.lastSeen = now();
+    /* a count of writes, which no clock can move — see vaultRecover */
+    SAVE.writes = (SAVE.writes || 0) + 1;
+    SAVE.maxSeen = clockSeen(Math.max(SAVE.maxSeen || 0, Date.now()));
     const json = JSON.stringify(SAVE);
     try { localStorage.setItem(SAVE_KEY, json); } catch (e) { /* private mode */ }
     /* and behind it, the copy the system will not evict. An immediate
@@ -421,14 +436,42 @@ function heartsIn() {
 }
 function spendHeart() {
   heartTick();
-  if (heartsInfinite()) return true;
+  if (heartsInfinite()) { SAVE.heartHeld = false; persist(); return true; }
   if (SAVE.hearts <= 0) return false;
   heartClockStart();
   if (SAVE.hearts === HEART_MAX) SAVE.heartAt = now();
   SAVE.hearts--;
+  SAVE.heartHeld = true;
   persist();
   return true;
 }
+/* THE HEART THIS ATTEMPT IS HOLDING.
+
+   A win gave a heart back and a quit gave a heart back, and neither
+   asked whether one had been taken. The daily walk costs nothing, so
+   opening it and walking away paid a heart every time: played on a
+   phone on 30 Sep 2026, an empty purse went 2 -> 3 -> 4 -> 5 in half a
+   minute, and the unlimited hours sold in the larger packs refilled the
+   purse the same way with every level cleared inside them. The meter
+   everything is sold against was optional.
+
+   So an attempt carries a flag saying whether it paid, written with the
+   save so a resumed level still knows, and only a paid attempt gets
+   anything back. The flag is spent on the way out whatever happens —
+   returned on a win or an untouched quit, kept by the game on a loss. */
+function returnHeart() {
+  if (!SAVE.heartHeld) return false;
+  SAVE.heartHeld = false;
+  if (SAVE.hearts < HEART_MAX) {
+    SAVE.hearts++;
+    /* the clock only restarts from a full purse, so a refund must not
+       move it — clearing a level while waiting would otherwise push the
+       next free heart further away */
+    if (SAVE.hearts >= HEART_MAX) SAVE.heartAt = now();
+  }
+  return true;
+}
+function forfeitHeart() { SAVE.heartHeld = false; }
 
 /* ---------- unlimited hearts ----------
 
@@ -1057,7 +1100,18 @@ function grantPurchase(kind, id, txId) {
   }
   if (kind === 'pass') {
     const p = passState();
-    if (p.paid) return 0;              /* already theirs; a restore said so twice */
+    /* Already theirs. A second book in one season cannot be given, but
+       it was paid for, and a paid sale that grants nothing gets closed
+       by nobody and refunded by nobody. It is worth a paper bag of
+       treats, which is what the same money buys in the shop. */
+    if (p.paid) {
+      if (!txId) return 0;
+      const bag = TREAT_PACKS.find(x => x.id === 'bag');
+      SAVE.treats += bag ? bag.treats : 110;
+      mark();
+      persist(true);
+      return 1;
+    }
     p.paid = true;
     mark();
     persist(true);
@@ -1170,7 +1224,9 @@ function giftKeeps() { const d = giftDays(); return d >= 1 && d <= 2; }
    nothing anywhere mentioned. The interface reads this table now, so
    what is promised and what is paid cannot drift apart. */
 function giftFor(day) {
-  const r = { coins: 40 + day * 18, treats: ECON.giftTreats[day] || 0, food: null, booster: null };
+  /* 25 + 12 a day, from 40 + 18: the ladder cut by the same third as
+     every other coin source on 30 Sep 2026 (ECON, 10-data.js) */
+  const r = { coins: 25 + day * 12, treats: ECON.giftTreats[day] || 0, food: null, booster: null };
   if (day === 2 || day === 5) r.food = 'tuna';
   if (day === 4) r.food = 'stew';
   if (day === 3) r.booster = 'hammer';

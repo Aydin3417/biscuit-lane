@@ -365,7 +365,7 @@ for (let n = 1; n <= LEVELS_TO_TEST; n++) {
     if (rescueGoal) {
       for (let i = 0; i < Math.min(PUPS_IN_PLAY, rescueGoal[2] + 2); i++) {
         const spots = [];
-        for (let c = 0; c < B.w; c++) for (let r = Math.min(2, B.h - 1); r < Math.min(5, B.h); r++) {
+        for (let c = 0; c < B.w; c++) for (let r = 0; r < Math.min(3, B.h); r++) {
           const cell = openCell(B, r, c);
           if (cell && cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && cell.ice === 0) { spots.push(cell); break; }
         }

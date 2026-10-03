@@ -60,13 +60,13 @@ require('./_modules.js').CORE.forEach(f =>
 const X = vm.runInContext(
   '({ makeBoard, findMatches, specialFor, settle, hasMove, allMoves, canSwap,' +
   '   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,' +
-  '   commonType, shuffleTypes, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,' +
+  '   commonType, shuffleTypes, ensureMove, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,' +
   '   moleCount, moleTick, moleHit, MOLE_EVERY,' +
 '   targetClear, isGate, budgetFor, budgetRange, LEVELS, winRunGifts })', ctx);
 const {
   makeBoard, findMatches, specialFor, settle, hasMove, allMoves, canSwap,
   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,
-  commonType, shuffleTypes, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,
+  commonType, shuffleTypes, ensureMove, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,
   moleCount, moleTick, moleHit
 } = X;
 
@@ -76,6 +76,7 @@ function cloneBoard(B) {
   const C = {
     w: B.w, h: B.h, types: B.types, def: B.def,
     exits: B.exits, pupQueue: B.pupQueue || 0,
+    rescueNeed: B.rescueNeed || 0, rescuedSoFar: B.rescuedSoFar || 0,
     rng: mulberry(cloneSeq++ * 2654435761 >>> 0),
     cell: []
   };
@@ -168,7 +169,19 @@ function collectPups(B, tally) {
     const r = B.exits[c];
     if (r < 0) continue;
     const cell = B.cell[r][c];
-    if (cell.tile && cell.tile.type === PUP) { cell.tile = null; tally.rescued++; B.pupQueue = (B.pupQueue || 0) + 1; got++; }
+    if (cell.tile && cell.tile.type === PUP) { cell.tile = null; tally.rescued++; got++; }
+  }
+  /* The game queues a replacement only while the goal still needs one:
+     min(PUPS_IN_PLAY, still needed + 1) minus what is already on the
+     board (40-game.js, after collectPups). This queued one for every
+     basket home, so late in a rescue the harness had baskets the game
+     never deals — a solver playing an easier level than the player. */
+  if (got && B.rescueNeed) {
+    B.rescuedSoFar = (B.rescuedSoFar || 0) + got;
+    let onBoard = 0;
+    for (let r = 0; r < B.h; r++) for (let c = 0; c < B.w; c++) { const x = B.cell[r][c]; if (x && x.tile && x.tile.type === PUP) onBoard++; }
+    const want = Math.min(PUPS_IN_PLAY, B.rescueNeed - B.rescuedSoFar + 1) - onBoard;
+    for (let i = 0; i < want; i++) B.pupQueue = (B.pupQueue || 0) + 1;
   }
   return got;
 }
@@ -397,10 +410,11 @@ function playLevel(n, seed, defOverride) {
   B.pupQueue = 0;
   const goals = mkGoals(def);
   const rescue = def.goals.find(g => g[0] === GK.RESCUE);
+  B.rescueNeed = rescue ? rescue[2] : 0; B.rescuedSoFar = 0;
   if (rescue) {
     for (let i = 0; i < Math.min(PUPS_IN_PLAY, rescue[2] + 2); i++) {
       const spots = [];
-      for (let c = 0; c < B.w; c++) for (let r = Math.min(2, B.h - 1); r < Math.min(5, B.h); r++) {
+      for (let c = 0; c < B.w; c++) for (let r = 0; r < Math.min(3, B.h); r++) {
         const cell = openCell(B, r, c);
         if (cell && cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && cell.ice === 0) { spots.push(cell); break; }
       }
@@ -445,7 +459,7 @@ function playLevel(n, seed, defOverride) {
     gifts.forEach(g => {
       if (!spots.length) return;
       const cell = spots.splice((Math.random() * spots.length) | 0, 1)[0];
-      cell.tile.sp = g === 'bomb' ? SP.BOMB : (Math.random() < .5 ? SP.ROW : SP.COL);
+      cell.tile.sp = g === 'bomb' ? SP.BOMB : (rescue || Math.random() < .5 ? SP.ROW : SP.COL);
     });
   }
   const scoreMul = perked ? 1.12 : 1;
@@ -455,8 +469,10 @@ function playLevel(n, seed, defOverride) {
   const scoreOnly = goals.length > 0 && goals.every(g => g.kind === GK.SCORE);
   while (moves > 0 && (scoreOnly || !met(goals))) {
     if (!hasMove(B)) {
-      let g = 0;
-      do { shuffleTypes(B); } while (!hasMove(B) && g++ < 50);
+      /* the game's own rescue for a dead board; a board it cannot
+         rescue ends the game here rather than looping for ever */
+      shuffleTypes(B);
+      if (!ensureMove(B)) break;
       const t = blankTally(); resolve(B, null, t);
       score += Math.round(t.count * 62 * scoreMul); applyTally(goals, t, score, B);
       continue;

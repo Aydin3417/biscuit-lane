@@ -715,6 +715,20 @@ canvas{ max-width:100%; }
 .sheet > *{ flex:0 0 auto; }
 .sheet .row{ display:flex; gap:9px; }
 .sheet .row .btn{ flex:1; }
+/* THE BUTTON THAT STARTS THE LEVEL WAS BELOW THE PHONE.
+
+   The level card grew a row for every thing it had to say — the gate,
+   the run, the chest, the pet, what charges the pet, the booster — and on
+   a Pixel 7 on a gate level with a run going, Start sat at 847px on an
+   839px screen; on an iPhone SE it was off the bottom on every level
+   from ten on. The card still scrolls, but its buttons ride the bottom
+   edge of the sheet and are always on screen. */
+.sheet .sheetFoot{
+  position:sticky; bottom:-18px; z-index:2;
+  margin:0 -18px -18px; padding:12px 18px 18px;
+  background:linear-gradient(to bottom, color-mix(in srgb, var(--surface) 0%, transparent), var(--surface) 34%);
+}
+.chargedBy{ display:block; margin-top:4px; font-size:var(--t-micro); color:var(--text-faint); font-weight:600; }
 .starsRow{ display:flex; justify-content:center; gap:5px; }
 .starsRow .s{ transform:scale(.3) rotate(-25deg); opacity:0; transition:transform .55s cubic-bezier(.2,1.7,.4,1), opacity .3s; }
 .starsRow .s svg{ width:46px; height:46px; display:block; }
@@ -844,6 +858,13 @@ canvas{ max-width:100%; }
 
 /* ---------- misc ---------- */
 .switchRow{ display:flex; align-items:center; gap:12px; padding:11px 14px; }
+/* The switches are buttons, and a button sizes to its content and
+   centres its text whatever the card around it says — so each row was a
+   different width (282, 267, 274px against 332) with its switch at a
+   different x and its label centred. Measured on a phone, 30 Sep 2026. */
+button.switchRow{ width:100%; text-align:left; }
+/* the privacy link is an <a> dressed as a button */
+a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:center; }
 .switchRow .lb{ flex:1 1 auto; font-weight:700; font-size:var(--t-small); }
 .switchRow .lb small{ display:block; font-weight:500; font-size:var(--t-micro); color:var(--text-faint); line-height:1.35; }
 .sw2{ width:48px; height:28px; border-radius:999px; background:var(--surface-3); position:relative; transition:background .2s; flex:0 0 auto; }

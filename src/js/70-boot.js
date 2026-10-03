@@ -183,6 +183,8 @@ function boot() {
   castRebuild();          /* who stands in each board slot, before anything draws */
   if (SAVE.settings.lang) LANG = SAVE.settings.lang;
   else { LANG = (navigator.language || 'en').toLowerCase().indexOf('tr') === 0 ? 'tr' : 'en'; SAVE.settings.lang = LANG; }
+  numLocale(LANG);
+  document.documentElement.lang = LANG;
 
   applyTheme();
   readPalette();
@@ -212,6 +214,7 @@ function boot() {
   /* the chip explained what treats were and then stopped, which was the
      right card back when there was nothing to do about it */
   $('#chipTreats').addEventListener('click', () => { SFX.tap(); treatStore(); });
+  $('#chipCoins').addEventListener('click', () => coinPurse());
 
   catchUpPets();
   heartTick();
@@ -279,7 +282,14 @@ function boot() {
      account for. */
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
+      /* the comment on snapshotLevel promised a write at every hide and
+         there was none; a board at rest is exactly the one to keep */
+      if (SCREEN === 'game' && G.B && !G.busy && !G.over) keepLevel();
       musicStop(); persist(true);
+      /* the context itself, not just the music bus: a running
+         AudioContext keeps an audio session open on some phones, and a
+         cascade in flight would go on playing into the pocket */
+      try { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend(); } catch (e) { }
       /* The moment the queue can still be made right: the player has put
          the game down, and everything the two notifications are about —
          whether the hearts are empty, whether today's walk went untaken
@@ -293,6 +303,7 @@ function boot() {
          canvas repainted for nobody, in a pocket, on a battery */
       if (AMB.raf) { cancelAnimationFrame(AMB.raf); AMB.raf = null; }
     } else {
+      try { if (AU.ctx && AU.ctx.state === 'suspended' && (SAVE.settings.sound || SAVE.settings.music)) AU.ctx.resume(); } catch (e) { }
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
       if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
       if (SAVE.settings.music) musicStart();
@@ -350,6 +361,15 @@ function boot() {
        back first, before the gift or anything else: the player was in
        the middle of something, and the home screen is not where they
        left off. See snapshotLevel in 40-game.js. */
+    /* a win committed and never shown: the app died during the
+       fireworks. It counted — say so, once, rather than leaving the
+       player to find a level unlocked with no memory of the card. */
+    if (SAVE.unshownWin) {
+      const wn = SAVE.unshownWin;
+      SAVE.unshownWin = 0;
+      persist();
+      setTimeout(() => toast(T('win_kept', { n: wn })), 600);
+    }
     const unfinished = levelToResume();
     if (unfinished) {
       setTimeout(() => { if (SCREEN === 'home' && !sheetIsOpen()) resumeLevel(unfinished); }, 350);
@@ -365,8 +385,13 @@ function boot() {
   }
 }
 
-/* a small handle for debugging in the console */
-window.BL = {
+/* A small handle for debugging in the console, and the door every test
+   harness comes in by. Not in the store build: it hands over the save and
+   persist(), which in a debuggable WebView is "BL.save.treats = 1e6" typed
+   into a console. The app on a phone gets it only if somebody who can
+   already reach its storage asks for it (pawtika-debug = 1). */
+const BL_OPEN = !nativeShell() || (() => { try { return localStorage.getItem('pawtika-debug') === '1'; } catch (e) { return false; } })();
+if (BL_OPEN) window.BL = {
   set fast(v) { FAST_FORWARD = !!v; },
   get fast() { return FAST_FORWARD; },
   get save() { return SAVE; },

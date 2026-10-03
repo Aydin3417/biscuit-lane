@@ -773,6 +773,20 @@ canvas{ max-width:100%; }
 .sheet > *{ flex:0 0 auto; }
 .sheet .row{ display:flex; gap:9px; }
 .sheet .row .btn{ flex:1; }
+/* THE BUTTON THAT STARTS THE LEVEL WAS BELOW THE PHONE.
+
+   The level card grew a row for every thing it had to say — the gate,
+   the run, the chest, the pet, what charges the pet, the booster — and on
+   a Pixel 7 on a gate level with a run going, Start sat at 847px on an
+   839px screen; on an iPhone SE it was off the bottom on every level
+   from ten on. The card still scrolls, but its buttons ride the bottom
+   edge of the sheet and are always on screen. */
+.sheet .sheetFoot{
+  position:sticky; bottom:-18px; z-index:2;
+  margin:0 -18px -18px; padding:12px 18px 18px;
+  background:linear-gradient(to bottom, color-mix(in srgb, var(--surface) 0%, transparent), var(--surface) 34%);
+}
+.chargedBy{ display:block; margin-top:4px; font-size:var(--t-micro); color:var(--text-faint); font-weight:600; }
 .starsRow{ display:flex; justify-content:center; gap:5px; }
 .starsRow .s{ transform:scale(.3) rotate(-25deg); opacity:0; transition:transform .55s cubic-bezier(.2,1.7,.4,1), opacity .3s; }
 .starsRow .s svg{ width:46px; height:46px; display:block; }
@@ -902,6 +916,13 @@ canvas{ max-width:100%; }
 
 /* ---------- misc ---------- */
 .switchRow{ display:flex; align-items:center; gap:12px; padding:11px 14px; }
+/* The switches are buttons, and a button sizes to its content and
+   centres its text whatever the card around it says — so each row was a
+   different width (282, 267, 274px against 332) with its switch at a
+   different x and its label centred. Measured on a phone, 30 Sep 2026. */
+button.switchRow{ width:100%; text-align:left; }
+/* the privacy link is an <a> dressed as a button */
+a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:center; }
 .switchRow .lb{ flex:1 1 auto; font-weight:700; font-size:var(--t-small); }
 .switchRow .lb small{ display:block; font-weight:500; font-size:var(--t-micro); color:var(--text-faint); line-height:1.35; }
 .sw2{ width:48px; height:28px; border-radius:999px; background:var(--surface-3); position:relative; transition:background .2s; flex:0 0 auto; }
@@ -1328,7 +1349,34 @@ const lerp = (a, b, t) => a + (b - a) * t;
 const rnd = (a, b) => a + Math.random() * (b - a);
 const irnd = (a, b) => Math.floor(rnd(a, b + 1));
 const pick = a => a[Math.floor(Math.random() * a.length)];
-const now = () => Date.now();
+/* THE GAME'S CLOCK NEVER RUNS BACKWARDS.
+
+   Every timed thing — hearts, unlimited-heart hours, the gift, the walk —
+   reads the phone's clock, and the phone's clock is a setting. Put
+   forward, it refilled the hearts; put back, nothing noticed, so it could
+   be done again at once. And the unlimited hours sold in the larger packs
+   end at a timestamp, so turning the clock back stretched a paid hour
+   for as long as the player liked.
+
+   So the game keeps the latest time it has seen (SAVE.maxSeen, written
+   with every save) and never reports anything earlier: a clock put back
+   finds the game waiting where it was until real time catches up. Going
+   forward still works — only a server can refuse that — but it now costs
+   the same stretch of frozen time on the way back. A clock that was set
+   years ahead by mistake would freeze the game for years, so a gap of
+   more than three days is taken as a repaired clock and trusted. */
+/* a phone or tablet with no keyboard or mouse: the keyboard help is
+   noise there */
+function touchOnly() {
+  try { return matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches; } catch (e) { return false; }
+}
+let CLOCK_FLOOR = 0;
+const now = () => { const t = Date.now(); return t >= CLOCK_FLOOR || CLOCK_FLOOR - t > 3 * 86400000 ? t : CLOCK_FLOOR; };
+function clockSeen(t) {
+  const real = Date.now();
+  CLOCK_FLOOR = (t - real > 3 * 86400000) ? real : Math.max(CLOCK_FLOOR, t || 0);
+  return CLOCK_FLOOR;
+}
 const HOUR = 3600000, MIN = 60000, DAY = 86400000;
 
 /* seeded RNG so a level always builds the same board */
@@ -1608,7 +1656,7 @@ function icon(name, cls) { return `<span class="i ${cls || ''}" aria-hidden="tru
 
 /* ---------- toast ---------- */
 let toastTimers = [];
-function toast(msg, ic) {
+function toast(msg, ic, ms) {
   const el = document.createElement('div');
   el.className = 'toast';
   el.innerHTML = (ic ? IC[ic] : '') + '<span>' + msg + '</span>';
@@ -1616,7 +1664,7 @@ function toast(msg, ic) {
   const t = setTimeout(() => {
     el.classList.add('out');
     setTimeout(() => el.remove(), 320);
-  }, 1900);
+  }, ms || 1900);
   toastTimers.push(t);
   const kids = $$('#toasts .toast');
   if (kids.length > 3) kids[0].remove();
@@ -1705,7 +1753,7 @@ function modal(html, opts) {
   };
 
   const api = {
-    el: sheet, veil,
+    el: sheet, veil, dismissable: opts.dismissable !== false,
     close() {
       if (closed) return;
       closed = true;
@@ -1827,9 +1875,15 @@ const HAP = {
 };
 
 /* ---------- number formatting ---------- */
+/* Numbers were written the American way in both languages, so a Turkish
+   player read 12,345 as twelve and a bit and 1.6k as a sixteenth of
+   something. The locale follows the language; see setLang and boot. */
+let NUM_LOCALE = 'en-US';
+function numLocale(lang) { NUM_LOCALE = lang === 'tr' ? 'tr-TR' : 'en-US'; }
+const decimalMark = () => NUM_LOCALE === 'tr-TR' ? ',' : '.';
 function fmt(n) {
   n = Math.round(n);
-  return n >= 10000 ? n.toLocaleString('en-US') : String(n);
+  return n >= 10000 ? n.toLocaleString(NUM_LOCALE) : String(n);
 }
 /* The purse, which has a width budget the score does not.
 
@@ -1846,9 +1900,9 @@ function fmtPurse(n) {
      stops being shorter. */
   if (n < 999500) {
     const k = n / 1000;
-    return (k < 100 ? +k.toFixed(1) : Math.round(k)) + 'k';
+    return String(k < 100 ? +k.toFixed(1) : Math.round(k)).replace('.', decimalMark()) + 'k';
   }
-  return +(n / 1000000).toFixed(1) + 'M';
+  return String(+(n / 1000000).toFixed(1)).replace('.', decimalMark()) + 'M';
 }
 /* A bond figure as a player should read it. One decimal at most, and
    none when the number is whole: .34 shows as 0.3 so petting visibly did
@@ -2018,6 +2072,8 @@ const STRINGS = {
     lvl_charges: 'Charged by',
     g_quit_t: 'Leave the level?',
     g_quit_s: 'You keep the heart. Progress on this level is lost.',
+    g_quit_lose: 'This costs the heart you started with.',
+    g_quit_free: 'Progress on this level is lost.',
     g_quit_yes: 'Leave', g_quit_no: 'Keep playing',
     g_shuffle: 'No moves left — shuffling',
     g_booster_pick: 'Tap a tile',
@@ -2086,7 +2142,11 @@ const STRINGS = {
     shop_buy: 'Buy', shop_owned: 'Owned', shop_wear: 'Wear', shop_worn: 'Worn', 
     shop_place: 'Put in room', shop_placed: 'In room',
     shop_have: 'x{n} in the cupboard',
-    shop_poor: 'Not enough coins',
+    purse_t: 'Coins for treats',
+    purse_s: 'Turn treats into coins for the room, the shop and the next animal. Bigger sizes give more for each treat.',
+    purse_need: '{n} more coins for that.',
+    purse_done: '+{n} coins',
+    store_why_coins: 'That size costs {n} treats.',
     shop_bought: 'Bought {item}',
     shop_treats_t: 'Treats',
     shop_treats_s: 'Everything on this page is bought with coins you earned. Treats come from daily baskets, three-star clears and milestones.',
@@ -2136,7 +2196,8 @@ const STRINGS = {
     set_reset_confirm: 'Delete everything?',
     set_reset_confirm_s: 'Your pets, coins and every level you cleared. This cannot be undone.',
     set_reset_yes: 'Delete it all', set_reset_no: 'Keep my pets',
-    set_credits: 'Everything here — every cat, dog, sound and biscuit — is drawn and synthesised in code. No audio files, and no pictures but the logo.',
+    set_credits: 'Every cat, dog, sound and biscuit here is drawn and synthesised in code — no audio files. The rooms and lanes behind them are painted.',
+    set_privacy: 'Privacy policy',
 
     /* daily */
     daily_t: 'Left on the step',
@@ -2192,6 +2253,8 @@ const STRINGS = {
     a11y_state: '{moves} moves left, score {score}. {goals}',
     a11y_goal_line: '{label}, {have} of {need}',
     a11y_cleared: 'Level cleared with {stars} stars.',
+    win_kept: 'Level {n} counted as cleared, rewards included.',
+    win_badges: 'For the shelf: {names}',
     a11y_failed: 'Out of moves.',
     a11y_ready: '{name} is ready. Press P.',
     a11y_help_t: 'Playing by keyboard',
@@ -2206,7 +2269,9 @@ const STRINGS = {
     trait_none: 'Still working out who they are.',
     trait_pending: 'A trait settles past bond {n}, once you have looked after them the same way {c} times.',
     ad_watch: '{n} more moves',
-    ad_watch_sub: 'A short video instead of {t} treats, once a day.',
+    ad_heart: 'Watch a video for a heart',
+    ad_double: 'Watch a video: +{n} more',
+    ad_watch_sub: 'A short video instead of {t} treats.',
     ad_go: 'Watch',
     pass_t: 'The season book',
     pass_sub: 'Tier {n} of {c} · {d} days left',
@@ -2373,6 +2438,8 @@ const STRINGS = {
     lvl_charges: 'Hamlesini dolduran',
     g_quit_t: 'Bölümden çıkılsın mı?',
     g_quit_s: 'Kalbin sende kalır. Bu bölümdeki ilerleme silinir.',
+    g_quit_lose: 'Başlarken harcadığın kalp geri gelmez.',
+    g_quit_free: 'Bu bölümdeki ilerleme silinir.',
     g_quit_yes: 'Çık', g_quit_no: 'Devam et',
     g_shuffle: 'Hamle kalmadı — karıştırılıyor',
     g_booster_pick: 'Bir taşa dokun',
@@ -2438,7 +2505,11 @@ const STRINGS = {
     shop_buy: 'Al', shop_owned: 'Sende', shop_wear: 'Tak', shop_worn: 'Takılı', 
     shop_place: 'Odaya koy', shop_placed: 'Odada',
     shop_have: 'Dolapta {n} tane',
-    shop_poor: 'Altın yetmiyor',
+    purse_t: 'Ödülle altın',
+    purse_s: 'Ödülleri oda, dükkân ve yeni hayvan için altına çevir. Büyük boylar ödül başına daha çok altın verir.',
+    purse_need: 'Bunun için {n} altın daha lazım.',
+    purse_done: '+{n} altın',
+    store_why_coins: 'O boy {n} ödül tutuyor.',
     shop_bought: '{item} alındı',
     shop_treats_t: 'Ödüller',
     shop_treats_s: 'Bu sayfadaki her şey kazandığın altınla alınır. Ödüller günlük sepetten, üç yıldızlı geçişlerden ve bölüm hediyelerinden gelir.',
@@ -2486,7 +2557,8 @@ const STRINGS = {
     set_reset_confirm: 'Her şey silinsin mi?',
     set_reset_confirm_s: 'Hayvanların, altının ve geçtiğin bölümler. Geri dönüşü yok.',
     set_reset_yes: 'Hepsini sil', set_reset_no: 'Vazgeçtim',
-    set_credits: 'Buradaki her şey — her kedi, her köpek, her ses — kodla çiziliyor ve sentezleniyor. Ses dosyası yok; logo dışında görsel de yok.',
+    set_credits: 'Buradaki her kedi, her köpek, her ses kodla çiziliyor ve sentezleniyor — ses dosyası yok. Arkadaki oda ve yollar boyama.',
+    set_privacy: 'Gizlilik politikası',
 
     daily_t: 'Kapıya bırakılmış',
     daily_s: 'Serinin {n}. günü.',
@@ -2539,6 +2611,8 @@ const STRINGS = {
     a11y_state: '{moves} hamle kaldı, puan {score}. {goals}',
     a11y_goal_line: '{label}, {have} / {need}',
     a11y_cleared: 'Bölüm {stars} yıldızla geçildi.',
+    win_kept: '{n}. bölüm geçilmiş sayıldı, ödülleri verildi.',
+    win_badges: 'Rafa eklendi: {names}',
     a11y_failed: 'Hamle bitti.',
     a11y_ready: '{name} hazır. P tuşuna bas.',
     a11y_help_t: 'Klavyeyle oynamak',
@@ -2553,7 +2627,9 @@ const STRINGS = {
     trait_none: 'Kim olduğunu henüz bulmaya çalışıyor.',
     trait_pending: 'Karakteri {n}. bağ seviyesinden sonra, ona {c} kez aynı şekilde baktığında belli olur.',
     ad_watch: '{n} hamle daha',
-    ad_watch_sub: '{t} ödül yerine kısa bir video, günde bir kez.',
+    ad_heart: 'Video izle, bir kalp al',
+    ad_double: 'Video izle: +{n} daha',
+    ad_watch_sub: '{t} ödül yerine kısa bir video.',
     ad_go: 'İzle',
     pass_t: 'Sezon defteri',
     pass_sub: 'Kademe {n}/{c} · {d} gün kaldı',
@@ -2670,8 +2746,23 @@ function petDative(name) {
   return LANG === 'tr' ? name + trDative(name) : name;
 }
 
+/* The singular, where a language has one. Every count in STRINGS was
+   written for many, so a level cleared with one star said "with 1
+   stars", a last move said "1 moves", and a chest one level away was
+   "in 1 levels". Turkish does not inflect a noun after a number, so it
+   needs no entries here; a third language that does gets a table of its
+   own, keyed the same way. */
+const ONE = {
+  en: {
+    lvl_moves: '{n} move', goal_crate: 'Break {n} crate', goal_mud: 'Clean {n} muddy tile',
+    goal_bramble: 'Cut back {n} bramble', a11y_cleared: 'Level cleared with {stars} star.',
+    chest_in: 'Chest in {n} level', a11y_mole: 'a molehill, {n} move until it pushes earth up',
+    perk_moves: '+{n} move'
+  }
+};
 function T(key, vars) {
-  let s = (STRINGS[LANG] && STRINGS[LANG][key]) || STRINGS.en[key] || key;
+  const single = vars && (vars.n === 1 || vars.stars === 1) && ONE[LANG] && ONE[LANG][key];
+  let s = single || (STRINGS[LANG] && STRINGS[LANG][key]) || STRINGS.en[key] || key;
   if (vars) for (const k in vars) s = s.split('{' + k + '}').join(vars[k]);
   return s;
 }
@@ -2944,7 +3035,16 @@ const ECON = {
      all six by day 14 in test/economy.js, and a month ended with four
      thousand coins and nothing left to spend them on. See README, "The
      money meant nothing by the second week". */
-  winBase: 15, winPerStar: 10, winPerScore: 2600,
+  /* And by a third again on 30 Sep 2026, by the owner's call to run the
+     money tight but fair. A month of ordinary play still earned 18,285
+     coins against a 17,533-coin catalogue: every hat, room and animal
+     the game sells was bought inside thirty days, so nothing priced in
+     coins was ever a reason to come back, or to open the treat store. The
+     booster prices go up with it, below, and treats can now be turned
+     into coins (COIN_PURSES) — so the player who wants the room finished
+     sooner has somewhere to go, and the one who does not still gets there
+     by playing. test/economy.js prints the month before and after. */
+  winBase: 10, winPerStar: 7, winPerScore: 3600,
   /* and what it pays the second time. A cleared level paid full price
      forever, which made the best coin-per-minute in the game "replay
      level 3", and made every price downstream a fiction. Beating your
@@ -2952,7 +3052,7 @@ const ECON = {
      isn't farming. */
   replayRate: .10, replayBestRate: .25,
 
-  dailyWalkCoins: 80, dailyWalkTreats: 1,
+  dailyWalkCoins: 55, dailyWalkTreats: 1,
   /* treats on the gift ladder: day 4 and day 7 only, 1 and 3. Was day
      3, 6 and 7 for 2, 2 and 5 — nine a week, on top of fourteen from
      the walk. */
@@ -2979,7 +3079,7 @@ const ECON = {
      ordinary level was the largest single source of it. A treat is the
      currency that ends a wall, so it is paid at the walls: three-starring
      a gate is the hardest thing in a block, and it still pays. */
-  threeStarTreats: 0, threeStarTreatsGate: 1, milestoneTreats: 1, milestoneEvery: 10, chestCoins: 40,
+  threeStarTreats: 0, threeStarTreatsGate: 1, milestoneTreats: 1, milestoneEvery: 10, chestCoins: 30,
 
   /* thirty, which is the genre's number: a full set in two and a half
      hours rather than two. It only matters to somebody who has lost five
@@ -2995,7 +3095,7 @@ const ECON = {
      and the moment it is not is the moment a player most wants to finish
      — so there is a second offer, once, and it costs what the genre
      charges for the second: close to double. There is no third. */
-  continueTreats2: 16,
+  continueTreats2: 18,
   /* Was twelve, against a player who is holding seven at the moment
      the pool empties — which made it not an offer but a wall with a
      price written on it. Nine is the carry-on price, and a player who
@@ -3008,7 +3108,18 @@ const ECON = {
      is not an offer, it is a sale of a lost level — the player finds
      that out after paying, once, and then never trusts the button
      again. Below this the card does not carry it at all. */
-  continueAt: .70
+  /* Lowered from .70 on 30 Sep 2026. At seven tenths the offer reached a
+     player only when the level was nearly done, and test/economy.js had
+     it offered fifteen times in a month — the one real sink in the game,
+     shown to almost nobody. At half the goal, five moves still finishes
+     a board more often than not (the moves are worth more on a board
+     that is half cleared, not less), so the offer is still honest: it is
+     not sold to somebody who is a long way off. */
+  continueAt: .50,
+  /* what a rewarded video carries on with: three moves, where nine treats
+     buy five. The video is the free way through, and it should be the
+     smaller one, or nobody would ever pay for the other. */
+  adMoves: 3
 };
 
 /* ---------- where this game lives, once it lives anywhere ----------
@@ -3033,7 +3144,11 @@ const STORE_LINKS = {
   play: 'https://play.google.com/store/apps/details?id=com.pawtika.game',
   /* paste the App Store URL here — App Store Connect gives it once the
      app record exists, in the form https://apps.apple.com/app/id0000000000 */
-  apple: ''
+  apple: '',
+  /* where privacy.html is hosted. Both stores ask for this address, and
+     settings links to it once it is filled in (App Store Review 5.1.1
+     wants the policy reachable from inside the app as well). */
+  privacy: 'https://aydin3417.github.io/biscuit-lane/privacy.html'
 };
 /* Whether this is the app or the web page. Asked here rather than
    reading 75-native.js's `NATIVE`, because that file is the last one
@@ -3042,6 +3157,52 @@ const STORE_LINKS = {
 function nativeShell() {
   return !!(typeof window !== 'undefined' && window.Capacitor &&
     window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+/* ---------- the one server ----------
+
+   Two things a game that earns money cannot do from the phone alone:
+   know how players are getting on, and know that a purchase is real.
+   Both go to one small Supabase project (server/supabase/ in this
+   repository): an analytics intake and a purchase check, and nothing
+   else — no accounts, no saves, no names.
+
+   Empty, both are off and the game is exactly what it was before this
+   existed: events stay in the ring buffer on the phone, and purchases
+   are granted on the store's word. Fill in the project URL and its
+   publishable (anon) key — both are public by design, the database is
+   closed to them by row-level security — and the next build sends. */
+const BACKEND = {
+  /* the "Pawtika" organisation's project, Ireland (eu-west-1); schema and
+     both functions deployed 3 Oct 2026 */
+  url: 'https://emkdfbpzlreozepcoykn.supabase.co',
+  key: 'sb_publishable_gGZirwhi9sDI68ZV12XBgw_67aqkVJe'
+};
+/* Not from a developer's machine. The test suites and the dev tools play
+   whole levels on localhost, and every one of them would otherwise land in
+   the same table as the players — a level funnel with a solver in it. The
+   app on a phone is also served from "localhost" (capacitor://localhost,
+   https://localhost), which is why the shell is asked first; a browser on
+   localhost sends only when pawtika-debug says so. */
+function backendOn() {
+  if (!(BACKEND.url && BACKEND.key)) return false;
+  if (nativeShell()) return true;
+  try {
+    const h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '') return localStorage.getItem('pawtika-debug') === '1';
+  } catch (e) { return false; }
+  return true;
+}
+function backendCall(fn, body) {
+  return fetch(BACKEND.url.replace(/\/$/, '') + '/functions/v1/' + fn, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: BACKEND.key, Authorization: 'Bearer ' + BACKEND.key },
+    body: JSON.stringify(body)
+  });
+}
+/* 'ios', 'android' or 'web' — for the few things that differ by store */
+function nativePlatform() {
+  const C = typeof window !== 'undefined' && window.Capacitor;
+  return C && C.getPlatform ? C.getPlatform() : 'web';
 }
 function storeLink() {
   const ios = typeof window !== 'undefined' && window.Capacitor &&
@@ -3083,6 +3244,22 @@ const TREAT_PACKS = [
   { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı' },
   { id: 'tin', sku: 'treats_tin_240', treats: 240, usd: '$9.99', en: 'Biscuit tin', tr: 'Bisküvi kutusu', infinite: 60 },
   { id: 'sack', sku: 'treats_sack_520', treats: 520, usd: '$19.99', en: 'Feed sack', tr: 'Mama çuvalı', best: true, infinite: 180 }
+];
+
+/* ---------- coins for treats ----------
+
+   Coins could only be earned by playing, and treats could not be turned
+   into them, so the thing most players actually want to hurry — the
+   room, the second animal, a booster before a wall — had no way to be
+   hurried. With the coin faucet cut by a third (ECON, 30 Sep 2026) that
+   would only have been a slower game, so the purse is the other half of
+   the same change: every size gives more coins per treat than the one
+   below it, and the smallest is still a fair trade (twenty treats for
+   about nine levels' worth of first-clear coins). */
+const COIN_PURSES = [
+  { id: 'handful', treats: 20, coins: 350, en: 'A handful', tr: 'Bir avuç' },
+  { id: 'pouch', treats: 50, coins: 950, en: 'A pouch', tr: 'Bir kese' },
+  { id: 'chest', treats: 120, coins: 2500, en: 'A strongbox', tr: 'Bir kasa', best: true }
 ];
 
 /* ---------- the welcome pack ----------
@@ -3390,10 +3567,10 @@ const BOOSTERS = [
   /* Priced for the month in which coins stop having anywhere to go: the
      catalogue runs out around day forty, and a booster that costs nothing
      that matters is not a booster anybody decides to use. */
-  { id: 'moves', en: '+5 moves', tr: '+5 hamle', cost: 150, icon: 'plusmove', enDesc: 'Five extra moves before the level starts.', trDesc: 'Bölüm başlamadan beş hamle ekler.' },
-  { id: 'hammer', en: 'Hammer', tr: 'Çekiç', cost: 110, icon: 'hammer', enDesc: 'Smash any single tile or blocker.', trDesc: 'Tek bir taşı ya da engeli kırar.' },
-  { id: 'swap', en: 'Free swap', tr: 'Serbest takas', cost: 130, icon: 'swap', enDesc: 'Swap any two tiles, anywhere, for free.', trDesc: 'İstediğin iki taşı bedavaya değiştirir.' },
-  { id: 'shuffle', en: 'Shuffle', tr: 'Karıştır', cost: 100, icon: 'shuffle', enDesc: 'Reshuffle the board without spending a move.', trDesc: 'Hamle harcamadan tahtayı karıştırır.' }
+  { id: 'moves', en: '+5 moves', tr: '+5 hamle', cost: 220, icon: 'plusmove', enDesc: 'Five extra moves before the level starts.', trDesc: 'Bölüm başlamadan beş hamle ekler.' },
+  { id: 'hammer', en: 'Hammer', tr: 'Çekiç', cost: 170, icon: 'hammer', enDesc: 'Smash any single tile or blocker.', trDesc: 'Tek bir taşı ya da engeli kırar.' },
+  { id: 'swap', en: 'Free swap', tr: 'Serbest takas', cost: 190, icon: 'swap', enDesc: 'Swap any two tiles, anywhere, for free.', trDesc: 'İstediğin iki taşı bedavaya değiştirir.' },
+  { id: 'shuffle', en: 'Shuffle', tr: 'Karıştır', cost: 150, icon: 'shuffle', enDesc: 'Reshuffle the board without spending a move.', trDesc: 'Hamle harcamadan tahtayı karıştırır.' }
 ];
 const HATS = [
   { id: 'none', en: 'No hat', tr: 'Yok', cost: 0, art: 'none' },
@@ -3557,27 +3734,27 @@ const BADGES = [
   {
     id: 'first', icon: 'paw', fam: 'lane', en: 'First one home', tr: 'İlk geçiş',
     enDesc: 'Clear a level.', trDesc: 'Bir bölüm geç.',
-    of: 1, at: s => s.stats.cleared, coins: 20
+    of: 1, at: s => s.stats.cleared, coins: 15
   },
   {
     id: 'ten', icon: 'play', fam: 'lane', en: 'Getting the hang of it', tr: 'Eli alıştı',
     enDesc: 'Clear ten levels.', trDesc: 'On bölüm geç.',
-    of: 10, at: s => s.stats.cleared, coins: 60
+    of: 10, at: s => s.stats.cleared, coins: 40
   },
   {
     id: 'thirty', icon: 'home', fam: 'lane', en: 'Lane regular', tr: 'Sokağın müdavimi',
     enDesc: 'Clear thirty levels.', trDesc: 'Otuz bölüm geç.',
-    of: 30, at: s => s.stats.cleared, coins: 150, treats: 2
+    of: 30, at: s => s.stats.cleared, coins: 100, treats: 2
   },
   {
     id: 'star3', icon: 'star', fam: 'star', en: 'Perfectionist', tr: 'Mükemmeliyetçi',
     enDesc: 'Take three stars from a level.', trDesc: 'Bir bölümden üç yıldız al.',
-    of: 1, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 30
+    of: 1, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 20
   },
   {
     id: 'star3x10', icon: 'sparkle', fam: 'star', en: 'Ten perfect runs', tr: 'On kusursuz geçiş',
     enDesc: 'Three-star ten levels.', trDesc: 'On bölümü üç yıldızla geç.',
-    of: 10, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 130, treats: 2
+    of: 10, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 85, treats: 2
   },
   {
     /* Six, not five, and forty tiles, not thirty.
@@ -3592,80 +3769,80 @@ const BADGES = [
        which is rare enough to be noticed and common enough to arrive. */
     id: 'combo5', icon: 'flame', fam: 'feat', en: 'Snowball', tr: 'Çığ',
     enDesc: 'Set off a six-chain cascade.', trDesc: 'Altı zincirlik bir çığ başlat.',
-    of: 6, at: s => s.stats.bestCombo, coins: 40
+    of: 6, at: s => s.stats.bestCombo, coins: 25
   },
   {
     id: 'combo8', icon: 'bolt', fam: 'feat', en: 'Avalanche', tr: 'Heyelan',
     enDesc: 'Set off an eight-chain cascade.', trDesc: 'Sekiz zincirlik bir çığ başlat.',
-    of: 8, at: s => s.stats.bestCombo, coins: 110, treats: 1
+    of: 8, at: s => s.stats.bestCombo, coins: 70, treats: 1
   },
   {
     id: 'big30', icon: 'hammer', fam: 'feat', en: 'One good move', tr: 'Tek iyi hamle',
     enDesc: 'Clear forty tiles in a single move.', trDesc: 'Tek hamlede kırk taş temizle.',
-    of: 40, at: s => s.stats.biggestClear, coins: 80
+    of: 40, at: s => s.stats.biggestClear, coins: 50
   },
   {
     id: 'pop2k', icon: 'shuffle', fam: 'feat', en: 'Two thousand faces', tr: 'İki bin yüz',
     enDesc: 'Clear two thousand tiles in total.', trDesc: 'Toplam iki bin taş temizle.',
-    of: 2000, at: s => s.stats.tilesPopped, coins: 100
+    of: 2000, at: s => s.stats.tilesPopped, coins: 65
   },
   {
     id: 'rescue10', icon: 'heart', fam: 'lane', en: 'Ten walked home', tr: 'On tanesi evde',
     enDesc: 'Walk ten baskets to the door.', trDesc: 'On sepeti kapıya götür.',
-    of: 10, at: s => s.stats.rescued, coins: 90, treats: 1
+    of: 10, at: s => s.stats.rescued, coins: 60, treats: 1
   },
   {
     id: 'family2', icon: 'paw', fam: 'family', en: 'Company', tr: 'Arkadaş',
     enDesc: 'Adopt a second pet.', trDesc: 'İkinci bir hayvan sahiplen.',
-    of: 2, at: s => s.pets.length, coins: 50
+    of: 2, at: s => s.pets.length, coins: 35
   },
   {
     id: 'family4', icon: 'home', fam: 'family', en: 'A full house', tr: 'Ev doldu',
     enDesc: 'Have four pets at home.', trDesc: 'Evde dört hayvan olsun.',
-    of: 4, at: s => s.pets.length, coins: 150, treats: 2
+    of: 4, at: s => s.pets.length, coins: 100, treats: 2
   },
   {
     id: 'family6', icon: 'crown', fam: 'family', en: 'Everybody', tr: 'Herkes burada',
     enDesc: 'Adopt every breed on the lane.', trDesc: 'Sokaktaki her cinsi sahiplen.',
-    of: 6, at: s => s.pets.length, coins: 300, treats: 5
+    of: 6, at: s => s.pets.length, coins: 195, treats: 5
   },
   {
     id: 'bond5', icon: 'heart', fam: 'family', en: 'Inseparable', tr: 'Ayrılmaz',
     enDesc: 'Reach bond level five with any pet.', trDesc: 'Bir hayvanla beşinci bağ seviyesine ulaş.',
-    of: 5, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 80
+    of: 5, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 50
   },
   {
     id: 'bond12', icon: 'star', fam: 'family', en: 'Grown up together', tr: 'Birlikte büyüdük',
     enDesc: 'Reach bond level twelve.', trDesc: 'On ikinci bağ seviyesine ulaş.',
-    of: 12, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 200, treats: 3
+    of: 12, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 130, treats: 3
   },
   {
     id: 'care100', icon: 'bowl', fam: 'care', en: 'Devoted', tr: 'Kendini adamış',
     enDesc: 'Look after your pets a hundred times.', trDesc: 'Hayvanlarınla yüz kez ilgilen.',
-    of: 100, at: s => s.stats.cared, coins: 130, treats: 1
+    of: 100, at: s => s.stats.cared, coins: 85, treats: 1
   },
   {
     id: 'streak7', icon: 'flame', fam: 'care', en: 'A week of it', tr: 'Bir hafta boyunca',
     enDesc: 'Come back seven days running.', trDesc: 'Yedi gün üst üste gel.',
-    of: 7, at: s => s.streak, coins: 110, treats: 3
+    of: 7, at: s => s.streak, coins: 70, treats: 3
   },
   {
     id: 'walk7', icon: 'ball', fam: 'care', en: 'Seven walks', tr: 'Yedi yürüyüş',
     enDesc: 'Finish the daily walk seven days running.', trDesc: 'Günlük yürüyüşü yedi gün üst üste bitir.',
-    of: 7, at: s => (s.daily && s.daily.streak) || 0, coins: 150, treats: 3
+    of: 7, at: s => (s.daily && s.daily.streak) || 0, coins: 100, treats: 3
   },
   {
     id: 'decor', icon: 'brush', fam: 'care', en: 'Interior decorator', tr: 'İç mimar',
     enDesc: 'Own five things for the room.', trDesc: 'Oda için beş eşyan olsun.',
-    of: 5, at: s => Object.keys(s.furniture || {}).length, coins: 90
+    of: 5, at: s => Object.keys(s.furniture || {}).length, coins: 60
   },
   /* the catalogue was eight pieces when the badge above was written, so
      five was most of it; at twenty, a house that is actually full is a
      month of coins and worth a shelf of its own */
   {
-    id: 'fullhouse', icon: 'brush', fam: 'care', en: 'A full house', tr: 'Dolu bir ev',
+    id: 'fullhouse', icon: 'brush', fam: 'care', en: 'Every corner filled', tr: 'Dolu bir ev',
     enDesc: 'Own fifteen things for the room.', trDesc: 'Oda için on beş eşyan olsun.',
-    of: 15, at: s => Object.keys(s.furniture || {}).length, coins: 200, treats: 3
+    of: 15, at: s => Object.keys(s.furniture || {}).length, coins: 130, treats: 3
   },
 
   /* ---- the second tier ----
@@ -3682,7 +3859,7 @@ const BADGES = [
   {
     id: 'chain7', icon: 'star', fam: 'lane', en: 'One thing led to another', tr: 'Biri diğerini getirdi',
     enDesc: 'Reach a seven-deep cascade.', trDesc: 'Yedi kademelik bir zincir yakala.',
-    of: 7, at: s => s.stats.bestCombo, coins: 40,  treats: 1
+    of: 7, at: s => s.stats.bestCombo, coins: 25,  treats: 1
   },
   {
     id: 'lane60', icon: 'home', fam: 'lane', en: 'The whole lane', tr: 'Yolun sonu',
@@ -3690,32 +3867,32 @@ const BADGES = [
     /* only the authored sixty count: a player deep into the generated
        run has more keys than that and would otherwise be handed this
        for levels it is not about */
-    of: 60, at: s => Object.keys(s.stars || {}).filter(k => +k <= 60).length, coins: 100, treats: 2
+    of: 60, at: s => Object.keys(s.stars || {}).filter(k => +k <= 60).length, coins: 65, treats: 2
   },
   {
     id: 'run100', icon: 'play', fam: 'lane', en: 'Past the hundred', tr: 'Yüzü geçti',
     enDesc: 'Reach level one hundred.', trDesc: 'Yüzüncü bölüme ulaş.',
-    of: 100, at: s => s.reached, coins: 80, treats: 2
+    of: 100, at: s => s.reached, coins: 50, treats: 2
   },
   {
     id: 'star30', icon: 'star', fam: 'lane', en: 'Thirty perfect', tr: 'Otuz kusursuz',
     enDesc: 'Three-star thirty levels.', trDesc: 'Otuz bölümü üç yıldızla bitir.',
-    of: 30, at: s => Object.keys(s.stars || {}).filter(k => s.stars[k] >= 3).length, coins: 60, treats: 1
+    of: 30, at: s => Object.keys(s.stars || {}).filter(k => s.stars[k] >= 3).length, coins: 40, treats: 1
   },
   {
     id: 'pop50k', icon: 'paw', fam: 'lane', en: 'Fifty thousand faces', tr: 'Elli bin yüz',
     enDesc: 'Clear fifty thousand tiles.', trDesc: 'Elli bin taş patlat.',
-    of: 50000, at: s => s.stats.tilesPopped, coins: 50, treats: 1
+    of: 50000, at: s => s.stats.tilesPopped, coins: 35, treats: 1
   },
   {
     id: 'rescue50', icon: 'ball', fam: 'lane', en: 'Nobody left behind', tr: 'Kimse geride kalmadı',
     enDesc: 'Bring fifty puppies safely down.', trDesc: 'Elli yavruyu sağ salim indir.',
-    of: 50, at: s => s.stats.rescued, coins: 50,  treats: 1
+    of: 50, at: s => s.stats.rescued, coins: 35,  treats: 1
   },
   {
-    id: 'family3', icon: 'paw', fam: 'care', en: 'A full house', tr: 'Kalabalık ev',
+    id: 'family3', icon: 'paw', fam: 'care', en: 'Three\'s company', tr: 'Kalabalık ev',
     enDesc: 'Have three animals at home.', trDesc: 'Evde üç hayvanın olsun.',
-    of: 3, at: s => (s.pets || []).length, coins: 50, treats: 1
+    of: 3, at: s => (s.pets || []).length, coins: 35, treats: 1
   },
   {
     /* This carried the id `family6`, the same as the crown badge above,
@@ -3726,27 +3903,27 @@ const BADGES = [
        the care family should be about. */
     id: 'allcared', icon: 'home', fam: 'care', en: 'All six home', tr: 'Altısı da evde',
     enDesc: 'Six animals, every one of them fed today.', trDesc: 'Altı hayvan, hepsi bugün yedirilmiş.',
-    of: 6, at: s => (s.pets || []).filter(p => p.food >= 60).length, coins: 100, treats: 3
+    of: 6, at: s => (s.pets || []).filter(p => p.food >= 60).length, coins: 65, treats: 3
   },
   {
     id: 'grown2', icon: 'flame', fam: 'care', en: 'Raised them right', tr: 'İyi büyüttün',
     enDesc: 'Raise two animals to grown.', trDesc: 'İki hayvanı yetişkinliğe getir.',
-    of: 2, at: s => (s.pets || []).filter(p => p && p.bond >= 12).length, coins: 60, treats: 1
+    of: 2, at: s => (s.pets || []).filter(p => p && p.bond >= 12).length, coins: 40, treats: 1
   },
   {
     id: 'traits2', icon: 'brush', fam: 'care', en: 'Two of a kind', tr: 'İki ayrı karakter',
     enDesc: 'Settle two animals into a character.', trDesc: 'İki hayvanın karakteri belli olsun.',
-    of: 2, at: s => (s.pets || []).filter(p => p && p.trait).length, coins: 40,  treats: 1
+    of: 2, at: s => (s.pets || []).filter(p => p && p.trait).length, coins: 25,  treats: 1
   },
   {
     id: 'care300', icon: 'bath', fam: 'care', en: 'Never once forgotten', tr: 'Hiç unutulmadı',
     enDesc: 'Look after them three hundred times.', trDesc: 'Onlara üç yüz kez bak.',
-    of: 300, at: s => s.stats.cared, coins: 50, treats: 1
+    of: 300, at: s => s.stats.cared, coins: 35, treats: 1
   },
   {
     id: 'streak30', icon: 'flame', fam: 'care', en: 'A month of it', tr: 'Bir ay boyunca',
     enDesc: 'Come back thirty days running.', trDesc: 'Otuz gün üst üste gel.',
-    of: 30, at: s => s.streak, coins: 80, treats: 3
+    of: 30, at: s => s.streak, coins: 50, treats: 3
   }
 ];
 function badgeName(b) { return LANG === 'tr' ? b.tr : b.en; }
@@ -3869,8 +4046,8 @@ const LEVELS = [
      boosters, no perks and no stage moves, and has just been asked to
      name an animal. The first three carry a real cushion; the curve
      descends from level 4, where it already did. */
-  { n: 1, w: 7, h: 7, types: 5, moves: 26, goals: [[GK.COLLECT, 0, 34]], base: 10600, want: 0.97, tut: 'swap' },
-  { n: 2, w: 7, h: 7, types: 5, moves: 24, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 10700, want: 0.95 },
+  { n: 1, w: 7, h: 7, types: 5, moves: 27, goals: [[GK.COLLECT, 0, 34]], base: 10600, want: 0.97, tut: 'swap' },
+  { n: 2, w: 7, h: 7, types: 5, moves: 25, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 10700, want: 0.95 },
   /* A score goal is the one kind of level a person cannot plan: nothing
      on the board says which swap is worth more, so the only strategy is
      to keep matching and hope the cascade is kind. Measured with the
@@ -3881,59 +4058,59 @@ const LEVELS = [
      of a rescue. All three are collect goals now, which a person can
      look at and go after. The score levels that remain sit past level
      35, where a player has specials to make and knows it. */
-  { n: 3, w: 7, h: 8, types: 5, moves: 26, goals: [[GK.COLLECT, 2, 30]], base: 9700, want: 0.97, tut: 'special' },
+  { n: 3, w: 7, h: 8, types: 5, moves: 24, goals: [[GK.COLLECT, 2, 30]], base: 9700, want: 0.97, tut: 'special' },
   {
-    n: 4, w: 7, h: 8, types: 5, moves: 19, goals: [[GK.MUD, 0, 76]], base: 10000, want: 0.93,
+    n: 4, w: 7, h: 8, types: 5, moves: 20, goals: [[GK.MUD, 0, 76]], base: 10000, want: 0.93,
     map: ['.......', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', '.......']
   },
-  { n: 5, w: 8, h: 8, types: 5, moves: 32, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 16600, want: 0.9 },
+  { n: 5, w: 8, h: 8, types: 5, moves: 31, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 16600, want: 0.9 },
   {
-    n: 6, w: 8, h: 8, types: 5, moves: 17, goals: [[GK.CRATE, 0, 28]], base: 7200, want: 0.9,
+    n: 6, w: 8, h: 8, types: 5, moves: 19, goals: [[GK.CRATE, 0, 28]], base: 7200, want: 0.9,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
-  { n: 7, w: 8, h: 8, types: 5, moves: 27, goals: [[GK.RESCUE, 0, 2]], base: 7000, want: 0.95, tut: 'rescue' },
+  { n: 7, w: 8, h: 8, types: 5, moves: 36, goals: [[GK.RESCUE, 0, 2]], base: 7000, want: 0.95, tut: 'rescue' },
   {
-    n: 8, w: 8, h: 8, types: 5, moves: 33, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 19300, want: 0.87,
+    n: 8, w: 8, h: 8, types: 5, moves: 34, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 19300, want: 0.87,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 9, w: 8, h: 8, types: 5, moves: 24, goals: [[GK.COLLECT, 1, 34], [GK.COLLECT, 4, 28]], base: 11300, want: 0.91,
+    n: 9, w: 8, h: 8, types: 5, moves: 23, goals: [[GK.COLLECT, 1, 34], [GK.COLLECT, 4, 28]], base: 11300, want: 0.91,
     map: ['##....##', '#......#', '........', '........', '........', '........', '#......#', '##....##']
   },
   {
-    n: 10, w: 8, h: 9, types: 5, moves: 43, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26600, want: 0.82,
+    n: 10, w: 8, h: 9, types: 5, moves: 42, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26600, want: 0.82,
     map: ['##....##', '#......#', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 11, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.CRATE, 0, 28]], base: 9400, want: 0.96,
+    n: 11, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.CRATE, 0, 28]], base: 9400, want: 0.96,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', '........', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
   {
-    n: 12, w: 8, h: 9, types: 5, moves: 39, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 15400, want: 0.92,
+    n: 12, w: 8, h: 9, types: 5, moves: 36, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 15400, want: 0.92,
     map: ['#......#', '........', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 13, w: 8, h: 8, types: 6, moves: 25, goals: [[GK.MUD, 0, 24]], base: 6100, want: 0.91,
+    n: 13, w: 8, h: 8, types: 6, moves: 22, goals: [[GK.MUD, 0, 24]], base: 6100, want: 0.91,
     map: ['MMMM....', 'MMMM....', '........', '........', '........', '........', '....MMMM', '....MMMM']
   },
   {
-    n: 14, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.BRAMBLE, 0, 18]], base: 9900, want: 0.95, tut: 'bramble',
+    n: 14, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.BRAMBLE, 0, 18]], base: 9900, want: 0.95, tut: 'bramble',
     map: ['........', '........', '.vvvvvv.', '.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........']
   },
   {
-    n: 15, w: 8, h: 9, types: 5, moves: 29, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 18700, want: 0.87,
+    n: 15, w: 8, h: 9, types: 5, moves: 32, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 18700, want: 0.87,
     map: ['..c..c..', '.cc..cc.', '........', '.c....c.', '........', '.c....c.', '........', '.cc..cc.', '..c..c..']
   },
   {
-    n: 16, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 7900, want: 0.82,
+    n: 16, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 7900, want: 0.82,
     map: ['........', '...mm...', '..mmmm..', '.mmmmmm.', 'mmmmmmmm', '.mmmmmm.', '..mmmm..', '...mm...', '........']
   },
   {
-    n: 17, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12100, want: 0.85,
+    n: 17, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12100, want: 0.85,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 18, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.CRATE, 0, 16]], base: 11400, want: 0.84,
+    n: 18, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.CRATE, 0, 16]], base: 11400, want: 0.84,
     map: ['C......C', '........', '..cccc..', '..c..c..', '..c..c..', '..cccc..', '........', 'C......C', '........']
   },
   {
@@ -3945,51 +4122,51 @@ const LEVELS = [
     map: ['..####..', '..####..', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 21, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.MUD, 0, 24]], base: 10200, want: 0.94,
+    n: 21, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.MUD, 0, 24]], base: 10200, want: 0.94,
     map: ['........', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', '........']
   },
   {
-    n: 22, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 12000, want: 0.89,
+    n: 22, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 12000, want: 0.89,
     map: ['..CCCC..', '........', '.c....c.', '..c..c..', '..c..c..', '........', '.c....c.', '........', '........']
   },
   {
-    n: 23, w: 8, h: 9, types: 6, moves: 53, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 12600, want: 0.88,
+    n: 23, w: 8, h: 9, types: 6, moves: 51, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 12600, want: 0.88,
     map: ['........', '.m....m.', '..m..m..', '...mm...', '........', '...mm...', '..m..m..', '.m....m.', '........']
   },
   {
-    n: 24, w: 8, h: 9, types: 6, moves: 59, goals: [[GK.BRAMBLE, 0, 28]], base: 14500, want: 0.8,
+    n: 24, w: 8, h: 9, types: 6, moves: 52, goals: [[GK.BRAMBLE, 0, 28]], base: 14500, want: 0.8,
     map: ['........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........']
   },
   {
-    n: 25, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 9700, want: 0.86,
+    n: 25, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 9700, want: 0.86,
     map: ['mmmmmmmm', 'm.c..c.m', 'm......m', 'm..cc..m', 'm..cc..m', 'm......m', 'm.c..c.m', 'mmmmmmmm', '........']
   },
   {
-    n: 26, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 9900, want: 0.78,
+    n: 26, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 9900, want: 0.78,
     map: ['##....##', '#......#', '#......#', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 27, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.CRATE, 0, 22]], base: 9700, want: 0.83,
+    n: 27, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.CRATE, 0, 22]], base: 9700, want: 0.83,
     map: ['CC....CC', 'C......C', '..cccc..', '..c..c..', '..c..c..', '..cccc..', 'C......C', 'CC....CC', '........']
   },
   {
-    n: 28, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 12200, want: 0.82,
+    n: 28, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 12200, want: 0.82,
     map: ['MMMMMMMM', 'MMMMMMMM', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 29, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 9600, want: 0.81,
+    n: 29, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 9600, want: 0.81,
     map: ['.######.', '.######.', '..####..', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 30, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 10800, want: 0.72,
+    n: 30, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 10800, want: 0.72,
     map: ['........', '........', '.vvvvvv.', '.v....v.', '.v....v.', '.v....v.', '.vvvvvv.', '........', '........']
   },
   {
-    n: 31, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 7700, want: 0.92,
+    n: 31, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 7700, want: 0.92,
     map: ['mccccccm', 'm......m', 'm.mmmm.m', 'm......m', '........', 'm......m', 'm.mmmm.m', 'm......m', 'mccccccm']
   },
   {
-    n: 32, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 11800, want: 0.87,
+    n: 32, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 11800, want: 0.87,
     map: ['........', '.c....c.', '........', '..c..c..', '........', '..c..c..', '........', '.c....c.', '........']
   },
   {
@@ -3997,31 +4174,31 @@ const LEVELS = [
     map: ['.######.', '..####..', '...##...', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 34, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 60]], base: 11100, want: 0.84,
+    n: 34, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 60]], base: 11100, want: 0.84,
     map: ['MMMMMMMM', 'M......M', 'M.mmmm.M', 'M.m..m.M', 'M.m..m.M', 'M.mmmm.M', 'M......M', 'MMMMMMMM', '........']
   },
   {
-    n: 35, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 10200, want: 0.82,
+    n: 35, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 10200, want: 0.82,
     map: ['........', '.cc..cc.', '........', '..c..c..', '........', '..c..c..', '........', '.cc..cc.', '........']
   },
   {
-    n: 36, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.SCORE, 0, 16000]], base: 20200, want: 0.75,
+    n: 36, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.SCORE, 0, 16000]], base: 20200, want: 0.75,
     map: ['###..###', '##....##', '##....##', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 37, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 12000, want: 0.79,
+    n: 37, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 12000, want: 0.79,
     map: ['mmmmmmmm', '........', '..mmmm..', '........', '........', '........', '..mmmm..', '........', 'mmmmmmmm']
   },
   {
-    n: 38, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 10300, want: 0.78,
+    n: 38, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 10300, want: 0.78,
     map: ['C.C..C.C', '........', 'iCiiiiCi', '........', '..CCCC..', '........', 'iCiiiiCi', '........', 'C.C..C.C']
   },
   {
-    n: 39, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 12000, want: 0.75,
+    n: 39, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 12000, want: 0.75,
     map: ['MMMMMMMM', 'Mc.cc.cM', 'M......M', 'M......M', 'M......M', 'M......M', 'M......M', 'Mc.cc.cM', 'MMMMMMMM']
   },
   {
-    n: 40, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 11400, want: 0.74,
+    n: 40, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 11400, want: 0.74,
     map: ['##....##', '##....##', '........', '........', '........', '........', '........', '........', '........']
   },
 
@@ -4031,15 +4208,15 @@ const LEVELS = [
     map: ['#.#..#.#', '#.#..#.#', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 42, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11700, want: 0.78,
+    n: 42, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11700, want: 0.78,
     map: ['........', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 43, w: 8, h: 9, types: 6, moves: 21, goals: [[GK.CRATE, 0, 28]], base: 6900, want: 0.85,
+    n: 43, w: 8, h: 9, types: 6, moves: 23, goals: [[GK.CRATE, 0, 28]], base: 6900, want: 0.85,
     map: ['c......c', '.cccccc.', '.c....c.', '.c.cc.c.', '.c.cc.c.', '.c....c.', '.cccccc.', 'c......c', '........']
   },
   {
-    n: 44, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 11700, want: 0.78,
+    n: 44, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 11700, want: 0.78,
     map: ['........', '........', '..mmmm..', '.mmmmmm.', '.mmmmmm.', '..mmmm..', '........', '........', '........']
   },
   {
@@ -4047,15 +4224,15 @@ const LEVELS = [
     map: ['##....##', '#......#', '........', '...##...', '...##...', '........', '#......#', '##....##', '........']
   },
   {
-    n: 46, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.BRAMBLE, 0, 14]], base: 6500, want: 0.91,
+    n: 46, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.BRAMBLE, 0, 14]], base: 6500, want: 0.91,
     map: ['........', '..vvvv..', '..v..v..', '..v..v..', '..v..v..', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 47, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 12300, want: 0.81,
+    n: 47, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 12300, want: 0.81,
     map: ['........', '..iiii..', '........', '.i....i.', '.i....i.', '........', '..iiii..', '........', '........']
   },
   {
-    n: 48, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 10200, want: 0.91,
+    n: 48, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 10200, want: 0.91,
     map: ['cc....cc', '........', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '........', 'cc....cc', '........']
   },
   {
@@ -4067,15 +4244,15 @@ const LEVELS = [
     map: ['MMMMMMMM', 'M.cccc.M', 'M......M', 'M......M', 'M......M', 'M......M', 'M.cccc.M', 'MMMMMMMM', '........']
   },
   {
-    n: 51, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 13400, want: 0.91,
+    n: 51, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 13400, want: 0.91,
     map: ['###..###', '##....##', '#......#', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 52, w: 8, h: 9, types: 6, moves: 53, goals: [[GK.BRAMBLE, 0, 24]], base: 13700, want: 0.82,
+    n: 52, w: 8, h: 9, types: 6, moves: 52, goals: [[GK.BRAMBLE, 0, 24]], base: 13700, want: 0.82,
     map: ['.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........', '.vvvvvv.', '.vvvvvv.', '........']
   },
   {
-    n: 53, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 14800, want: 0.84,
+    n: 53, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 14800, want: 0.84,
     map: ['iCiiiiCi', '........', '..CCCC..', '........', '........', '........', '..CCCC..', '........', 'iCiiiiCi']
   },
   {
@@ -4087,23 +4264,23 @@ const LEVELS = [
     map: ['#####...', '####....', '###.....', '##......', '#.......', '........', '........', '........', '........']
   },
   {
-    n: 56, w: 8, h: 9, types: 6, moves: 25, goals: [[GK.MUD, 0, 38]], base: 8400, want: 0.83,
+    n: 56, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 38]], base: 8400, want: 0.83,
     map: ['mmmmmmmm', 'mmmmmmmm', 'mmmmmmmm', '........', '........', '........', 'mmmmmmmm', 'mmmmmmmm', '........']
   },
   {
-    n: 57, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 13900, want: 0.74,
+    n: 57, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 13900, want: 0.74,
     map: ['mmmmmmmm', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', 'mmmmmmmm', '........']
   },
   {
-    n: 58, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.CRATE, 0, 30]], base: 6100, want: 0.8,
+    n: 58, w: 8, h: 9, types: 6, moves: 23, goals: [[GK.CRATE, 0, 30]], base: 6100, want: 0.8,
     map: ['CCCCCCCC', 'C......C', 'C.cccc.C', 'C.c..c.C', 'C.c..c.C', 'C.cccc.C', 'C......C', 'CCCCCCCC', '........']
   },
   {
-    n: 59, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 11000, want: 0.74,
+    n: 59, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 11000, want: 0.74,
     map: ['..####..', '...##...', '...##...', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 60, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 13800, want: 0.63,
+    n: 60, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 13800, want: 0.63,
     map: ['mmmmmmmm', '.cc..cc.', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '.cc..cc.', 'mmmmmmmm', '........']
   }
 ];
@@ -4686,7 +4863,7 @@ function levelDef(n, ref, forceKind) {
    and sized against how far the player has actually got rather than a
    fixed difficulty. Free to attempt: it is the reason to come back. */
 function dayNumber(t) {
-  const d = new Date(t === undefined ? Date.now() : t);
+  const d = new Date(t === undefined ? now() : t);
   return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
 }
 function dailyLevel(reached, dayNo) {
@@ -5149,44 +5326,48 @@ function budgetFor(kind, wantClear) {
 
    300 levels fitted, mean miss 5% at that
    sample size; 25 pinned at the floor (easier than drawn at six tenths of
-   their budget) and 7 at the ceiling (harder than drawn at twice it). */
+   their budget) and 7 at the ceiling (harder than drawn at twice it).
+
+   The 44 rescue levels were refitted on 30 Sep 2026, same tool, same 20
+   games a point, after the baskets moved to the top three rows
+   (placePup, 40-game.js); their rows replace the earlier ones. */
 const RUN_MOVES = {
-  61: 8, 62: 24, 63: 20, 64: 20, 65: 30, 66: 36, 67: 26, 68: 38,
-  69: 8, 70: 14, 71: 29, 72: 42, 73: 27, 74: 9, 75: 36, 76: 11,
-  77: 32, 78: 45, 79: 28, 80: 14, 81: 12, 82: 34, 83: 20, 84: 29,
-  85: 38, 86: 9, 87: 23, 88: 34, 89: 42, 90: 23, 91: 12, 92: 42,
-  93: 39, 94: 25, 95: 53, 96: 18, 97: 8, 98: 37, 99: 10, 100: 24,
+  61: 8, 62: 22, 63: 20, 64: 20, 65: 30, 66: 36, 67: 26, 68: 38,
+  69: 8, 70: 14, 71: 29, 72: 43, 73: 27, 74: 9, 75: 39, 76: 11,
+  77: 32, 78: 44, 79: 28, 80: 14, 81: 12, 82: 34, 83: 20, 84: 29,
+  85: 34, 86: 9, 87: 23, 88: 34, 89: 42, 90: 23, 91: 12, 92: 42,
+  93: 40, 94: 25, 95: 53, 96: 18, 97: 8, 98: 37, 99: 10, 100: 23,
   101: 22, 102: 16, 103: 28, 104: 20, 105: 38, 106: 28, 107: 13, 108: 9,
-  109: 29, 110: 26, 111: 10, 112: 14, 113: 33, 114: 24, 115: 26, 116: 25,
-  117: 33, 118: 45, 119: 8, 120: 9, 121: 17, 122: 32, 123: 34, 124: 31,
-  125: 23, 126: 37, 127: 43, 128: 17, 129: 31, 130: 11, 131: 36, 132: 12,
-  133: 12, 134: 30, 135: 9, 136: 30, 137: 37, 138: 52, 139: 29, 140: 24,
-  141: 11, 142: 8, 143: 38, 144: 15, 145: 44, 146: 13, 147: 31, 148: 18,
+  109: 29, 110: 26, 111: 10, 112: 14, 113: 33, 114: 24, 115: 26, 116: 32,
+  117: 33, 118: 35, 119: 8, 120: 9, 121: 17, 122: 32, 123: 34, 124: 31,
+  125: 23, 126: 37, 127: 38, 128: 17, 129: 31, 130: 11, 131: 36, 132: 12,
+  133: 12, 134: 30, 135: 9, 136: 32, 137: 37, 138: 52, 139: 37, 140: 24,
+  141: 11, 142: 8, 143: 38, 144: 15, 145: 44, 146: 13, 147: 29, 148: 18,
   149: 39, 150: 9, 151: 21, 152: 35, 153: 16, 154: 30, 155: 22, 156: 9,
-  157: 29, 158: 41, 159: 27, 160: 8, 161: 8, 162: 64, 163: 42, 164: 22,
-  165: 20, 166: 29, 167: 24, 168: 30, 169: 35, 170: 32, 171: 17, 172: 8,
-  173: 29, 174: 12, 175: 24, 176: 24, 177: 33, 178: 8, 179: 24, 180: 24,
-  181: 31, 182: 51, 183: 11, 184: 32, 185: 16, 186: 27, 187: 18, 188: 8,
-  189: 8, 190: 23, 191: 22, 192: 30, 193: 32, 194: 25, 195: 37, 196: 30,
-  197: 32, 198: 9, 199: 28, 200: 8, 201: 15, 202: 42, 203: 24, 204: 16,
+  157: 29, 158: 37, 159: 27, 160: 8, 161: 8, 162: 64, 163: 42, 164: 26,
+  165: 20, 166: 29, 167: 24, 168: 30, 169: 29, 170: 32, 171: 17, 172: 8,
+  173: 29, 174: 12, 175: 24, 176: 27, 177: 33, 178: 8, 179: 24, 180: 24,
+  181: 31, 182: 51, 183: 11, 184: 43, 185: 16, 186: 27, 187: 18, 188: 8,
+  189: 8, 190: 23, 191: 22, 192: 30, 193: 40, 194: 25, 195: 37, 196: 30,
+  197: 35, 198: 9, 199: 28, 200: 8, 201: 15, 202: 38, 203: 24, 204: 16,
   205: 32, 206: 8, 207: 24, 208: 11, 209: 29, 210: 18, 211: 29, 212: 17,
-  213: 11, 214: 10, 215: 34, 216: 10, 217: 20, 218: 27, 219: 31, 220: 19,
-  221: 8, 222: 29, 223: 23, 224: 35, 225: 33, 226: 9, 227: 15, 228: 8,
-  229: 33, 230: 9, 231: 37, 232: 29, 233: 29, 234: 35, 235: 25, 236: 10,
-  237: 26, 238: 22, 239: 29, 240: 41, 241: 26, 242: 28, 243: 12, 244: 26,
-  245: 30, 246: 14, 247: 34, 248: 45, 249: 10, 250: 8, 251: 31, 252: 12,
-  253: 19, 254: 48, 255: 36, 256: 18, 257: 30, 258: 19, 259: 9, 260: 26,
-  261: 30, 262: 9, 263: 31, 264: 16, 265: 31, 266: 24, 267: 32, 268: 28,
-  269: 16, 270: 8, 271: 21, 272: 8, 273: 9, 274: 14, 275: 36, 276: 21,
-  277: 26, 278: 26, 279: 8, 280: 19, 281: 35, 282: 41, 283: 41, 284: 12,
+  213: 11, 214: 10, 215: 30, 216: 10, 217: 20, 218: 27, 219: 31, 220: 19,
+  221: 8, 222: 34, 223: 23, 224: 33, 225: 33, 226: 9, 227: 15, 228: 8,
+  229: 33, 230: 9, 231: 37, 232: 30, 233: 29, 234: 35, 235: 25, 236: 10,
+  237: 26, 238: 22, 239: 33, 240: 41, 241: 26, 242: 28, 243: 12, 244: 26,
+  245: 33, 246: 14, 247: 34, 248: 45, 249: 10, 250: 8, 251: 31, 252: 12,
+  253: 19, 254: 48, 255: 36, 256: 18, 257: 25, 258: 19, 259: 9, 260: 31,
+  261: 30, 262: 9, 263: 31, 264: 16, 265: 31, 266: 24, 267: 38, 268: 28,
+  269: 16, 270: 8, 271: 21, 272: 8, 273: 9, 274: 14, 275: 33, 276: 21,
+  277: 26, 278: 26, 279: 8, 280: 18, 281: 35, 282: 41, 283: 41, 284: 12,
   285: 12, 286: 8, 287: 36, 288: 26, 289: 27, 290: 36, 291: 23, 292: 13,
-  293: 37, 294: 27, 295: 12, 296: 28, 297: 18, 298: 8, 299: 26, 300: 31,
-  301: 22, 302: 22, 303: 26, 304: 31, 305: 8, 306: 11, 307: 24, 308: 28,
+  293: 37, 294: 29, 295: 12, 296: 28, 297: 18, 298: 8, 299: 26, 300: 31,
+  301: 22, 302: 22, 303: 26, 304: 28, 305: 8, 306: 11, 307: 30, 308: 28,
   309: 35, 310: 9, 311: 19, 312: 11, 313: 18, 314: 11, 315: 33, 316: 26,
-  317: 21, 318: 9, 319: 31, 320: 8, 321: 19, 322: 33, 323: 28, 324: 10,
-  325: 11, 326: 32, 327: 9, 328: 28, 329: 24, 330: 10, 331: 11, 332: 52,
-  333: 12, 334: 30, 335: 26, 336: 25, 337: 23, 338: 8, 339: 44, 340: 33,
-  341: 21, 342: 33, 343: 48, 344: 10, 345: 9, 346: 28, 347: 15, 348: 28,
+  317: 21, 318: 9, 319: 31, 320: 8, 321: 19, 322: 31, 323: 28, 324: 10,
+  325: 11, 326: 32, 327: 9, 328: 28, 329: 25, 330: 10, 331: 11, 332: 52,
+  333: 12, 334: 30, 335: 26, 336: 26, 337: 23, 338: 8, 339: 44, 340: 33,
+  341: 21, 342: 30, 343: 48, 344: 10, 345: 9, 346: 28, 347: 15, 348: 28,
   349: 11, 350: 8, 351: 18, 352: 39, 353: 27, 354: 20, 355: 32, 356: 31,
   357: 10, 358: 28, 359: 15, 360: 8
 };
@@ -5195,11 +5376,11 @@ const RUN_MOVES = {
    work was changed as well: the goal is this many times what the
    generator would have asked for, before the budget above was fitted. */
 const RUN_WORK = {
-  61: 2, 63: 2, 97: 2, 99: 1.25, 101: 2, 104: 0.55, 114: 0.55, 119: 2,
-  142: 2, 151: 2, 160: 2, 161: 2, 162: 0.55, 167: 0.85, 178: 2, 180: 0.85,
-  187: 0.55, 188: 2, 200: 2, 221: 2, 228: 2, 241: 0.55, 250: 2, 254: 0.85,
-  269: 0.55, 270: 2, 271: 2, 279: 2, 285: 1.25, 298: 2, 305: 2, 311: 2,
-  313: 0.55, 321: 2, 338: 2, 350: 2, 360: 2
+  61: 2, 62: 1.5, 63: 2, 97: 2, 99: 1.25, 101: 2, 104: 0.55, 114: 0.55,
+  119: 2, 142: 2, 151: 2, 160: 2, 161: 2, 162: 0.55, 167: 0.85, 178: 2,
+  180: 0.85, 187: 0.55, 188: 2, 200: 2, 221: 2, 228: 2, 241: 0.55, 250: 2,
+  254: 0.85, 269: 0.55, 270: 2, 271: 2, 279: 2, 285: 1.25, 298: 2, 305: 2,
+  311: 2, 313: 0.55, 321: 2, 338: 2, 350: 2, 360: 2
 };
 
 /* the fitted budget for a level, or undefined when it was never fitted */
@@ -5235,7 +5416,7 @@ function freshSave() {
     install: 0,               // random, made on first boot, forgotten with the save
     coins: 120,
     treats: 6,
-    hearts: HEART_MAX,
+    hearts: HEART_MAX, heartHeld: false,
     heartAt: now(),
     stars: {},                 // levelNumber -> 1..3
     scores: {},                // levelNumber -> best score seen there
@@ -5300,7 +5481,7 @@ const SAVE_VERSION = 2;
 /* what a build calls itself when it reports anything. Bumped by hand,
    with android/app/build.gradle's versionName, so a crash from an old
    install is not read as one from the current one. */
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 
 function migrate(d) {
   const v = d.v || 1;
@@ -5488,9 +5669,19 @@ function vaultRecover(mirror) {
   if (!mirror) return;
   let here = null;
   try { here = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { here = null; }
-  const theirs = +mirror.lastSeen || 0;
-  const ours = here ? (+here.lastSeen || 0) : -1;
-  if (theirs <= ours) return;
+  /* Which copy is newer was decided by lastSeen, the wall clock at the
+     last write. A phone whose clock ran ahead stamped the vault in the
+     future, and once the clock was put right the genuinely newer local
+     save lost to it on the next launch — progress rolled back. The write
+     count only ever goes up; the clock breaks ties, and saves from before
+     the count existed. */
+  const tw = +mirror.writes || 0, ow = here ? (+here.writes || 0) : -1;
+  if (tw || ow > 0) { if (tw <= ow) return; }
+  else {
+    const theirs = +mirror.lastSeen || 0;
+    const ours = here ? (+here.lastSeen || 0) : -1;
+    if (theirs <= ours) return;
+  }
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(mirror)); } catch (e) { }
 }
 
@@ -5502,6 +5693,8 @@ function loadSave() {
     const d = migrate(JSON.parse(raw));
     const base = freshSave();
     SAVE = Object.assign(base, d);
+    /* before anything below asks the time: see CLOCK_FLOOR, 00-util.js */
+    SAVE.maxSeen = clockSeen(+SAVE.maxSeen || 0);
     SAVE.settings = Object.assign(freshSave().settings, d.settings || {});
     SAVE.room = Object.assign({ theme: 'oat', placed: [] }, d.room || {});
     SAVE.stats = Object.assign(freshSave().stats, d.stats || {});
@@ -5576,6 +5769,9 @@ function persist(immediate) {
   const doIt = () => {
     saveTimer = null;
     SAVE.lastSeen = now();
+    /* a count of writes, which no clock can move — see vaultRecover */
+    SAVE.writes = (SAVE.writes || 0) + 1;
+    SAVE.maxSeen = clockSeen(Math.max(SAVE.maxSeen || 0, Date.now()));
     const json = JSON.stringify(SAVE);
     try { localStorage.setItem(SAVE_KEY, json); } catch (e) { /* private mode */ }
     /* and behind it, the copy the system will not evict. An immediate
@@ -5635,14 +5831,42 @@ function heartsIn() {
 }
 function spendHeart() {
   heartTick();
-  if (heartsInfinite()) return true;
+  if (heartsInfinite()) { SAVE.heartHeld = false; persist(); return true; }
   if (SAVE.hearts <= 0) return false;
   heartClockStart();
   if (SAVE.hearts === HEART_MAX) SAVE.heartAt = now();
   SAVE.hearts--;
+  SAVE.heartHeld = true;
   persist();
   return true;
 }
+/* THE HEART THIS ATTEMPT IS HOLDING.
+
+   A win gave a heart back and a quit gave a heart back, and neither
+   asked whether one had been taken. The daily walk costs nothing, so
+   opening it and walking away paid a heart every time: played on a
+   phone on 30 Sep 2026, an empty purse went 2 -> 3 -> 4 -> 5 in half a
+   minute, and the unlimited hours sold in the larger packs refilled the
+   purse the same way with every level cleared inside them. The meter
+   everything is sold against was optional.
+
+   So an attempt carries a flag saying whether it paid, written with the
+   save so a resumed level still knows, and only a paid attempt gets
+   anything back. The flag is spent on the way out whatever happens —
+   returned on a win or an untouched quit, kept by the game on a loss. */
+function returnHeart() {
+  if (!SAVE.heartHeld) return false;
+  SAVE.heartHeld = false;
+  if (SAVE.hearts < HEART_MAX) {
+    SAVE.hearts++;
+    /* the clock only restarts from a full purse, so a refund must not
+       move it — clearing a level while waiting would otherwise push the
+       next free heart further away */
+    if (SAVE.hearts >= HEART_MAX) SAVE.heartAt = now();
+  }
+  return true;
+}
+function forfeitHeart() { SAVE.heartHeld = false; }
 
 /* ---------- unlimited hearts ----------
 
@@ -6271,7 +6495,18 @@ function grantPurchase(kind, id, txId) {
   }
   if (kind === 'pass') {
     const p = passState();
-    if (p.paid) return 0;              /* already theirs; a restore said so twice */
+    /* Already theirs. A second book in one season cannot be given, but
+       it was paid for, and a paid sale that grants nothing gets closed
+       by nobody and refunded by nobody. It is worth a paper bag of
+       treats, which is what the same money buys in the shop. */
+    if (p.paid) {
+      if (!txId) return 0;
+      const bag = TREAT_PACKS.find(x => x.id === 'bag');
+      SAVE.treats += bag ? bag.treats : 110;
+      mark();
+      persist(true);
+      return 1;
+    }
     p.paid = true;
     mark();
     persist(true);
@@ -6384,7 +6619,9 @@ function giftKeeps() { const d = giftDays(); return d >= 1 && d <= 2; }
    nothing anywhere mentioned. The interface reads this table now, so
    what is promised and what is paid cannot drift apart. */
 function giftFor(day) {
-  const r = { coins: 40 + day * 18, treats: ECON.giftTreats[day] || 0, food: null, booster: null };
+  /* 25 + 12 a day, from 40 + 18: the ladder cut by the same third as
+     every other coin source on 30 Sep 2026 (ECON, 10-data.js) */
+  const r = { coins: 25 + day * 12, treats: ECON.giftTreats[day] || 0, food: null, booster: null };
   if (day === 2 || day === 5) r.food = 'tuna';
   if (day === 4) r.food = 'stew';
   if (day === 3) r.booster = 'hammer';
@@ -6644,8 +6881,9 @@ const NOTIFY = {
    test/economy.js makes them. This is the one seam where value enters
    from outside, and it is deliberately the only one.
 
-   No advertising. Nothing here interrupts a level, nothing plays a
-   video, nothing is sold to a player who is not already asking for it.
+   Nothing here interrupts a level and nothing is sold to a player who
+   is not already asking for it. (The rewarded videos in 19-ads.js are
+   the same rule applied to attention instead of money.)
    Every surface in this file is opened by the player: the treat chip in
    the header, or the two moments — out of moves near the end, out of
    hearts — where the game has something the player wanted and could not
@@ -6653,8 +6891,9 @@ const NOTIFY = {
 
    WHAT IS BEHIND IT. cordova-plugin-purchase, which talks to Google Play
    Billing and to StoreKit and to nobody else: no server of its own, no
-   account of its own, and no receipt sent anywhere, because no validator
-   is set. It was chosen over RevenueCat for exactly that reason.
+   account of its own. Receipts go to one place only when BACKEND is
+   filled in: the game's own verify-purchase function, which forwards
+   them to Apple or Google and keeps nothing but the transaction id. It was chosen over RevenueCat for exactly that reason.
    RevenueCat is a service that sees every purchase, and privacy.html
    and the listing say in two languages that nobody but the store does,
    which is also what the data answers for both stores rest on. It was
@@ -6686,6 +6925,8 @@ const BILLING = {
   started: null,           // the one promise every caller waits on
   waiting: {},             // sku -> the answer of the buy() open on it
   owed: {},                // transactionId -> approved and not yet handed back
+  checking: false,         // a server checks receipts (BACKEND) before anything is paid
+  cleared: {},             // transactionId -> the server said this one is real
 
   /* Whether money can actually change hands in this build: a store is up
      and it has told us the price of something we sell. A plugin with no
@@ -6737,7 +6978,7 @@ const BILLING = {
         const platform = ios ? C.Platform.APPLE_APPSTORE : C.Platform.GOOGLE_PLAY;
         const S = C.store;
         S.register(this.skus().map(id => ({ id: id, type: C.ProductType.CONSUMABLE, platform: platform })));
-        /* Arrival is `approved`, not `verified`. With no validator set the
+        /* Without a server, arrival is `approved`, not `verified`. With no validator set the
            plugin passes every receipt without looking at it — its own
            source says "for backward compatibility, we consider that the
            receipt is verified" — so waiting for `verified` would be
@@ -6746,10 +6987,56 @@ const BILLING = {
            the plugin's own bookkeeping runs its usual course. The day a
            validator is set, arrival moves to `verified` and this comment
            stops being true. */
-        S.when()
+        /* WITH A SERVER, A RECEIPT IS CHECKED BEFORE ANYTHING IS PAID.
+
+           Without one, arrival is `approved`: the store said so, and
+           that is all there is to go on — which on a rooted phone with a
+           billing emulator is nothing at all. With BACKEND filled in, the
+           receipt goes to server/supabase/functions/verify-purchase, which
+           asks Apple or Google themselves, and arrival moves to
+           `verified`. A receipt the server refuses never reaches the
+           save. */
+        this.checking = backendOn();
+        if (this.checking) {
+          /* A server that cannot be reached is not a refusal. A free
+             Supabase project is paused after a week with no traffic, and a
+             phone can be offline for the check and online for the store;
+             either way the player has paid, and a purchase left "pending"
+             because of our server is a sale lost and a player wronged. So
+             no answer (no network, a paused project, a 5xx) falls back to
+             the store's word, exactly as the game behaves with no server
+             at all. Only an answer that says "refused" stops a grant. */
+          S.validator = (body, cb) => {
+            const good = { ok: true, data: { id: body.id, latest_receipt: true, transaction: body.transaction } };
+            backendCall('verify-purchase', { body: body, install: SAVE.install || 0, platform: ios ? 'ios' : 'android' })
+              .then(r => r.status >= 500 ? null : r.json().then(j => ({ status: r.status, j: j })))
+              .then(x => {
+                if (!x || !x.j || typeof x.j.ok !== 'boolean') { track('verify_skip', { why: 'noanswer' }); cb(good); return; }
+                cb(x.j.ok ? good
+                  : { ok: false, status: x.status, code: x.j.code || 6778003, message: x.j.message || 'refused' });
+              }, () => { track('verify_skip', { why: 'unreachable' }); cb(good); });
+          };
+        }
+        const w8 = S.when()
           .productUpdated(p => this.learn(p))
-          .approved(tx => { this.arrived(tx); tx.verify(); })
+          .approved(tx => { if (!this.checking) this.arrived(tx); tx.verify(); })
           .pending(tx => this.held(tx));
+        if (this.checking) {
+          w8.verified(rc => {
+            ((rc && rc.sourceReceipt && rc.sourceReceipt.transactions) || []).forEach(tx => {
+              if (tx && tx.transactionId) this.cleared[tx.transactionId] = true;
+              this.arrived(tx);
+            });
+          });
+          w8.unverified(u => {
+            const txs = (u && u.receipt && u.receipt.transactions) || [];
+            const refused = u && u.payload && u.payload.code !== 6778001;
+            txs.forEach(tx => ((tx && tx.products) || []).forEach(p => {
+              const open = p && this.waiting[p.id];
+              if (open) open({ ok: false, why: refused ? 'failed' : 'pending' });
+            }));
+          });
+        }
         S.initialize([platform]).then(() => {
           this.store = S;
           this.skus().forEach(id => this.learn(S.get(id, platform)));
@@ -6840,8 +7127,17 @@ const BILLING = {
     try { await tx.finish(); } catch (e) { return; /* still open; the next launch closes it */ }
     if (tx.transactionId) delete this.owed[tx.transactionId];
   },
+  /* Only what the save has actually paid out. This closed every owed
+     transaction, including ones grantPurchase had refused — a SKU a
+     later build no longer sells — and a consumed purchase is in nobody's
+     queue again: the player was charged and the sale was gone. One the
+     ledger does not hold stays open for a build that knows what it is. */
   async settleAll(list) {
-    for (const tx of (list || [])) await this.settle(tx);
+    for (const tx of (list || [])) {
+      const id = tx && tx.transactionId;
+      if (id && !(SAVE.granted && SAVE.granted[id])) continue;
+      await this.settle(tx);
+    }
   },
 
   /* The purchase itself.
@@ -6919,6 +7215,11 @@ const BILLING = {
     const ours = tx => ((tx && tx.products) || []).some(p => p && mine.indexOf(p.id) >= 0);
     (this.store.localReceipts || []).forEach(r => ((r && r.transactions) || []).forEach(tx => {
       if (tx && tx.state === 'approved' && tx.transactionId && !this.owed[tx.transactionId] && ours(tx)) {
+        /* Restore read the phone's own receipts and paid whatever was
+           approved, which is the one door the server check would not
+           have covered. With a server, an unchecked one is sent to be
+           checked and paid when the answer comes back. */
+        if (this.checking && !this.cleared[tx.transactionId]) { try { tx.verify(); } catch (e) { } return; }
         this.owed[tx.transactionId] = tx;
       }
     }));
@@ -7005,6 +7306,13 @@ const TRACK = {
     this.session = Math.floor(Math.random() * 1e9);
     if (!SAVE.install) SAVE.install = Math.floor(Math.random() * 1e12);
     this.install = SAVE.install;
+    /* the sink, once there is somewhere to send to (BACKEND, 10-data.js) */
+    if (!this.sink && backendOn()) {
+      this.sink = async batch => {
+        const r = await backendCall('track', { events: batch, platform: nativePlatform() });
+        return r.ok;
+      };
+    }
     try {
       /* The buffer carried the old name until this build. Adopted the
          same way the save is, and for the same reason — a crash report
@@ -7050,6 +7358,12 @@ const TRACK = {
     this.buf.push(e);
     if (this.buf.length > TELEMETRY_MAX) this.buf.splice(0, this.buf.length - TELEMETRY_MAX);
     this.save();
+    /* a batch every forty events as well as at every hide: a player who
+       never puts the phone down would otherwise send nothing */
+    if (this.sink && this.buf.length >= 40 && !this.sending) {
+      this.sending = true;
+      this.flush().then(() => { this.sending = false; }, () => { this.sending = false; });
+    }
   },
 
   /* Failures carry a trimmed message and no stack beyond the first
@@ -7099,71 +7413,153 @@ const TRACK = {
 function track(name, props) { TRACK.track(name, props); }
 
 /* ===== 19-ads.js ===== */
-/* ---------- rewarded video, if there is ever any ----------
+/* ---------- rewarded video ----------
 
-   There is no advertising in this game and there is no ad SDK in this
-   bundle. This file is the shape one would take, built the same way as
-   17-billing.js and 18-telemetry.js and for the same reason: so that the
-   day somebody decides to wire a network up, it is a change to one
-   function rather than a change to the game.
+   Rewarded only. The player asks for every video, at a moment they
+   already wanted something, and nothing in the game ever interrupts a
+   level, a menu or a win with one. tools/revenue.js measured the other
+   trade — a forced break between levels — and it cost more in lost days
+   than it paid, three times over at Turkish eCPMs.
 
-   `plugin` is null. Nothing here opens a socket, loads a script or reads
-   an identifier, `available()` answers false for every slot, and every
-   button that would offer a video is therefore never drawn. The game
-   still works in flight mode and still ships with no runtime dependency.
+   Decided on 30 Sep 2026, by the owner, after this file had spent a
+   month as an empty seam: the game carries AdMob's rewarded format
+   through @capacitor-community/admob, and nothing else. What that
+   changed outside this file, all of it by hand:
 
-   WHAT CHANGES THE DAY A PLUGIN IS INSTALLED, and none of it is code:
+     - privacy.html names Google as a third party and says what the
+       advertising id is used for, in both languages.
+     - store/LISTING.md: "Contains ads", Data safety and App Privacy
+       answers for Device ID / advertising data, the content rating.
+     - ios/App/App/Info.plist: GADApplicationIdentifier, the tracking
+       usage description, and the SKAdNetwork identifiers Google lists.
+     - android manifest: the AdMob application id meta-data.
 
-     - store/LISTING.md says "No advertising" in two languages, twice,
-       and the Play Data safety answers below it are all "No".
-     - privacy.html says there is no advertising and no third-party SDK,
-       in two languages. Every rewarded network collects an advertising
-       id; that sentence stops being true the moment one is linked.
-     - the content rating declares Ads: none.
-     - the listing sells this game on "drawn, not downloaded" and "works
-       in flight mode from the first launch". An ad SDK is a network
-       dependency and takes both.
+   AD_UNITS below is where the ids go. Empty, the whole thing is off:
+   available() answers false, no button offering a video is drawn, the
+   SDK is never initialised, and the game is exactly the game it was.
 
-   That is not a reason never to do it. It is the reason the decision
-   belongs to a person rather than to a merge, and the reason this file
-   stops short of making it.
+   THE ORDER THINGS HAPPEN IN, because each is a legal requirement:
+     1. Google's consent form (UMP), only where the law asks for one —
+        the EEA, the UK, and the US states that regulate this.
+     2. On iOS, Apple's tracking prompt (ATT), the first time a video is
+        actually asked for — not at launch, where it would read as the
+        price of opening the app.
+     3. The video, personalised only if both said yes.
 
-   WHY REWARDED AND NOT INTERSTITIAL. Measured in tools/revenue.js: a
-   break between levels costs retention, and retention carries purchases
-   and rewarded views as well as its own format, so a forced break pays
-   for its lost days three times over. At Turkish eCPMs the whole thing
-   comes out negative. A rewarded video is the opposite trade — the
-   player asks for it, at a moment they already wanted something. */
+   A VIDEO THAT DOES NOT FINISH PAYS NOTHING. On iOS the plugin's show
+   call resolves only when a reward is earned; closed early, it never
+   resolves at all. So a video is judged by events — rewarded, then
+   dismissed — and not by the call returning. Awaiting the call alone
+   would have hung the lose card for ever on the first skipped video. */
+const AD_UNITS = {
+  /* "Pawtika Rewarded iOS" and "Pawtika Rewarded Android", created
+     3 Oct 2026 in the AdMob account ca-app-pub-3062307440336080. The
+     app ids that go with them are in Info.plist and AndroidManifest.xml. */
+  ios: 'ca-app-pub-3062307440336080/1673274319',
+  android: 'ca-app-pub-3062307440336080/8565985721',
+  /* Google's published test units, used instead when `testing` is on.
+     A build shipped with testing on shows "Test Ad" banners and earns
+     nothing, which is safe; one shipped with real ids and testing on is
+     a policy strike, so testing is on only in a debuggable build. */
+  testIos: 'ca-app-pub-3940256099942544/1712485313',
+  testAndroid: 'ca-app-pub-3940256099942544/5224354917'
+};
+
 const ADS = {
   plugin: null,
 
-  /* One a day, each. A rewarded video is a favour while it is rare and a
-     grind the moment it is not, and a player who can watch four in a row
-     to skip a wall is a player the difficulty curve no longer describes.
-     The cap is also what keeps the offer honest against the shop: it can
-     rescue an evening, it cannot replace the jar. */
-  caps: { carry: 1, treat: 1 },
+  /* A day's allowance per slot. Rare enough to stay a favour and never
+     the way through a wall: a player who could watch six in a row to
+     carry on a level is a player the difficulty curve no longer
+     describes, and one who could farm treats would never open the jar.
+       carry   three moves on the lose card, once per attempt
+       treat   two treats, from the earn-treats sheet
+       heart   one heart, from the out-of-hearts sheet
+       double  the coins of a first clear, again, on the win card */
+  caps: { carry: 3, treat: 2, heart: 3, double: 3 },
 
-  /* What the daily one hands over. Two is a fifth of a carry-on and
-     about half a day of ordinary treat income — enough to be worth the
-     thirty seconds, nowhere near enough to make the rest of the economy
-     a formality. */
   treatReward: 2,
 
-  /* Whether a video could actually be shown. Checked at call time, not
-     cached at load: a plugin arrives with the native bridge, which is
-     not up yet when this file is read. */
+  inited: false,
+  initing: null,
+  personalised: false,
+  asked: false,
+  loading: null,
+
+  testing() {
+    try { return localStorage.getItem('pawtika-debug') === '1'; } catch (e) { return false; }
+  },
+  unit() {
+    const ios = nativePlatform() === 'ios';
+    if (this.testing()) return ios ? AD_UNITS.testIos : AD_UNITS.testAndroid;
+    return ios ? AD_UNITS.ios : AD_UNITS.android;
+  },
+
+  /* Whether a video could actually be shown. Checked at call time: the
+     plugin arrives with the native bridge, which is not up when this
+     file is read, and a web build never has one. */
   ready() {
+    if (!this.unit()) return false;
     if (this.plugin) return true;
     const P = (typeof window !== 'undefined' && window.Capacitor && window.Capacitor.Plugins) || null;
-    if (!P) return false;
-    this.plugin = P.AdMob || P.RewardedVideo || P.Ads || null;
+    this.plugin = (P && P.AdMob) || null;
     return !!this.plugin;
   },
 
+  /* Once per launch, and before the first video: the SDK, then Google's
+     consent form where one is required. Never throws; an SDK that will
+     not start leaves every slot unavailable, which is the right failure. */
+  init() {
+    if (this.inited) return Promise.resolve(true);
+    if (this.initing) return this.initing;
+    if (!this.ready()) return Promise.resolve(false);
+    const A = this.plugin;
+    this.initing = (async () => {
+      try {
+        await A.initialize({ initializeForTesting: this.testing() });
+        try {
+          const info = await A.requestConsentInfo();
+          if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') await A.showConsentForm();
+        } catch (e) { /* no form, or no network: non-personalised it is */ }
+        this.inited = true;
+        this.preload();
+        return true;
+      } catch (e) {
+        TRACK.fail('ads_init', e && e.message);
+        return false;
+      } finally { this.initing = null; }
+    })();
+    return this.initing;
+  },
+
+  /* Apple's prompt, once ever, and only when a video is first wanted.
+     Declined or unavailable, videos are still shown, non-personalised. */
+  async askTracking() {
+    if (nativePlatform() !== 'ios') { this.personalised = true; return; }
+    try {
+      let st = await this.plugin.trackingAuthorizationStatus();
+      if (st && st.status === 'notDetermined' && !SAVE.attAsked) {
+        SAVE.attAsked = true; persist(true);
+        await this.plugin.requestTrackingAuthorization();
+        st = await this.plugin.trackingAuthorizationStatus();
+      }
+      this.personalised = !!(st && st.status === 'authorized');
+    } catch (e) { this.personalised = false; }
+  },
+
+  /* A video loaded ahead, so the button does not sit there for three
+     seconds after it is pressed. One at a time; a failed load is simply
+     tried again next time. */
+  preload() {
+    if (this.loading || !this.inited) return this.loading;
+    this.loading = this.plugin.prepareRewardVideoAd({ adId: this.unit(), isTesting: this.testing(), npa: !this.personalised })
+      .then(() => true, () => { this.loading = null; return false; });
+    return this.loading;
+  },
+
   /* The daily counters live in the save so that closing the game is not
-     a way around them, and they roll over on the same day boundary the
-     gift ladder uses rather than on a timer of their own. */
+     a way around them, and they roll over on the day boundary the gift
+     ladder uses rather than on a timer of their own. */
   state() {
     if (!SAVE.ads) SAVE.ads = { day: 0, used: {} };
     const today = dayNumber();
@@ -7175,29 +7571,55 @@ const ADS = {
     return Math.max(0, cap - (this.state().used[slot] || 0));
   },
   available(slot) {
-    return this.ready() && this.left(slot) > 0;
+    if (!this.ready() || this.left(slot) <= 0) return false;
+    if (!this.inited) this.init();
+    return true;
   },
 
-  /* Show one, and resolve true only if it was actually watched through.
-     A network reports "dismissed" and "no fill" as ordinary outcomes
-     rather than as errors, so both land here as false and the caller
-     leaves the player exactly where they were — never charged, never
-     told off. The counter moves on the reward, not on the attempt,
-     because a video that failed to load is not one the player used. */
+  /* Show one; resolve true only if it was watched through. A network
+     reports "dismissed" and "no fill" as ordinary outcomes rather than
+     errors, so both land here as false and the caller leaves the player
+     exactly where they were — never charged, never told off. The counter
+     moves on the reward, not on the attempt. */
   async show(slot) {
     if (!this.available(slot)) return false;
+    if (!await this.init()) return false;
+    const A = this.plugin;
+    if (!this.asked) { this.asked = true; await this.askTracking(); }
+    musicStop();
+    const handles = [];
+    let rewarded = false;
     try {
-      const r = await this.plugin.showRewardVideoAd({ slot });
-      const won = !!(r && (r.rewarded || r.type || r.amount));
-      if (!won) return false;
-      const st = this.state();
-      st.used[slot] = (st.used[slot] || 0) + 1;
-      persist(true);
-      track('ad_reward', { slot });
-      return true;
+      const loaded = await (this.loading || this.preload());
+      this.loading = null;
+      if (!loaded) return false;
+      const over = new Promise(res => {
+        const on = (ev, fn) => A.addListener(ev, fn).then(h => handles.push(h));
+        Promise.all([
+          on('onRewardedVideoAdReward', () => { rewarded = true; }),
+          on('onRewardedVideoAdDismissed', () => res()),
+          on('onRewardedVideoAdFailedToShow', () => res())
+        ]).then(() => {
+          /* resolves on the reward and never otherwise (see the header) */
+          A.showRewardVideoAd().then(() => { rewarded = true; }, () => res());
+        });
+      });
+      /* a video that neither finishes nor closes in three minutes is not
+         one the player is watching */
+      await Promise.race([over, new Promise(r => setTimeout(r, 180000))]);
     } catch (e) {
-      return false;
+      rewarded = false;
+    } finally {
+      handles.forEach(h => { try { h.remove(); } catch (e) { } });
+      if (SAVE.settings.music) musicStart();
+      this.preload();
     }
+    if (!rewarded) return false;
+    const st = this.state();
+    st.used[slot] = (st.used[slot] || 0) + 1;
+    persist(true);
+    track('ad_reward', { slot });
+    return true;
   }
 };
 
@@ -8220,31 +8642,6 @@ function drawChest(c, x, y, s, open) {
   c.restore();
 }
 
-function drawTreatPip(c, x, y, r) {
-  c.save();
-  c.translate(x, y);
-  c.rotate(-.5);
-  c.fillStyle = '#F3E2C4';
-  c.strokeStyle = rgba('#6B4A22', .75);
-  c.lineWidth = r * .30;
-  c.lineJoin = 'round';
-  const w = r * 1.5, h = r * .62, k = r * .52;
-  c.beginPath();
-  ellipse(c, -w / 2, -h / 2, k, k);
-  c.fill(); c.stroke();
-  c.beginPath();
-  ellipse(c, -w / 2, h / 2, k, k);
-  c.fill(); c.stroke();
-  c.beginPath();
-  ellipse(c, w / 2, -h / 2, k, k);
-  c.fill(); c.stroke();
-  c.beginPath();
-  ellipse(c, w / 2, h / 2, k, k);
-  c.fill(); c.stroke();
-  rr(c, -w / 2, -h / 2, w, h, h * .5);
-  c.fill(); c.stroke();
-  c.restore();
-}
 
 /* whichever of dark or cream reads better on a given fill */
 function inkOn(hex) { return coatLum(hex) > .45 ? '#22271C' : '#FFFFFF'; }
@@ -13227,14 +13624,53 @@ function fillBoard(B) {
     cell.tile = mkTile(t);
     cell.tile.x = c; cell.tile.y = r; cell.tile.tx = c; cell.tile.ty = r;
   });
-  let guard = 0;
-  while (!hasMove(B) && guard++ < 40) shuffleTypes(B);
+  ensureMove(B);
 }
 function wouldMatch(B, r, c, t) {
   const g = (rr2, cc) => { const cell = openCell(B, rr2, cc); return cell && cell.tile ? cell.tile.type : -9; };
   if (g(r, c - 1) === t && g(r, c - 2) === t) return true;
   if (g(r - 1, c) === t && g(r - 2, c) === t) return true;
   return false;
+}
+/* A BOARD THAT ALWAYS HAS A MOVE.
+
+   Every shuffle in the game was "permute the colours, up to forty
+   times, until there is a move" — and then carry on whether there was
+   one or not. A permutation keeps the colour count and cannot touch the
+   tiles under ice, the specials or the pups, so a board choked by ice
+   and crates can have no arrangement with a move in it, and the level
+   then sat there: no move to make, so none to spend, so never won and
+   never lost. The solver's copy of the loop simply never ended.
+
+   Forty permutations still come first, because they keep the board the
+   player was looking at. Then the plain tiles are dealt fresh colours,
+   which changes the count. And if even that finds nothing — a board so
+   blocked that no two swappable tiles can ever line up — one plain tile
+   becomes a rainbow, which is legal beside anything it can trade with.
+   Returns whether the board now has a move. */
+function ensureMove(B) {
+  let guard = 0;
+  while (!hasMove(B) && guard++ < 40) shuffleTypes(B);
+  for (let k = 0; k < 40 && !hasMove(B); k++) {
+    eachCell(B, cell => {
+      if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE) cell.tile.type = Math.floor(B.rng() * B.types);
+    });
+    clearAccidental(B);
+  }
+  if (hasMove(B)) return true;
+  const spots = [];
+  eachCell(B, cell => { if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && !cell.ice) spots.push(cell); });
+  if (spots.length) spots[Math.floor(B.rng() * spots.length)].tile.sp = SP.RAIN;
+  return hasMove(B);
+}
+function clearAccidental(B) {
+  let guard = 0;
+  while (findMatches(B).length && guard++ < 60) {
+    findMatches(B).forEach(g => {
+      const cell = B.cell[g.cells[0][0]][g.cells[0][1]];
+      if (cell.tile && cell.tile.type >= 0) cell.tile.type = (cell.tile.type + 1 + Math.floor(B.rng() * (B.types - 1))) % B.types;
+    });
+  }
 }
 function shuffleTypes(B) {
   const list = [];
@@ -13694,7 +14130,7 @@ function snapshotLevel() {
   const B = G.B;
   return {
     n: G.n, day: G.n === DAILY_LEVEL ? dayNumber() : 0, reached: SAVE.reached,
-    moves: G.moves, score: G.score, charge: G.charge, scoreMul: G.scoreMul,
+    moves: G.moves, made: G.made, targets: G.starTargets, score: G.score, charge: G.charge, scoreMul: G.scoreMul,
     extras: G.extras || 0, rescued: G.rescued, creepTick: G.creepTick,
     pupQueue: B.pupQueue || 0, startedAt: G.startedAt, bestChain: G.bestChain,
     goals: G.goals.map(g => g.have),
@@ -13930,7 +14366,10 @@ function startLevel(n, opts) {
   musicMood(n === DAILY_LEVEL ? SAVE.reached : n);
   const res = opts.resume || null;
   G.startedAt = res ? (res.startedAt || now()) : now();
-  track('level_start', { n: n, moves: G.def.moves, tries: (SAVE.stats.played || 0), resumed: !!res });
+  /* which attempt at this level, not how many levels ever: the number a
+     wall shows up in is attempts per level */
+  if (!res && n > 0) { if (!SAVE.tries) SAVE.tries = {}; SAVE.tries[n] = (SAVE.tries[n] || 0) + 1; }
+  track('level_start', { n: n, moves: G.def.moves, attempt: n > 0 ? ((SAVE.tries && SAVE.tries[n]) || 1) : 0, tries: (SAVE.stats.played || 0), resumed: !!res });
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
   if (res) restoreBoard(G.B, res);
@@ -13946,6 +14385,9 @@ function startLevel(n, opts) {
   });
   if (opts.extraMoves && !res) moves += opts.extraMoves;
   G.moves = moves;
+  /* moves actually played, which is what quitting asks about; a level
+     kept before this was counted had been played, or it was not kept */
+  G.made = res ? (res.made !== undefined ? res.made : 1) : 0;
   G.score = res ? (res.score || 0) : 0;
   G.chain = 0; G.bestChain = res ? (res.bestChain || 0) : 0; G.bestShown = false;
   G.over = false; G.busy = true;
@@ -13957,7 +14399,15 @@ function startLevel(n, opts) {
   G.creepTick = res ? (res.creepTick || 0) : 0;
   G.lastPraise = 0;
   G.finale = false; G.finaleSkip = false;
-  G.starTargets = starTargets(G.def);
+  G.won = null;                       /* the committed result of a win, see commitWin */
+  /* Stars were set against a bare pet, and a looked-after one brings
+     +12% score and two or three moves that the finale turns into
+     fireworks. Played with the pet the game gives a new player, thirteen
+     clears out of thirteen were three stars — including one finished
+     with a single move left — so a star said nothing. The targets carry
+     the same multipliers the score does now. */
+  const boost = G.scoreMul * Math.max(1, G.moves / Math.max(1, G.def.moves));
+  G.starTargets = res && res.targets ? res.targets.slice() : starTargets(G.def).map(v => Math.round(v * boost));
   G.starsEarned = 0;
   /* -1 rather than 0, so the first sync of a level always paints the
      lane once — a level that starts with a goal already partly met
@@ -14000,7 +14450,10 @@ function startLevel(n, opts) {
     winRunGifts(SAVE.winRun, isGate(n)).forEach(g => {
       if (!spots.length) return;
       const [r, c] = spots.splice(Math.floor(Math.random() * spots.length), 1)[0];
-      G.B.cell[r][c].tile.sp = g === 'bomb' ? SP.BOMB : (Math.random() < .5 ? SP.ROW : SP.COL);
+      /* on a rescue board a vertical rocket under a basket walks it home
+         in one move — with a streak running, level 7 went from a median
+         of fifteen moves to eight — so there the gift lies flat */
+      G.B.cell[r][c].tile.sp = g === 'bomb' ? SP.BOMB : (G.pupsWanted || Math.random() < .5 ? SP.ROW : SP.COL);
       G.runGifts.push(g);
     });
   }
@@ -14040,9 +14493,19 @@ function startLevel(n, opts) {
 /* Baskets start in the upper middle rather than the very top row: from
    row 0 a basket needs the whole column to clear beneath it before it
    reaches the door, which measured at ~11 moves each. */
+/* THE BASKETS START AT THE TOP.
+
+   They were put in rows two to four of eight, three to five drops from
+   the door, and a drop happens whenever anything under them clears —
+   which on a board this size is most moves. Level 7, the level that
+   teaches rescue, was won in three moves of twenty-seven on a phone and
+   in two by the solver: the goal finished itself before the player had
+   found out what it was. From the top three rows a basket has a real
+   distance to travel and a column worth choosing, and the budgets were
+   refitted for it (see README, "Baskets that had somewhere to go"). */
 function placePup(B) {
   const spots = [];
-  const from = Math.min(2, B.h - 1), to = Math.min(5, B.h);
+  const from = 0, to = Math.min(3, B.h);
   /* every candidate cell, not the first per column — taking the first
      lined all the baskets up along one row. Columns that already hold a
      basket are skipped so they arrive spread out rather than stacked. */
@@ -14245,6 +14708,7 @@ function armBooster(id) {
   if (!(SAVE.boosters[id] > 0)) return;
   if (id === 'shuffle') {
     SAVE.boosters[id]--; persist();
+    track('booster_use', { id: id, n: G.n });
     syncBoosterBar();
     SFX.select();
     doShuffle();
@@ -14259,7 +14723,14 @@ async function useHammer(r, c) {
   const _ep = levelEpoch();
   const cell = G.B.cell[r][c];
   if (!cell || cell.hole) return false;
+  /* A molehill has no tile and a basket is not a tile the blast will
+     touch, so the hammer used to be spent on either and do nothing — a
+     booster people pay for, gone with no effect. Refused before it is
+     taken now; it stays armed for a tile that will break. */
+  const breaks = cell.crate > 0 || cell.ice > 0 || (cell.tile && cell.tile.type !== PUP);
+  if (!breaks) { SFX.bad(); if (cell.tile) cell.tile.jiggle = .8; return false; }
   SAVE.boosters.hammer--; persist();
+  track('booster_use', { id: 'hammer', n: G.n });
   G.armed = null; syncBoosterBar();
   G.busy = true;
   SFX.crate();
@@ -14277,6 +14748,7 @@ async function useHammer(r, c) {
 async function useFreeSwap(a, b) {
   const _ep = levelEpoch();
   SAVE.boosters.swap--; persist();
+  track('booster_use', { id: 'swap', n: G.n });
   G.armed = null; G.armedFirst = null; syncBoosterBar();
   G.busy = true;
   const ca = G.B.cell[a[0]][a[1]], cb = G.B.cell[b[0]][b[1]];
@@ -14297,8 +14769,8 @@ async function doShuffle() {
   eachCell(G.B, cell => { if (cell.tile) cell.tile.jiggle = 1; });
   await wait(180);
   if (stale(_ep)) return;
-  let guard = 0;
-  do { shuffleTypes(G.B); } while (!hasMove(G.B) && guard++ < 40);
+  shuffleTypes(G.B);
+  ensureMove(G.B);
   eachCell(G.B, (cell, r, c) => {
     if (cell.tile) {
       cell.tile.x = c + rnd(-.4, .4); cell.tile.y = r + rnd(-.4, .4);
@@ -14846,6 +15318,10 @@ function busyWatch(dt) {
     if (!cell.tile) return;
     cell.tile.tw = null; cell.tile.x = c; cell.tile.y = r;
   });
+  /* and whatever was in flight is over: its chain would otherwise wake
+     from its next wait and run creep, moles and checkEnd a second time
+     alongside this one */
+  G.epoch++;
   G.busy = false; G.spending = false; G.sel = null;
   syncHud();
   resolveBoard(null).then(() => { if (!G.over) checkEnd(); });
@@ -14860,8 +15336,8 @@ async function doShuffleQuiet() {
   const _ep = levelEpoch();
   await wait(260);
   if (stale(_ep)) return;
-  let guard = 0;
-  do { shuffleTypes(G.B); } while (!hasMove(G.B) && guard++ < 40);
+  shuffleTypes(G.B);
+  ensureMove(G.B);
   eachCell(G.B, (cell, r, c) => {
     if (cell.tile) { cell.tile.x = c + rnd(-.5, .5); cell.tile.y = r + rnd(-.5, .5); setTarget(cell.tile, c, r, .34, E.back); }
   });
@@ -14884,7 +15360,17 @@ function comboOf(a, b) {
   }
   if ((A === SP.ROW || A === SP.COL) && (Bp === SP.ROW || Bp === SP.COL)) return 'cross';
   if (A === SP.BOMB && Bp === SP.BOMB) return 'bigbomb';
-  if (A === SP.BOMB || Bp === SP.BOMB) return 'rowbomb';
+  /* A bomb and a rocket, and only that pair. This line used to read
+     "a bomb and anything", which reached a bomb beside a plain tile too:
+     the swap was legal with no match in it, and it cleared three rows
+     and three columns — the bomb-and-rocket blast — out of one special.
+     Found by playing level 9 on a phone, 30 Sep 2026. Nothing else in
+     the game agreed it was a move (swapMakesMatch, hasMove, the hint,
+     the solver every budget was fitted with), so every bomb on the board
+     was a free nuke the difficulty numbers had never seen. A bomb beside
+     a plain tile needs a match now, like a rocket does. */
+  if ((A === SP.BOMB && (Bp === SP.ROW || Bp === SP.COL)) ||
+      (Bp === SP.BOMB && (A === SP.ROW || A === SP.COL))) return 'rowbomb';
   return null;
 }
 async function runCombo(kind, a, b) {
@@ -15011,6 +15497,7 @@ async function creepBrambles() {
 
 function spendMove() {
   G.moves = Math.max(0, G.moves - 1);
+  G.made = (G.made || 0) + 1;
   /* the last three moves get their own low note */
   if (G.moves > 0 && G.moves <= 3) SFX.tension(1 - (G.moves - 1) / 3);
   const el = $('#movesBox');
@@ -15028,6 +15515,9 @@ async function tryMove(a, b) {
   const ta = ca.tile, tb = cb.tile;
   const combo = comboOf(ta, tb);
   const legal = combo || swapMakesMatch(G.B, a, b);
+  /* the board as it was, to be written with this move already paid for:
+     see below, after spendMove */
+  const before = legal ? snapshotLevel() : null;
 
   swapTiles(G.B, a, b);
   setTarget(ta, b[1], b[0], .17);
@@ -15052,6 +15542,14 @@ async function tryMove(a, b) {
     return;
   }
   spendMove();
+  /* The level was only written once a move had finished cascading, so
+     swiping the app away mid-cascade brought back the board from before
+     the move with the move unspent — and a reseeded refill, which made
+     it a free undo and a free reroll. Reproduced on a phone, 30 Sep 2026.
+     The move is charged the moment it is played now: a kill mid-cascade
+     resumes the old board one move poorer, which is what the player
+     would have had if the phone had not rung. */
+  if (before) { before.moves = G.moves; before.made = G.made; SAVE.inLevel = before; persist(true); }
   if (combo) await runCombo(combo, a, b);
   else await resolveBoard([a, b]);
   if (stale(_ep)) return;
@@ -15300,12 +15798,12 @@ function checkEnd() {
   if (G.over) return;
   if (goalsMet()) {
     if (scoreOnlyLevel() && G.moves > 0) { keepLevel(); return; }      /* keep going for the stars */
-    G.over = true; dropLevel(); finishWin(); return;
+    G.over = true; dropLevel(); EV.emit('goal'); finishWin(); return;
   }
   if (G.moves <= 0) {
     G.over = true;
     dropLevel();
-    if (scoreOnlyLevel() && goalsMet()) finishWin(); else finishLose();
+    if (scoreOnlyLevel() && goalsMet()) { EV.emit('goal'); finishWin(); } else finishLose();
     return;
   }
   /* still going: this is the board the next launch will find */
@@ -15714,7 +16212,9 @@ function renderGame(dt) {
   /* white flash on the big ones */
   if (G.flash > 0) {
     c.save();
-    c.globalAlpha = G.flash * .5;
+    /* reduced motion took the shake and the zoom out and left the
+       full-board white flash in; with it on, the flash is a glow */
+    c.globalAlpha = G.flash * (reduceMotion() ? .08 : .5);
     c.fillStyle = '#FFFFFF';
     c.fillRect(0, 0, G.cw, G.ch);
     c.restore();
@@ -15753,6 +16253,8 @@ function hintScore(a, b) {
   if (ca.tile.sp !== SP.NONE && cb.tile.sp !== SP.NONE) return 180;
   let best = 0, wanted = 0;
   const collect = G.goals.filter(g => g.kind === GK.COLLECT && g.have < g.need).map(g => g.arg);
+  const open = k => G.goals.some(g => g.kind === k && g.have < g.need);
+  const want = { bramble: open(GK.BRAMBLE), mole: open(GK.MOLE), rescue: open(GK.RESCUE) };
   /* The swap happens on the live board, so putting it back is not
      optional and not conditional. Anything thrown in between would
      otherwise leave two tiles transposed with no move having been made. */
@@ -15773,10 +16275,23 @@ function hintScore(a, b) {
         if (!cell) return;
         if (cell.mud) wanted += 3;
         if (cell.tile && collect.indexOf(cell.tile.type) >= 0) wanted += 1;
-        /* a match beside a crate is what breaks the crate */
+        /* The hint knew three goals — collect, mud, crate — and pointed
+           at any tidy three on every other kind of board. Followed move
+           for move on a phone, it lost level 14 at 11 of 18 brambles,
+           a level the solver clears every time. The four it did not
+           know are weighted as test/_solver.js's human policy weighs
+           them, since that is the player every budget was fitted to. */
+        if (want.bramble && cell.bram > 0) wanted += 4;
         [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(d => {
-          const nb = openCell(G.B, r2 + d[0], c2 + d[1]);
-          if (nb && nb.crate) wanted += 2;
+          const nb = G.B.cell[r2 + d[0]] && G.B.cell[r2 + d[0]][c2 + d[1]];
+          if (!nb || nb.hole) return;
+          /* a match beside a crate is what breaks the crate. This read
+             openCell, which answers null for a crate cell, so the bonus
+             had never once fired. */
+          if (nb.crate) wanted += 2;
+          if (want.mole && nb.mole > 0) wanted += 4;
+          /* a basket rides down on whatever is cleared beneath it */
+          if (want.rescue && d[0] === -1 && nb.tile && nb.tile.type === PUP) wanted += 6;
         });
       });
     });
@@ -17124,6 +17639,7 @@ function syncPurse() {
    of the arrow is the whole point — nothing below this file names
    anything in it. */
 EV.on('purse', syncPurse);
+EV.on('goal', commitWin);
 EV.on('won', showWin);
 EV.on('lost', showLose);
 EV.on('lane', openLevelIntro);
@@ -17996,7 +18512,7 @@ function buyThing(id, kind) {
     if (SAVE.treats < item.cost) { SFX.bad(); toast(T('toast_treats'), 'treat'); return; }
     SAVE.treats -= item.cost;
   } else {
-    if (SAVE.coins < item.cost) { SFX.bad(); toast(T('shop_poor'), 'coin'); return; }
+    if (SAVE.coins < item.cost) { SFX.bad(); coinPurse(item.cost - SAVE.coins); return; }
     SAVE.coins -= item.cost;
   }
   if (kind === 'food') SAVE.food[id] = (SAVE.food[id] || 0) + 1;
@@ -18193,7 +18709,7 @@ function renameSheet(p) {
 }
 function tryAdopt(breedIdx, cost, need) {
   if (SAVE.reached < need) { SFX.bad(); toast(T('fam_locked', { n: need }), 'lock'); return; }
-  if (SAVE.coins < cost) { SFX.bad(); toast(T('shop_poor'), 'coin'); return; }
+  if (SAVE.coins < cost) { SFX.bad(); coinPurse(cost - SAVE.coins); return; }
   SFX.tap();
   customiseSheet(breedIdx, (coat, eye, name) => {
     SAVE.coins -= cost;
@@ -18440,7 +18956,7 @@ function groomSheet(id) {
        is on it before you tap. */
     const choose = (own, cost, set) => {
       if (!own) {
-        if (SAVE.coins < cost) { SFX.bad(); toast(T('shop_poor'), 'coin'); return; }
+        if (SAVE.coins < cost) { SFX.bad(); coinPurse(cost - SAVE.coins); return; }
         SAVE.coins -= cost;
         SFX.coin();
       } else SFX.tap();
@@ -18594,11 +19110,8 @@ function openLevelIntro(n) {
       <span class="t"><b>${pet.name} · ${abilityName(pet)} · ${abilityPower(pet)}</b>
       ${perks.length
         ? `<span class="perkchips">${perkChips(perks).map(x => `<span class="pill ok">${x}</span>`).join('')}</span>`
-        : T('care_perks')}</span>
-    </div>
-    <div class="goalItem">
-      <canvas data-tile="${favType(def.types)}" width="34" height="34"></canvas>
-      <span class="t"><b>${T('lvl_charges')}</b>${castName(favType(def.types))}</span>
+        : T('care_perks')}
+      <span class="chargedBy">${T('lvl_charges')} ${castName(favType(def.types))}</span></span>
     </div>` : ''}
     <div class="eyebrow">${T('lvl_boosters')}</div>
     <button class="goalItem" id="pickMoves" style="width:100%">
@@ -18606,7 +19119,7 @@ function openLevelIntro(n) {
       <span class="t"><b>${T('boost_moves')}</b>${T('shop_have', { n: SAVE.boosters.moves || 0 })}</span>
       <span class="pill info" id="movesPill">${T('pill_off')}</span>
     </button>
-    <div class="row">
+    <div class="row sheetFoot">
       <button class="btn ghost" id="liCancel">${T('cancel')}</button>
       <button class="btn primary" id="liGo">${IC.heart}${T('lvl_start')}</button>
     </div>
@@ -18649,6 +19162,39 @@ function openLevelIntro(n) {
    least one product. Until then BILLING is not ready and this opens the
    sheet that says how treats are earned — the comment here used to say
    the prices still showed, after the code had stopped showing them. */
+/* The coin purse: treats into coins, opened from the coin chip and from
+   any purchase the player could not afford. A shortfall used to end in a
+   toast saying so, which is a door with nothing behind it. */
+function coinPurse(need) {
+  SFX.tap();
+  track('purse_open', { need: need || 0 });
+  const m = modal(`
+    <span style="color:var(--accent-strong);width:48px;height:48px;align-self:center">${IC.coin}</span>
+    <h2>${T('purse_t')}</h2>
+    ${need ? `<p><b style="color:var(--accent-strong)">${T('purse_need', { n: fmt(need) })}</b></p>` : ''}
+    <p style="color:var(--text-dim)">${T('purse_s')}</p>
+    ${COIN_PURSES.map(p => `
+      <div class="offer">
+        <span class="ot"><b><span class="reward" style="color:var(--accent-strong)">${IC.coin}${fmt(p.coins)}</span>${p.best ? ' ★' : ''}</b><small>${p[LANG] || p.en}</small></span>
+        <button class="btn sm" data-purse="${p.id}">${IC.treat}${p.treats}</button>
+      </div>`).join('')}
+    <button class="btn primary wide" id="puOk">${T('ok')}</button>
+  `);
+  $$('[data-purse]', m.el).forEach(b => b.addEventListener('click', () => {
+    const p = COIN_PURSES.find(x => x.id === b.dataset.purse);
+    if (SAVE.treats < p.treats) { SFX.bad(); m.close(); treatStore('coins', p.treats); return; }
+    SAVE.treats -= p.treats;
+    SAVE.coins += p.coins;
+    persist(true);
+    track('purse_buy', { id: p.id });
+    SFX.coin();
+    syncPurse();
+    m.close();
+    toast(T('purse_done', { n: fmt(p.coins) }), 'coin');
+    if (SCREEN === 'shop') renderShop();
+  }));
+  $('#puOk', m.el).addEventListener('click', m.close);
+}
 function treatStore(why, need) {
   const live = BILLING.ready();
   track('store_open', { why: why || 'chip', live: live });
@@ -18660,6 +19206,7 @@ function treatStore(why, need) {
   if (!live) { earnTreatsSheet(why, need); return; }
   const j = jarState();
   const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
+    : why === 'coins' ? T('store_why_coins', { n: need || COIN_PURSES[0].treats })
     : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
   const tag = (sku, usd) => {
     const p = BILLING.price(sku, null);
@@ -18846,6 +19393,7 @@ function noHeartsSheet() {
       <button class="btn ghost" id="nhWait">${T('lvl_wait')}</button>
       <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: ECON.heartRefillTreats })}</button>
     </div>
+    ${ADS.available('heart') ? `<button class="btn wide" id="nhAd">${IC.heart}${T('ad_heart')}</button>` : ''}
     ${offer ? `<button class="btn wide" id="nhNotify" style="margin-top:4px">${T('nh_notify')}</button>` : ''}
   `, { onClose: () => { if (tick) clearInterval(tick); onHeartArrived = () => { }; } });
   const nb = $('#nhNotify', m.el);
@@ -18874,10 +19422,25 @@ function noHeartsSheet() {
     SFX.coin();
     toast(T('lvl_heart_back'), 'heart');
   };
+  /* one heart for a video, three a day: enough to finish an evening,
+     never a way to stop the meter meaning anything */
+  const nad = $('#nhAd', m.el);
+  if (nad) nad.addEventListener('click', async () => {
+    nad.disabled = true;
+    if (!await ADS.show('heart')) { nad.disabled = false; SFX.bad(); return; }
+    if (SAVE.hearts < HEART_MAX) SAVE.hearts++;
+    if (SAVE.hearts >= HEART_MAX) SAVE.heartAt = now();
+    persist(true);
+    SFX.coin();
+    syncPurse();
+    m.close();
+    toast(T('lvl_heart_back'), 'heart');
+  });
   $('#nhWait', m.el).addEventListener('click', m.close);
   $('#nhBuy', m.el).addEventListener('click', () => {
     if (SAVE.treats < ECON.heartRefillTreats) { SFX.bad(); treatStore('hearts'); return; }
     SAVE.treats -= ECON.heartRefillTreats;
+    track('hearts_refill', { n: SAVE.reached });
     SAVE.hearts = HEART_MAX;
     SAVE.heartAt = now();
     persist(true);
@@ -18886,11 +19449,31 @@ function noHeartsSheet() {
     m.close();
   });
 }
-function showWin() {
+/* THE WIN IS WRITTEN WHEN IT HAPPENS.
+
+   Everything a clear earns — the stars, the next level, the coins, the
+   heart back — used to be written by showWin, which runs after the
+   finale: the leftover moves going off as fireworks, a second volley
+   of specials, the cascades after them. That is four or five seconds on
+   a level finished with moves to spare, and checkEnd had already thrown
+   away the snapshot that would have resumed it. Killed in that window
+   (swiped away, a call, the OS reclaiming memory) the level came back
+   uncleared with its heart spent. Tested on 30 Sep 2026: win, kill
+   during the fireworks, relaunch — no stars, level locked.
+
+   So checkEnd commits the result the moment the goal is met, with the
+   score and stars as they stand, and persists it. The finale can only
+   add to it: settleWin, called by the card, tops up whatever the extra
+   score earned — a third star, the coins that go with it — and nothing
+   is ever paid twice, because the committed result sits on G and in
+   SAVE.unshownWin until the card has been drawn. */
+function commitWin() {
+  if (G.won) return G.won;
+  if (G.n === DAILY_LEVEL) {
+    G.won = { daily: dailyDone(G.score) };
+    return G.won;
+  }
   const n = G.n;
-  say(T('a11y_cleared', { stars: Math.max(1, G.starsEarned) }), true);
-  /* the daily walk is not a numbered level: no stars ledger, no unlock */
-  if (n === DAILY_LEVEL) { showDailyResult(true); return; }
   const stars = Math.max(1, G.starsEarned);
   const first = !SAVE.stars[n];
   const prev = SAVE.stars[n] || 0;
@@ -18933,11 +19516,7 @@ function showWin() {
      The clock only restarts from a full purse, so a refund must not move
      it — otherwise clearing a level while waiting would push the next
      free heart further away. */
-  if (SAVE.hearts < HEART_MAX) {
-    SAVE.hearts++;
-    if (SAVE.hearts >= HEART_MAX) SAVE.heartAt = now();
-    syncPurse();
-  }
+  returnHeart();
   /* A cleared level paid its full reward every time it was cleared, so
      the fastest coins in the game were on whichever early level you
      could three-star in ninety seconds — and a currency you can farm is
@@ -18968,6 +19547,58 @@ function showWin() {
   const grew = pet ? addBond(pet, bondXp) : false;
   if (pet) { pet.joy = clamp(pet.joy + 6, 0, 100); pet.energy = clamp(pet.energy - 5, 0, 100); }
   persist(true);
+  G.won = { n, stars, first, prev, prevBest, newBest, coins, treats, chest, jarFilled, grew, bondXp, score: G.score, rate };
+  SAVE.unshownWin = n;
+  persist(true);
+  return G.won;
+}
+/* what the fireworks added, paid on top of what was committed */
+function settleWin() {
+  const w = commitWin();
+  const n = w.n;
+  const stars = Math.max(1, G.starsEarned);
+  if (stars > w.stars) {
+    SAVE.stars[n] = Math.max(SAVE.stars[n] || 0, stars);
+    if (stars >= 3 && w.stars < 3) {
+      if (w.prev < 3) {
+        const t = isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats;
+        w.treats += t; SAVE.treats += t;
+      }
+      if (w.first) { passStamp('threeStar'); maybeAskForAReview(); }
+    }
+    w.stars = stars;
+  }
+  if (G.score > w.score) {
+    if (G.score > (SAVE.scores[n] || 0)) SAVE.scores[n] = G.score;
+    const newBest = G.score > w.prevBest;
+    const rate = w.first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
+    const base = Math.round((ECON.winBase + stars * ECON.winPerStar
+      + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
+    const coins = Math.max(w.first ? 0 : 1, Math.round(base * rate));
+    if (coins > w.coins) { SAVE.coins += coins - w.coins; w.coins = coins; }
+    w.newBest = newBest;
+    w.score = G.score;
+  }
+  SAVE.unshownWin = 0;
+  persist(true);
+  return w;
+}
+function showWin() {
+  const n = G.n;
+  say(T('a11y_cleared', { stars: Math.max(1, G.starsEarned) }), true);
+  /* the daily walk is not a numbered level: no stars ledger, no unlock */
+  if (n === DAILY_LEVEL) { showDailyResult(true); return; }
+  const w = settleWin();
+  const { stars, first, prevBest, newBest, coins, treats, chest, jarFilled, grew, bondXp } = w;
+  const pet = activePet();
+  /* Badges earned by this clear go on this card, as one line. They were
+     their own sheet behind it, and on a first session that was nine
+     extra cards in thirteen levels — played on a phone, 30 Sep 2026 —
+     each one a tap between the player and the next board. The shelf on
+     the family page still shows them in full. */
+  const wonBadges = checkBadges();
+  const badgeCoins = wonBadges.reduce((a, b) => a + (b.coins || 0), 0);
+  const badgeTreats = wonBadges.reduce((a, b) => a + (b.treats || 0), 0);
 
   const m = modal(`
     ${pet ? `<div class="winPet"><canvas data-body="${pet.breed}" data-coat="${pet.coat}"
@@ -18984,6 +19615,10 @@ function showWin() {
       <span class="reward" style="color:var(--sage)">${IC.paw}+${bondXp} ${T('win_bond')}</span>
     </div>
     ${first ? '' : `<p style="color:var(--text-faint);font-size:var(--t-micro);margin-top:-4px">${T('win_replay')}</p>`}
+    ${first && coins > 0 && ADS.available('double') ? `<button class="btn wide" id="wDouble">${IC.coin}${T('ad_double', { n: coins })}</button>` : ''}
+    ${wonBadges.length ? `<div class="goalItem winBadges"><span class="rosette fam-${wonBadges[0].fam}">${IC[wonBadges[0].icon] || IC.crown}</span>
+      <span class="t"><b>${T('win_badges', { names: wonBadges.map(badgeName).join(', ') })}</b></span>
+      <span class="pill warn">${badgeCoins ? '+' + badgeCoins : ''}${badgeTreats ? ' +' + badgeTreats + IC.treat : ''}</span></div>` : ''}
     ${jarFilled && jarFull() ? `<div class="offer">
       <span class="ot"><b>${T('store_jar_t')}</b>
         <small>${T('store_jar_full', { n: jarState().fill })}</small></span>
@@ -18997,6 +19632,17 @@ function showWin() {
   `, { dismissable: false, onClose: () => { closedByHand = true; } });
   let closedByHand = false;
   paintArtCanvases(m.el);
+  const wd = $('#wDouble', m.el);
+  if (wd) wd.addEventListener('click', async () => {
+    wd.disabled = true;
+    if (!await ADS.show('double')) { wd.disabled = false; SFX.bad(); return; }
+    SAVE.coins += coins;
+    persist(true);
+    SFX.coin();
+    syncPurse();
+    wd.remove();
+    toast(T('purse_done', { n: fmt(coins) }), 'coin');
+  });
   const wj = $('#wJar', m.el);
   if (wj) wj.addEventListener('click', () => { SFX.tap(); treatStore(); });
   $$('.starsRow .s', m.el).forEach((s, i) => {
@@ -19038,7 +19684,6 @@ function showWin() {
   $('#wMap', m.el).addEventListener('click', () => { m.close(); leaveLevel(); });
   $('#wNext', m.el).addEventListener('click', () => { m.close(); goOn(); });
   syncPurse();
-  const wonBadges = checkBadges();
   /* queued now, not on a timer: a timer that fires after the player has
      already pressed Carry on lands on the wrong screen. Queued as the
      call rather than as the sheet, so the stage-up's fanfare and sparks
@@ -19050,7 +19695,6 @@ function showWin() {
   const later = fn => modalQueue.push(() => { if (closedByHand) fn(); });
   if (chest) later(() => chestModal(chest));
   if (grew) later(() => stageUpModal(pet));
-  if (wonBadges.length) later(() => badgeModal(wonBadges));
 }
 /* The chest, opened. Shut for a beat and shaking, then open with what
    was in it: the half second of not knowing is most of what a chest is. */
@@ -19189,7 +19833,7 @@ function showLose() {
     </div>` + (!(G.extras || 0) && ADS.available('carry') ? `
     <div class="offer">
       <span class="ot">
-        <b>${T('ad_watch', { n: ECON.continueMoves })}</b>
+        <b>${T('ad_watch', { n: ECON.adMoves })}</b>
         <small>${T('ad_watch_sub', { t: ECON.continueTreats })}</small>
       </span>
       <button class="btn sm" id="lAd">${T('ad_go')}</button>
@@ -19203,6 +19847,7 @@ function showLose() {
        jar, so it opens there rather than being told no by a toast */
     if (SAVE.treats < price) { SFX.bad(); treatStore('continue', price); return; }
     SAVE.treats -= price; keepRun(); persist(true); syncPurse();
+    track('continue_buy', { n: G.n, price: price, second: (G.extras || 0) ? 1 : 0 });
     m.close();
     G.extras = (G.extras || 0) + 1;
     G.over = false; G.busy = false;
@@ -19223,13 +19868,17 @@ function showLose() {
     m.close();
     G.extras = (G.extras || 0) + 1;
     G.over = false; G.busy = false;
-    G.moves = ECON.continueMoves;
+    G.moves = ECON.adMoves;
     syncHud();
     SFX.coin();
   });
-  $('#lMap', m.el).addEventListener('click', () => { m.close(); leaveLevel(); });
+  /* The heart this attempt paid is lost when the player walks away from
+     the card, not when it opens: a carry-on continues the same attempt,
+     and a win after one gives the heart back like any other win. */
+  $('#lMap', m.el).addEventListener('click', () => { forfeitHeart(); m.close(); leaveLevel(); });
   $('#lRetry', m.el).addEventListener('click', () => {
     m.close();
+    forfeitHeart();
     if (!spendHeart()) { noHeartsSheet(); leaveLevel(); return; }
     syncPurse();
     const pet2 = activePet();
@@ -19255,10 +19904,19 @@ function confirmQuit() {
   if (G.over) { leaveLevel(); return; }
   /* walking away from a new level once it has been played is losing it,
      as far as the run is concerned; before the first move it is not */
-  const ends = G.n !== DAILY_LEVEL && !SAVE.stars[G.n] && SAVE.winRun > 0 && G.moves < G.def.moves;
+  /* "played" is a move made, not moves below the budget: a pet that
+     brings two extra moves put the count above the budget, so quitting
+     after one or two moves used to end nothing and cost nothing */
+  const played = (G.made || 0) > 0;
+  const ends = G.n !== DAILY_LEVEL && !SAVE.stars[G.n] && SAVE.winRun > 0 && played;
+  /* An untouched level gives its heart back; a played one keeps it. The
+     refund used to be unconditional, which made the heart a charge only
+     on players who played the last move instead of quitting before it —
+     and, on the free daily walk, a heart printed on every exit. */
+  const refund = !played && !!SAVE.heartHeld;
   const m = modal(`
     <h2>${T('g_quit_t')}</h2>
-    <p>${T('g_quit_s')}</p>
+    <p>${T(refund ? 'g_quit_s' : SAVE.heartHeld ? 'g_quit_lose' : 'g_quit_free')}</p>
     ${ends ? `<p style="color:var(--rose)"><b>${T('run_quit', { n: SAVE.winRun })}</b></p>` : ''}
     <div class="row">
       <button class="btn primary" id="qNo">${T('g_quit_no')}</button>
@@ -19270,7 +19928,7 @@ function confirmQuit() {
     m.close();
     track('level_quit', { n: G.n, left: G.moves });
     if (ends) SAVE.winRun = 0;
-    SAVE.hearts = Math.min(HEART_MAX, SAVE.hearts + 1);
+    if (refund) returnHeart(); else forfeitHeart();
     persist(true);
     leaveLevel();
   });
@@ -19358,6 +20016,8 @@ function startDailyWalk() {
   $('#dwCancel', m.el).addEventListener('click', m.close);
   $('#dwGo', m.el).addEventListener('click', () => {
     m.close();
+    /* free, so it holds no heart for a win or a quit to hand back */
+    forfeitHeart();
     setScreen('game');
     startLevel(DAILY_LEVEL, { perks });
   });
@@ -19366,7 +20026,9 @@ function startDailyWalk() {
 function showDailyResult(won) {
   const d = dailyState();
   let reward = { first: false };
-  if (won) reward = dailyDone(G.score);
+  /* committed when the goal was met; this second call only moves the
+     best score up to whatever the fireworks added */
+  if (won) { reward = commitWin().daily; dailyDone(G.score); }
   /* the walk stamps the book once a day, on the day it is first walked */
   if (reward.first) passStamp('walk');
   const stars = won ? Math.max(1, G.starsEarned) : 0;
@@ -19416,6 +20078,7 @@ function showDailyResult(won) {
   });
   $('#dwAgain', m.el).addEventListener('click', () => {
     m.close();
+    forfeitHeart();
     startLevel(DAILY_LEVEL, { perks: perksFor(activePet()) });
   });
   syncPurse();
@@ -19486,6 +20149,8 @@ function openDailyGift() {
    layout test came to measure English twice. */
 function setLang(code) {
   LANG = (code === 'tr') ? 'tr' : 'en';
+  numLocale(LANG);
+  document.documentElement.lang = LANG;
   SAVE.settings.lang = LANG;
   persist(true);
   /* Everything the language touches, moved from here.
@@ -19541,7 +20206,8 @@ function openSettings() {
       </div>
     </div>
     <button class="btn ghost wide" id="setHow">${T('how_open')}</button>
-    <button class="btn ghost wide" id="setKeys">${T('a11y_help_t')}</button>
+    ${touchOnly() ? '' : `<button class="btn ghost wide" id="setKeys">${T('a11y_help_t')}</button>`}
+    ${STORE_LINKS.privacy ? `<a class="btn ghost wide" id="setPrivacy" href="${STORE_LINKS.privacy}" target="_blank" rel="noopener">${T('set_privacy')}</a>` : ''}
     <div style="font-size:var(--t-micro);color:var(--text-faint);line-height:1.5">${T('set_credits')}</div>
     <div style="font-size:var(--t-micro);color:var(--text-faint);display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <span>${T('set_played')}: <b class="num">${SAVE.stats.played}</b></span>
@@ -19588,7 +20254,8 @@ function openSettings() {
     setTimeout(openSettings, 60);
   }));
   $('#setHow', m.el).addEventListener('click', () => { m.close(); howToPlay(); });
-  $('#setKeys', m.el).addEventListener('click', () => { m.close(); keyboardHelp(); });
+  const sk = $('#setKeys', m.el);
+  if (sk) sk.addEventListener('click', () => { m.close(); keyboardHelp(); });
   $('#setClose', m.el).addEventListener('click', m.close);
   $('#setReset', m.el).addEventListener('click', () => {
     const c2 = modal(`
@@ -19655,8 +20322,21 @@ function paintLogo() {
 function maybeTutorial(def) {
   const pet = activePet();
   const steps = [];
-  if (!SAVE.seen.swap) steps.push({ k: 'swap', text: T('tut_swap') + ' ' + T('tut_match') });
-  if (!SAVE.seen.pet && pet) steps.push({ k: 'pet', text: T('tut_pet', { name: pet.name, breed: breedName(pet.breed) }) });
+  /* THE FIRST MINUTE HAD TWO CARDS IN IT BEFORE THE FIRST MOVE.
+
+     "Drag one tile onto its neighbour" and then "your pet sits here",
+     each a paragraph and a button, over a board nobody had touched.
+     The swap is shown now rather than told: the hand that demonstrates
+     it is put on the board at once, with one line underneath that goes
+     away by itself. The pet waits for the second level, when there is
+     something on the rail worth pointing at. And no level opens with
+     more than one card — a mechanic introduced on this board comes first,
+     anything else keeps until the next. */
+  if (!SAVE.seen.swap) {
+    SAVE.seen.swap = 1; persist();
+    setTimeout(() => { nudgeHint(); toast(T('tut_swap') + ' ' + T('tut_match'), null, 4500); }, 520);
+    return;
+  }
   if (def.tut === 'special' && !SAVE.seen.special) steps.push({ k: 'special', text: T('tut_special') });
   if (def.goals.some(g => g[0] === GK.BRAMBLE) && !SAVE.seen.bramble) {
     steps.push({ k: 'bramble', text: T('tut_bramble') });
@@ -19679,7 +20359,9 @@ function maybeTutorial(def) {
   firstSight('cC', 'crate', T('how_crate'), 'crate');
   firstSight('mM', 'mud', T('how_mud'), 'mud');
   firstSight('i', 'ice', T('how_ice'), 'ice');
+  if (!steps.length && !SAVE.seen.pet && pet) steps.push({ k: 'pet', text: T('tut_pet', { name: pet.name, breed: breedName(pet.breed) }) });
   if (!steps.length) return;
+  steps.length = 1;
   let i = 0;
   const show = () => {
     /* the last card has just closed on a board the player has never
@@ -20032,6 +20714,8 @@ function boot() {
   castRebuild();          /* who stands in each board slot, before anything draws */
   if (SAVE.settings.lang) LANG = SAVE.settings.lang;
   else { LANG = (navigator.language || 'en').toLowerCase().indexOf('tr') === 0 ? 'tr' : 'en'; SAVE.settings.lang = LANG; }
+  numLocale(LANG);
+  document.documentElement.lang = LANG;
 
   applyTheme();
   readPalette();
@@ -20061,6 +20745,7 @@ function boot() {
   /* the chip explained what treats were and then stopped, which was the
      right card back when there was nothing to do about it */
   $('#chipTreats').addEventListener('click', () => { SFX.tap(); treatStore(); });
+  $('#chipCoins').addEventListener('click', () => coinPurse());
 
   catchUpPets();
   heartTick();
@@ -20128,7 +20813,14 @@ function boot() {
      account for. */
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
+      /* the comment on snapshotLevel promised a write at every hide and
+         there was none; a board at rest is exactly the one to keep */
+      if (SCREEN === 'game' && G.B && !G.busy && !G.over) keepLevel();
       musicStop(); persist(true);
+      /* the context itself, not just the music bus: a running
+         AudioContext keeps an audio session open on some phones, and a
+         cascade in flight would go on playing into the pocket */
+      try { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend(); } catch (e) { }
       /* The moment the queue can still be made right: the player has put
          the game down, and everything the two notifications are about —
          whether the hearts are empty, whether today's walk went untaken
@@ -20142,6 +20834,7 @@ function boot() {
          canvas repainted for nobody, in a pocket, on a battery */
       if (AMB.raf) { cancelAnimationFrame(AMB.raf); AMB.raf = null; }
     } else {
+      try { if (AU.ctx && AU.ctx.state === 'suspended' && (SAVE.settings.sound || SAVE.settings.music)) AU.ctx.resume(); } catch (e) { }
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
       if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
       if (SAVE.settings.music) musicStart();
@@ -20199,6 +20892,15 @@ function boot() {
        back first, before the gift or anything else: the player was in
        the middle of something, and the home screen is not where they
        left off. See snapshotLevel in 40-game.js. */
+    /* a win committed and never shown: the app died during the
+       fireworks. It counted — say so, once, rather than leaving the
+       player to find a level unlocked with no memory of the card. */
+    if (SAVE.unshownWin) {
+      const wn = SAVE.unshownWin;
+      SAVE.unshownWin = 0;
+      persist();
+      setTimeout(() => toast(T('win_kept', { n: wn })), 600);
+    }
     const unfinished = levelToResume();
     if (unfinished) {
       setTimeout(() => { if (SCREEN === 'home' && !sheetIsOpen()) resumeLevel(unfinished); }, 350);
@@ -20214,8 +20916,13 @@ function boot() {
   }
 }
 
-/* a small handle for debugging in the console */
-window.BL = {
+/* A small handle for debugging in the console, and the door every test
+   harness comes in by. Not in the store build: it hands over the save and
+   persist(), which in a debuggable WebView is "BL.save.treats = 1e6" typed
+   into a console. The app on a phone gets it only if somebody who can
+   already reach its storage asks for it (pawtika-debug = 1). */
+const BL_OPEN = !nativeShell() || (() => { try { return localStorage.getItem('pawtika-debug') === '1'; } catch (e) { return false; } })();
+if (BL_OPEN) window.BL = {
   set fast(v) { FAST_FORWARD = !!v; },
   get fast() { return FAST_FORWARD; },
   get save() { return SAVE; },
@@ -20333,6 +21040,16 @@ function nativeBack() {
   /* a sheet first, whatever else is true: it is the thing in front */
   if (sheetIsOpen()) {
     const top = modalStack[modalStack.length - 1];
+    /* A card that cannot be dismissed (the win and lose cards, the
+       gift) was closed by back all the same, which on the lose card left
+       a finished board with no buttons on it. Back on one of those means
+       its quiet way out — the ghost button, which is "to the lane" on
+       every one of them — or nothing at all. */
+    if (top && !top.dismissable) {
+      const out = top.el.querySelector('.btn.ghost:not([disabled])');
+      if (out) { SFX.tap(); out.click(); }
+      return;
+    }
     if (top) { SFX.tap(); top.close(); return; }
   }
   if (SCREEN === 'game') { SFX.tap(); confirmQuit(); return; }

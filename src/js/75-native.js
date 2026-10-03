@@ -45,6 +45,16 @@ function nativeBack() {
   /* a sheet first, whatever else is true: it is the thing in front */
   if (sheetIsOpen()) {
     const top = modalStack[modalStack.length - 1];
+    /* A card that cannot be dismissed (the win and lose cards, the
+       gift) was closed by back all the same, which on the lose card left
+       a finished board with no buttons on it. Back on one of those means
+       its quiet way out — the ghost button, which is "to the lane" on
+       every one of them — or nothing at all. */
+    if (top && !top.dismissable) {
+      const out = top.el.querySelector('.btn.ghost:not([disabled])');
+      if (out) { SFX.tap(); out.click(); }
+      return;
+    }
     if (top) { SFX.tap(); top.close(); return; }
   }
   if (SCREEN === 'game') { SFX.tap(); confirmQuit(); return; }

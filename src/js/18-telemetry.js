@@ -71,6 +71,13 @@ const TRACK = {
     this.session = Math.floor(Math.random() * 1e9);
     if (!SAVE.install) SAVE.install = Math.floor(Math.random() * 1e12);
     this.install = SAVE.install;
+    /* the sink, once there is somewhere to send to (BACKEND, 10-data.js) */
+    if (!this.sink && backendOn()) {
+      this.sink = async batch => {
+        const r = await backendCall('track', { events: batch, platform: nativePlatform() });
+        return r.ok;
+      };
+    }
     try {
       /* The buffer carried the old name until this build. Adopted the
          same way the save is, and for the same reason — a crash report
@@ -116,6 +123,12 @@ const TRACK = {
     this.buf.push(e);
     if (this.buf.length > TELEMETRY_MAX) this.buf.splice(0, this.buf.length - TELEMETRY_MAX);
     this.save();
+    /* a batch every forty events as well as at every hide: a player who
+       never puts the phone down would otherwise send nothing */
+    if (this.sink && this.buf.length >= 40 && !this.sending) {
+      this.sending = true;
+      this.flush().then(() => { this.sending = false; }, () => { this.sending = false; });
+    }
   },
 
   /* Failures carry a trimmed message and no stack beyond the first

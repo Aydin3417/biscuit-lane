@@ -7,8 +7,9 @@
    test/economy.js makes them. This is the one seam where value enters
    from outside, and it is deliberately the only one.
 
-   No advertising. Nothing here interrupts a level, nothing plays a
-   video, nothing is sold to a player who is not already asking for it.
+   Nothing here interrupts a level and nothing is sold to a player who
+   is not already asking for it. (The rewarded videos in 19-ads.js are
+   the same rule applied to attention instead of money.)
    Every surface in this file is opened by the player: the treat chip in
    the header, or the two moments — out of moves near the end, out of
    hearts — where the game has something the player wanted and could not
@@ -16,8 +17,9 @@
 
    WHAT IS BEHIND IT. cordova-plugin-purchase, which talks to Google Play
    Billing and to StoreKit and to nobody else: no server of its own, no
-   account of its own, and no receipt sent anywhere, because no validator
-   is set. It was chosen over RevenueCat for exactly that reason.
+   account of its own. Receipts go to one place only when BACKEND is
+   filled in: the game's own verify-purchase function, which forwards
+   them to Apple or Google and keeps nothing but the transaction id. It was chosen over RevenueCat for exactly that reason.
    RevenueCat is a service that sees every purchase, and privacy.html
    and the listing say in two languages that nobody but the store does,
    which is also what the data answers for both stores rest on. It was
@@ -49,6 +51,8 @@ const BILLING = {
   started: null,           // the one promise every caller waits on
   waiting: {},             // sku -> the answer of the buy() open on it
   owed: {},                // transactionId -> approved and not yet handed back
+  checking: false,         // a server checks receipts (BACKEND) before anything is paid
+  cleared: {},             // transactionId -> the server said this one is real
 
   /* Whether money can actually change hands in this build: a store is up
      and it has told us the price of something we sell. A plugin with no
@@ -100,7 +104,7 @@ const BILLING = {
         const platform = ios ? C.Platform.APPLE_APPSTORE : C.Platform.GOOGLE_PLAY;
         const S = C.store;
         S.register(this.skus().map(id => ({ id: id, type: C.ProductType.CONSUMABLE, platform: platform })));
-        /* Arrival is `approved`, not `verified`. With no validator set the
+        /* Without a server, arrival is `approved`, not `verified`. With no validator set the
            plugin passes every receipt without looking at it — its own
            source says "for backward compatibility, we consider that the
            receipt is verified" — so waiting for `verified` would be
@@ -109,10 +113,56 @@ const BILLING = {
            the plugin's own bookkeeping runs its usual course. The day a
            validator is set, arrival moves to `verified` and this comment
            stops being true. */
-        S.when()
+        /* WITH A SERVER, A RECEIPT IS CHECKED BEFORE ANYTHING IS PAID.
+
+           Without one, arrival is `approved`: the store said so, and
+           that is all there is to go on — which on a rooted phone with a
+           billing emulator is nothing at all. With BACKEND filled in, the
+           receipt goes to server/supabase/functions/verify-purchase, which
+           asks Apple or Google themselves, and arrival moves to
+           `verified`. A receipt the server refuses never reaches the
+           save. */
+        this.checking = backendOn();
+        if (this.checking) {
+          /* A server that cannot be reached is not a refusal. A free
+             Supabase project is paused after a week with no traffic, and a
+             phone can be offline for the check and online for the store;
+             either way the player has paid, and a purchase left "pending"
+             because of our server is a sale lost and a player wronged. So
+             no answer (no network, a paused project, a 5xx) falls back to
+             the store's word, exactly as the game behaves with no server
+             at all. Only an answer that says "refused" stops a grant. */
+          S.validator = (body, cb) => {
+            const good = { ok: true, data: { id: body.id, latest_receipt: true, transaction: body.transaction } };
+            backendCall('verify-purchase', { body: body, install: SAVE.install || 0, platform: ios ? 'ios' : 'android' })
+              .then(r => r.status >= 500 ? null : r.json().then(j => ({ status: r.status, j: j })))
+              .then(x => {
+                if (!x || !x.j || typeof x.j.ok !== 'boolean') { track('verify_skip', { why: 'noanswer' }); cb(good); return; }
+                cb(x.j.ok ? good
+                  : { ok: false, status: x.status, code: x.j.code || 6778003, message: x.j.message || 'refused' });
+              }, () => { track('verify_skip', { why: 'unreachable' }); cb(good); });
+          };
+        }
+        const w8 = S.when()
           .productUpdated(p => this.learn(p))
-          .approved(tx => { this.arrived(tx); tx.verify(); })
+          .approved(tx => { if (!this.checking) this.arrived(tx); tx.verify(); })
           .pending(tx => this.held(tx));
+        if (this.checking) {
+          w8.verified(rc => {
+            ((rc && rc.sourceReceipt && rc.sourceReceipt.transactions) || []).forEach(tx => {
+              if (tx && tx.transactionId) this.cleared[tx.transactionId] = true;
+              this.arrived(tx);
+            });
+          });
+          w8.unverified(u => {
+            const txs = (u && u.receipt && u.receipt.transactions) || [];
+            const refused = u && u.payload && u.payload.code !== 6778001;
+            txs.forEach(tx => ((tx && tx.products) || []).forEach(p => {
+              const open = p && this.waiting[p.id];
+              if (open) open({ ok: false, why: refused ? 'failed' : 'pending' });
+            }));
+          });
+        }
         S.initialize([platform]).then(() => {
           this.store = S;
           this.skus().forEach(id => this.learn(S.get(id, platform)));
@@ -203,8 +253,17 @@ const BILLING = {
     try { await tx.finish(); } catch (e) { return; /* still open; the next launch closes it */ }
     if (tx.transactionId) delete this.owed[tx.transactionId];
   },
+  /* Only what the save has actually paid out. This closed every owed
+     transaction, including ones grantPurchase had refused — a SKU a
+     later build no longer sells — and a consumed purchase is in nobody's
+     queue again: the player was charged and the sale was gone. One the
+     ledger does not hold stays open for a build that knows what it is. */
   async settleAll(list) {
-    for (const tx of (list || [])) await this.settle(tx);
+    for (const tx of (list || [])) {
+      const id = tx && tx.transactionId;
+      if (id && !(SAVE.granted && SAVE.granted[id])) continue;
+      await this.settle(tx);
+    }
   },
 
   /* The purchase itself.
@@ -282,6 +341,11 @@ const BILLING = {
     const ours = tx => ((tx && tx.products) || []).some(p => p && mine.indexOf(p.id) >= 0);
     (this.store.localReceipts || []).forEach(r => ((r && r.transactions) || []).forEach(tx => {
       if (tx && tx.state === 'approved' && tx.transactionId && !this.owed[tx.transactionId] && ours(tx)) {
+        /* Restore read the phone's own receipts and paid whatever was
+           approved, which is the one door the server check would not
+           have covered. With a server, an unchecked one is sent to be
+           checked and paid when the answer comes back. */
+        if (this.checking && !this.cleared[tx.transactionId]) { try { tx.verify(); } catch (e) { } return; }
         this.owed[tx.transactionId] = tx;
       }
     }));

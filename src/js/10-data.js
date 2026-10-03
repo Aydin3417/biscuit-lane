@@ -265,7 +265,16 @@ const ECON = {
      all six by day 14 in test/economy.js, and a month ended with four
      thousand coins and nothing left to spend them on. See README, "The
      money meant nothing by the second week". */
-  winBase: 15, winPerStar: 10, winPerScore: 2600,
+  /* And by a third again on 30 Sep 2026, by the owner's call to run the
+     money tight but fair. A month of ordinary play still earned 18,285
+     coins against a 17,533-coin catalogue: every hat, room and animal
+     the game sells was bought inside thirty days, so nothing priced in
+     coins was ever a reason to come back, or to open the treat store. The
+     booster prices go up with it, below, and treats can now be turned
+     into coins (COIN_PURSES) — so the player who wants the room finished
+     sooner has somewhere to go, and the one who does not still gets there
+     by playing. test/economy.js prints the month before and after. */
+  winBase: 10, winPerStar: 7, winPerScore: 3600,
   /* and what it pays the second time. A cleared level paid full price
      forever, which made the best coin-per-minute in the game "replay
      level 3", and made every price downstream a fiction. Beating your
@@ -273,7 +282,7 @@ const ECON = {
      isn't farming. */
   replayRate: .10, replayBestRate: .25,
 
-  dailyWalkCoins: 80, dailyWalkTreats: 1,
+  dailyWalkCoins: 55, dailyWalkTreats: 1,
   /* treats on the gift ladder: day 4 and day 7 only, 1 and 3. Was day
      3, 6 and 7 for 2, 2 and 5 — nine a week, on top of fourteen from
      the walk. */
@@ -300,7 +309,7 @@ const ECON = {
      ordinary level was the largest single source of it. A treat is the
      currency that ends a wall, so it is paid at the walls: three-starring
      a gate is the hardest thing in a block, and it still pays. */
-  threeStarTreats: 0, threeStarTreatsGate: 1, milestoneTreats: 1, milestoneEvery: 10, chestCoins: 40,
+  threeStarTreats: 0, threeStarTreatsGate: 1, milestoneTreats: 1, milestoneEvery: 10, chestCoins: 30,
 
   /* thirty, which is the genre's number: a full set in two and a half
      hours rather than two. It only matters to somebody who has lost five
@@ -316,7 +325,7 @@ const ECON = {
      and the moment it is not is the moment a player most wants to finish
      — so there is a second offer, once, and it costs what the genre
      charges for the second: close to double. There is no third. */
-  continueTreats2: 16,
+  continueTreats2: 18,
   /* Was twelve, against a player who is holding seven at the moment
      the pool empties — which made it not an offer but a wall with a
      price written on it. Nine is the carry-on price, and a player who
@@ -329,7 +338,18 @@ const ECON = {
      is not an offer, it is a sale of a lost level — the player finds
      that out after paying, once, and then never trusts the button
      again. Below this the card does not carry it at all. */
-  continueAt: .70
+  /* Lowered from .70 on 30 Sep 2026. At seven tenths the offer reached a
+     player only when the level was nearly done, and test/economy.js had
+     it offered fifteen times in a month — the one real sink in the game,
+     shown to almost nobody. At half the goal, five moves still finishes
+     a board more often than not (the moves are worth more on a board
+     that is half cleared, not less), so the offer is still honest: it is
+     not sold to somebody who is a long way off. */
+  continueAt: .50,
+  /* what a rewarded video carries on with: three moves, where nine treats
+     buy five. The video is the free way through, and it should be the
+     smaller one, or nobody would ever pay for the other. */
+  adMoves: 3
 };
 
 /* ---------- where this game lives, once it lives anywhere ----------
@@ -354,7 +374,11 @@ const STORE_LINKS = {
   play: 'https://play.google.com/store/apps/details?id=com.pawtika.game',
   /* paste the App Store URL here — App Store Connect gives it once the
      app record exists, in the form https://apps.apple.com/app/id0000000000 */
-  apple: ''
+  apple: '',
+  /* where privacy.html is hosted. Both stores ask for this address, and
+     settings links to it once it is filled in (App Store Review 5.1.1
+     wants the policy reachable from inside the app as well). */
+  privacy: 'https://aydin3417.github.io/biscuit-lane/privacy.html'
 };
 /* Whether this is the app or the web page. Asked here rather than
    reading 75-native.js's `NATIVE`, because that file is the last one
@@ -363,6 +387,52 @@ const STORE_LINKS = {
 function nativeShell() {
   return !!(typeof window !== 'undefined' && window.Capacitor &&
     window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+}
+/* ---------- the one server ----------
+
+   Two things a game that earns money cannot do from the phone alone:
+   know how players are getting on, and know that a purchase is real.
+   Both go to one small Supabase project (server/supabase/ in this
+   repository): an analytics intake and a purchase check, and nothing
+   else — no accounts, no saves, no names.
+
+   Empty, both are off and the game is exactly what it was before this
+   existed: events stay in the ring buffer on the phone, and purchases
+   are granted on the store's word. Fill in the project URL and its
+   publishable (anon) key — both are public by design, the database is
+   closed to them by row-level security — and the next build sends. */
+const BACKEND = {
+  /* the "Pawtika" organisation's project, Ireland (eu-west-1); schema and
+     both functions deployed 3 Oct 2026 */
+  url: 'https://emkdfbpzlreozepcoykn.supabase.co',
+  key: 'sb_publishable_gGZirwhi9sDI68ZV12XBgw_67aqkVJe'
+};
+/* Not from a developer's machine. The test suites and the dev tools play
+   whole levels on localhost, and every one of them would otherwise land in
+   the same table as the players — a level funnel with a solver in it. The
+   app on a phone is also served from "localhost" (capacitor://localhost,
+   https://localhost), which is why the shell is asked first; a browser on
+   localhost sends only when pawtika-debug says so. */
+function backendOn() {
+  if (!(BACKEND.url && BACKEND.key)) return false;
+  if (nativeShell()) return true;
+  try {
+    const h = location.hostname;
+    if (h === 'localhost' || h === '127.0.0.1' || h === '') return localStorage.getItem('pawtika-debug') === '1';
+  } catch (e) { return false; }
+  return true;
+}
+function backendCall(fn, body) {
+  return fetch(BACKEND.url.replace(/\/$/, '') + '/functions/v1/' + fn, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', apikey: BACKEND.key, Authorization: 'Bearer ' + BACKEND.key },
+    body: JSON.stringify(body)
+  });
+}
+/* 'ios', 'android' or 'web' — for the few things that differ by store */
+function nativePlatform() {
+  const C = typeof window !== 'undefined' && window.Capacitor;
+  return C && C.getPlatform ? C.getPlatform() : 'web';
 }
 function storeLink() {
   const ios = typeof window !== 'undefined' && window.Capacitor &&
@@ -404,6 +474,22 @@ const TREAT_PACKS = [
   { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı' },
   { id: 'tin', sku: 'treats_tin_240', treats: 240, usd: '$9.99', en: 'Biscuit tin', tr: 'Bisküvi kutusu', infinite: 60 },
   { id: 'sack', sku: 'treats_sack_520', treats: 520, usd: '$19.99', en: 'Feed sack', tr: 'Mama çuvalı', best: true, infinite: 180 }
+];
+
+/* ---------- coins for treats ----------
+
+   Coins could only be earned by playing, and treats could not be turned
+   into them, so the thing most players actually want to hurry — the
+   room, the second animal, a booster before a wall — had no way to be
+   hurried. With the coin faucet cut by a third (ECON, 30 Sep 2026) that
+   would only have been a slower game, so the purse is the other half of
+   the same change: every size gives more coins per treat than the one
+   below it, and the smallest is still a fair trade (twenty treats for
+   about nine levels' worth of first-clear coins). */
+const COIN_PURSES = [
+  { id: 'handful', treats: 20, coins: 350, en: 'A handful', tr: 'Bir avuç' },
+  { id: 'pouch', treats: 50, coins: 950, en: 'A pouch', tr: 'Bir kese' },
+  { id: 'chest', treats: 120, coins: 2500, en: 'A strongbox', tr: 'Bir kasa', best: true }
 ];
 
 /* ---------- the welcome pack ----------
@@ -711,10 +797,10 @@ const BOOSTERS = [
   /* Priced for the month in which coins stop having anywhere to go: the
      catalogue runs out around day forty, and a booster that costs nothing
      that matters is not a booster anybody decides to use. */
-  { id: 'moves', en: '+5 moves', tr: '+5 hamle', cost: 150, icon: 'plusmove', enDesc: 'Five extra moves before the level starts.', trDesc: 'Bölüm başlamadan beş hamle ekler.' },
-  { id: 'hammer', en: 'Hammer', tr: 'Çekiç', cost: 110, icon: 'hammer', enDesc: 'Smash any single tile or blocker.', trDesc: 'Tek bir taşı ya da engeli kırar.' },
-  { id: 'swap', en: 'Free swap', tr: 'Serbest takas', cost: 130, icon: 'swap', enDesc: 'Swap any two tiles, anywhere, for free.', trDesc: 'İstediğin iki taşı bedavaya değiştirir.' },
-  { id: 'shuffle', en: 'Shuffle', tr: 'Karıştır', cost: 100, icon: 'shuffle', enDesc: 'Reshuffle the board without spending a move.', trDesc: 'Hamle harcamadan tahtayı karıştırır.' }
+  { id: 'moves', en: '+5 moves', tr: '+5 hamle', cost: 220, icon: 'plusmove', enDesc: 'Five extra moves before the level starts.', trDesc: 'Bölüm başlamadan beş hamle ekler.' },
+  { id: 'hammer', en: 'Hammer', tr: 'Çekiç', cost: 170, icon: 'hammer', enDesc: 'Smash any single tile or blocker.', trDesc: 'Tek bir taşı ya da engeli kırar.' },
+  { id: 'swap', en: 'Free swap', tr: 'Serbest takas', cost: 190, icon: 'swap', enDesc: 'Swap any two tiles, anywhere, for free.', trDesc: 'İstediğin iki taşı bedavaya değiştirir.' },
+  { id: 'shuffle', en: 'Shuffle', tr: 'Karıştır', cost: 150, icon: 'shuffle', enDesc: 'Reshuffle the board without spending a move.', trDesc: 'Hamle harcamadan tahtayı karıştırır.' }
 ];
 const HATS = [
   { id: 'none', en: 'No hat', tr: 'Yok', cost: 0, art: 'none' },
@@ -878,27 +964,27 @@ const BADGES = [
   {
     id: 'first', icon: 'paw', fam: 'lane', en: 'First one home', tr: 'İlk geçiş',
     enDesc: 'Clear a level.', trDesc: 'Bir bölüm geç.',
-    of: 1, at: s => s.stats.cleared, coins: 20
+    of: 1, at: s => s.stats.cleared, coins: 15
   },
   {
     id: 'ten', icon: 'play', fam: 'lane', en: 'Getting the hang of it', tr: 'Eli alıştı',
     enDesc: 'Clear ten levels.', trDesc: 'On bölüm geç.',
-    of: 10, at: s => s.stats.cleared, coins: 60
+    of: 10, at: s => s.stats.cleared, coins: 40
   },
   {
     id: 'thirty', icon: 'home', fam: 'lane', en: 'Lane regular', tr: 'Sokağın müdavimi',
     enDesc: 'Clear thirty levels.', trDesc: 'Otuz bölüm geç.',
-    of: 30, at: s => s.stats.cleared, coins: 150, treats: 2
+    of: 30, at: s => s.stats.cleared, coins: 100, treats: 2
   },
   {
     id: 'star3', icon: 'star', fam: 'star', en: 'Perfectionist', tr: 'Mükemmeliyetçi',
     enDesc: 'Take three stars from a level.', trDesc: 'Bir bölümden üç yıldız al.',
-    of: 1, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 30
+    of: 1, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 20
   },
   {
     id: 'star3x10', icon: 'sparkle', fam: 'star', en: 'Ten perfect runs', tr: 'On kusursuz geçiş',
     enDesc: 'Three-star ten levels.', trDesc: 'On bölümü üç yıldızla geç.',
-    of: 10, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 130, treats: 2
+    of: 10, at: s => Object.values(s.stars).filter(v => v >= 3).length, coins: 85, treats: 2
   },
   {
     /* Six, not five, and forty tiles, not thirty.
@@ -913,80 +999,80 @@ const BADGES = [
        which is rare enough to be noticed and common enough to arrive. */
     id: 'combo5', icon: 'flame', fam: 'feat', en: 'Snowball', tr: 'Çığ',
     enDesc: 'Set off a six-chain cascade.', trDesc: 'Altı zincirlik bir çığ başlat.',
-    of: 6, at: s => s.stats.bestCombo, coins: 40
+    of: 6, at: s => s.stats.bestCombo, coins: 25
   },
   {
     id: 'combo8', icon: 'bolt', fam: 'feat', en: 'Avalanche', tr: 'Heyelan',
     enDesc: 'Set off an eight-chain cascade.', trDesc: 'Sekiz zincirlik bir çığ başlat.',
-    of: 8, at: s => s.stats.bestCombo, coins: 110, treats: 1
+    of: 8, at: s => s.stats.bestCombo, coins: 70, treats: 1
   },
   {
     id: 'big30', icon: 'hammer', fam: 'feat', en: 'One good move', tr: 'Tek iyi hamle',
     enDesc: 'Clear forty tiles in a single move.', trDesc: 'Tek hamlede kırk taş temizle.',
-    of: 40, at: s => s.stats.biggestClear, coins: 80
+    of: 40, at: s => s.stats.biggestClear, coins: 50
   },
   {
     id: 'pop2k', icon: 'shuffle', fam: 'feat', en: 'Two thousand faces', tr: 'İki bin yüz',
     enDesc: 'Clear two thousand tiles in total.', trDesc: 'Toplam iki bin taş temizle.',
-    of: 2000, at: s => s.stats.tilesPopped, coins: 100
+    of: 2000, at: s => s.stats.tilesPopped, coins: 65
   },
   {
     id: 'rescue10', icon: 'heart', fam: 'lane', en: 'Ten walked home', tr: 'On tanesi evde',
     enDesc: 'Walk ten baskets to the door.', trDesc: 'On sepeti kapıya götür.',
-    of: 10, at: s => s.stats.rescued, coins: 90, treats: 1
+    of: 10, at: s => s.stats.rescued, coins: 60, treats: 1
   },
   {
     id: 'family2', icon: 'paw', fam: 'family', en: 'Company', tr: 'Arkadaş',
     enDesc: 'Adopt a second pet.', trDesc: 'İkinci bir hayvan sahiplen.',
-    of: 2, at: s => s.pets.length, coins: 50
+    of: 2, at: s => s.pets.length, coins: 35
   },
   {
     id: 'family4', icon: 'home', fam: 'family', en: 'A full house', tr: 'Ev doldu',
     enDesc: 'Have four pets at home.', trDesc: 'Evde dört hayvan olsun.',
-    of: 4, at: s => s.pets.length, coins: 150, treats: 2
+    of: 4, at: s => s.pets.length, coins: 100, treats: 2
   },
   {
     id: 'family6', icon: 'crown', fam: 'family', en: 'Everybody', tr: 'Herkes burada',
     enDesc: 'Adopt every breed on the lane.', trDesc: 'Sokaktaki her cinsi sahiplen.',
-    of: 6, at: s => s.pets.length, coins: 300, treats: 5
+    of: 6, at: s => s.pets.length, coins: 195, treats: 5
   },
   {
     id: 'bond5', icon: 'heart', fam: 'family', en: 'Inseparable', tr: 'Ayrılmaz',
     enDesc: 'Reach bond level five with any pet.', trDesc: 'Bir hayvanla beşinci bağ seviyesine ulaş.',
-    of: 5, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 80
+    of: 5, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 50
   },
   {
     id: 'bond12', icon: 'star', fam: 'family', en: 'Grown up together', tr: 'Birlikte büyüdük',
     enDesc: 'Reach bond level twelve.', trDesc: 'On ikinci bağ seviyesine ulaş.',
-    of: 12, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 200, treats: 3
+    of: 12, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 130, treats: 3
   },
   {
     id: 'care100', icon: 'bowl', fam: 'care', en: 'Devoted', tr: 'Kendini adamış',
     enDesc: 'Look after your pets a hundred times.', trDesc: 'Hayvanlarınla yüz kez ilgilen.',
-    of: 100, at: s => s.stats.cared, coins: 130, treats: 1
+    of: 100, at: s => s.stats.cared, coins: 85, treats: 1
   },
   {
     id: 'streak7', icon: 'flame', fam: 'care', en: 'A week of it', tr: 'Bir hafta boyunca',
     enDesc: 'Come back seven days running.', trDesc: 'Yedi gün üst üste gel.',
-    of: 7, at: s => s.streak, coins: 110, treats: 3
+    of: 7, at: s => s.streak, coins: 70, treats: 3
   },
   {
     id: 'walk7', icon: 'ball', fam: 'care', en: 'Seven walks', tr: 'Yedi yürüyüş',
     enDesc: 'Finish the daily walk seven days running.', trDesc: 'Günlük yürüyüşü yedi gün üst üste bitir.',
-    of: 7, at: s => (s.daily && s.daily.streak) || 0, coins: 150, treats: 3
+    of: 7, at: s => (s.daily && s.daily.streak) || 0, coins: 100, treats: 3
   },
   {
     id: 'decor', icon: 'brush', fam: 'care', en: 'Interior decorator', tr: 'İç mimar',
     enDesc: 'Own five things for the room.', trDesc: 'Oda için beş eşyan olsun.',
-    of: 5, at: s => Object.keys(s.furniture || {}).length, coins: 90
+    of: 5, at: s => Object.keys(s.furniture || {}).length, coins: 60
   },
   /* the catalogue was eight pieces when the badge above was written, so
      five was most of it; at twenty, a house that is actually full is a
      month of coins and worth a shelf of its own */
   {
-    id: 'fullhouse', icon: 'brush', fam: 'care', en: 'A full house', tr: 'Dolu bir ev',
+    id: 'fullhouse', icon: 'brush', fam: 'care', en: 'Every corner filled', tr: 'Dolu bir ev',
     enDesc: 'Own fifteen things for the room.', trDesc: 'Oda için on beş eşyan olsun.',
-    of: 15, at: s => Object.keys(s.furniture || {}).length, coins: 200, treats: 3
+    of: 15, at: s => Object.keys(s.furniture || {}).length, coins: 130, treats: 3
   },
 
   /* ---- the second tier ----
@@ -1003,7 +1089,7 @@ const BADGES = [
   {
     id: 'chain7', icon: 'star', fam: 'lane', en: 'One thing led to another', tr: 'Biri diğerini getirdi',
     enDesc: 'Reach a seven-deep cascade.', trDesc: 'Yedi kademelik bir zincir yakala.',
-    of: 7, at: s => s.stats.bestCombo, coins: 40,  treats: 1
+    of: 7, at: s => s.stats.bestCombo, coins: 25,  treats: 1
   },
   {
     id: 'lane60', icon: 'home', fam: 'lane', en: 'The whole lane', tr: 'Yolun sonu',
@@ -1011,32 +1097,32 @@ const BADGES = [
     /* only the authored sixty count: a player deep into the generated
        run has more keys than that and would otherwise be handed this
        for levels it is not about */
-    of: 60, at: s => Object.keys(s.stars || {}).filter(k => +k <= 60).length, coins: 100, treats: 2
+    of: 60, at: s => Object.keys(s.stars || {}).filter(k => +k <= 60).length, coins: 65, treats: 2
   },
   {
     id: 'run100', icon: 'play', fam: 'lane', en: 'Past the hundred', tr: 'Yüzü geçti',
     enDesc: 'Reach level one hundred.', trDesc: 'Yüzüncü bölüme ulaş.',
-    of: 100, at: s => s.reached, coins: 80, treats: 2
+    of: 100, at: s => s.reached, coins: 50, treats: 2
   },
   {
     id: 'star30', icon: 'star', fam: 'lane', en: 'Thirty perfect', tr: 'Otuz kusursuz',
     enDesc: 'Three-star thirty levels.', trDesc: 'Otuz bölümü üç yıldızla bitir.',
-    of: 30, at: s => Object.keys(s.stars || {}).filter(k => s.stars[k] >= 3).length, coins: 60, treats: 1
+    of: 30, at: s => Object.keys(s.stars || {}).filter(k => s.stars[k] >= 3).length, coins: 40, treats: 1
   },
   {
     id: 'pop50k', icon: 'paw', fam: 'lane', en: 'Fifty thousand faces', tr: 'Elli bin yüz',
     enDesc: 'Clear fifty thousand tiles.', trDesc: 'Elli bin taş patlat.',
-    of: 50000, at: s => s.stats.tilesPopped, coins: 50, treats: 1
+    of: 50000, at: s => s.stats.tilesPopped, coins: 35, treats: 1
   },
   {
     id: 'rescue50', icon: 'ball', fam: 'lane', en: 'Nobody left behind', tr: 'Kimse geride kalmadı',
     enDesc: 'Bring fifty puppies safely down.', trDesc: 'Elli yavruyu sağ salim indir.',
-    of: 50, at: s => s.stats.rescued, coins: 50,  treats: 1
+    of: 50, at: s => s.stats.rescued, coins: 35,  treats: 1
   },
   {
-    id: 'family3', icon: 'paw', fam: 'care', en: 'A full house', tr: 'Kalabalık ev',
+    id: 'family3', icon: 'paw', fam: 'care', en: 'Three\'s company', tr: 'Kalabalık ev',
     enDesc: 'Have three animals at home.', trDesc: 'Evde üç hayvanın olsun.',
-    of: 3, at: s => (s.pets || []).length, coins: 50, treats: 1
+    of: 3, at: s => (s.pets || []).length, coins: 35, treats: 1
   },
   {
     /* This carried the id `family6`, the same as the crown badge above,
@@ -1047,27 +1133,27 @@ const BADGES = [
        the care family should be about. */
     id: 'allcared', icon: 'home', fam: 'care', en: 'All six home', tr: 'Altısı da evde',
     enDesc: 'Six animals, every one of them fed today.', trDesc: 'Altı hayvan, hepsi bugün yedirilmiş.',
-    of: 6, at: s => (s.pets || []).filter(p => p.food >= 60).length, coins: 100, treats: 3
+    of: 6, at: s => (s.pets || []).filter(p => p.food >= 60).length, coins: 65, treats: 3
   },
   {
     id: 'grown2', icon: 'flame', fam: 'care', en: 'Raised them right', tr: 'İyi büyüttün',
     enDesc: 'Raise two animals to grown.', trDesc: 'İki hayvanı yetişkinliğe getir.',
-    of: 2, at: s => (s.pets || []).filter(p => p && p.bond >= 12).length, coins: 60, treats: 1
+    of: 2, at: s => (s.pets || []).filter(p => p && p.bond >= 12).length, coins: 40, treats: 1
   },
   {
     id: 'traits2', icon: 'brush', fam: 'care', en: 'Two of a kind', tr: 'İki ayrı karakter',
     enDesc: 'Settle two animals into a character.', trDesc: 'İki hayvanın karakteri belli olsun.',
-    of: 2, at: s => (s.pets || []).filter(p => p && p.trait).length, coins: 40,  treats: 1
+    of: 2, at: s => (s.pets || []).filter(p => p && p.trait).length, coins: 25,  treats: 1
   },
   {
     id: 'care300', icon: 'bath', fam: 'care', en: 'Never once forgotten', tr: 'Hiç unutulmadı',
     enDesc: 'Look after them three hundred times.', trDesc: 'Onlara üç yüz kez bak.',
-    of: 300, at: s => s.stats.cared, coins: 50, treats: 1
+    of: 300, at: s => s.stats.cared, coins: 35, treats: 1
   },
   {
     id: 'streak30', icon: 'flame', fam: 'care', en: 'A month of it', tr: 'Bir ay boyunca',
     enDesc: 'Come back thirty days running.', trDesc: 'Otuz gün üst üste gel.',
-    of: 30, at: s => s.streak, coins: 80, treats: 3
+    of: 30, at: s => s.streak, coins: 50, treats: 3
   }
 ];
 function badgeName(b) { return LANG === 'tr' ? b.tr : b.en; }
@@ -1190,8 +1276,8 @@ const LEVELS = [
      boosters, no perks and no stage moves, and has just been asked to
      name an animal. The first three carry a real cushion; the curve
      descends from level 4, where it already did. */
-  { n: 1, w: 7, h: 7, types: 5, moves: 26, goals: [[GK.COLLECT, 0, 34]], base: 10600, want: 0.97, tut: 'swap' },
-  { n: 2, w: 7, h: 7, types: 5, moves: 24, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 10700, want: 0.95 },
+  { n: 1, w: 7, h: 7, types: 5, moves: 27, goals: [[GK.COLLECT, 0, 34]], base: 10600, want: 0.97, tut: 'swap' },
+  { n: 2, w: 7, h: 7, types: 5, moves: 25, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 10700, want: 0.95 },
   /* A score goal is the one kind of level a person cannot plan: nothing
      on the board says which swap is worth more, so the only strategy is
      to keep matching and hope the cascade is kind. Measured with the
@@ -1202,59 +1288,59 @@ const LEVELS = [
      of a rescue. All three are collect goals now, which a person can
      look at and go after. The score levels that remain sit past level
      35, where a player has specials to make and knows it. */
-  { n: 3, w: 7, h: 8, types: 5, moves: 26, goals: [[GK.COLLECT, 2, 30]], base: 9700, want: 0.97, tut: 'special' },
+  { n: 3, w: 7, h: 8, types: 5, moves: 24, goals: [[GK.COLLECT, 2, 30]], base: 9700, want: 0.97, tut: 'special' },
   {
-    n: 4, w: 7, h: 8, types: 5, moves: 19, goals: [[GK.MUD, 0, 76]], base: 10000, want: 0.93,
+    n: 4, w: 7, h: 8, types: 5, moves: 20, goals: [[GK.MUD, 0, 76]], base: 10000, want: 0.93,
     map: ['.......', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', '.......']
   },
-  { n: 5, w: 8, h: 8, types: 5, moves: 32, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 16600, want: 0.9 },
+  { n: 5, w: 8, h: 8, types: 5, moves: 31, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 16600, want: 0.9 },
   {
-    n: 6, w: 8, h: 8, types: 5, moves: 17, goals: [[GK.CRATE, 0, 28]], base: 7200, want: 0.9,
+    n: 6, w: 8, h: 8, types: 5, moves: 19, goals: [[GK.CRATE, 0, 28]], base: 7200, want: 0.9,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
-  { n: 7, w: 8, h: 8, types: 5, moves: 27, goals: [[GK.RESCUE, 0, 2]], base: 7000, want: 0.95, tut: 'rescue' },
+  { n: 7, w: 8, h: 8, types: 5, moves: 36, goals: [[GK.RESCUE, 0, 2]], base: 7000, want: 0.95, tut: 'rescue' },
   {
-    n: 8, w: 8, h: 8, types: 5, moves: 33, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 19300, want: 0.87,
+    n: 8, w: 8, h: 8, types: 5, moves: 34, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 19300, want: 0.87,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 9, w: 8, h: 8, types: 5, moves: 24, goals: [[GK.COLLECT, 1, 34], [GK.COLLECT, 4, 28]], base: 11300, want: 0.91,
+    n: 9, w: 8, h: 8, types: 5, moves: 23, goals: [[GK.COLLECT, 1, 34], [GK.COLLECT, 4, 28]], base: 11300, want: 0.91,
     map: ['##....##', '#......#', '........', '........', '........', '........', '#......#', '##....##']
   },
   {
-    n: 10, w: 8, h: 9, types: 5, moves: 43, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26600, want: 0.82,
+    n: 10, w: 8, h: 9, types: 5, moves: 42, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26600, want: 0.82,
     map: ['##....##', '#......#', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 11, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.CRATE, 0, 28]], base: 9400, want: 0.96,
+    n: 11, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.CRATE, 0, 28]], base: 9400, want: 0.96,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', '........', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
   {
-    n: 12, w: 8, h: 9, types: 5, moves: 39, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 15400, want: 0.92,
+    n: 12, w: 8, h: 9, types: 5, moves: 36, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 15400, want: 0.92,
     map: ['#......#', '........', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 13, w: 8, h: 8, types: 6, moves: 25, goals: [[GK.MUD, 0, 24]], base: 6100, want: 0.91,
+    n: 13, w: 8, h: 8, types: 6, moves: 22, goals: [[GK.MUD, 0, 24]], base: 6100, want: 0.91,
     map: ['MMMM....', 'MMMM....', '........', '........', '........', '........', '....MMMM', '....MMMM']
   },
   {
-    n: 14, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.BRAMBLE, 0, 18]], base: 9900, want: 0.95, tut: 'bramble',
+    n: 14, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.BRAMBLE, 0, 18]], base: 9900, want: 0.95, tut: 'bramble',
     map: ['........', '........', '.vvvvvv.', '.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........']
   },
   {
-    n: 15, w: 8, h: 9, types: 5, moves: 29, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 18700, want: 0.87,
+    n: 15, w: 8, h: 9, types: 5, moves: 32, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 18700, want: 0.87,
     map: ['..c..c..', '.cc..cc.', '........', '.c....c.', '........', '.c....c.', '........', '.cc..cc.', '..c..c..']
   },
   {
-    n: 16, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 7900, want: 0.82,
+    n: 16, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 7900, want: 0.82,
     map: ['........', '...mm...', '..mmmm..', '.mmmmmm.', 'mmmmmmmm', '.mmmmmm.', '..mmmm..', '...mm...', '........']
   },
   {
-    n: 17, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12100, want: 0.85,
+    n: 17, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12100, want: 0.85,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 18, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.CRATE, 0, 16]], base: 11400, want: 0.84,
+    n: 18, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.CRATE, 0, 16]], base: 11400, want: 0.84,
     map: ['C......C', '........', '..cccc..', '..c..c..', '..c..c..', '..cccc..', '........', 'C......C', '........']
   },
   {
@@ -1266,51 +1352,51 @@ const LEVELS = [
     map: ['..####..', '..####..', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 21, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.MUD, 0, 24]], base: 10200, want: 0.94,
+    n: 21, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.MUD, 0, 24]], base: 10200, want: 0.94,
     map: ['........', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', '........']
   },
   {
-    n: 22, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 12000, want: 0.89,
+    n: 22, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 12000, want: 0.89,
     map: ['..CCCC..', '........', '.c....c.', '..c..c..', '..c..c..', '........', '.c....c.', '........', '........']
   },
   {
-    n: 23, w: 8, h: 9, types: 6, moves: 53, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 12600, want: 0.88,
+    n: 23, w: 8, h: 9, types: 6, moves: 51, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 12600, want: 0.88,
     map: ['........', '.m....m.', '..m..m..', '...mm...', '........', '...mm...', '..m..m..', '.m....m.', '........']
   },
   {
-    n: 24, w: 8, h: 9, types: 6, moves: 59, goals: [[GK.BRAMBLE, 0, 28]], base: 14500, want: 0.8,
+    n: 24, w: 8, h: 9, types: 6, moves: 52, goals: [[GK.BRAMBLE, 0, 28]], base: 14500, want: 0.8,
     map: ['........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........']
   },
   {
-    n: 25, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 9700, want: 0.86,
+    n: 25, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 9700, want: 0.86,
     map: ['mmmmmmmm', 'm.c..c.m', 'm......m', 'm..cc..m', 'm..cc..m', 'm......m', 'm.c..c.m', 'mmmmmmmm', '........']
   },
   {
-    n: 26, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 9900, want: 0.78,
+    n: 26, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 9900, want: 0.78,
     map: ['##....##', '#......#', '#......#', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 27, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.CRATE, 0, 22]], base: 9700, want: 0.83,
+    n: 27, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.CRATE, 0, 22]], base: 9700, want: 0.83,
     map: ['CC....CC', 'C......C', '..cccc..', '..c..c..', '..c..c..', '..cccc..', 'C......C', 'CC....CC', '........']
   },
   {
-    n: 28, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 12200, want: 0.82,
+    n: 28, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 12200, want: 0.82,
     map: ['MMMMMMMM', 'MMMMMMMM', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 29, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 9600, want: 0.81,
+    n: 29, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 9600, want: 0.81,
     map: ['.######.', '.######.', '..####..', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 30, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 10800, want: 0.72,
+    n: 30, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 10800, want: 0.72,
     map: ['........', '........', '.vvvvvv.', '.v....v.', '.v....v.', '.v....v.', '.vvvvvv.', '........', '........']
   },
   {
-    n: 31, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 7700, want: 0.92,
+    n: 31, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 7700, want: 0.92,
     map: ['mccccccm', 'm......m', 'm.mmmm.m', 'm......m', '........', 'm......m', 'm.mmmm.m', 'm......m', 'mccccccm']
   },
   {
-    n: 32, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 11800, want: 0.87,
+    n: 32, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 11800, want: 0.87,
     map: ['........', '.c....c.', '........', '..c..c..', '........', '..c..c..', '........', '.c....c.', '........']
   },
   {
@@ -1318,31 +1404,31 @@ const LEVELS = [
     map: ['.######.', '..####..', '...##...', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 34, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 60]], base: 11100, want: 0.84,
+    n: 34, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 60]], base: 11100, want: 0.84,
     map: ['MMMMMMMM', 'M......M', 'M.mmmm.M', 'M.m..m.M', 'M.m..m.M', 'M.mmmm.M', 'M......M', 'MMMMMMMM', '........']
   },
   {
-    n: 35, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 10200, want: 0.82,
+    n: 35, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 10200, want: 0.82,
     map: ['........', '.cc..cc.', '........', '..c..c..', '........', '..c..c..', '........', '.cc..cc.', '........']
   },
   {
-    n: 36, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.SCORE, 0, 16000]], base: 20200, want: 0.75,
+    n: 36, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.SCORE, 0, 16000]], base: 20200, want: 0.75,
     map: ['###..###', '##....##', '##....##', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 37, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 12000, want: 0.79,
+    n: 37, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 12000, want: 0.79,
     map: ['mmmmmmmm', '........', '..mmmm..', '........', '........', '........', '..mmmm..', '........', 'mmmmmmmm']
   },
   {
-    n: 38, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 10300, want: 0.78,
+    n: 38, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 10300, want: 0.78,
     map: ['C.C..C.C', '........', 'iCiiiiCi', '........', '..CCCC..', '........', 'iCiiiiCi', '........', 'C.C..C.C']
   },
   {
-    n: 39, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 12000, want: 0.75,
+    n: 39, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 12000, want: 0.75,
     map: ['MMMMMMMM', 'Mc.cc.cM', 'M......M', 'M......M', 'M......M', 'M......M', 'M......M', 'Mc.cc.cM', 'MMMMMMMM']
   },
   {
-    n: 40, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 11400, want: 0.74,
+    n: 40, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 11400, want: 0.74,
     map: ['##....##', '##....##', '........', '........', '........', '........', '........', '........', '........']
   },
 
@@ -1352,15 +1438,15 @@ const LEVELS = [
     map: ['#.#..#.#', '#.#..#.#', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 42, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11700, want: 0.78,
+    n: 42, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11700, want: 0.78,
     map: ['........', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 43, w: 8, h: 9, types: 6, moves: 21, goals: [[GK.CRATE, 0, 28]], base: 6900, want: 0.85,
+    n: 43, w: 8, h: 9, types: 6, moves: 23, goals: [[GK.CRATE, 0, 28]], base: 6900, want: 0.85,
     map: ['c......c', '.cccccc.', '.c....c.', '.c.cc.c.', '.c.cc.c.', '.c....c.', '.cccccc.', 'c......c', '........']
   },
   {
-    n: 44, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 11700, want: 0.78,
+    n: 44, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 11700, want: 0.78,
     map: ['........', '........', '..mmmm..', '.mmmmmm.', '.mmmmmm.', '..mmmm..', '........', '........', '........']
   },
   {
@@ -1368,15 +1454,15 @@ const LEVELS = [
     map: ['##....##', '#......#', '........', '...##...', '...##...', '........', '#......#', '##....##', '........']
   },
   {
-    n: 46, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.BRAMBLE, 0, 14]], base: 6500, want: 0.91,
+    n: 46, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.BRAMBLE, 0, 14]], base: 6500, want: 0.91,
     map: ['........', '..vvvv..', '..v..v..', '..v..v..', '..v..v..', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 47, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 12300, want: 0.81,
+    n: 47, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 12300, want: 0.81,
     map: ['........', '..iiii..', '........', '.i....i.', '.i....i.', '........', '..iiii..', '........', '........']
   },
   {
-    n: 48, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 10200, want: 0.91,
+    n: 48, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 10200, want: 0.91,
     map: ['cc....cc', '........', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '........', 'cc....cc', '........']
   },
   {
@@ -1388,15 +1474,15 @@ const LEVELS = [
     map: ['MMMMMMMM', 'M.cccc.M', 'M......M', 'M......M', 'M......M', 'M......M', 'M.cccc.M', 'MMMMMMMM', '........']
   },
   {
-    n: 51, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 13400, want: 0.91,
+    n: 51, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 13400, want: 0.91,
     map: ['###..###', '##....##', '#......#', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 52, w: 8, h: 9, types: 6, moves: 53, goals: [[GK.BRAMBLE, 0, 24]], base: 13700, want: 0.82,
+    n: 52, w: 8, h: 9, types: 6, moves: 52, goals: [[GK.BRAMBLE, 0, 24]], base: 13700, want: 0.82,
     map: ['.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........', '.vvvvvv.', '.vvvvvv.', '........']
   },
   {
-    n: 53, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 14800, want: 0.84,
+    n: 53, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 14800, want: 0.84,
     map: ['iCiiiiCi', '........', '..CCCC..', '........', '........', '........', '..CCCC..', '........', 'iCiiiiCi']
   },
   {
@@ -1408,23 +1494,23 @@ const LEVELS = [
     map: ['#####...', '####....', '###.....', '##......', '#.......', '........', '........', '........', '........']
   },
   {
-    n: 56, w: 8, h: 9, types: 6, moves: 25, goals: [[GK.MUD, 0, 38]], base: 8400, want: 0.83,
+    n: 56, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 38]], base: 8400, want: 0.83,
     map: ['mmmmmmmm', 'mmmmmmmm', 'mmmmmmmm', '........', '........', '........', 'mmmmmmmm', 'mmmmmmmm', '........']
   },
   {
-    n: 57, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 13900, want: 0.74,
+    n: 57, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 13900, want: 0.74,
     map: ['mmmmmmmm', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', 'mmmmmmmm', '........']
   },
   {
-    n: 58, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.CRATE, 0, 30]], base: 6100, want: 0.8,
+    n: 58, w: 8, h: 9, types: 6, moves: 23, goals: [[GK.CRATE, 0, 30]], base: 6100, want: 0.8,
     map: ['CCCCCCCC', 'C......C', 'C.cccc.C', 'C.c..c.C', 'C.c..c.C', 'C.cccc.C', 'C......C', 'CCCCCCCC', '........']
   },
   {
-    n: 59, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 11000, want: 0.74,
+    n: 59, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 11000, want: 0.74,
     map: ['..####..', '...##...', '...##...', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 60, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 13800, want: 0.63,
+    n: 60, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 13800, want: 0.63,
     map: ['mmmmmmmm', '.cc..cc.', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '.cc..cc.', 'mmmmmmmm', '........']
   }
 ];
@@ -2007,7 +2093,7 @@ function levelDef(n, ref, forceKind) {
    and sized against how far the player has actually got rather than a
    fixed difficulty. Free to attempt: it is the reason to come back. */
 function dayNumber(t) {
-  const d = new Date(t === undefined ? Date.now() : t);
+  const d = new Date(t === undefined ? now() : t);
   return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000);
 }
 function dailyLevel(reached, dayNo) {

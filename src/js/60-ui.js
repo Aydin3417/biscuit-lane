@@ -99,6 +99,7 @@ function syncPurse() {
    of the arrow is the whole point — nothing below this file names
    anything in it. */
 EV.on('purse', syncPurse);
+EV.on('goal', commitWin);
 EV.on('won', showWin);
 EV.on('lost', showLose);
 EV.on('lane', openLevelIntro);
@@ -971,7 +972,7 @@ function buyThing(id, kind) {
     if (SAVE.treats < item.cost) { SFX.bad(); toast(T('toast_treats'), 'treat'); return; }
     SAVE.treats -= item.cost;
   } else {
-    if (SAVE.coins < item.cost) { SFX.bad(); toast(T('shop_poor'), 'coin'); return; }
+    if (SAVE.coins < item.cost) { SFX.bad(); coinPurse(item.cost - SAVE.coins); return; }
     SAVE.coins -= item.cost;
   }
   if (kind === 'food') SAVE.food[id] = (SAVE.food[id] || 0) + 1;
@@ -1168,7 +1169,7 @@ function renameSheet(p) {
 }
 function tryAdopt(breedIdx, cost, need) {
   if (SAVE.reached < need) { SFX.bad(); toast(T('fam_locked', { n: need }), 'lock'); return; }
-  if (SAVE.coins < cost) { SFX.bad(); toast(T('shop_poor'), 'coin'); return; }
+  if (SAVE.coins < cost) { SFX.bad(); coinPurse(cost - SAVE.coins); return; }
   SFX.tap();
   customiseSheet(breedIdx, (coat, eye, name) => {
     SAVE.coins -= cost;
@@ -1415,7 +1416,7 @@ function groomSheet(id) {
        is on it before you tap. */
     const choose = (own, cost, set) => {
       if (!own) {
-        if (SAVE.coins < cost) { SFX.bad(); toast(T('shop_poor'), 'coin'); return; }
+        if (SAVE.coins < cost) { SFX.bad(); coinPurse(cost - SAVE.coins); return; }
         SAVE.coins -= cost;
         SFX.coin();
       } else SFX.tap();
@@ -1569,11 +1570,8 @@ function openLevelIntro(n) {
       <span class="t"><b>${pet.name} · ${abilityName(pet)} · ${abilityPower(pet)}</b>
       ${perks.length
         ? `<span class="perkchips">${perkChips(perks).map(x => `<span class="pill ok">${x}</span>`).join('')}</span>`
-        : T('care_perks')}</span>
-    </div>
-    <div class="goalItem">
-      <canvas data-tile="${favType(def.types)}" width="34" height="34"></canvas>
-      <span class="t"><b>${T('lvl_charges')}</b>${castName(favType(def.types))}</span>
+        : T('care_perks')}
+      <span class="chargedBy">${T('lvl_charges')} ${castName(favType(def.types))}</span></span>
     </div>` : ''}
     <div class="eyebrow">${T('lvl_boosters')}</div>
     <button class="goalItem" id="pickMoves" style="width:100%">
@@ -1581,7 +1579,7 @@ function openLevelIntro(n) {
       <span class="t"><b>${T('boost_moves')}</b>${T('shop_have', { n: SAVE.boosters.moves || 0 })}</span>
       <span class="pill info" id="movesPill">${T('pill_off')}</span>
     </button>
-    <div class="row">
+    <div class="row sheetFoot">
       <button class="btn ghost" id="liCancel">${T('cancel')}</button>
       <button class="btn primary" id="liGo">${IC.heart}${T('lvl_start')}</button>
     </div>
@@ -1624,6 +1622,39 @@ function openLevelIntro(n) {
    least one product. Until then BILLING is not ready and this opens the
    sheet that says how treats are earned — the comment here used to say
    the prices still showed, after the code had stopped showing them. */
+/* The coin purse: treats into coins, opened from the coin chip and from
+   any purchase the player could not afford. A shortfall used to end in a
+   toast saying so, which is a door with nothing behind it. */
+function coinPurse(need) {
+  SFX.tap();
+  track('purse_open', { need: need || 0 });
+  const m = modal(`
+    <span style="color:var(--accent-strong);width:48px;height:48px;align-self:center">${IC.coin}</span>
+    <h2>${T('purse_t')}</h2>
+    ${need ? `<p><b style="color:var(--accent-strong)">${T('purse_need', { n: fmt(need) })}</b></p>` : ''}
+    <p style="color:var(--text-dim)">${T('purse_s')}</p>
+    ${COIN_PURSES.map(p => `
+      <div class="offer">
+        <span class="ot"><b><span class="reward" style="color:var(--accent-strong)">${IC.coin}${fmt(p.coins)}</span>${p.best ? ' ★' : ''}</b><small>${p[LANG] || p.en}</small></span>
+        <button class="btn sm" data-purse="${p.id}">${IC.treat}${p.treats}</button>
+      </div>`).join('')}
+    <button class="btn primary wide" id="puOk">${T('ok')}</button>
+  `);
+  $$('[data-purse]', m.el).forEach(b => b.addEventListener('click', () => {
+    const p = COIN_PURSES.find(x => x.id === b.dataset.purse);
+    if (SAVE.treats < p.treats) { SFX.bad(); m.close(); treatStore('coins', p.treats); return; }
+    SAVE.treats -= p.treats;
+    SAVE.coins += p.coins;
+    persist(true);
+    track('purse_buy', { id: p.id });
+    SFX.coin();
+    syncPurse();
+    m.close();
+    toast(T('purse_done', { n: fmt(p.coins) }), 'coin');
+    if (SCREEN === 'shop') renderShop();
+  }));
+  $('#puOk', m.el).addEventListener('click', m.close);
+}
 function treatStore(why, need) {
   const live = BILLING.ready();
   track('store_open', { why: why || 'chip', live: live });
@@ -1635,6 +1666,7 @@ function treatStore(why, need) {
   if (!live) { earnTreatsSheet(why, need); return; }
   const j = jarState();
   const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
+    : why === 'coins' ? T('store_why_coins', { n: need || COIN_PURSES[0].treats })
     : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
   const tag = (sku, usd) => {
     const p = BILLING.price(sku, null);
@@ -1821,6 +1853,7 @@ function noHeartsSheet() {
       <button class="btn ghost" id="nhWait">${T('lvl_wait')}</button>
       <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: ECON.heartRefillTreats })}</button>
     </div>
+    ${ADS.available('heart') ? `<button class="btn wide" id="nhAd">${IC.heart}${T('ad_heart')}</button>` : ''}
     ${offer ? `<button class="btn wide" id="nhNotify" style="margin-top:4px">${T('nh_notify')}</button>` : ''}
   `, { onClose: () => { if (tick) clearInterval(tick); onHeartArrived = () => { }; } });
   const nb = $('#nhNotify', m.el);
@@ -1849,10 +1882,25 @@ function noHeartsSheet() {
     SFX.coin();
     toast(T('lvl_heart_back'), 'heart');
   };
+  /* one heart for a video, three a day: enough to finish an evening,
+     never a way to stop the meter meaning anything */
+  const nad = $('#nhAd', m.el);
+  if (nad) nad.addEventListener('click', async () => {
+    nad.disabled = true;
+    if (!await ADS.show('heart')) { nad.disabled = false; SFX.bad(); return; }
+    if (SAVE.hearts < HEART_MAX) SAVE.hearts++;
+    if (SAVE.hearts >= HEART_MAX) SAVE.heartAt = now();
+    persist(true);
+    SFX.coin();
+    syncPurse();
+    m.close();
+    toast(T('lvl_heart_back'), 'heart');
+  });
   $('#nhWait', m.el).addEventListener('click', m.close);
   $('#nhBuy', m.el).addEventListener('click', () => {
     if (SAVE.treats < ECON.heartRefillTreats) { SFX.bad(); treatStore('hearts'); return; }
     SAVE.treats -= ECON.heartRefillTreats;
+    track('hearts_refill', { n: SAVE.reached });
     SAVE.hearts = HEART_MAX;
     SAVE.heartAt = now();
     persist(true);
@@ -1861,11 +1909,31 @@ function noHeartsSheet() {
     m.close();
   });
 }
-function showWin() {
+/* THE WIN IS WRITTEN WHEN IT HAPPENS.
+
+   Everything a clear earns — the stars, the next level, the coins, the
+   heart back — used to be written by showWin, which runs after the
+   finale: the leftover moves going off as fireworks, a second volley
+   of specials, the cascades after them. That is four or five seconds on
+   a level finished with moves to spare, and checkEnd had already thrown
+   away the snapshot that would have resumed it. Killed in that window
+   (swiped away, a call, the OS reclaiming memory) the level came back
+   uncleared with its heart spent. Tested on 30 Sep 2026: win, kill
+   during the fireworks, relaunch — no stars, level locked.
+
+   So checkEnd commits the result the moment the goal is met, with the
+   score and stars as they stand, and persists it. The finale can only
+   add to it: settleWin, called by the card, tops up whatever the extra
+   score earned — a third star, the coins that go with it — and nothing
+   is ever paid twice, because the committed result sits on G and in
+   SAVE.unshownWin until the card has been drawn. */
+function commitWin() {
+  if (G.won) return G.won;
+  if (G.n === DAILY_LEVEL) {
+    G.won = { daily: dailyDone(G.score) };
+    return G.won;
+  }
   const n = G.n;
-  say(T('a11y_cleared', { stars: Math.max(1, G.starsEarned) }), true);
-  /* the daily walk is not a numbered level: no stars ledger, no unlock */
-  if (n === DAILY_LEVEL) { showDailyResult(true); return; }
   const stars = Math.max(1, G.starsEarned);
   const first = !SAVE.stars[n];
   const prev = SAVE.stars[n] || 0;
@@ -1908,11 +1976,7 @@ function showWin() {
      The clock only restarts from a full purse, so a refund must not move
      it — otherwise clearing a level while waiting would push the next
      free heart further away. */
-  if (SAVE.hearts < HEART_MAX) {
-    SAVE.hearts++;
-    if (SAVE.hearts >= HEART_MAX) SAVE.heartAt = now();
-    syncPurse();
-  }
+  returnHeart();
   /* A cleared level paid its full reward every time it was cleared, so
      the fastest coins in the game were on whichever early level you
      could three-star in ninety seconds — and a currency you can farm is
@@ -1943,6 +2007,58 @@ function showWin() {
   const grew = pet ? addBond(pet, bondXp) : false;
   if (pet) { pet.joy = clamp(pet.joy + 6, 0, 100); pet.energy = clamp(pet.energy - 5, 0, 100); }
   persist(true);
+  G.won = { n, stars, first, prev, prevBest, newBest, coins, treats, chest, jarFilled, grew, bondXp, score: G.score, rate };
+  SAVE.unshownWin = n;
+  persist(true);
+  return G.won;
+}
+/* what the fireworks added, paid on top of what was committed */
+function settleWin() {
+  const w = commitWin();
+  const n = w.n;
+  const stars = Math.max(1, G.starsEarned);
+  if (stars > w.stars) {
+    SAVE.stars[n] = Math.max(SAVE.stars[n] || 0, stars);
+    if (stars >= 3 && w.stars < 3) {
+      if (w.prev < 3) {
+        const t = isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats;
+        w.treats += t; SAVE.treats += t;
+      }
+      if (w.first) { passStamp('threeStar'); maybeAskForAReview(); }
+    }
+    w.stars = stars;
+  }
+  if (G.score > w.score) {
+    if (G.score > (SAVE.scores[n] || 0)) SAVE.scores[n] = G.score;
+    const newBest = G.score > w.prevBest;
+    const rate = w.first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
+    const base = Math.round((ECON.winBase + stars * ECON.winPerStar
+      + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
+    const coins = Math.max(w.first ? 0 : 1, Math.round(base * rate));
+    if (coins > w.coins) { SAVE.coins += coins - w.coins; w.coins = coins; }
+    w.newBest = newBest;
+    w.score = G.score;
+  }
+  SAVE.unshownWin = 0;
+  persist(true);
+  return w;
+}
+function showWin() {
+  const n = G.n;
+  say(T('a11y_cleared', { stars: Math.max(1, G.starsEarned) }), true);
+  /* the daily walk is not a numbered level: no stars ledger, no unlock */
+  if (n === DAILY_LEVEL) { showDailyResult(true); return; }
+  const w = settleWin();
+  const { stars, first, prevBest, newBest, coins, treats, chest, jarFilled, grew, bondXp } = w;
+  const pet = activePet();
+  /* Badges earned by this clear go on this card, as one line. They were
+     their own sheet behind it, and on a first session that was nine
+     extra cards in thirteen levels — played on a phone, 30 Sep 2026 —
+     each one a tap between the player and the next board. The shelf on
+     the family page still shows them in full. */
+  const wonBadges = checkBadges();
+  const badgeCoins = wonBadges.reduce((a, b) => a + (b.coins || 0), 0);
+  const badgeTreats = wonBadges.reduce((a, b) => a + (b.treats || 0), 0);
 
   const m = modal(`
     ${pet ? `<div class="winPet"><canvas data-body="${pet.breed}" data-coat="${pet.coat}"
@@ -1959,6 +2075,10 @@ function showWin() {
       <span class="reward" style="color:var(--sage)">${IC.paw}+${bondXp} ${T('win_bond')}</span>
     </div>
     ${first ? '' : `<p style="color:var(--text-faint);font-size:var(--t-micro);margin-top:-4px">${T('win_replay')}</p>`}
+    ${first && coins > 0 && ADS.available('double') ? `<button class="btn wide" id="wDouble">${IC.coin}${T('ad_double', { n: coins })}</button>` : ''}
+    ${wonBadges.length ? `<div class="goalItem winBadges"><span class="rosette fam-${wonBadges[0].fam}">${IC[wonBadges[0].icon] || IC.crown}</span>
+      <span class="t"><b>${T('win_badges', { names: wonBadges.map(badgeName).join(', ') })}</b></span>
+      <span class="pill warn">${badgeCoins ? '+' + badgeCoins : ''}${badgeTreats ? ' +' + badgeTreats + IC.treat : ''}</span></div>` : ''}
     ${jarFilled && jarFull() ? `<div class="offer">
       <span class="ot"><b>${T('store_jar_t')}</b>
         <small>${T('store_jar_full', { n: jarState().fill })}</small></span>
@@ -1972,6 +2092,17 @@ function showWin() {
   `, { dismissable: false, onClose: () => { closedByHand = true; } });
   let closedByHand = false;
   paintArtCanvases(m.el);
+  const wd = $('#wDouble', m.el);
+  if (wd) wd.addEventListener('click', async () => {
+    wd.disabled = true;
+    if (!await ADS.show('double')) { wd.disabled = false; SFX.bad(); return; }
+    SAVE.coins += coins;
+    persist(true);
+    SFX.coin();
+    syncPurse();
+    wd.remove();
+    toast(T('purse_done', { n: fmt(coins) }), 'coin');
+  });
   const wj = $('#wJar', m.el);
   if (wj) wj.addEventListener('click', () => { SFX.tap(); treatStore(); });
   $$('.starsRow .s', m.el).forEach((s, i) => {
@@ -2013,7 +2144,6 @@ function showWin() {
   $('#wMap', m.el).addEventListener('click', () => { m.close(); leaveLevel(); });
   $('#wNext', m.el).addEventListener('click', () => { m.close(); goOn(); });
   syncPurse();
-  const wonBadges = checkBadges();
   /* queued now, not on a timer: a timer that fires after the player has
      already pressed Carry on lands on the wrong screen. Queued as the
      call rather than as the sheet, so the stage-up's fanfare and sparks
@@ -2025,7 +2155,6 @@ function showWin() {
   const later = fn => modalQueue.push(() => { if (closedByHand) fn(); });
   if (chest) later(() => chestModal(chest));
   if (grew) later(() => stageUpModal(pet));
-  if (wonBadges.length) later(() => badgeModal(wonBadges));
 }
 /* The chest, opened. Shut for a beat and shaking, then open with what
    was in it: the half second of not knowing is most of what a chest is. */
@@ -2164,7 +2293,7 @@ function showLose() {
     </div>` + (!(G.extras || 0) && ADS.available('carry') ? `
     <div class="offer">
       <span class="ot">
-        <b>${T('ad_watch', { n: ECON.continueMoves })}</b>
+        <b>${T('ad_watch', { n: ECON.adMoves })}</b>
         <small>${T('ad_watch_sub', { t: ECON.continueTreats })}</small>
       </span>
       <button class="btn sm" id="lAd">${T('ad_go')}</button>
@@ -2178,6 +2307,7 @@ function showLose() {
        jar, so it opens there rather than being told no by a toast */
     if (SAVE.treats < price) { SFX.bad(); treatStore('continue', price); return; }
     SAVE.treats -= price; keepRun(); persist(true); syncPurse();
+    track('continue_buy', { n: G.n, price: price, second: (G.extras || 0) ? 1 : 0 });
     m.close();
     G.extras = (G.extras || 0) + 1;
     G.over = false; G.busy = false;
@@ -2198,13 +2328,17 @@ function showLose() {
     m.close();
     G.extras = (G.extras || 0) + 1;
     G.over = false; G.busy = false;
-    G.moves = ECON.continueMoves;
+    G.moves = ECON.adMoves;
     syncHud();
     SFX.coin();
   });
-  $('#lMap', m.el).addEventListener('click', () => { m.close(); leaveLevel(); });
+  /* The heart this attempt paid is lost when the player walks away from
+     the card, not when it opens: a carry-on continues the same attempt,
+     and a win after one gives the heart back like any other win. */
+  $('#lMap', m.el).addEventListener('click', () => { forfeitHeart(); m.close(); leaveLevel(); });
   $('#lRetry', m.el).addEventListener('click', () => {
     m.close();
+    forfeitHeart();
     if (!spendHeart()) { noHeartsSheet(); leaveLevel(); return; }
     syncPurse();
     const pet2 = activePet();
@@ -2230,10 +2364,19 @@ function confirmQuit() {
   if (G.over) { leaveLevel(); return; }
   /* walking away from a new level once it has been played is losing it,
      as far as the run is concerned; before the first move it is not */
-  const ends = G.n !== DAILY_LEVEL && !SAVE.stars[G.n] && SAVE.winRun > 0 && G.moves < G.def.moves;
+  /* "played" is a move made, not moves below the budget: a pet that
+     brings two extra moves put the count above the budget, so quitting
+     after one or two moves used to end nothing and cost nothing */
+  const played = (G.made || 0) > 0;
+  const ends = G.n !== DAILY_LEVEL && !SAVE.stars[G.n] && SAVE.winRun > 0 && played;
+  /* An untouched level gives its heart back; a played one keeps it. The
+     refund used to be unconditional, which made the heart a charge only
+     on players who played the last move instead of quitting before it —
+     and, on the free daily walk, a heart printed on every exit. */
+  const refund = !played && !!SAVE.heartHeld;
   const m = modal(`
     <h2>${T('g_quit_t')}</h2>
-    <p>${T('g_quit_s')}</p>
+    <p>${T(refund ? 'g_quit_s' : SAVE.heartHeld ? 'g_quit_lose' : 'g_quit_free')}</p>
     ${ends ? `<p style="color:var(--rose)"><b>${T('run_quit', { n: SAVE.winRun })}</b></p>` : ''}
     <div class="row">
       <button class="btn primary" id="qNo">${T('g_quit_no')}</button>
@@ -2245,7 +2388,7 @@ function confirmQuit() {
     m.close();
     track('level_quit', { n: G.n, left: G.moves });
     if (ends) SAVE.winRun = 0;
-    SAVE.hearts = Math.min(HEART_MAX, SAVE.hearts + 1);
+    if (refund) returnHeart(); else forfeitHeart();
     persist(true);
     leaveLevel();
   });
@@ -2333,6 +2476,8 @@ function startDailyWalk() {
   $('#dwCancel', m.el).addEventListener('click', m.close);
   $('#dwGo', m.el).addEventListener('click', () => {
     m.close();
+    /* free, so it holds no heart for a win or a quit to hand back */
+    forfeitHeart();
     setScreen('game');
     startLevel(DAILY_LEVEL, { perks });
   });
@@ -2341,7 +2486,9 @@ function startDailyWalk() {
 function showDailyResult(won) {
   const d = dailyState();
   let reward = { first: false };
-  if (won) reward = dailyDone(G.score);
+  /* committed when the goal was met; this second call only moves the
+     best score up to whatever the fireworks added */
+  if (won) { reward = commitWin().daily; dailyDone(G.score); }
   /* the walk stamps the book once a day, on the day it is first walked */
   if (reward.first) passStamp('walk');
   const stars = won ? Math.max(1, G.starsEarned) : 0;
@@ -2391,6 +2538,7 @@ function showDailyResult(won) {
   });
   $('#dwAgain', m.el).addEventListener('click', () => {
     m.close();
+    forfeitHeart();
     startLevel(DAILY_LEVEL, { perks: perksFor(activePet()) });
   });
   syncPurse();
@@ -2461,6 +2609,8 @@ function openDailyGift() {
    layout test came to measure English twice. */
 function setLang(code) {
   LANG = (code === 'tr') ? 'tr' : 'en';
+  numLocale(LANG);
+  document.documentElement.lang = LANG;
   SAVE.settings.lang = LANG;
   persist(true);
   /* Everything the language touches, moved from here.
@@ -2516,7 +2666,8 @@ function openSettings() {
       </div>
     </div>
     <button class="btn ghost wide" id="setHow">${T('how_open')}</button>
-    <button class="btn ghost wide" id="setKeys">${T('a11y_help_t')}</button>
+    ${touchOnly() ? '' : `<button class="btn ghost wide" id="setKeys">${T('a11y_help_t')}</button>`}
+    ${STORE_LINKS.privacy ? `<a class="btn ghost wide" id="setPrivacy" href="${STORE_LINKS.privacy}" target="_blank" rel="noopener">${T('set_privacy')}</a>` : ''}
     <div style="font-size:var(--t-micro);color:var(--text-faint);line-height:1.5">${T('set_credits')}</div>
     <div style="font-size:var(--t-micro);color:var(--text-faint);display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <span>${T('set_played')}: <b class="num">${SAVE.stats.played}</b></span>
@@ -2563,7 +2714,8 @@ function openSettings() {
     setTimeout(openSettings, 60);
   }));
   $('#setHow', m.el).addEventListener('click', () => { m.close(); howToPlay(); });
-  $('#setKeys', m.el).addEventListener('click', () => { m.close(); keyboardHelp(); });
+  const sk = $('#setKeys', m.el);
+  if (sk) sk.addEventListener('click', () => { m.close(); keyboardHelp(); });
   $('#setClose', m.el).addEventListener('click', m.close);
   $('#setReset', m.el).addEventListener('click', () => {
     const c2 = modal(`
@@ -2630,8 +2782,21 @@ function paintLogo() {
 function maybeTutorial(def) {
   const pet = activePet();
   const steps = [];
-  if (!SAVE.seen.swap) steps.push({ k: 'swap', text: T('tut_swap') + ' ' + T('tut_match') });
-  if (!SAVE.seen.pet && pet) steps.push({ k: 'pet', text: T('tut_pet', { name: pet.name, breed: breedName(pet.breed) }) });
+  /* THE FIRST MINUTE HAD TWO CARDS IN IT BEFORE THE FIRST MOVE.
+
+     "Drag one tile onto its neighbour" and then "your pet sits here",
+     each a paragraph and a button, over a board nobody had touched.
+     The swap is shown now rather than told: the hand that demonstrates
+     it is put on the board at once, with one line underneath that goes
+     away by itself. The pet waits for the second level, when there is
+     something on the rail worth pointing at. And no level opens with
+     more than one card — a mechanic introduced on this board comes first,
+     anything else keeps until the next. */
+  if (!SAVE.seen.swap) {
+    SAVE.seen.swap = 1; persist();
+    setTimeout(() => { nudgeHint(); toast(T('tut_swap') + ' ' + T('tut_match'), null, 4500); }, 520);
+    return;
+  }
   if (def.tut === 'special' && !SAVE.seen.special) steps.push({ k: 'special', text: T('tut_special') });
   if (def.goals.some(g => g[0] === GK.BRAMBLE) && !SAVE.seen.bramble) {
     steps.push({ k: 'bramble', text: T('tut_bramble') });
@@ -2654,7 +2819,9 @@ function maybeTutorial(def) {
   firstSight('cC', 'crate', T('how_crate'), 'crate');
   firstSight('mM', 'mud', T('how_mud'), 'mud');
   firstSight('i', 'ice', T('how_ice'), 'ice');
+  if (!steps.length && !SAVE.seen.pet && pet) steps.push({ k: 'pet', text: T('tut_pet', { name: pet.name, breed: breedName(pet.breed) }) });
   if (!steps.length) return;
+  steps.length = 1;
   let i = 0;
   const show = () => {
     /* the last card has just closed on a board the player has never
