@@ -1,8 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<!-- What the app itself declares to Apple. Pawtika tracks nobody and
-     collects nothing (privacy.html); the one "required reason" API it
-     reaches is UserDefaults, through @capacitor/preferences, which mirrors
+<!-- What the app itself declares to Apple, as distinct from what the SDKs
+     inside it declare for themselves. Pawtika's own code sends three
+     things to its own server (privacy.html, server/README.md): anonymous
+     counts of what was played, the message of an error, and the store's
+     transaction number when a purchase is checked. None is linked to a
+     person and none is used to track anybody. The advertising identifier
+     is Google's business: the Mobile Ads SDK ships its own manifest and
+     declares its own tracking, and Apple's prompt is asked before it is
+     used. The one "required reason" API the app reaches is UserDefaults, through @capacitor/preferences, which mirrors
      the save so the operating system cannot lose it. That plugin ships no
      manifest of its own, so the app declares it: CA92.1, data only this
      app reads and writes. Capacitor's own core ships its manifest. -->
@@ -13,7 +19,44 @@
 	<key>NSPrivacyTrackingDomains</key>
 	<array/>
 	<key>NSPrivacyCollectedDataTypes</key>
-	<array/>
+	<array>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeProductInteraction</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeCrashData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePurchaseHistory</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSPrivacyAccessedAPITypes</key>
 	<array>
 		<dict>

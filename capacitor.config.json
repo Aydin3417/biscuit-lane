@@ -9,8 +9,7 @@
   },
   "ios": {
     "backgroundColor": "#F6EADAFF",
-    "contentInset": "never",
-    "limitsNavigationsToAppBoundDomains": true
+    "contentInset": "never"
   },
   "server": {
     "androidScheme": "https"

@@ -296,10 +296,13 @@ const SAFE = 72 / 108;
   server.stop();
 
   if (ios) {
+    /* without its alpha channel: the App Store refuses an icon that has
+       one, and a canvas cannot export anything else (tools/_png.js) */
+    const { opaquePng } = require('./_png.js');
     const put = (rel, url) => {
       const f = path.join(iosDir, rel);
       fs.mkdirSync(path.dirname(f), { recursive: true });
-      fs.writeFileSync(f, Buffer.from(url.slice(url.indexOf(',') + 1), 'base64'));
+      fs.writeFileSync(f, opaquePng(Buffer.from(url.slice(url.indexOf(',') + 1), 'base64')));
       return (fs.statSync(f).size / 1024).toFixed(0);
     };
     put('AppIcon.appiconset/AppIcon-512@2x.png', ios.icon);
