@@ -4659,4 +4659,17 @@ App Store Connect — signs the archive and sends it to TestFlight. Without
 the secrets it stops after the archive, which is still the first time the
 iOS project will have been compiled by anything. The project had no
 shared scheme, which `xcodebuild` on a clean machine needs; there is one
-now. The workflow has not run yet. Its header says how to start it.
+now. Its header says how to start it.
+
+It took eight tags on 4 Oct 2026 to get one build through. The project
+compiled the first time it was asked to. What did not work was Apple's
+offer to keep the distribution certificate on its own side: every upload
+signed that way was refused with error 90035 for every binary, though
+each verified on the machine that signed it. The fourth run printed the
+certificate's subject beside the requirement written into the signature.
+The holder's name has an O-umlaut in it; the certificate spells it as one
+character and Xcode's cloud signer writes it as two, and App Store
+Connect compares bytes. So the runner makes a key, `tools/ios-cert.js`
+asks the App Store Connect API for a certificate and an App Store profile
+for that one build, and both are revoked in a step that always runs.
+Build 1.2.0 (202610041833) reached TestFlight that way.
