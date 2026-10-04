@@ -1,7 +1,7 @@
 /* A distribution certificate that lives for one build.
 
      node tools/ios-cert.js create <dir>     needs <dir>/csr.pem
-     node tools/ios-cert.js revoke <dir>
+     node tools/ios-cert.js revoke <dir>     by hand only; see below
 
    WHY THIS EXISTS. The first uploads from .github/workflows/ios.yml were
    signed with the certificate Apple keeps on its own side ("cloud
@@ -21,12 +21,25 @@
    A binary signed by codesign with a key that is actually on the
    machine carries no written-out requirement at all, so there is nothing
    to mismatch. That needs a private key on the runner, and a runner is
-   thrown away after every build. So the key is made on the runner, the
-   App Store Connect API is asked for a certificate and an App Store
-   profile for it, and both are revoked when the build ends, whether it
-   passed or not. Nothing secret is kept anywhere, and an upload that is
-   already with Apple does not need the certificate that signed it to
-   still exist.
+   thrown away after every build. So the key is made on the runner and
+   the App Store Connect API is asked for a certificate and an App Store
+   profile for it.
+
+   THE CERTIFICATE IS NOT REVOKED WHEN THE BUILD ENDS. It was, at first,
+   on the belief that a binary already with Apple no longer needs the
+   certificate that signed it. That is true of an app on sale and false
+   of one waiting to be reviewed: build 202610041833 was uploaded and
+   accepted at 21:35 on 4 Oct 2026, its certificate was revoked a minute
+   later, and when it was submitted for review at 21:55 Apple checked the
+   signature again and sent back ITMS-90035, invalid signature.
+
+   So the certificate outlives the run, and the key that made it does
+   not: nobody can sign with it again, which is the property that
+   mattered. What is cleared is the run before last - `create` first
+   removes every "Pawtika CI" profile and its certificate except the
+   newest one, so that the build most likely to be in front of a reviewer
+   keeps its certificate and the team's few certificate places are not
+   used up.
 
    Reads ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_P8 from the environment.
    Prints ids and names, never key material. */
@@ -68,6 +81,8 @@ async function create(dir) {
   const csr = fs.readFileSync(path.join(dir, 'csr.pem'), 'utf8');
   const state = {};
   const save = () => fs.writeFileSync(path.join(dir, 'signing.json'), JSON.stringify(state, null, 1));
+
+  await sweep();
 
   /* how many are there already: Apple allows a team only a few */
   const have = await call('GET', '/certificates?filter[certificateType]=DISTRIBUTION&limit=50');
@@ -126,6 +141,23 @@ async function create(dir) {
 </dict>
 </plist>
 `);
+}
+
+/* Every profile this file made, oldest first, and all but the newest of
+   them removed together with the certificate each was made for. */
+async function sweep() {
+  const all = await call('GET', '/profiles?filter[profileType]=IOS_APP_STORE&limit=200');
+  const ours = all.data.filter(p => /^Pawtika CI \d{12}$/.test(p.attributes.name))
+    .sort((x, y) => x.attributes.name < y.attributes.name ? -1 : 1);
+  console.log('profiles from earlier runs: ' + ours.length + (ours.length ? ', keeping "' + ours[ours.length - 1].attributes.name + '"' : ''));
+  for (const p of ours.slice(0, -1)) {
+    try {
+      const certs = await call('GET', '/profiles/' + p.id + '/certificates');
+      await call('DELETE', '/profiles/' + p.id);
+      for (const c of certs.data) await call('DELETE', '/certificates/' + c.id);
+      console.log('  removed "' + p.attributes.name + '" and ' + certs.data.length + ' certificate(s)');
+    } catch (e) { console.log('  could not remove "' + p.attributes.name + '": ' + e.message); }
+  }
 }
 
 async function revoke(dir) {

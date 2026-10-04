@@ -26,8 +26,8 @@
 #
 # WHO SIGNS IT. The archive is signed ad hoc, which needs no certificate.
 # The export is signed with a distribution certificate made for the run
-# and revoked at the end of it (tools/ios-cert.js): a runner keeps
-# nothing, and the certificate Apple offers to keep on its own side writes
+# (tools/ios-cert.js), whose key is thrown away with the runner: a runner
+# keeps nothing, and the certificate Apple offers to keep on its own side writes
 # the holder's name into the signature in a spelling that does not match
 # the certificate when the name has an accent in it. Four uploads were
 # refused (tags ios-3 to ios-7, 4 Oct 2026) before the bytes were printed
@@ -101,9 +101,9 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :ApplicationProperties' "$ARCHIVE/Info.plist"
           du -sh "$ARCHIVE/Products/Applications/App.app"
 
-      # A key made here, a certificate and a profile asked for by API, and
-      # both revoked in the last step. tools/ios-cert.js says why the
-      # certificate Apple keeps on its own side could not be used.
+      # A key made here, and a certificate and a profile asked for by API.
+      # tools/ios-cert.js says why the certificate Apple keeps on its own
+      # side could not be used, and why this one is left standing.
       - name: A certificate for this run
         if: env.ASC_KEY_ID != '' && (github.event_name != 'workflow_dispatch' || inputs.upload)
         env:
@@ -174,14 +174,12 @@ jobs:
             --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" \
             2>&1 | tee "$RUNNER_TEMP/upload.log"
 
-      # Whatever happened above. A certificate left behind takes one of
-      # the few places a team has.
-      - name: Revoke the certificate and throw the keys away
-        if: always() && env.ASC_KEY_ID != ''
-        env:
-          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      # The key goes; the certificate stays. Revoking it here cost the
+      # first build its review (tools/ios-cert.js says how). The next run
+      # clears the one before last.
+      - name: Throw the keys away
+        if: always()
         run: |
-          node tools/ios-cert.js revoke "$RUNNER_TEMP/signing" || true
           security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
           rm -rf "$RUNNER_TEMP/signing" "$HOME/.appstoreconnect/private_keys"
 
