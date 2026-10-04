@@ -18,23 +18,20 @@
 # it appears under TestFlight a few minutes later. Three repository
 # secrets, all from App Store Connect > Users and Access > Integrations >
 # App Store Connect API, a team key with the Admin role (a lesser role
-# cannot ask Apple for the distribution certificate):
+# cannot create or revoke a certificate):
 #
 #     ASC_KEY_ID      the Key ID, ten characters
 #     ASC_ISSUER_ID   the Issuer ID above the key list
 #     ASC_KEY_P8      the whole text of the AuthKey_XXXX.p8 file
 #
-# WHY THE ARCHIVE IS SIGNED AD HOC. Signing it properly here would need
-# a development certificate, and a fresh runner has none - Xcode would
-# mint a new one on every run until Apple's limit on them is reached. The
-# export step signs instead, with the distribution certificate Apple
-# keeps on its own side, which costs nothing per run.
-#
-# It was first archived with signing switched off altogether, and the
-# first upload (4 Oct 2026, tag ios-3) was refused by App Store Connect:
-# error 90035, "App.app/App is not properly signed". An archive with no
-# signature at all gives the export step nothing to re-sign over. Signed
-# ad hoc ("-"), it has one.
+# WHO SIGNS IT. The archive is signed ad hoc, which needs no certificate.
+# The export is signed with a distribution certificate made for the run
+# and revoked at the end of it (tools/ios-cert.js): a runner keeps
+# nothing, and the certificate Apple offers to keep on its own side writes
+# the holder's name into the signature in a spelling that does not match
+# the certificate when the name has an accent in it. Four uploads were
+# refused (tags ios-3 to ios-7, 4 Oct 2026) before the bytes were printed
+# side by side.
 name: ios
 
 on:
@@ -104,57 +101,50 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :ApplicationProperties' "$ARCHIVE/Info.plist"
           du -sh "$ARCHIVE/Products/Applications/App.app"
 
-      # The second upload (tag ios-4) got past the app and was refused over
-      # App.app/Frameworks/GoogleMobileAds.framework: the same 90035. The
-      # frameworks that arrive already signed by somebody else are signed
-      # ad hoc here too, so that everything in the archive is in the one
-      # state the app's own binary was in when it was accepted.
-      - name: One signature state for everything in the archive
+      # A key made here, a certificate and a profile asked for by API, and
+      # both revoked in the last step. tools/ios-cert.js says why the
+      # certificate Apple keeps on its own side could not be used.
+      - name: A certificate for this run
+        if: env.ASC_KEY_ID != '' && (github.event_name != 'workflow_dispatch' || inputs.upload)
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
-          APP="$ARCHIVE/Products/Applications/App.app"
-          say() { codesign -dvv "$1" 2>&1 | grep -E 'Authority|TeamIdentifier|Signature|flags' | tr '\n' ' '; echo; }
-          # A requirement that names the team and not the certificate's
-          # holder. The third upload (tag ios-5) was refused for all five
-          # binaries although every one was signed for distribution and
-          # verified here; the requirement Xcode writes by default spells
-          # out the holder's name, and this one has an O with a diaeresis
-          # in it. Whether the export keeps this is printed further down.
-          req() {
-            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$1/Info.plist")
-            echo "designated => anchor apple generic and identifier \"$id\" and certificate leaf[subject.OU] = \"894Y9VXD2N\""
-          }
-          for f in "$APP"/Frameworks/*.framework; do
-            [ -e "$f" ] || continue
-            echo "before  $(basename "$f"): $(say "$f")"
-            codesign --force --sign - --timestamp=none -r="$(req "$f")" "$f"
-            echo "after   $(basename "$f"): $(say "$f")"
+          D="$RUNNER_TEMP/signing"; mkdir -p "$D"
+          node -e "const c=require('crypto');process.stdout.write(c.generateKeyPairSync('rsa',{modulusLength:2048,privateKeyEncoding:{type:'pkcs1',format:'pem'},publicKeyEncoding:{type:'spki',format:'pem'}}).privateKey)" > "$D/key.pem"
+          openssl req -new -key "$D/key.pem" -out "$D/csr.pem" -subj "/CN=Pawtika CI/C=TR"
+          node tools/ios-cert.js create "$D"
+
+          KC="$RUNNER_TEMP/build.keychain-db"; PW=$(uuidgen)
+          security create-keychain -p "$PW" "$KC"
+          security set-keychain-settings -lut 3600 "$KC"
+          security unlock-keychain -p "$PW" "$KC"
+          security import "$D/key.pem" -k "$KC" -T /usr/bin/codesign -T /usr/bin/security
+          security import "$D/cert.cer" -k "$KC" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$PW" "$KC" > /dev/null
+          security list-keychains -d user -s "$KC" $(security list-keychains -d user | tr -d '"')
+          security find-identity -v -p codesigning "$KC"
+
+          UUID=$(node -p "require('$D/signing.json').profileUuid")
+          for P in "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            mkdir -p "$P"; cp "$D/profile.mobileprovision" "$P/$UUID.mobileprovision"
           done
-          codesign --force --sign - --timestamp=none --preserve-metadata=entitlements -r="$(req "$APP")" "$APP"
-          echo "app: $(say "$APP")"
-          codesign -d -r- "$APP" 2>&1 | grep -v '^Executable'
 
       # Signing and sending are two steps so that what was signed can be
       # looked at before Apple is asked about it.
       - name: Sign
         if: env.ASC_KEY_ID != '' && (github.event_name != 'workflow_dispatch' || inputs.upload)
-        env:
-          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           set -o pipefail
-          mkdir -p "$HOME/.appstoreconnect/private_keys"
-          KEY="$HOME/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8"
-          printf '%s\n' "$ASC_KEY_P8" > "$KEY"
           xcodebuild -exportArchive \
             -archivePath "$ARCHIVE" \
-            -exportOptionsPlist ios/exportOptions.plist \
+            -exportOptionsPlist "$RUNNER_TEMP/signing/exportOptions.plist" \
             -exportPath "$RUNNER_TEMP/export" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$KEY" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             2>&1 | tee "$RUNNER_TEMP/export.log"
           ls -la "$RUNNER_TEMP/export"
 
+      # "# designated" is a requirement worked out from the certificate
+      # when somebody asks; "designated" without the hash is one written
+      # into the signature, which is the thing that was wrong.
       - name: What the signatures say
         if: env.ASC_KEY_ID != '' && (github.event_name != 'workflow_dispatch' || inputs.upload)
         run: |
@@ -164,29 +154,36 @@ jobs:
           for c in "$APP"/Frameworks/*.framework "$APP"; do
             [ -e "$c" ] || continue
             echo "== $(basename "$c")"
-            codesign -dvv "$c" 2>&1 | grep -E 'Authority=|TeamIdentifier|flags' | head -4
-            codesign -d -r- "$c" 2>&1 | grep -v '^Executable' | head -3
-            codesign --verify --strict "$c" 2>&1 | head -3 && echo "   verifies"
+            codesign -dvv "$c" 2>&1 | grep -E 'Authority=Apple Distribution|TeamIdentifier|flags' | head -3
+            codesign -d -r- "$c" 2>&1 | grep -v '^Executable' | head -2
+            codesign --verify --strict "$c" && echo "   verifies"
           done
-          # the certificate's own spelling of the holder's name, byte for byte
-          codesign -d --extract-certificates=cert "$APP" 2>/dev/null || true
-          openssl x509 -inform DER -in cert0 -noout -subject -nameopt esc_msb,oneline || true
-          openssl asn1parse -inform DER -in cert0 | grep -A1 ':commonName' | head -2 || true
-          codesign -d --entitlements - "$APP" 2>/dev/null | head -30 || true
-          rm -rf payload cert0 cert1 cert2
+          codesign -d --entitlements - "$APP" 2>/dev/null | head -24 || true
+          rm -rf payload
 
       - name: Send to TestFlight
         if: env.ASC_KEY_ID != '' && (github.event_name != 'workflow_dispatch' || inputs.upload)
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           set -o pipefail
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          printf '%s\n' "$ASC_KEY_P8" > "$HOME/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8"
           xcrun altool --upload-app --type ios \
             -f "$RUNNER_TEMP"/export/*.ipa \
             --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" \
             2>&1 | tee "$RUNNER_TEMP/upload.log"
 
-      - name: Throw the key away
-        if: always()
-        run: rm -rf "$HOME/.appstoreconnect/private_keys"
+      # Whatever happened above. A certificate left behind takes one of
+      # the few places a team has.
+      - name: Revoke the certificate and throw the keys away
+        if: always() && env.ASC_KEY_ID != ''
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          node tools/ios-cert.js revoke "$RUNNER_TEMP/signing" || true
+          security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
+          rm -rf "$RUNNER_TEMP/signing" "$HOME/.appstoreconnect/private_keys"
 
       # The logs are the only thing anybody without a Mac can debug from.
       - name: Keep the logs
