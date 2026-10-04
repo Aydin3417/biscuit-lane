@@ -24,12 +24,17 @@
 #     ASC_ISSUER_ID   the Issuer ID above the key list
 #     ASC_KEY_P8      the whole text of the AuthKey_XXXX.p8 file
 #
-# WHY THE ARCHIVE IS UNSIGNED. Signing it here would need a development
-# certificate, and a fresh runner has none — Xcode would mint a new one
-# on every run until Apple's limit on them is reached. The export step
-# signs instead, with the distribution certificate Apple keeps on its own
-# side, which costs nothing per run. The app has no entitlements file, so
-# nothing is lost by signing late.
+# WHY THE ARCHIVE IS SIGNED AD HOC. Signing it properly here would need
+# a development certificate, and a fresh runner has none - Xcode would
+# mint a new one on every run until Apple's limit on them is reached. The
+# export step signs instead, with the distribution certificate Apple
+# keeps on its own side, which costs nothing per run.
+#
+# It was first archived with signing switched off altogether, and the
+# first upload (4 Oct 2026, tag ios-3) was refused by App Store Connect:
+# error 90035, "App.app/App is not properly signed". An archive with no
+# signature at all gives the export step nothing to re-sign over. Signed
+# ad hoc ("-"), it has one.
 name: ios
 
 on:
@@ -91,7 +96,7 @@ jobs:
             -destination 'generic/platform=iOS' \
             -archivePath "$ARCHIVE" \
             CURRENT_PROJECT_VERSION="$BUILD" \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- AD_HOC_CODE_SIGNING_ALLOWED=YES             PROVISIONING_PROFILE_SPECIFIER="" \
             2>&1 | tee "$RUNNER_TEMP/archive.log" | xcbeautify --renderer github-actions
 
       - name: What was built
