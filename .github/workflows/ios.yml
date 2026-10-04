@@ -113,14 +113,25 @@ jobs:
         run: |
           APP="$ARCHIVE/Products/Applications/App.app"
           say() { codesign -dvv "$1" 2>&1 | grep -E 'Authority|TeamIdentifier|Signature|flags' | tr '\n' ' '; echo; }
+          # A requirement that names the team and not the certificate's
+          # holder. The third upload (tag ios-5) was refused for all five
+          # binaries although every one was signed for distribution and
+          # verified here; the requirement Xcode writes by default spells
+          # out the holder's name, and this one has an O with a diaeresis
+          # in it. Whether the export keeps this is printed further down.
+          req() {
+            id=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$1/Info.plist")
+            echo "designated => anchor apple generic and identifier \"$id\" and certificate leaf[subject.OU] = \"894Y9VXD2N\""
+          }
           for f in "$APP"/Frameworks/*.framework; do
             [ -e "$f" ] || continue
             echo "before  $(basename "$f"): $(say "$f")"
-            codesign --force --sign - --timestamp=none "$f"
+            codesign --force --sign - --timestamp=none -r="$(req "$f")" "$f"
             echo "after   $(basename "$f"): $(say "$f")"
           done
-          codesign --force --sign - --timestamp=none --preserve-metadata=entitlements "$APP"
+          codesign --force --sign - --timestamp=none --preserve-metadata=entitlements -r="$(req "$APP")" "$APP"
           echo "app: $(say "$APP")"
+          codesign -d -r- "$APP" 2>&1 | grep -v '^Executable'
 
       # Signing and sending are two steps so that what was signed can be
       # looked at before Apple is asked about it.
@@ -157,7 +168,12 @@ jobs:
             codesign -d -r- "$c" 2>&1 | grep -v '^Executable' | head -3
             codesign --verify --strict "$c" 2>&1 | head -3 && echo "   verifies"
           done
-          rm -rf payload
+          # the certificate's own spelling of the holder's name, byte for byte
+          codesign -d --extract-certificates=cert "$APP" 2>/dev/null || true
+          openssl x509 -inform DER -in cert0 -noout -subject -nameopt esc_msb,oneline || true
+          openssl asn1parse -inform DER -in cert0 | grep -A1 ':commonName' | head -2 || true
+          codesign -d --entitlements - "$APP" 2>/dev/null | head -30 || true
+          rm -rf payload cert0 cert1 cert2
 
       - name: Send to TestFlight
         if: env.ASC_KEY_ID != '' && (github.event_name != 'workflow_dispatch' || inputs.upload)
