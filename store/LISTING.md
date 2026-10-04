@@ -21,6 +21,12 @@ Pawtika: Eşleştir ve Büyüt
 ```
 [26]
 
+**On the App Store the Turkish name is `Pawtika: Eşleştir & Büyüt`.**
+App Store Connect refused the one above on 4 Oct 2026 ("the app name you
+entered is already being used"); names are unique across the whole store,
+in every language. The ampersand is the same name to a reader and to the
+search index, which does not weigh "ve".
+
 The name was the bare word until 3 Oct 2026. A coined word is found only
 by somebody who already knows it; both stores weigh the title above every
 other field, so the words people actually type go after the colon. The
@@ -303,6 +309,42 @@ give, `/pawtika/privacy.html`, is a 404 — GitHub Pages serves a project
 site under the repository name, and the repository is `biscuit-lane`.
 Both stores fetch the URL, and both would have refused it.
 
+## App Store Connect, as entered on 4 Oct 2026
+
+Apple ID 6818820766, SKU pawtika-ios-001, bundle com.pawtika.game,
+version 1.2.0. Everything below is saved as a draft; nothing has been
+submitted, and the privacy answers have not been published.
+
+- **Localisations:** English (U.S.) primary, English (U.K.) with its own
+  keyword field, Turkish. Seven screenshots each for U.S. and Turkish in
+  the 6.9" slot; the U.K. one borrows the U.S. set.
+- **Category** Games, Puzzle and Casual. **Age rating** 4+, with
+  "advertising: yes" and everything else none. **Content rights:** no
+  third-party content. **Price** free, all 175 countries and regions.
+- **In-app purchases:** all seven, consumable, with the ids and prices in
+  the table further down, a display name and description in English and
+  Turkish, a review screenshot (`store/review/`) and a review note each.
+  The Turkish display names: Bir Avuç / Bir Kese / Bir Kutu / Bir Çuval
+  Evcil Hayvan Ödülü, Hoş Geldin Paketi, Ödül Kavanozu, Sezon Kitabı.
+- **App Privacy:** eight data types, none linked to the user. Used for
+  tracking: Device ID, Coarse Location, Advertising Data, Product
+  Interaction. Not used for tracking: Purchase History, Crash Data,
+  Performance Data, Other Diagnostic Data (all "app functionality").
+  This is wider than the paragraph below it was written from: Coarse
+  Location and Performance Data were added on the understanding that
+  Google's ad SDK collects both; check that against Google's current
+  disclosure before pressing Publish.
+- **Marketing URL** `https://aydin3417.github.io/biscuit-lane/` in all
+  three localisations, so that AdMob has a developer website to read.
+  `app-ads.txt` is served from the root of that host by a separate
+  repository, `Aydin3417/aydin3417.github.io` (one line: google.com,
+  pub-3062307440336080, DIRECT, f08c47fec0942fa0). AdMob can only verify
+  it once the app is on sale and linked to its store record.
+- **Left for the account holder:** the review contact (name, phone,
+  e-mail), the Digital Services Act trader declaration, Publish on the
+  privacy page, choosing the build once one has been uploaded, and Add
+  for Review.
+
 ## What the App Store reads for search (checked 3 Oct 2026)
 
 - **Indexed:** the name, the subtitle, the keyword field, in-app purchase
@@ -333,6 +375,28 @@ privacy manifest.
 
 The age rating questionnaire now answers "Contains ads: yes" as well,
 and the App Store listing must not say "no ads" anywhere.
+
+## Notes for App Review
+
+Paste into App Store Connect -> App Review Information -> Notes:
+
+```
+No account or sign-in is needed; the game starts on first launch.
+
+In-app purchases: tap the purple treat chip at the top of any screen to
+open the store. All seven products are consumable.
+
+Advertising: rewarded video only, never shown unless the player taps a
+"Watch a video" button. Those buttons appear only when a video has
+loaded, on the out-of-moves card, the out-of-hearts sheet and the
+level-cleared card. The App Tracking Transparency prompt is shown the
+first time a video is requested, before any ad is displayed. If no video
+is available the buttons are simply absent.
+
+The app targets iPhone. It works offline; a connection is used only for
+purchases, the optional videos and anonymous play statistics, which can
+be switched off in Settings (gear icon) -> Share play data.
+```
 
 ## Content rating
 
