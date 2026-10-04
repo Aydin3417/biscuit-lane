@@ -111,6 +111,7 @@ const STRINGS = {
     retry: 'Try again', to_map: 'Back to the lane', keep_going: 'Carry on',
     lose_extra: 'Buy {n} more moves',
     lose_extra_sub: '{n} treats',
+    lose_extra_go: 'Carry on',
     lose_extra_short: '{n} treats · you have {have}',
     /* one line about what to do differently, by the goal that fell shortest */
     lose_why: 'Next time',
@@ -198,7 +199,6 @@ const STRINGS = {
     /* settings */
     set_t: 'Settings',
     set_sound: 'Sound effects', set_sound_s: 'Pops, blasts and small victories.',
-    set_music: 'Music', set_music_s: 'A quiet loop behind the game.',
     set_notify: 'Reminders',
     set_notify_s: 'Two only: when your hearts have come back, and when the daily walk has gone untaken. Nothing else, ever.',
     note_hearts_t: 'Your hearts are back',
@@ -476,6 +476,7 @@ const STRINGS = {
     retry: 'Yeniden dene', to_map: 'Sokağa dön', keep_going: 'Devam',
     lose_extra: '{n} hamle daha al',
     lose_extra_sub: '{n} ödül',
+    lose_extra_go: 'Devam et',
     lose_extra_short: '{n} ödül · sende {have} var',
     lose_why: 'Bir dahakine',
     lose_tip_collect: 'Tahtanın altında eşle; yukarıdan dolan taşlar daha fazlasını getirir.',
@@ -559,7 +560,6 @@ const STRINGS = {
 
     set_t: 'Ayarlar',
     set_sound: 'Ses efektleri', set_sound_s: 'Patlamalar, çıtırtılar, küçük zaferler.',
-    set_music: 'Müzik', set_music_s: 'Oyunun arkasında sakin bir döngü.',
     set_notify: 'Hatırlatmalar',
     set_notify_s: 'Yalnız iki tane: canların geri geldiğinde, ve günlük yürüyüş yapılmadan geçtiğinde. Başka hiçbir şey.',
     note_hearts_t: 'Canların geri geldi',

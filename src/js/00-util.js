@@ -450,7 +450,15 @@ function modal(html, opts) {
     });
   }
   modalStack.push(api);
-  if (sheetIsOpen()) modalQueue.push(show);
+  /* A sheet waits its turn behind whatever is up — unless it was opened
+     from that sheet and is the answer to it. The treat store is the case:
+     a player short of treats on the lose card pressed Buy, the store
+     joined the queue behind a card that does not close by itself, and
+     nothing happened on the screen at all. It appeared afterwards, over
+     the map, when the level it was for was already gone. Found on 4 Oct
+     2026 by photographing the card with a store behind it. `over` puts a
+     sheet on top of the one that asked for it. */
+  if (sheetIsOpen() && !opts.over) modalQueue.push(show);
   else show();
   return api;
 }

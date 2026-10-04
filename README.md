@@ -4571,3 +4571,92 @@ the old ones back.
 On a rescue board the win streak's rockets now lie flat: a vertical one
 under a basket walked it home in one move, and with a streak running
 level 7 had fallen from a median of fifteen moves to eight (eleven now).
+
+## The music came out
+
+The game had a generated loop behind it: a sine bass, a detuned triangle
+pad and a bell that wandered, over four chords, six stretches of it by
+the end. Every measurement of it passed (it sat under the effects, it
+never clipped) and none of them could say whether it was any good. On
+3 Oct 2026 the owner listened to it and had it removed, and the setting
+with it. The effects are what is left, and they were always the better
+half: a match is a mallet note on a pentatonic scale that climbs with the
+chain, with one low thump for the whole clear rather than one per tile.
+If music comes back it should be written by somebody, not scheduled.
+
+`dev/sounds.html` (with `npm start` running) puts every sound the game
+makes on a button, calling the game's own `SFX`, because the audio tests
+are measurements and a measurement cannot hear a meow.
+
+## Four things that would have stopped the first iOS build, found by reading
+
+Before anybody opened Xcode, 4 Oct 2026.
+
+`capacitor.config.json` set `limitsNavigationsToAppBoundDomains` with no
+`WKAppBoundDomains` in Info.plist. Capacitor's own documentation says the
+two go together and that `localhost` has to be in the list; without it
+the web view treats its own page as outside the app's domains, and the
+bridge every plugin rides on (the save, purchases, videos) is exactly
+what that mode refuses to inject. The option is gone; nothing needed it,
+since the service worker is unregistered inside the shell.
+
+The 1024 icon was RGBA. Every alpha was 255 and it looked right, and the
+App Store refuses an icon with an alpha channel whatever is in it. A
+canvas cannot export anything else, so `tools/_png.js` re-encodes it as
+RGB and `tools/icon.js` writes through it; the pixels are identical.
+
+A video button was drawn whenever the SDK was present, and a new ad unit
+serves nothing for its first days: the button would have been pressed by
+a reviewer and done nothing. A slot is offered only when a video is
+loaded (`ADS.available`), the SDK is started at boot so that one usually
+is, and `test/ads.js` plays the three outcomes against a stand-in plugin
+— no fill, watched, closed early — because the real iOS call never
+returns on the last.
+
+And the privacy manifest still said the app collects nothing. It lists
+what the app's own code sends (play data, crash messages, purchase
+numbers; none linked, none for tracking); the advertising identifier is
+declared by Google's SDK in its own manifest. The signing team is set in
+the project, so Xcode signs without being asked.
+
+## The store could not be reached from the one place it was needed
+
+Every paid surface was photographed on 4 Oct 2026 as an iPhone with a live
+store and a loaded video would show it (the plugin and the store are
+stand-ins; nothing was charged). One of them did not exist.
+
+A player out of moves and short of treats pressed Buy on the lose card,
+and nothing happened. `modal()` queues a sheet behind whatever is open,
+the lose card does not close by itself, and so the treat store waited
+its turn — and appeared afterwards, over the map, when the level it was
+for had already been given up. The same was true from the out-of-hearts
+sheet and from the jar on the win card. A sheet opened as the answer to
+another now says so (`{ over: true }`) and is drawn on top of it; when it
+closes, the line under the offer is brought up to date.
+
+The lose card was also arranged so that the price was the quietest thing
+on it: a dashed row under a large orange Try again. By the owner's call
+the carry-on now leads the card and takes the accent, with the price on
+the button; the video is beneath it and the two free ways out beneath
+that. What keeps it honest did not move — it is drawn only at half the
+goal or better. The welcome pack's button in the store is the accent too.
+
+A new save was then played badly on purpose (half its moves at random,
+45 levels, never paying): 11 lost, the carry-on offered on all 11, the
+first loss on the 4th level played and the first empty heart on the
+31st, with 20 treats in hand at the end against 9 for a carry-on and 12
+for a refill. Nothing threw. `tools/revenue.js` said there were no ads
+and gated the offer at 70%; it now counts the four video slots under
+their daily caps. It remains a model: the eCPMs and the share of players
+who pay are public benchmarks, not anything measured here.
+
+## A Mac, borrowed by the minute
+
+There is no Mac behind this repository, and an iOS build needs one.
+`.github/workflows/ios.yml` runs on GitHub's: it builds the page, syncs
+the native project, archives it unsigned, and — given three secrets from
+App Store Connect — signs the archive and sends it to TestFlight. Without
+the secrets it stops after the archive, which is still the first time the
+iOS project will have been compiled by anything. The project had no
+shared scheme, which `xcodebuild` on a clean machine needs; there is one
+now. The workflow has not run yet. Its header says how to start it.

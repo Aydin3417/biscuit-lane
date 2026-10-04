@@ -49,7 +49,7 @@ function freshSave() {
        the system's own dialog — see 16-notify.js. Defaulting it true
        would have the settings screen showing a switch that is on while
        nothing can actually be delivered. */
-    settings: { sound: true, music: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true, notify: false },
+    settings: { sound: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true, notify: false },
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
     jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing

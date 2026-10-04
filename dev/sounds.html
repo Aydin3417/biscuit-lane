@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Pawtika — ses tahtası</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<!--
+  Every sound the game makes, on a button.
+
+    npm start    then    http://localhost:8181/dev/sounds.html
+
+  The game itself is loaded in the frame on the right and every button
+  calls its own SFX, so what is heard here is exactly what the build
+  plays: the same synthesis, the same compressor, the same reverb. Nothing
+  on this page makes a sound of its own. It exists because every test of
+  the audio is a measurement, and a measurement cannot say whether a meow
+  sounds like a cat.
+-->
+<style>
+  body{ margin:0; font:15px/1.45 system-ui,sans-serif; background:#F6EADA; color:#2C2118; display:flex; min-height:100vh; }
+  main{ flex:1; padding:22px 26px 60px; max-width:860px; }
+  aside{ flex:0 0 330px; background:#E9D8C3; padding:14px; position:sticky; top:0; height:100vh; box-sizing:border-box; }
+  iframe{ width:100%; height:calc(100% - 44px); border:0; border-radius:18px; background:#fff; }
+  h1{ font-size:24px; margin:0 0 4px; } h2{ font-size:16px; margin:26px 0 8px; }
+  p{ margin:0 0 10px; color:#6B5949; }
+  .row{ display:flex; flex-wrap:wrap; gap:8px; }
+  button{ font:600 14px system-ui; padding:9px 13px; border-radius:11px; border:1px solid #DCC7AC; background:#FFFAF2; color:#2C2118; cursor:pointer; }
+  button:hover{ background:#F7D79B; } button:active{ transform:translateY(1px); }
+  button.go{ background:#D98A18; color:#3A2503; border-color:#B8730F; }
+  small{ display:block; color:#6B5949; font-weight:400; font-size:12px; }
+  #state{ font-weight:600; color:#276853; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pawtika ses tahtası</h1>
+  <p>Her düğme oyunun kendi sesini çalar. Önce <b>Sesi aç</b>'a bas (tarayıcı, bir tıklama olmadan ses çalmaz). <span id="state"></span></p>
+  <div class="row"><button class="go" id="on">Sesi aç</button></div>
+
+  <h2>Tahta</h2><div class="row" id="board"></div>
+  <h2>Özel taşlar ve engeller</h2><div class="row" id="specials"></div>
+  <h2>Sonuç ve ödül</h2><div class="row" id="result"></div>
+  <h2>Hayvan sesleri</h2><div class="row" id="pets"></div>
+  <h2>Bakım ve arayüz</h2><div class="row" id="ui"></div>
+</main>
+<aside>
+  <p>Oyunun kendisi (sesler buradan çıkıyor):</p>
+  <iframe id="game" src="../pawtika.html"></iframe>
+</aside>
+<script>
+const frame = document.getElementById('game');
+const BL = () => frame.contentWindow.BL;
+const say = t => { document.getElementById('state').textContent = t; };
+
+function wake() {
+  const w = frame.contentWindow, B = w.BL;
+  if (!B) { say('Oyun henüz yüklenmedi.'); return false; }
+  B.save.settings.sound = true;
+  /* the game wakes its own audio on the first press inside it */
+  w.document.dispatchEvent(new w.PointerEvent('pointerdown', { bubbles: true }));
+  B.audio.init();
+  try { if (B.audio.au.ctx && B.audio.au.ctx.state !== 'running') B.audio.au.ctx.resume(); } catch (e) { }
+  say('Ses açık.');
+  return true;
+}
+document.getElementById('on').onclick = wake;
+const S = (name, ...a) => () => { if (wake()) BL().SFX[name](...a); };
+const seq = (steps, gap) => () => { if (!wake()) return; steps.forEach((fn, i) => setTimeout(fn, i * gap)); };
+const add = (where, label, note, fn) => {
+  const b = document.createElement('button');
+  b.innerHTML = label + (note ? `<small>${note}</small>` : '');
+  b.onclick = fn;
+  document.getElementById(where).appendChild(b);
+};
+
+add('board', 'Dokunma', 'tap', S('tap'));
+add('board', 'Seçme', 'select', S('select'));
+add('board', 'Yer değiştirme', 'swap', S('swap'));
+add('board', 'Geçersiz hamle', 'bad', S('bad'));
+add('board', 'Eşleşme', 'üç taş', seq([0, 1, 2].map(i => () => BL().SFX.pop(1, i, 0)), 0));
+add('board', 'Zincir 1→5', 'her adımda yükselir', seq([1, 2, 3, 4, 5].map(c => () => { [0, 1, 2].forEach(i => BL().SFX.pop(c, i, 0)); if (c > 1) BL().SFX.combo(c); }), 520));
+add('board', 'Taş düşmesi', 'drop + land', seq([() => BL().SFX.drop(0), () => BL().SFX.land(.7, 0)], 160));
+add('board', 'Son 3 hamle', 'gerilim', seq([.2, .6, 1].map(k => () => BL().SFX.tension(k)), 700));
+
+add('specials', 'Roket', '', S('rocket', 0));
+add('specials', 'Bomba', '', S('bomb'));
+add('specials', 'Gökkuşağı', '', S('rainbow'));
+add('specials', 'Kasa kırılması', '', S('crate', false, 0));
+add('specials', 'Buz', '', S('ice'));
+add('specials', 'Çamur', '', S('mud', 0));
+add('specials', 'Böğürtlen kesme', '', S('snip'));
+add('specials', 'Böğürtlen büyümesi', '', S('creak'));
+add('specials', 'Yetenek hazır', '', S('chargeReady'));
+
+add('result', 'Yıldızlar', '1, 2, 3', seq([0, 1, 2].map(i => () => BL().SFX.star(i)), 260));
+add('result', 'Kazanma', '', S('win'));
+add('result', 'Kaybetme', '', S('lose'));
+add('result', 'Seviye atlama', 'bağ / büyüme', S('levelup'));
+add('result', 'Altın', '', S('coin'));
+
+frame.addEventListener('load', () => {
+  const wait = setInterval(() => {
+    const B = frame.contentWindow.BL;
+    if (!B || !B.BREEDS) return;
+    clearInterval(wait);
+    B.BREEDS.forEach(b => {
+      const v = b.voice || {};
+      add('pets', (b.en || b.id), b.species === 'cat' ? 'miyav' : 'havlama',
+        () => { if (wake()) (b.species === 'cat' ? B.SFX.meow(1.1 * (v.pitch || 1), v) : B.SFX.bark(1.1 * (v.pitch || 1), v)); });
+    });
+    add('pets', 'Mırlama', '', S('purr'));
+    add('pets', 'Horlama', '', S('snore'));
+    say('Oyun yüklendi.');
+  }, 200);
+});
+
+add('ui', 'Yemek', '', S('eat'));
+add('ui', 'Yıkama', '', S('splash'));
+add('ui', 'Fırçalama', '', S('brush'));
+add('ui', 'Ekran geçişi', 'whoosh', S('whoosh', 0));
+add('ui', 'Kaydırma', 'swish', S('swish', true));
+add('ui', 'Arayüz tıkı', '', S('uiTick'));
+</script>
+</body>
+</html>

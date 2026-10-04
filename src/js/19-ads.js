@@ -70,6 +70,8 @@ const ADS = {
   personalised: false,
   asked: false,
   loading: null,
+  loaded: false,
+  retry: null,
 
   testing() {
     try { return localStorage.getItem('pawtika-debug') === '1'; } catch (e) { return false; }
@@ -137,8 +139,15 @@ const ADS = {
      tried again next time. */
   preload() {
     if (this.loading || !this.inited) return this.loading;
+    this.loaded = false;
     this.loading = this.plugin.prepareRewardVideoAd({ adId: this.unit(), isTesting: this.testing(), npa: !this.personalised })
-      .then(() => true, () => { this.loading = null; return false; });
+      .then(() => { this.loaded = true; return true; }, () => {
+        this.loading = null;
+        /* no fill is the ordinary state of a new ad unit, and of a phone
+           with no signal; ask again in a while rather than never */
+        if (!this.retry) this.retry = setTimeout(() => { this.retry = null; this.preload(); }, 60000);
+        return false;
+      });
     return this.loading;
   },
 
@@ -155,10 +164,15 @@ const ADS = {
     const cap = this.caps[slot] || 0;
     return Math.max(0, cap - (this.state().used[slot] || 0));
   },
+  /* Only when a video is actually sitting there loaded. A button that
+     is drawn because one might load, and then does nothing when pressed
+     because none did, is a broken feature to the player and to whoever
+     reviews the app — and a new AdMob unit serves nothing at all for its
+     first days. No video, no button. */
   available(slot) {
     if (!this.ready() || this.left(slot) <= 0) return false;
-    if (!this.inited) this.init();
-    return true;
+    if (!this.inited) { this.init(); return false; }
+    return !!this.loaded;
   },
 
   /* Show one; resolve true only if it was watched through. A network
@@ -171,12 +185,12 @@ const ADS = {
     if (!await this.init()) return false;
     const A = this.plugin;
     if (!this.asked) { this.asked = true; await this.askTracking(); }
-    musicStop();
     const handles = [];
     let rewarded = false;
     try {
       const loaded = await (this.loading || this.preload());
       this.loading = null;
+      this.loaded = false;
       if (!loaded) return false;
       const over = new Promise(res => {
         const on = (ev, fn) => A.addListener(ev, fn).then(h => handles.push(h));
@@ -196,7 +210,6 @@ const ADS = {
       rewarded = false;
     } finally {
       handles.forEach(h => { try { h.remove(); } catch (e) { } });
-      if (SAVE.settings.music) musicStart();
       this.preload();
     }
     if (!rewarded) return false;

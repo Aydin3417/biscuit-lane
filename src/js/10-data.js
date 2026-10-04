@@ -363,18 +363,19 @@ const ECON = {
    The Play address is deterministic — it is the applicationId in
    android/app/build.gradle and nothing else — so it is filled in here
    and will start working the day the listing goes live. Apple's is a
-   number App Store Connect assigns when the app record is created, and
-   there is no way to know it in advance, so it is blank and everything
-   that would use it stays hidden on iOS until it is not.
+   number App Store Connect assigns when the app record is created; it
+   was blank until the record existed, and is filled in below.
 
    `storeLink()` is the only reader. Nothing in the game asks which
    platform it is on to decide whether to offer a share; it asks this,
    and gets null when there is nowhere to send anybody. */
 const STORE_LINKS = {
   play: 'https://play.google.com/store/apps/details?id=com.pawtika.game',
-  /* paste the App Store URL here — App Store Connect gives it once the
-     app record exists, in the form https://apps.apple.com/app/id0000000000 */
-  apple: '',
+  /* the number App Store Connect gave the app record (Apple ID
+     6818820766, read off the App Information page on 4 Oct 2026). The
+     address answers only once the app is on sale; until then a share
+     from iOS leads to a page that is not there yet. */
+  apple: 'https://apps.apple.com/app/id6818820766',
   /* where privacy.html is hosted. Both stores ask for this address, and
      settings links to it once it is filled in (App Store Review 5.1.1
      wants the policy reachable from inside the app as well). */

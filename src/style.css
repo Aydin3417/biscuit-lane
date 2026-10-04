@@ -1073,6 +1073,11 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .offer .ot small{ display:block; color:var(--text-faint); font-size:var(--t-micro); margin-top:1px; }
 .offer .btn{ flex:0 0 auto; white-space:nowrap; color:var(--plum);
   border-color:color-mix(in srgb,var(--plum) 40%, var(--line)); }
+/* the offer that leads a card: the accent, and a solid edge */
+.offer.hot{ background:color-mix(in srgb,var(--accent) 16%, var(--surface-2)); border:1.5px solid color-mix(in srgb,var(--accent) 55%, var(--line)); }
+.offer.hot .ot b{ font-size:var(--t-body); }
+.offer .btn.primary{ color:var(--accent-ink); border-color:transparent; }
+.offer .btn.primary svg{ width:15px; height:15px; margin-left:2px; }
 
 /* ---------- turned sideways ----------
    A board that shrinks to 22px cells in a wide empty field is not a

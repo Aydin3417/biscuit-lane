@@ -222,6 +222,9 @@ function boot() {
      replaces the fallback labels whenever it arrives, and nothing waits
      on it */
   BILLING.refresh();
+  /* and the videos, so that one is loaded by the time a card could offer
+     it: a slot is only drawn when a video is ready (ADS.available) */
+  if (ADS.ready()) ADS.init();
   /* And, in the same breath, anything the store still says is owed.
 
      A purchase that was taken but never granted — the app killed between
@@ -255,13 +258,10 @@ function boot() {
      Two things wait on it. The vibration motor, which the browser will
      not start before a gesture and complains about in the console every
      time it is asked; and the audio context, which is created suspended
-     — so a save that has music on still boots silent, and used to stay
-     that way until the player happened to press something that called
-     audioResume by hand. */
+     and stays that way until something calls audioResume. */
   const wake = () => {
     markGesture();
     audioResume();
-    if (SAVE.settings.music) musicStart();
   };
   window.addEventListener('pointerdown', wake, { once: true });
   window.addEventListener('keydown', wake, { once: true });
@@ -285,8 +285,8 @@ function boot() {
       /* the comment on snapshotLevel promised a write at every hide and
          there was none; a board at rest is exactly the one to keep */
       if (SCREEN === 'game' && G.B && !G.busy && !G.over) keepLevel();
-      musicStop(); persist(true);
-      /* the context itself, not just the music bus: a running
+      persist(true);
+      /* the context itself: a running
          AudioContext keeps an audio session open on some phones, and a
          cascade in flight would go on playing into the pocket */
       try { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend(); } catch (e) { }
@@ -303,10 +303,9 @@ function boot() {
          canvas repainted for nobody, in a pocket, on a battery */
       if (AMB.raf) { cancelAnimationFrame(AMB.raf); AMB.raf = null; }
     } else {
-      try { if (AU.ctx && AU.ctx.state === 'suspended' && (SAVE.settings.sound || SAVE.settings.music)) AU.ctx.resume(); } catch (e) { }
+      try { if (AU.ctx && AU.ctx.state === 'suspended' && SAVE.settings.sound) AU.ctx.resume(); } catch (e) { }
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
       if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
-      if (SAVE.settings.music) musicStart();
       if (!AMB.raf && !reduceMotion()) { AMB.last = performance.now(); AMB.raf = requestAnimationFrame(motesLoop); }
       if (SCREEN === 'home') { renderHome(); roomLayout(); roomStart(); }
       if (SCREEN === 'game') { layoutBoard(); gameLoopStart(); }
@@ -337,7 +336,7 @@ function boot() {
   if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
 
   /* first gesture starts the audio engine */
-  const kick = () => { audioResume(); musicSync(); document.removeEventListener('pointerdown', kick); };
+  const kick = () => { audioResume(); document.removeEventListener('pointerdown', kick); };
   document.addEventListener('pointerdown', kick);
 
   if (!had) {
@@ -404,22 +403,11 @@ if (BL_OPEN) window.BL = {
   audio: {
     get au() { return AU; },
     init: audioInit,
-    /* the music schedules on a wall clock, which does not run in an
-       offline context, so a harness has to place the beats itself */
-    beat: musicBeat,
-    get mood() { return MUS.mood; },
-    get step() { return AU.step; },
-    set step(v) { AU.step = v; },
     reset() {
-      /* the music keeps a timer that schedules notes into whatever
-         context is current, which would land in the one being measured */
-      try { musicStop(); } catch (e) { }
-      AU.musicOn = false;
-      if (AU.musicTimer) { clearTimeout(AU.musicTimer); AU.musicTimer = null; }
       try { if (AU.ctx && AU.ctx.close) AU.ctx.close(); } catch (e) { }
-      AU.ctx = null; AU.master = null; AU.sfxBus = null; AU.musBus = null;
+      AU.ctx = null; AU.master = null; AU.sfxBus = null;
       AU.verb = null; AU.verbGain = null; AU.comp = null; AU.noise = null;
-      AU.ready = false; AU.voices = 0; AU.intensity = 0;
+      AU.ready = false; AU.voices = 0;
       audioBroken = false;
     }
   },

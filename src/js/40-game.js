@@ -292,7 +292,6 @@ function startLevel(n, opts) {
      sizing, not a level number, so the caller picks rather than the
      level table reaching into the save to find out how far you got */
   G.def = n === DAILY_LEVEL ? dailyLevel(SAVE.reached) : levelDef(n);
-  musicMood(n === DAILY_LEVEL ? SAVE.reached : n);
   const res = opts.resume || null;
   G.startedAt = res ? (res.startedAt || now()) : now();
   /* which attempt at this level, not how many levels ever: the number a
@@ -887,7 +886,6 @@ async function blastWaves(startKeys, chain, silent) {
     }
     totalTiles += ctx.count;
     if (!silent && ctx.removed.length) {
-      musicIntensity(Math.min(1, (chain || 1) / 5));
       if ((chain || 1) >= 3) {
         SFX.combo(chain);
         FX.pulse(G.ox, G.oy, G.boardW, G.boardH,

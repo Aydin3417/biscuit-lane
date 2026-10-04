@@ -1131,6 +1131,11 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .offer .ot small{ display:block; color:var(--text-faint); font-size:var(--t-micro); margin-top:1px; }
 .offer .btn{ flex:0 0 auto; white-space:nowrap; color:var(--plum);
   border-color:color-mix(in srgb,var(--plum) 40%, var(--line)); }
+/* the offer that leads a card: the accent, and a solid edge */
+.offer.hot{ background:color-mix(in srgb,var(--accent) 16%, var(--surface-2)); border:1.5px solid color-mix(in srgb,var(--accent) 55%, var(--line)); }
+.offer.hot .ot b{ font-size:var(--t-body); }
+.offer .btn.primary{ color:var(--accent-ink); border-color:transparent; }
+.offer .btn.primary svg{ width:15px; height:15px; margin-left:2px; }
 
 /* ---------- turned sideways ----------
    A board that shrinks to 22px cells in a wide empty field is not a
@@ -1789,7 +1794,15 @@ function modal(html, opts) {
     });
   }
   modalStack.push(api);
-  if (sheetIsOpen()) modalQueue.push(show);
+  /* A sheet waits its turn behind whatever is up — unless it was opened
+     from that sheet and is the answer to it. The treat store is the case:
+     a player short of treats on the lose card pressed Buy, the store
+     joined the queue behind a card that does not close by itself, and
+     nothing happened on the screen at all. It appeared afterwards, over
+     the map, when the level it was for was already gone. Found on 4 Oct
+     2026 by photographing the card with a store behind it. `over` puts a
+     sheet on top of the one that asked for it. */
+  if (sheetIsOpen() && !opts.over) modalQueue.push(show);
   else show();
   return api;
 }
@@ -2090,6 +2103,7 @@ const STRINGS = {
     retry: 'Try again', to_map: 'Back to the lane', keep_going: 'Carry on',
     lose_extra: 'Buy {n} more moves',
     lose_extra_sub: '{n} treats',
+    lose_extra_go: 'Carry on',
     lose_extra_short: '{n} treats · you have {have}',
     /* one line about what to do differently, by the goal that fell shortest */
     lose_why: 'Next time',
@@ -2177,7 +2191,6 @@ const STRINGS = {
     /* settings */
     set_t: 'Settings',
     set_sound: 'Sound effects', set_sound_s: 'Pops, blasts and small victories.',
-    set_music: 'Music', set_music_s: 'A quiet loop behind the game.',
     set_notify: 'Reminders',
     set_notify_s: 'Two only: when your hearts have come back, and when the daily walk has gone untaken. Nothing else, ever.',
     note_hearts_t: 'Your hearts are back',
@@ -2455,6 +2468,7 @@ const STRINGS = {
     retry: 'Yeniden dene', to_map: 'Sokağa dön', keep_going: 'Devam',
     lose_extra: '{n} hamle daha al',
     lose_extra_sub: '{n} ödül',
+    lose_extra_go: 'Devam et',
     lose_extra_short: '{n} ödül · sende {have} var',
     lose_why: 'Bir dahakine',
     lose_tip_collect: 'Tahtanın altında eşle; yukarıdan dolan taşlar daha fazlasını getirir.',
@@ -2538,7 +2552,6 @@ const STRINGS = {
 
     set_t: 'Ayarlar',
     set_sound: 'Ses efektleri', set_sound_s: 'Patlamalar, çıtırtılar, küçük zaferler.',
-    set_music: 'Müzik', set_music_s: 'Oyunun arkasında sakin bir döngü.',
     set_notify: 'Hatırlatmalar',
     set_notify_s: 'Yalnız iki tane: canların geri geldiğinde, ve günlük yürüyüş yapılmadan geçtiğinde. Başka hiçbir şey.',
     note_hearts_t: 'Canların geri geldi',
@@ -3133,18 +3146,19 @@ const ECON = {
    The Play address is deterministic — it is the applicationId in
    android/app/build.gradle and nothing else — so it is filled in here
    and will start working the day the listing goes live. Apple's is a
-   number App Store Connect assigns when the app record is created, and
-   there is no way to know it in advance, so it is blank and everything
-   that would use it stays hidden on iOS until it is not.
+   number App Store Connect assigns when the app record is created; it
+   was blank until the record existed, and is filled in below.
 
    `storeLink()` is the only reader. Nothing in the game asks which
    platform it is on to decide whether to offer a share; it asks this,
    and gets null when there is nowhere to send anybody. */
 const STORE_LINKS = {
   play: 'https://play.google.com/store/apps/details?id=com.pawtika.game',
-  /* paste the App Store URL here — App Store Connect gives it once the
-     app record exists, in the form https://apps.apple.com/app/id0000000000 */
-  apple: '',
+  /* the number App Store Connect gave the app record (Apple ID
+     6818820766, read off the App Information page on 4 Oct 2026). The
+     address answers only once the app is on sale; until then a share
+     from iOS leads to a page that is not there yet. */
+  apple: 'https://apps.apple.com/app/id6818820766',
   /* where privacy.html is hosted. Both stores ask for this address, and
      settings links to it once it is filled in (App Store Review 5.1.1
      wants the policy reachable from inside the app as well). */
@@ -5444,7 +5458,7 @@ function freshSave() {
        the system's own dialog — see 16-notify.js. Defaulting it true
        would have the settings screen showing a switch that is on while
        nothing can actually be delivered. */
-    settings: { sound: true, music: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true, notify: false },
+    settings: { sound: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true, notify: false },
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
     jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing
@@ -7485,6 +7499,8 @@ const ADS = {
   personalised: false,
   asked: false,
   loading: null,
+  loaded: false,
+  retry: null,
 
   testing() {
     try { return localStorage.getItem('pawtika-debug') === '1'; } catch (e) { return false; }
@@ -7552,8 +7568,15 @@ const ADS = {
      tried again next time. */
   preload() {
     if (this.loading || !this.inited) return this.loading;
+    this.loaded = false;
     this.loading = this.plugin.prepareRewardVideoAd({ adId: this.unit(), isTesting: this.testing(), npa: !this.personalised })
-      .then(() => true, () => { this.loading = null; return false; });
+      .then(() => { this.loaded = true; return true; }, () => {
+        this.loading = null;
+        /* no fill is the ordinary state of a new ad unit, and of a phone
+           with no signal; ask again in a while rather than never */
+        if (!this.retry) this.retry = setTimeout(() => { this.retry = null; this.preload(); }, 60000);
+        return false;
+      });
     return this.loading;
   },
 
@@ -7570,10 +7593,15 @@ const ADS = {
     const cap = this.caps[slot] || 0;
     return Math.max(0, cap - (this.state().used[slot] || 0));
   },
+  /* Only when a video is actually sitting there loaded. A button that
+     is drawn because one might load, and then does nothing when pressed
+     because none did, is a broken feature to the player and to whoever
+     reviews the app — and a new AdMob unit serves nothing at all for its
+     first days. No video, no button. */
   available(slot) {
     if (!this.ready() || this.left(slot) <= 0) return false;
-    if (!this.inited) this.init();
-    return true;
+    if (!this.inited) { this.init(); return false; }
+    return !!this.loaded;
   },
 
   /* Show one; resolve true only if it was watched through. A network
@@ -7586,12 +7614,12 @@ const ADS = {
     if (!await this.init()) return false;
     const A = this.plugin;
     if (!this.asked) { this.asked = true; await this.askTracking(); }
-    musicStop();
     const handles = [];
     let rewarded = false;
     try {
       const loaded = await (this.loading || this.preload());
       this.loading = null;
+      this.loaded = false;
       if (!loaded) return false;
       const over = new Promise(res => {
         const on = (ev, fn) => A.addListener(ev, fn).then(h => handles.push(h));
@@ -7611,7 +7639,6 @@ const ADS = {
       rewarded = false;
     } finally {
       handles.forEach(h => { try { h.remove(); } catch (e) { } });
-      if (SAVE.settings.music) musicStart();
       this.preload();
     }
     if (!rewarded) return false;
@@ -7630,24 +7657,25 @@ const ADS = {
    Signal path
      voice ─┬─► sfxBus ─► sfxComp ─► master ─► out
             └─► verbSend ─► convolver ─► verbGain ─┘
-     music ──► musBus  ─► master
+
+   There is no music. There was a generated loop, six of them by the
+   end, and on 3 Oct 2026 the owner listened to it and had it taken out:
+   a pad, a bass and a bell that wanders are a hum, not a tune, and a
+   hum behind every level is worse than the board's own sounds with
+   nothing behind them. If music comes back it should be written, not
+   generated.
 
    The compressor is what makes a ten-tile cascade sound like one
    happy noise instead of ten fighting ones, and the little room
    reverb is what stops the synth sounding like a test tone.
    ============================================================ */
 const AU = {
-  ctx: null, master: null, sfxBus: null, musBus: null, verb: null, verbGain: null,
+  ctx: null, master: null, sfxBus: null, verb: null, verbGain: null,
   comp: null, ready: false, noise: null,
-  musicOn: false, musicTimer: null, step: 0,
-  voices: 0, lastPop: 0, intensity: 0
+  voices: 0, lastPop: 0
 };
 
 const AU_MAX_VOICES = 26;          // hard ceiling; cascades stop stacking mush
-/* How loud the bed sits under everything. Measured against the
-   effects: at .3 the music was peaking level with the win fanfare. */
-const MUS_BED = .13;
-
 /* Every failure here is survivable: a browser with no Web Audio, a
    device that refuses another context, a policy that blocks it. The game
    plays silently rather than not at all, and never retries in a loop. */
@@ -7708,7 +7736,6 @@ function buildAudioGraph() {
   AU.limit.connect(AU.master);
 
   AU.sfxBus = c.createGain(); AU.sfxBus.gain.value = .85; AU.sfxBus.connect(AU.comp);
-  AU.musBus = c.createGain(); AU.musBus.gain.value = 0; AU.musBus.connect(AU.master);
 
   /* a small warm room, generated */
   AU.verb = c.createConvolver();
@@ -7949,17 +7976,6 @@ function click(fc, gain, pan) {
 const PENT = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 const semi = n => 261.63 * Math.pow(2, n / 12);
 
-/* duck the music for a beat when something big happens */
-function musicDuck(amount, time) {
-  if (!AU.ready || !AU.musicOn) return;
-  const g = AU.musBus.gain, t = AU.ctx.currentTime;
-  const target = Math.max(.015, MUS_BED * (1 - amount));
-  g.cancelScheduledValues(t);
-  g.setValueAtTime(g.value, t);
-  g.linearRampToValueAtTime(target, t + .04);
-  g.linearRampToValueAtTime(MUS_BED, t + (time || .5));
-}
-
 /* ============================================================
    The sound effects.
    ============================================================ */
@@ -8043,7 +8059,6 @@ const SFX = {
          chain reward needs to be heard over the pops it crowns */
       dur: .3, type: 'triangle', gain: .20 + n * .022, filter: 'lowpass', fc: 3400, send: .3
     });
-    musicDuck(.25, .4);
   },
 
   /* ---- specials ---- */
@@ -8060,14 +8075,12 @@ const SFX = {
     tone({ f: 92, f2: 34, dur: .55, type: 'triangle', gain: .15, pan });
     noiseBurst({ fc: 1400, fc2: 150, dur: .42, gain: .17, filter: 'lowpass', q: .7, pan, send: .35 });
     noiseBurst({ fc: 6000, fc2: 2000, dur: .09, gain: .12, q: .8, pan });
-    musicDuck(.5, .7);
   },
   rainbow() {
     for (let i = 0; i < 7; i++) {
       mallet(semi(PENT[i] + 24), { gain: .1, dur: .5, delay: i * .045, send: .4, pan: -.6 + i * .2 });
     }
     noiseBurst({ fc: 3200, fc2: 2200, dur: .5, gain: .07, filter: 'bandpass', q: 2, send: .5 });
-    musicDuck(.4, .8);
   },
 
   /* ---- blockers, by material ---- */
@@ -8287,133 +8300,6 @@ function petVoice(p, pitch) {
   const k = (pitch || 1) * (v.pitch || 1) * (st === 0 ? 1.28 : st === 1 ? 1.1 : .95);
   if (breed.species === 'cat') SFX.meow(k, v); else SFX.bark(k, v);
 }
-
-/* ============================================================
-   Music — a slow lamp-lit loop, scheduled against the audio clock
-   so it does not drift when the tab is busy drawing.
-   ============================================================ */
-/* Six stretches, six moods.
-
-   The loop was one progression at one tempo for the whole game. The
-   scene changes every ten levels; music that never does is a picture
-   with the wrong soundtrack under it. Each stretch has its own
-   progression, its own tempo, where the bass falls, and the voice and
-   the rate of the bell, keyed by the chapter's id in CHAPTERS. The
-   doorstep is the loop as it was, and coming home is the same loop,
-   slower and quieter — the one thing a player who has walked the whole
-   lane will recognise. A change is taken up at the next bar, so a
-   chord never changes under itself. */
-const MOODS = {
-  doorstep: { chords: [[-5, 0, 4, 7], [-7, -2, 2, 5], [-3, 2, 5, 9], [-5, 0, 4, 11]], beat: .52, bell: 'sine', rate: .42, bass: [0, 2] },
-  allot:    { chords: [[0, 4, 7, 11], [-3, 0, 4, 7], [-5, 0, 4, 9], [-7, -3, 2, 5]], beat: .48, bell: 'triangle', rate: .5, bass: [0, 3] },
-  common:   { chords: [[-7, -2, 2, 5], [-5, 0, 4, 7], [-3, 2, 5, 9], [-10, -3, 0, 4]], beat: .56, bell: 'sine', rate: .34, bass: [0, 2] },
-  canal:    { chords: [[-3, 0, 4, 7], [-5, -1, 2, 7], [-8, -3, 0, 4], [-7, -2, 2, 5]], beat: .54, bell: 'sine', rate: .4, bass: [0, 2] },
-  orchard:  { chords: [[-5, 0, 4, 7], [-1, 2, 5, 9], [-3, 0, 4, 7], [-7, -2, 2, 5]], beat: .5, bell: 'triangle', rate: .46, bass: [0, 3] },
-  home:     { chords: [[-5, 0, 4, 7], [-7, -2, 2, 5], [-3, 2, 5, 9], [-5, 0, 4, 11]], beat: .58, bell: 'sine', rate: .3, bass: [0, 2] }
-};
-const MUS = { next: 0, look: .12, beat: .52, mood: MOODS.doorstep, pending: null };
-
-/* the stretch this level is on decides what the loop plays next bar */
-function musicMood(n) {
-  const m = MOODS[chapterOf(n).id] || MOODS.doorstep;
-  MUS.pending = m === MUS.mood ? null : m;
-}
-
-function musicStart() {
-  audioInit();
-  if (!AU.ready || AU.musicOn) return;
-  AU.musicOn = true;
-  const g = AU.musBus.gain, t0 = AU.ctx.currentTime;
-  g.cancelScheduledValues(t0);
-  g.setValueAtTime(g.value, t0);
-  g.linearRampToValueAtTime(MUS_BED, t0 + 1.4);
-  AU.step = 0;
-  /* start in the stretch the player is on, not the one the loop was in */
-  if (typeof SAVE !== 'undefined' && SAVE) musicMood(SAVE.reached);
-  if (MUS.pending) { MUS.mood = MUS.pending; MUS.pending = null; }
-  MUS.beat = MUS.mood.beat;
-  MUS.next = AU.ctx.currentTime + .1;
-  const tick = () => {
-    if (!AU.musicOn) return;
-    while (MUS.next < AU.ctx.currentTime + MUS.look) {
-      musicBeat(MUS.next);
-      MUS.next += MUS.beat;
-      AU.step++;
-    }
-    AU.musicTimer = setTimeout(tick, 25);
-  };
-  tick();
-}
-
-function musicBeat(t) {
-  const c = AU.ctx;
-  /* a new stretch is taken up on the downbeat, from its first chord */
-  if (MUS.pending && AU.step % 4 === 0) {
-    MUS.mood = MUS.pending; MUS.pending = null;
-    MUS.beat = MUS.mood.beat;
-    AU.step = 0;
-  }
-  const mood = MUS.mood;
-  const bar = Math.floor(AU.step / 4) % mood.chords.length;
-  const ch = mood.chords[bar];
-  const s = AU.step % 4;
-
-  /* the bass, where the stretch puts it */
-  if (mood.bass.indexOf(s) >= 0) {
-    const o = c.createOscillator(), g = c.createGain();
-    o.type = 'sine'; o.frequency.value = semi(ch[0] - 12);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(.22, t + .04);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + .9);
-    o.connect(g); g.connect(AU.musBus);
-    o.start(t); o.stop(t + 1);
-  }
-  /* soft pad, slightly detuned so it breathes */
-  if (s === 0) {
-    ch.slice(1).forEach((n, i) => {
-      [0, 7].forEach(det => {
-        const o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
-        o.type = 'triangle'; o.frequency.value = semi(n); o.detune.value = det;
-        f.type = 'lowpass'; f.frequency.value = 1500;
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(.03, t + .5);
-        /* a bar is 2.08s, so a pad that died at 2.05 left a hole in it */
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 2.75);
-        o.connect(f); f.connect(g); g.connect(AU.musBus);
-        o.start(t + i * .02); o.stop(t + 2.9);
-      });
-    });
-  }
-  /* a bell that wanders, more often when the board is busy */
-  if (Math.random() < mood.rate + AU.intensity * .2) {
-    const n = ch[1 + Math.floor(Math.random() * 3)] + 12;
-    const o = c.createOscillator(), g = c.createGain();
-    o.type = mood.bell; o.frequency.value = semi(n);
-    g.gain.setValueAtTime(0.0001, t + .06);
-    g.gain.exponentialRampToValueAtTime(.075, t + .1);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
-    o.connect(g); g.connect(AU.musBus);
-    if (AU.verb) { const sd = c.createGain(); sd.gain.value = .3; g.connect(sd); sd.connect(AU.verbIn || AU.verb); }
-    o.start(t); o.stop(t + 1.4);
-  }
-  AU.intensity *= .92;
-}
-
-function musicStop() {
-  AU.musicOn = false;
-  if (AU.musicTimer) clearTimeout(AU.musicTimer);
-  if (AU.ready) {
-    const g = AU.musBus.gain, t = AU.ctx.currentTime;
-    g.cancelScheduledValues(t);
-    g.setValueAtTime(g.value, t);
-    g.linearRampToValueAtTime(0, t + .6);
-  }
-}
-function musicSync() {
-  if (SAVE.settings.music) musicStart(); else musicStop();
-}
-/* the board tells the music how lively things are, 0..1 */
-function musicIntensity(v) { AU.intensity = clamp(v, 0, 1); }
 
 /* ===== 25-art.js ===== */
 /* ============================================================
@@ -14363,7 +14249,6 @@ function startLevel(n, opts) {
      sizing, not a level number, so the caller picks rather than the
      level table reaching into the save to find out how far you got */
   G.def = n === DAILY_LEVEL ? dailyLevel(SAVE.reached) : levelDef(n);
-  musicMood(n === DAILY_LEVEL ? SAVE.reached : n);
   const res = opts.resume || null;
   G.startedAt = res ? (res.startedAt || now()) : now();
   /* which attempt at this level, not how many levels ever: the number a
@@ -14958,7 +14843,6 @@ async function blastWaves(startKeys, chain, silent) {
     }
     totalTiles += ctx.count;
     if (!silent && ctx.removed.length) {
-      musicIntensity(Math.min(1, (chain || 1) / 5));
       if ((chain || 1) >= 3) {
         SFX.combo(chain);
         FX.pulse(G.ox, G.oy, G.boardW, G.boardH,
@@ -17588,7 +17472,6 @@ function setScreen(name) {
   $('#topbar').style.display = inGame ? 'none' : '';
   $('#tabbar').style.display = inGame ? 'none' : '';
   if (name === 'home') { renderHome(); roomLayout(); roomStart(); } else roomStop();
-  if (!inGame) musicMood(SAVE.reached);
   if (name === 'game') {
     layoutBoard(); gameLoopStart();
     /* so the arrow keys reach the board straight away */
@@ -19195,7 +19078,7 @@ function coinPurse(need) {
   }));
   $('#puOk', m.el).addEventListener('click', m.close);
 }
-function treatStore(why, need) {
+function treatStore(why, need, done) {
   const live = BILLING.ready();
   track('store_open', { why: why || 'chip', live: live });
   /* No store, nothing to sell. Three priced rows that all answer "the
@@ -19203,7 +19086,7 @@ function treatStore(why, need) {
      no, and stops trusting the next thing the game offers. Until a
      billing plugin is installed this says where treats come from, which
      is true and useful, and asks for nothing. */
-  if (!live) { earnTreatsSheet(why, need); return; }
+  if (!live) { earnTreatsSheet(why, need, done); return; }
   const j = jarState();
   const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
     : why === 'coins' ? T('store_why_coins', { n: need || COIN_PURSES[0].treats })
@@ -19228,7 +19111,7 @@ function treatStore(why, need) {
     <div class="offer" style="background:color-mix(in srgb,var(--accent) 12%, var(--surface-2))">
       <span class="ot"><b>${T('store_starter_t')}</b>
         <small>${T('store_starter_s', { n: STARTER.treats, m: STARTER.boosters.moves, h: STARTER.boosters.hammer, s: STARTER.boosters.shuffle, i: durText(STARTER.infinite) })}</small></span>
-      <button class="btn sm" data-pay="starter" data-kind="starter">${tag(STARTER.sku, STARTER.usd)}</button>
+      <button class="btn primary sm" data-pay="starter" data-kind="starter">${tag(STARTER.sku, STARTER.usd)}</button>
     </div>`}
 
     ${!j.fill ? '' : jarFull()
@@ -19258,7 +19141,7 @@ function treatStore(why, need) {
     ${live ? `<button class="btn ghost wide" id="stRestore"
       style="font-size:var(--t-micro)">${T('store_restore')}</button>` : ''}
     <button class="btn primary wide" id="stOk">${T('ok')}</button>
-  `);
+  `, { over: true, onClose: done });
 
   /* Every button lands here, and the grant is on the far side of a
      receipt. There is no path through this function that adds a treat
@@ -19314,7 +19197,7 @@ function treatStore(why, need) {
 
    Everything in here the player can act on today: play a level, take the
    walk, come back tomorrow. No prices, no buttons that refuse. */
-function earnTreatsSheet(why, need) {
+function earnTreatsSheet(why, need, done) {
   const j = jarState();
   const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
     : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
@@ -19334,7 +19217,7 @@ function earnTreatsSheet(why, need) {
     ${j.fill ? line(IC.treat, T('earn_jar', { n: j.fill, c: JAR.cap })) : ''}
     ${ADS.available('treat') ? `<button class="btn wide" id="etAd">${T('ad_daily', { n: ADS.treatReward })}</button>` : ''}
     <button class="btn primary wide" id="etOk">${T('ok')}</button>
-  `);
+  `, { over: true, onClose: done });
   /* Listed under the ways to earn rather than above them, because it is
      one: the difference is that it costs half a minute instead of a
      level. Only drawn when a video could actually be shown, which today
@@ -19798,6 +19681,19 @@ function showLose() {
     persist(true);
   }
   const keepRun = () => { if (G.runAtRisk) { SAVE.winRun = G.runAtRisk; G.runAtRisk = 0; persist(true); } };
+  /* THE OFFER LEADS THE CARD, by the owner's call (4 Oct 2026).
+
+     It used to sit under the two buttons as a quiet dashed row with a
+     grey Buy on it, below a large orange Try again — deliberately, so
+     that the loudest thing on a lost level was not a price. That is a
+     defensible card and it is also the one place in the game where a
+     player has both the wish and the reason to spend, and it was the
+     quietest thing on the screen. The carry-on is first now and takes
+     the accent; Try again keeps its place and loses the colour. What
+     keeps it honest has not moved: it is only drawn at half the goal or
+     better (ECON.continueAt), the price is on the button, and the free
+     ways out are beside it. */
+  const offered = (G.extras || 0) < 2 && worthCarryingOn;
   const m = modal(`
     ${pet ? `<div class="winPet"><canvas data-body="${pet.breed}" data-coat="${pet.coat}"
       data-eye="${petEye(pet)}" data-hat="${pet.hat}" data-collar="${pet.collar}"
@@ -19819,17 +19715,13 @@ function showLose() {
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('run_lost', { n: G.runAtRisk })}</b>${(G.extras || 0) < 2 && worthCarryingOn ? T('run_lost_keep') : ''}</span>
     </div>` : ''}
-    <div class="row">
-      <button class="btn ghost" id="lMap">${T('to_map')}</button>
-      <button class="btn primary" id="lRetry">${T('retry')}</button>
-    </div>
-    ${(G.extras || 0) >= 2 || !worthCarryingOn ? '' : `
-    <div class="offer">
+    ${!offered ? '' : `
+    <div class="offer hot">
       <span class="ot">
         <b>${T('lose_extra', { n: ECON.continueMoves })}</b>
-        <small>${short2 ? T('lose_extra_short', { n: price, have: SAVE.treats }) : T('lose_extra_sub', { n: price })}</small>
+        <small id="lExtraSub">${short2 ? T('lose_extra_short', { n: price, have: SAVE.treats }) : T('lose_extra_sub', { n: price })}</small>
       </span>
-      <button class="btn sm" id="lExtra"${short2 ? ' style="opacity:.6"' : ''}>${T('shop_buy')}</button>
+      <button class="btn primary sm" id="lExtra">${T('lose_extra_go')} ${IC.treat}${price}</button>
     </div>` + (!(G.extras || 0) && ADS.available('carry') ? `
     <div class="offer">
       <span class="ot">
@@ -19838,6 +19730,10 @@ function showLose() {
       </span>
       <button class="btn sm" id="lAd">${T('ad_go')}</button>
     </div>` : '')}
+    <div class="row">
+      <button class="btn ghost" id="lMap">${T('to_map')}</button>
+      <button class="btn${offered ? '' : ' primary'}" id="lRetry">${T('retry')}</button>
+    </div>
   `, { dismissable: false });
   paintGoalIcons(m.el);
   paintArtCanvases(m.el);
@@ -19845,7 +19741,17 @@ function showLose() {
   if (ex) ex.addEventListener('click', () => {
     /* short of treats is the one moment the player actually wants the
        jar, so it opens there rather than being told no by a toast */
-    if (SAVE.treats < price) { SFX.bad(); treatStore('continue', price); return; }
+    /* short of treats: the store, on top of this card, and the line under
+       the offer brought up to date when it closes */
+    if (SAVE.treats < price) {
+      SFX.bad();
+      treatStore('continue', price, () => {
+        const sub = $('#lExtraSub', m.el);
+        if (sub) sub.textContent = SAVE.treats < price ? T('lose_extra_short', { n: price, have: SAVE.treats }) : T('lose_extra_sub', { n: price });
+        syncPurse();
+      });
+      return;
+    }
     SAVE.treats -= price; keepRun(); persist(true); syncPurse();
     track('continue_buy', { n: G.n, price: price, second: (G.extras || 0) ? 1 : 0 });
     m.close();
@@ -20183,7 +20089,6 @@ function openSettings() {
     <h2>${T('set_t')}</h2>
     <div class="card" style="text-align:left">
       ${row('sound', T('set_sound'), T('set_sound_s'), SAVE.settings.sound)}
-      ${row('music', T('set_music'), T('set_music_s'), SAVE.settings.music)}
       ${row('haptics', T('set_haptics'), T('set_haptics_s'), SAVE.settings.haptics)}
       ${row('marks', T('set_marks'), T('set_marks_s'), SAVE.settings.marks)}
       ${row('telemetry', T('set_data'), T('set_data_s'), SAVE.settings.telemetry !== false)}
@@ -20222,7 +20127,6 @@ function openSettings() {
     SAVE.settings[k] = !SAVE.settings[k];
     $('.sw2', b).classList.toggle('on', SAVE.settings[k]);
     persist(true);
-    if (k === 'music') musicSync();
     if (k === 'marks') { clearSprites(); G.goals && G.goals.forEach(paintGoalIcon); }
     if (k === 'sound' && SAVE.settings.sound) { audioResume(); SFX.select(); }
     if (k === 'haptics') buzz(14);
@@ -20753,6 +20657,9 @@ function boot() {
      replaces the fallback labels whenever it arrives, and nothing waits
      on it */
   BILLING.refresh();
+  /* and the videos, so that one is loaded by the time a card could offer
+     it: a slot is only drawn when a video is ready (ADS.available) */
+  if (ADS.ready()) ADS.init();
   /* And, in the same breath, anything the store still says is owed.
 
      A purchase that was taken but never granted — the app killed between
@@ -20786,13 +20693,10 @@ function boot() {
      Two things wait on it. The vibration motor, which the browser will
      not start before a gesture and complains about in the console every
      time it is asked; and the audio context, which is created suspended
-     — so a save that has music on still boots silent, and used to stay
-     that way until the player happened to press something that called
-     audioResume by hand. */
+     and stays that way until something calls audioResume. */
   const wake = () => {
     markGesture();
     audioResume();
-    if (SAVE.settings.music) musicStart();
   };
   window.addEventListener('pointerdown', wake, { once: true });
   window.addEventListener('keydown', wake, { once: true });
@@ -20816,8 +20720,8 @@ function boot() {
       /* the comment on snapshotLevel promised a write at every hide and
          there was none; a board at rest is exactly the one to keep */
       if (SCREEN === 'game' && G.B && !G.busy && !G.over) keepLevel();
-      musicStop(); persist(true);
-      /* the context itself, not just the music bus: a running
+      persist(true);
+      /* the context itself: a running
          AudioContext keeps an audio session open on some phones, and a
          cascade in flight would go on playing into the pocket */
       try { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend(); } catch (e) { }
@@ -20834,10 +20738,9 @@ function boot() {
          canvas repainted for nobody, in a pocket, on a battery */
       if (AMB.raf) { cancelAnimationFrame(AMB.raf); AMB.raf = null; }
     } else {
-      try { if (AU.ctx && AU.ctx.state === 'suspended' && (SAVE.settings.sound || SAVE.settings.music)) AU.ctx.resume(); } catch (e) { }
+      try { if (AU.ctx && AU.ctx.state === 'suspended' && SAVE.settings.sound) AU.ctx.resume(); } catch (e) { }
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
       if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
-      if (SAVE.settings.music) musicStart();
       if (!AMB.raf && !reduceMotion()) { AMB.last = performance.now(); AMB.raf = requestAnimationFrame(motesLoop); }
       if (SCREEN === 'home') { renderHome(); roomLayout(); roomStart(); }
       if (SCREEN === 'game') { layoutBoard(); gameLoopStart(); }
@@ -20868,7 +20771,7 @@ function boot() {
   if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
 
   /* first gesture starts the audio engine */
-  const kick = () => { audioResume(); musicSync(); document.removeEventListener('pointerdown', kick); };
+  const kick = () => { audioResume(); document.removeEventListener('pointerdown', kick); };
   document.addEventListener('pointerdown', kick);
 
   if (!had) {
@@ -20935,22 +20838,11 @@ if (BL_OPEN) window.BL = {
   audio: {
     get au() { return AU; },
     init: audioInit,
-    /* the music schedules on a wall clock, which does not run in an
-       offline context, so a harness has to place the beats itself */
-    beat: musicBeat,
-    get mood() { return MUS.mood; },
-    get step() { return AU.step; },
-    set step(v) { AU.step = v; },
     reset() {
-      /* the music keeps a timer that schedules notes into whatever
-         context is current, which would land in the one being measured */
-      try { musicStop(); } catch (e) { }
-      AU.musicOn = false;
-      if (AU.musicTimer) { clearTimeout(AU.musicTimer); AU.musicTimer = null; }
       try { if (AU.ctx && AU.ctx.close) AU.ctx.close(); } catch (e) { }
-      AU.ctx = null; AU.master = null; AU.sfxBus = null; AU.musBus = null;
+      AU.ctx = null; AU.master = null; AU.sfxBus = null;
       AU.verb = null; AU.verbGain = null; AU.comp = null; AU.noise = null;
-      AU.ready = false; AU.voices = 0; AU.intensity = 0;
+      AU.ready = false; AU.voices = 0;
       audioBroken = false;
     }
   },

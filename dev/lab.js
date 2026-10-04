@@ -287,11 +287,8 @@
       cv('hourLbl').textContent = String(roomHour).padStart(2, '0') + ':00';
     };
     cv('roomTheme').onchange = () => { };
-    cv('musicBtn').onclick = () => {
-      audioResume();
-      if (AU.musicOn) { musicStop(); cv('musicBtn').textContent = 'Music: off'; }
-      else { musicStart(); cv('musicBtn').textContent = 'Music: on'; }
-    };
+    /* the music button went with the music, 3 Oct 2026 */
+    if (cv('musicBtn')) cv('musicBtn').style.display = 'none';
     ROOM_THEMES.forEach(t => {
       const o = document.createElement('option');
       o.value = t.id; o.textContent = t.en;

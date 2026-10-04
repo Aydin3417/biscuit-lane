@@ -1,21 +1,24 @@
-/* What advertising would be worth, if there were any.
+/* What the game is worth per thousand installs, and what a forced ad
+   would add to it.
 
      node tools/revenue.js [installs]
 
-   There are no ads in this game and 17-billing.js says why. This exists
-   to put a number on that decision rather than leaving it a feeling, and
-   it is a model, not a measurement: everything above the line marked
+   Since September 2026 the game carries rewarded video and nothing else
+   (19-ads.js): four places a player may ask for one, each capped by the
+   day. There are still no interstitials. This exists to put a number on
+   both halves of that decision rather than leaving it a feeling, and it
+   is a model, not a measurement: everything above the line marked
    ASSUMPTIONS is a public benchmark, not something this repository
    knows. Change them and the answer changes — that is the point of
    having them in one place instead of in a paragraph.
 
    What the model does take from the game itself is the shape of play:
    how often a level is lost, how often the carry-on offer is allowed to
-   appear (it is gated at 70% of the goal), and how often hearts run out
-   — all of which test/economy.js measures. Those are the only three
-   moments an ad could honestly go. */
+   appear (it is gated at half the goal, ECON.continueAt), how often
+   hearts run out, and how often a level is cleared for the first time —
+   which is when the win card offers to double its coins. */
 
-const ECON_CONTINUE_GATE = 0.70;   /* the offer's own gate, from ECON */
+const ECON_CONTINUE_GATE = 0.50;   /* the offer's own gate, from ECON */
 
 /* ---------------- ASSUMPTIONS ---------------- */
 
@@ -29,10 +32,14 @@ const AUDIENCE = {
 };
 
 /* Measured in test/economy.js, not assumed: a level is cleared about
-   four times in five, and the carry-on is only offered on a near miss. */
+   four times in five, and the carry-on is only offered past the gate.
+   A new save played half at random on 4 Oct 2026 lost 11 of 45 and was
+   offered the carry-on on all 11; a worse player misses by more, so the
+   share is held under that. */
 const PLAY = {
   clearRate: 0.80,
-  nearMissShare: 0.50,      /* of losses, how many were close enough to offer */
+  nearMissShare: 0.85,      /* of losses, how many were close enough to offer */
+  firstClearShare: 0.90,    /* of wins, how many are a level's first: replays are rare */
   heartDryPerActiveDay: 0.5 /* median across the intensity sweep */
 };
 
@@ -49,6 +56,10 @@ const PLAY = {
    three levels. */
 const ADS = {
   rewardedTake: 0.40,       /* offered a video for a carry-on, how many watch */
+  doubleTake: 0.20,         /* offered double coins on a win, how many watch */
+  heartTake: 0.50,          /* out of hearts, how many watch for one */
+  treatPerDay: 0.10,        /* videos watched from the treat sheet, per active day */
+  cap: { carry: 3, double: 3, heart: 3, treat: 2 },   /* 19-ads.js, per day */
   interstitialEvery: 3,     /* levels between forced breaks */
   interstitialRetentionCost: 0.15,
   fill: 0.90
@@ -75,11 +86,18 @@ const installs = +process.argv[2] || 1000;
 function world(days) {
   const levels = installs * days * AUDIENCE.levelsPerDay;
   const losses = levels * (1 - PLAY.clearRate);
-  const offers = losses * PLAY.nearMissShare;         /* the 70% gate */
+  const offers = losses * PLAY.nearMissShare;         /* the gate */
+  /* views per active day, each slot under its own cap */
+  const perDay = {
+    carry: Math.min(ADS.cap.carry, AUDIENCE.levelsPerDay * (1 - PLAY.clearRate) * PLAY.nearMissShare * ADS.rewardedTake),
+    double: Math.min(ADS.cap.double, AUDIENCE.levelsPerDay * PLAY.clearRate * PLAY.firstClearShare * ADS.doubleTake),
+    heart: Math.min(ADS.cap.heart, PLAY.heartDryPerActiveDay * ADS.heartTake),
+    treat: Math.min(ADS.cap.treat, ADS.treatPerDay)
+  };
+  const views = perDay.carry + perDay.double + perDay.heart + perDay.treat;
   return {
-    days, levels, losses, offers,
-    rewarded: offers * ADS.rewardedTake * ADS.fill +
-      installs * days * PLAY.heartDryPerActiveDay * 0.5 * ADS.fill,
+    days, levels, losses, offers, perDay,
+    rewarded: installs * days * views * ADS.fill,
     interstitials: (levels / ADS.interstitialEvery) * ADS.fill,
     /* a payer's spend follows how much game they got through */
     iap: installs * IAP.payerShare * IAP.spendPerPayer * (days / AUDIENCE.daysPlayed)
@@ -99,9 +117,11 @@ console.log('\n  ' + installs.toLocaleString('en-US') + ' indirme, ilk ay\n');
 console.log('  oynanan bölüm        ' + Math.round(levels).toLocaleString('en-US'));
 console.log('  kaybedilen           ' + Math.round(losses).toLocaleString('en-US'));
 console.log('  devam teklifi        ' + Math.round(offers).toLocaleString('en-US') +
-  '   (%70 hedef barajını geçmiş kayıplar)');
+  '   (hedefin %' + (ECON_CONTINUE_GATE * 100).toFixed(0) + ' barajını geçmiş kayıplar)');
 console.log('');
-console.log('  ödüllü video izlenme ' + Math.round(rewardedViews + heartViews).toLocaleString('en-US'));
+console.log('  ödüllü video izlenme ' + Math.round(rewardedViews + heartViews).toLocaleString('en-US') +
+  '   (aktif gün başına: devam ' + clean.perDay.carry.toFixed(2) + ', ikiye katla ' + clean.perDay.double.toFixed(2) +
+  ', can ' + clean.perDay.heart.toFixed(2) + ', ödül ' + clean.perDay.treat.toFixed(2) + ')');
 console.log('  bölüm arası reklam   ' + Math.round(interstitials).toLocaleString('en-US') +
   '   (her ' + ADS.interstitialEvery + ' bölümde bir)');
 console.log('');

@@ -48,7 +48,6 @@ function setScreen(name) {
   $('#topbar').style.display = inGame ? 'none' : '';
   $('#tabbar').style.display = inGame ? 'none' : '';
   if (name === 'home') { renderHome(); roomLayout(); roomStart(); } else roomStop();
-  if (!inGame) musicMood(SAVE.reached);
   if (name === 'game') {
     layoutBoard(); gameLoopStart();
     /* so the arrow keys reach the board straight away */
@@ -1655,7 +1654,7 @@ function coinPurse(need) {
   }));
   $('#puOk', m.el).addEventListener('click', m.close);
 }
-function treatStore(why, need) {
+function treatStore(why, need, done) {
   const live = BILLING.ready();
   track('store_open', { why: why || 'chip', live: live });
   /* No store, nothing to sell. Three priced rows that all answer "the
@@ -1663,7 +1662,7 @@ function treatStore(why, need) {
      no, and stops trusting the next thing the game offers. Until a
      billing plugin is installed this says where treats come from, which
      is true and useful, and asks for nothing. */
-  if (!live) { earnTreatsSheet(why, need); return; }
+  if (!live) { earnTreatsSheet(why, need, done); return; }
   const j = jarState();
   const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
     : why === 'coins' ? T('store_why_coins', { n: need || COIN_PURSES[0].treats })
@@ -1688,7 +1687,7 @@ function treatStore(why, need) {
     <div class="offer" style="background:color-mix(in srgb,var(--accent) 12%, var(--surface-2))">
       <span class="ot"><b>${T('store_starter_t')}</b>
         <small>${T('store_starter_s', { n: STARTER.treats, m: STARTER.boosters.moves, h: STARTER.boosters.hammer, s: STARTER.boosters.shuffle, i: durText(STARTER.infinite) })}</small></span>
-      <button class="btn sm" data-pay="starter" data-kind="starter">${tag(STARTER.sku, STARTER.usd)}</button>
+      <button class="btn primary sm" data-pay="starter" data-kind="starter">${tag(STARTER.sku, STARTER.usd)}</button>
     </div>`}
 
     ${!j.fill ? '' : jarFull()
@@ -1718,7 +1717,7 @@ function treatStore(why, need) {
     ${live ? `<button class="btn ghost wide" id="stRestore"
       style="font-size:var(--t-micro)">${T('store_restore')}</button>` : ''}
     <button class="btn primary wide" id="stOk">${T('ok')}</button>
-  `);
+  `, { over: true, onClose: done });
 
   /* Every button lands here, and the grant is on the far side of a
      receipt. There is no path through this function that adds a treat
@@ -1774,7 +1773,7 @@ function treatStore(why, need) {
 
    Everything in here the player can act on today: play a level, take the
    walk, come back tomorrow. No prices, no buttons that refuse. */
-function earnTreatsSheet(why, need) {
+function earnTreatsSheet(why, need, done) {
   const j = jarState();
   const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
     : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
@@ -1794,7 +1793,7 @@ function earnTreatsSheet(why, need) {
     ${j.fill ? line(IC.treat, T('earn_jar', { n: j.fill, c: JAR.cap })) : ''}
     ${ADS.available('treat') ? `<button class="btn wide" id="etAd">${T('ad_daily', { n: ADS.treatReward })}</button>` : ''}
     <button class="btn primary wide" id="etOk">${T('ok')}</button>
-  `);
+  `, { over: true, onClose: done });
   /* Listed under the ways to earn rather than above them, because it is
      one: the difference is that it costs half a minute instead of a
      level. Only drawn when a video could actually be shown, which today
@@ -2258,6 +2257,19 @@ function showLose() {
     persist(true);
   }
   const keepRun = () => { if (G.runAtRisk) { SAVE.winRun = G.runAtRisk; G.runAtRisk = 0; persist(true); } };
+  /* THE OFFER LEADS THE CARD, by the owner's call (4 Oct 2026).
+
+     It used to sit under the two buttons as a quiet dashed row with a
+     grey Buy on it, below a large orange Try again — deliberately, so
+     that the loudest thing on a lost level was not a price. That is a
+     defensible card and it is also the one place in the game where a
+     player has both the wish and the reason to spend, and it was the
+     quietest thing on the screen. The carry-on is first now and takes
+     the accent; Try again keeps its place and loses the colour. What
+     keeps it honest has not moved: it is only drawn at half the goal or
+     better (ECON.continueAt), the price is on the button, and the free
+     ways out are beside it. */
+  const offered = (G.extras || 0) < 2 && worthCarryingOn;
   const m = modal(`
     ${pet ? `<div class="winPet"><canvas data-body="${pet.breed}" data-coat="${pet.coat}"
       data-eye="${petEye(pet)}" data-hat="${pet.hat}" data-collar="${pet.collar}"
@@ -2279,17 +2291,13 @@ function showLose() {
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('run_lost', { n: G.runAtRisk })}</b>${(G.extras || 0) < 2 && worthCarryingOn ? T('run_lost_keep') : ''}</span>
     </div>` : ''}
-    <div class="row">
-      <button class="btn ghost" id="lMap">${T('to_map')}</button>
-      <button class="btn primary" id="lRetry">${T('retry')}</button>
-    </div>
-    ${(G.extras || 0) >= 2 || !worthCarryingOn ? '' : `
-    <div class="offer">
+    ${!offered ? '' : `
+    <div class="offer hot">
       <span class="ot">
         <b>${T('lose_extra', { n: ECON.continueMoves })}</b>
-        <small>${short2 ? T('lose_extra_short', { n: price, have: SAVE.treats }) : T('lose_extra_sub', { n: price })}</small>
+        <small id="lExtraSub">${short2 ? T('lose_extra_short', { n: price, have: SAVE.treats }) : T('lose_extra_sub', { n: price })}</small>
       </span>
-      <button class="btn sm" id="lExtra"${short2 ? ' style="opacity:.6"' : ''}>${T('shop_buy')}</button>
+      <button class="btn primary sm" id="lExtra">${T('lose_extra_go')} ${IC.treat}${price}</button>
     </div>` + (!(G.extras || 0) && ADS.available('carry') ? `
     <div class="offer">
       <span class="ot">
@@ -2298,6 +2306,10 @@ function showLose() {
       </span>
       <button class="btn sm" id="lAd">${T('ad_go')}</button>
     </div>` : '')}
+    <div class="row">
+      <button class="btn ghost" id="lMap">${T('to_map')}</button>
+      <button class="btn${offered ? '' : ' primary'}" id="lRetry">${T('retry')}</button>
+    </div>
   `, { dismissable: false });
   paintGoalIcons(m.el);
   paintArtCanvases(m.el);
@@ -2305,7 +2317,17 @@ function showLose() {
   if (ex) ex.addEventListener('click', () => {
     /* short of treats is the one moment the player actually wants the
        jar, so it opens there rather than being told no by a toast */
-    if (SAVE.treats < price) { SFX.bad(); treatStore('continue', price); return; }
+    /* short of treats: the store, on top of this card, and the line under
+       the offer brought up to date when it closes */
+    if (SAVE.treats < price) {
+      SFX.bad();
+      treatStore('continue', price, () => {
+        const sub = $('#lExtraSub', m.el);
+        if (sub) sub.textContent = SAVE.treats < price ? T('lose_extra_short', { n: price, have: SAVE.treats }) : T('lose_extra_sub', { n: price });
+        syncPurse();
+      });
+      return;
+    }
     SAVE.treats -= price; keepRun(); persist(true); syncPurse();
     track('continue_buy', { n: G.n, price: price, second: (G.extras || 0) ? 1 : 0 });
     m.close();
@@ -2643,7 +2665,6 @@ function openSettings() {
     <h2>${T('set_t')}</h2>
     <div class="card" style="text-align:left">
       ${row('sound', T('set_sound'), T('set_sound_s'), SAVE.settings.sound)}
-      ${row('music', T('set_music'), T('set_music_s'), SAVE.settings.music)}
       ${row('haptics', T('set_haptics'), T('set_haptics_s'), SAVE.settings.haptics)}
       ${row('marks', T('set_marks'), T('set_marks_s'), SAVE.settings.marks)}
       ${row('telemetry', T('set_data'), T('set_data_s'), SAVE.settings.telemetry !== false)}
@@ -2682,7 +2703,6 @@ function openSettings() {
     SAVE.settings[k] = !SAVE.settings[k];
     $('.sw2', b).classList.toggle('on', SAVE.settings[k]);
     persist(true);
-    if (k === 'music') musicSync();
     if (k === 'marks') { clearSprites(); G.goals && G.goals.forEach(paintGoalIcon); }
     if (k === 'sound' && SAVE.settings.sound) { audioResume(); SFX.select(); }
     if (k === 'haptics') buzz(14);

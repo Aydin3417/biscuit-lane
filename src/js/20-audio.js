@@ -4,24 +4,25 @@
    Signal path
      voice ─┬─► sfxBus ─► sfxComp ─► master ─► out
             └─► verbSend ─► convolver ─► verbGain ─┘
-     music ──► musBus  ─► master
+
+   There is no music. There was a generated loop, six of them by the
+   end, and on 3 Oct 2026 the owner listened to it and had it taken out:
+   a pad, a bass and a bell that wanders are a hum, not a tune, and a
+   hum behind every level is worse than the board's own sounds with
+   nothing behind them. If music comes back it should be written, not
+   generated.
 
    The compressor is what makes a ten-tile cascade sound like one
    happy noise instead of ten fighting ones, and the little room
    reverb is what stops the synth sounding like a test tone.
    ============================================================ */
 const AU = {
-  ctx: null, master: null, sfxBus: null, musBus: null, verb: null, verbGain: null,
+  ctx: null, master: null, sfxBus: null, verb: null, verbGain: null,
   comp: null, ready: false, noise: null,
-  musicOn: false, musicTimer: null, step: 0,
-  voices: 0, lastPop: 0, intensity: 0
+  voices: 0, lastPop: 0
 };
 
 const AU_MAX_VOICES = 26;          // hard ceiling; cascades stop stacking mush
-/* How loud the bed sits under everything. Measured against the
-   effects: at .3 the music was peaking level with the win fanfare. */
-const MUS_BED = .13;
-
 /* Every failure here is survivable: a browser with no Web Audio, a
    device that refuses another context, a policy that blocks it. The game
    plays silently rather than not at all, and never retries in a loop. */
@@ -82,7 +83,6 @@ function buildAudioGraph() {
   AU.limit.connect(AU.master);
 
   AU.sfxBus = c.createGain(); AU.sfxBus.gain.value = .85; AU.sfxBus.connect(AU.comp);
-  AU.musBus = c.createGain(); AU.musBus.gain.value = 0; AU.musBus.connect(AU.master);
 
   /* a small warm room, generated */
   AU.verb = c.createConvolver();
@@ -323,17 +323,6 @@ function click(fc, gain, pan) {
 const PENT = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 const semi = n => 261.63 * Math.pow(2, n / 12);
 
-/* duck the music for a beat when something big happens */
-function musicDuck(amount, time) {
-  if (!AU.ready || !AU.musicOn) return;
-  const g = AU.musBus.gain, t = AU.ctx.currentTime;
-  const target = Math.max(.015, MUS_BED * (1 - amount));
-  g.cancelScheduledValues(t);
-  g.setValueAtTime(g.value, t);
-  g.linearRampToValueAtTime(target, t + .04);
-  g.linearRampToValueAtTime(MUS_BED, t + (time || .5));
-}
-
 /* ============================================================
    The sound effects.
    ============================================================ */
@@ -417,7 +406,6 @@ const SFX = {
          chain reward needs to be heard over the pops it crowns */
       dur: .3, type: 'triangle', gain: .20 + n * .022, filter: 'lowpass', fc: 3400, send: .3
     });
-    musicDuck(.25, .4);
   },
 
   /* ---- specials ---- */
@@ -434,14 +422,12 @@ const SFX = {
     tone({ f: 92, f2: 34, dur: .55, type: 'triangle', gain: .15, pan });
     noiseBurst({ fc: 1400, fc2: 150, dur: .42, gain: .17, filter: 'lowpass', q: .7, pan, send: .35 });
     noiseBurst({ fc: 6000, fc2: 2000, dur: .09, gain: .12, q: .8, pan });
-    musicDuck(.5, .7);
   },
   rainbow() {
     for (let i = 0; i < 7; i++) {
       mallet(semi(PENT[i] + 24), { gain: .1, dur: .5, delay: i * .045, send: .4, pan: -.6 + i * .2 });
     }
     noiseBurst({ fc: 3200, fc2: 2200, dur: .5, gain: .07, filter: 'bandpass', q: 2, send: .5 });
-    musicDuck(.4, .8);
   },
 
   /* ---- blockers, by material ---- */
@@ -661,130 +647,3 @@ function petVoice(p, pitch) {
   const k = (pitch || 1) * (v.pitch || 1) * (st === 0 ? 1.28 : st === 1 ? 1.1 : .95);
   if (breed.species === 'cat') SFX.meow(k, v); else SFX.bark(k, v);
 }
-
-/* ============================================================
-   Music — a slow lamp-lit loop, scheduled against the audio clock
-   so it does not drift when the tab is busy drawing.
-   ============================================================ */
-/* Six stretches, six moods.
-
-   The loop was one progression at one tempo for the whole game. The
-   scene changes every ten levels; music that never does is a picture
-   with the wrong soundtrack under it. Each stretch has its own
-   progression, its own tempo, where the bass falls, and the voice and
-   the rate of the bell, keyed by the chapter's id in CHAPTERS. The
-   doorstep is the loop as it was, and coming home is the same loop,
-   slower and quieter — the one thing a player who has walked the whole
-   lane will recognise. A change is taken up at the next bar, so a
-   chord never changes under itself. */
-const MOODS = {
-  doorstep: { chords: [[-5, 0, 4, 7], [-7, -2, 2, 5], [-3, 2, 5, 9], [-5, 0, 4, 11]], beat: .52, bell: 'sine', rate: .42, bass: [0, 2] },
-  allot:    { chords: [[0, 4, 7, 11], [-3, 0, 4, 7], [-5, 0, 4, 9], [-7, -3, 2, 5]], beat: .48, bell: 'triangle', rate: .5, bass: [0, 3] },
-  common:   { chords: [[-7, -2, 2, 5], [-5, 0, 4, 7], [-3, 2, 5, 9], [-10, -3, 0, 4]], beat: .56, bell: 'sine', rate: .34, bass: [0, 2] },
-  canal:    { chords: [[-3, 0, 4, 7], [-5, -1, 2, 7], [-8, -3, 0, 4], [-7, -2, 2, 5]], beat: .54, bell: 'sine', rate: .4, bass: [0, 2] },
-  orchard:  { chords: [[-5, 0, 4, 7], [-1, 2, 5, 9], [-3, 0, 4, 7], [-7, -2, 2, 5]], beat: .5, bell: 'triangle', rate: .46, bass: [0, 3] },
-  home:     { chords: [[-5, 0, 4, 7], [-7, -2, 2, 5], [-3, 2, 5, 9], [-5, 0, 4, 11]], beat: .58, bell: 'sine', rate: .3, bass: [0, 2] }
-};
-const MUS = { next: 0, look: .12, beat: .52, mood: MOODS.doorstep, pending: null };
-
-/* the stretch this level is on decides what the loop plays next bar */
-function musicMood(n) {
-  const m = MOODS[chapterOf(n).id] || MOODS.doorstep;
-  MUS.pending = m === MUS.mood ? null : m;
-}
-
-function musicStart() {
-  audioInit();
-  if (!AU.ready || AU.musicOn) return;
-  AU.musicOn = true;
-  const g = AU.musBus.gain, t0 = AU.ctx.currentTime;
-  g.cancelScheduledValues(t0);
-  g.setValueAtTime(g.value, t0);
-  g.linearRampToValueAtTime(MUS_BED, t0 + 1.4);
-  AU.step = 0;
-  /* start in the stretch the player is on, not the one the loop was in */
-  if (typeof SAVE !== 'undefined' && SAVE) musicMood(SAVE.reached);
-  if (MUS.pending) { MUS.mood = MUS.pending; MUS.pending = null; }
-  MUS.beat = MUS.mood.beat;
-  MUS.next = AU.ctx.currentTime + .1;
-  const tick = () => {
-    if (!AU.musicOn) return;
-    while (MUS.next < AU.ctx.currentTime + MUS.look) {
-      musicBeat(MUS.next);
-      MUS.next += MUS.beat;
-      AU.step++;
-    }
-    AU.musicTimer = setTimeout(tick, 25);
-  };
-  tick();
-}
-
-function musicBeat(t) {
-  const c = AU.ctx;
-  /* a new stretch is taken up on the downbeat, from its first chord */
-  if (MUS.pending && AU.step % 4 === 0) {
-    MUS.mood = MUS.pending; MUS.pending = null;
-    MUS.beat = MUS.mood.beat;
-    AU.step = 0;
-  }
-  const mood = MUS.mood;
-  const bar = Math.floor(AU.step / 4) % mood.chords.length;
-  const ch = mood.chords[bar];
-  const s = AU.step % 4;
-
-  /* the bass, where the stretch puts it */
-  if (mood.bass.indexOf(s) >= 0) {
-    const o = c.createOscillator(), g = c.createGain();
-    o.type = 'sine'; o.frequency.value = semi(ch[0] - 12);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(.22, t + .04);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + .9);
-    o.connect(g); g.connect(AU.musBus);
-    o.start(t); o.stop(t + 1);
-  }
-  /* soft pad, slightly detuned so it breathes */
-  if (s === 0) {
-    ch.slice(1).forEach((n, i) => {
-      [0, 7].forEach(det => {
-        const o = c.createOscillator(), g = c.createGain(), f = c.createBiquadFilter();
-        o.type = 'triangle'; o.frequency.value = semi(n); o.detune.value = det;
-        f.type = 'lowpass'; f.frequency.value = 1500;
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(.03, t + .5);
-        /* a bar is 2.08s, so a pad that died at 2.05 left a hole in it */
-        g.gain.exponentialRampToValueAtTime(0.0001, t + 2.75);
-        o.connect(f); f.connect(g); g.connect(AU.musBus);
-        o.start(t + i * .02); o.stop(t + 2.9);
-      });
-    });
-  }
-  /* a bell that wanders, more often when the board is busy */
-  if (Math.random() < mood.rate + AU.intensity * .2) {
-    const n = ch[1 + Math.floor(Math.random() * 3)] + 12;
-    const o = c.createOscillator(), g = c.createGain();
-    o.type = mood.bell; o.frequency.value = semi(n);
-    g.gain.setValueAtTime(0.0001, t + .06);
-    g.gain.exponentialRampToValueAtTime(.075, t + .1);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
-    o.connect(g); g.connect(AU.musBus);
-    if (AU.verb) { const sd = c.createGain(); sd.gain.value = .3; g.connect(sd); sd.connect(AU.verbIn || AU.verb); }
-    o.start(t); o.stop(t + 1.4);
-  }
-  AU.intensity *= .92;
-}
-
-function musicStop() {
-  AU.musicOn = false;
-  if (AU.musicTimer) clearTimeout(AU.musicTimer);
-  if (AU.ready) {
-    const g = AU.musBus.gain, t = AU.ctx.currentTime;
-    g.cancelScheduledValues(t);
-    g.setValueAtTime(g.value, t);
-    g.linearRampToValueAtTime(0, t + .6);
-  }
-}
-function musicSync() {
-  if (SAVE.settings.music) musicStart(); else musicStop();
-}
-/* the board tells the music how lively things are, 0..1 */
-function musicIntensity(v) { AU.intensity = clamp(v, 0, 1); }
