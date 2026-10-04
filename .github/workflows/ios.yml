@@ -104,13 +104,34 @@ jobs:
           /usr/libexec/PlistBuddy -c 'Print :ApplicationProperties' "$ARCHIVE/Info.plist"
           du -sh "$ARCHIVE/Products/Applications/App.app"
 
-      - name: Sign and send to TestFlight
+      # The second upload (tag ios-4) got past the app and was refused over
+      # App.app/Frameworks/GoogleMobileAds.framework: the same 90035. The
+      # frameworks that arrive already signed by somebody else are signed
+      # ad hoc here too, so that everything in the archive is in the one
+      # state the app's own binary was in when it was accepted.
+      - name: One signature state for everything in the archive
+        run: |
+          APP="$ARCHIVE/Products/Applications/App.app"
+          say() { codesign -dvv "$1" 2>&1 | grep -E 'Authority|TeamIdentifier|Signature|flags' | tr '\n' ' '; echo; }
+          for f in "$APP"/Frameworks/*.framework; do
+            [ -e "$f" ] || continue
+            echo "before  $(basename "$f"): $(say "$f")"
+            codesign --force --sign - --timestamp=none "$f"
+            echo "after   $(basename "$f"): $(say "$f")"
+          done
+          codesign --force --sign - --timestamp=none --preserve-metadata=entitlements "$APP"
+          echo "app: $(say "$APP")"
+
+      # Signing and sending are two steps so that what was signed can be
+      # looked at before Apple is asked about it.
+      - name: Sign
         if: env.ASC_KEY_ID != '' && (github.event_name != 'workflow_dispatch' || inputs.upload)
         env:
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
         run: |
           set -o pipefail
-          KEY="$RUNNER_TEMP/AuthKey_$ASC_KEY_ID.p8"
+          mkdir -p "$HOME/.appstoreconnect/private_keys"
+          KEY="$HOME/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8"
           printf '%s\n' "$ASC_KEY_P8" > "$KEY"
           xcodebuild -exportArchive \
             -archivePath "$ARCHIVE" \
@@ -121,10 +142,35 @@ jobs:
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             2>&1 | tee "$RUNNER_TEMP/export.log"
+          ls -la "$RUNNER_TEMP/export"
+
+      - name: What the signatures say
+        if: env.ASC_KEY_ID != '' && (github.event_name != 'workflow_dispatch' || inputs.upload)
+        run: |
+          cd "$RUNNER_TEMP/export"
+          unzip -q -o ./*.ipa -d payload
+          APP=payload/Payload/App.app
+          for c in "$APP"/Frameworks/*.framework "$APP"; do
+            [ -e "$c" ] || continue
+            echo "== $(basename "$c")"
+            codesign -dvv "$c" 2>&1 | grep -E 'Authority=|TeamIdentifier|flags' | head -4
+            codesign -d -r- "$c" 2>&1 | grep -v '^Executable' | head -3
+            codesign --verify --strict "$c" 2>&1 | head -3 && echo "   verifies"
+          done
+          rm -rf payload
+
+      - name: Send to TestFlight
+        if: env.ASC_KEY_ID != '' && (github.event_name != 'workflow_dispatch' || inputs.upload)
+        run: |
+          set -o pipefail
+          xcrun altool --upload-app --type ios \
+            -f "$RUNNER_TEMP"/export/*.ipa \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID" \
+            2>&1 | tee "$RUNNER_TEMP/upload.log"
 
       - name: Throw the key away
         if: always()
-        run: rm -f "$RUNNER_TEMP"/AuthKey_*.p8
+        run: rm -rf "$HOME/.appstoreconnect/private_keys"
 
       # The logs are the only thing anybody without a Mac can debug from.
       - name: Keep the logs
@@ -135,4 +181,5 @@ jobs:
           path: |
             ${{ runner.temp }}/archive.log
             ${{ runner.temp }}/export.log
+            ${{ runner.temp }}/upload.log
           if-no-files-found: ignore
