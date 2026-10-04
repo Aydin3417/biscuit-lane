@@ -51,9 +51,14 @@ jobs:
     env:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-      ARCHIVE: ${{ runner.temp }}/App.xcarchive
     steps:
       - uses: actions/checkout@v4
+
+      # The runner's temp directory is not known where a job's env is
+      # read, only once a step is running; the first run of this file
+      # was refused for asking too early.
+      - name: Where the archive goes
+        run: echo "ARCHIVE=$RUNNER_TEMP/App.xcarchive" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v4
         with:
