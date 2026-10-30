@@ -323,11 +323,21 @@ function renderHome() {
      game is, and a player who has met their pet once wants to see it
      again somewhere the hearts do not reach. */
   const napOn = SAVE.reached >= 3 || (SAVE.nap && SAVE.nap.solved > 0);
+  /* TODAY, IN ONE STRIP. The errands of the day — the basket, the nap,
+     the walk, the season book — were a full-width card and then a grid
+     of tiles under it, and with the care panel, the streak and the bond
+     card below them the screen the game opens on was nine panels tall
+     (photographed 31 Oct 2026). They are one row now, swiped sideways,
+     under a heading that says what they have in common: the thing you
+     came to do stays the first thing on the screen, and the rest of the
+     day is one glance under it rather than a scroll. */
   pad.innerHTML = `
     ${heroCard}
-    ${napOn ? napHomeCard() : ''}
-    <div class="todayRow">
+    <div class="todaySec">
+    <div class="sectitle"><h3>${T('home_today')}</h3></div>
+    <div class="todayStrip">
     ${giftReady() ? heroGift() : ''}
+    ${napOn ? napHomeCard() : ''}
     ${!settled ? '' : (() => {
       const d = dailyState();
       const def = dailyLevel(SAVE.reached);
@@ -359,6 +369,7 @@ function renderHome() {
         <span class="btn sm">${waiting ? T('pass_take') : T('pass_open')}</span>
       </button>`;
     })()}
+    </div>
     </div>
 
     <div class="card pad16" style="display:flex;flex-direction:column;gap:13px">

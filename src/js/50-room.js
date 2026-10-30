@@ -625,6 +625,34 @@ function drawMap() {
     if (r() > .45) drawBush(c, clamp(n.x - side * (KERB + 20 + r() * 40), 24, W - 24), y + 22, 9 + r() * 6);
   });
 
+  /* ---- the far field: a scene on the side of the road with room ----
+     Placed half way between two levels and well clear of the kerb props,
+     only where the road has left at least a third of the screen, and
+     chosen by the stretch so the walk changes as the lane does. Every
+     ninth one is one of the house's own animals, sitting by the road. */
+  const house = SAVE.pets || [];
+  MAP.nodes.forEach(n => {
+    const r = mulberry(n.n * 4513 + 7);
+    const left = n.x, right = W - n.x;
+    const far = right > left ? 1 : -1;
+    const room = Math.max(left, right);
+    if (room < W * .36) return;
+    const y = n.y + 50;
+    if (!onScreen(y, 120)) return;
+    const x = far > 0 ? n.x + room * (.55 + r() * .12) : n.x - room * (.55 + r() * .12);
+    if (n.n % 9 === 4 && house.length) {
+      const pet = house[(n.n / 9 | 0) % house.length];
+      c.save(); c.translate(clamp(x, 30, W - 30), y - 20);
+      drawBody(c, specOfPet(pet), 26, { mood: 'content', mouth: 'smile' });
+      c.restore();
+      return;
+    }
+    const set = FAR_SCENES[chapterOf(n.n).id] || FAR_SCENES.common;
+    const kind = set[(n.n + (r() * 4 | 0)) % set.length];
+    const sz = 56 + r() * 16;
+    drawFarScene(c, kind, clamp(x, sz * .7, W - sz * .7), y, sz, n.n);
+  });
+
   /* paw prints between nodes */
   c.save();
   c.globalAlpha = .3;

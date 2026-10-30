@@ -1218,3 +1218,25 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .napCard .nc-b{ display:flex; gap:7px; flex-wrap:wrap; }
 .napCard .nc-b .btn{ flex:1 1 auto; }
 
+/* ---------- today, as one strip ----------
+   Swiped sideways, each errand a card of its own width, the nap a wider
+   one because it carries a picture. The strip runs to the screen's edge
+   so the next card shows that there is a next card. */
+.todaySec{ display:flex; flex-direction:column; gap:8px; }
+.todayStrip{
+  display:flex; gap:11px; overflow-x:auto; overscroll-behavior-x:contain;
+  scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  margin:0 -14px; padding:2px 14px 6px;
+}
+.todayStrip::-webkit-scrollbar{ display:none; }
+.todayStrip > *{ flex:0 0 auto; scroll-snap-align:start; }
+.todayStrip > .todayTile{ width:min(47vw, 210px); }
+.todayStrip > .napCard{ width:min(80vw, 330px); }
+.todayStrip > .napCard{ grid-template-columns:72px 1fr; align-content:start; }
+.todayStrip > .napCard .napCardArt{ grid-row:auto; width:72px !important; height:72px !important; }
+.todayStrip > .napCard .nc-b{ grid-column:1 / -1; flex-wrap:nowrap; }
+/* alone, a card takes the row like the banner it is */
+.todayStrip > :only-child{ width:100%; }
+.todayStrip > .todayTile:only-child{ flex-direction:row; align-items:center; gap:12px; padding:10px 13px; }
+.todayStrip > .todayTile:only-child .btn{ width:auto; margin-top:0; }
+

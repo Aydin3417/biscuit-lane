@@ -1275,6 +1275,28 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .napCard .nc-t small{ font-size:var(--t-micro); color:var(--text-dim); }
 .napCard .nc-b{ display:flex; gap:7px; flex-wrap:wrap; }
 .napCard .nc-b .btn{ flex:1 1 auto; }
+
+/* ---------- today, as one strip ----------
+   Swiped sideways, each errand a card of its own width, the nap a wider
+   one because it carries a picture. The strip runs to the screen's edge
+   so the next card shows that there is a next card. */
+.todaySec{ display:flex; flex-direction:column; gap:8px; }
+.todayStrip{
+  display:flex; gap:11px; overflow-x:auto; overscroll-behavior-x:contain;
+  scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch; scrollbar-width:none;
+  margin:0 -14px; padding:2px 14px 6px;
+}
+.todayStrip::-webkit-scrollbar{ display:none; }
+.todayStrip > *{ flex:0 0 auto; scroll-snap-align:start; }
+.todayStrip > .todayTile{ width:min(47vw, 210px); }
+.todayStrip > .napCard{ width:min(80vw, 330px); }
+.todayStrip > .napCard{ grid-template-columns:72px 1fr; align-content:start; }
+.todayStrip > .napCard .napCardArt{ grid-row:auto; width:72px !important; height:72px !important; }
+.todayStrip > .napCard .nc-b{ grid-column:1 / -1; flex-wrap:nowrap; }
+/* alone, a card takes the row like the banner it is */
+.todayStrip > :only-child{ width:100%; }
+.todayStrip > .todayTile:only-child{ flex-direction:row; align-items:center; gap:12px; padding:10px 13px; }
+.todayStrip > .todayTile:only-child .btn{ width:auto; margin-top:0; }
 </style>
 
 <div class="stage">
@@ -2289,7 +2311,7 @@ const STRINGS = {
     set_reset_yes: 'Delete it all', set_reset_no: 'Keep my pets',
     set_credits: 'Every cat, dog, sound and biscuit here is drawn and synthesised in code — no audio files. The rooms and lanes behind them are painted.',
     set_privacy: 'Privacy policy',
-    set_ad_choices: 'Ad privacy choices',
+    set_ad_choices: 'Ad privacy choices', home_today: 'Today',
     nap_t: 'Nap time', nap_new: 'New · Nap time', nap_daily: 'Today’s nap', nap_level: 'Nap {n}',
     nap_size: '{n}×{n}', nap_tricky: 'a tricky one',
     nap_card_s: 'One sleeper on every cushion. No hearts needed.',
@@ -2673,7 +2695,7 @@ const STRINGS = {
     set_reset_yes: 'Hepsini sil', set_reset_no: 'Vazgeçtim',
     set_credits: 'Buradaki her kedi, her köpek, her ses kodla çiziliyor ve sentezleniyor — ses dosyası yok. Arkadaki oda ve yollar boyama.',
     set_privacy: 'Gizlilik politikası',
-    set_ad_choices: 'Reklam gizlilik tercihleri',
+    set_ad_choices: 'Reklam gizlilik tercihleri', home_today: 'Bugün',
     nap_t: 'Şekerleme', nap_new: 'Yeni · Şekerleme', nap_daily: 'Günün şekerlemesi', nap_level: 'Şekerleme {n}',
     nap_size: '{n}×{n}', nap_tricky: 'zorlu bir tane',
     nap_card_s: 'Her mindere bir uykucu. Kalp gerekmez.',
@@ -12259,6 +12281,167 @@ function drawLampPost(c, x, y, s, warmth, t) {
 
 
 /* ============================================================
+   THE FAR FIELD — what stands away from the lane
+   ============================================================
+
+   Every level has something at the kerb, and the road swings across a
+   phone-wide field, so a third of every screen of the map was grass on
+   the side the road was not using — 31 Oct 2026, photographed beside
+   the rest of the game, it was the one screen that looked unfinished.
+   Each stretch has its own small scenes for that space, in the hand the
+   kerb props are drawn in: flat fills, one shadow, nothing outlined. */
+const FAR_SCENES = {
+  doorstep: ['flowers', 'bench', 'flowers', 'well'],
+  allot: ['veg', 'scarecrow', 'veg', 'barrow'],
+  common: ['sheep', 'pond', 'sheep', 'flowers'],
+  canal: ['reeds', 'pond', 'reeds', 'bench'],
+  orchard: ['apples', 'hay', 'apples', 'barrow'],
+  home: ['flowers', 'well', 'bench', 'hay']
+};
+function farShadow(c, w, h) {
+  c.fillStyle = rgba('#2A1E12', PAL.dark ? .3 : .14);
+  ellipse(c, 0, 0, w, h); c.fill();
+}
+function drawFarScene(c, kind, x, y, s, seed) {
+  const r = mulberry(seed * 977 + 13);
+  const D = PAL.dark;
+  c.save(); c.translate(x, y);
+  if (kind === 'flowers') {
+    /* a bed, edged, with clumps in three colours */
+    farShadow(c, s * .62, s * .12);
+    c.fillStyle = D ? '#3B3226' : '#9A7650';
+    ellipse(c, 0, -s * .04, s * .58, s * .17); c.fill();
+    c.fillStyle = D ? '#2E4632' : '#6FA06A';
+    ellipse(c, 0, -s * .1, s * .5, s * .13); c.fill();
+    const cols = D ? ['#B68AA8', '#C9B27A', '#8EA6C8'] : ['#E57F95', '#F2C14E', '#8DB6E8'];
+    for (let i = 0; i < 11; i++) {
+      const fx = (r() - .5) * s * .9, fy = -s * .12 - r() * s * .14;
+      c.fillStyle = cols[i % 3];
+      ellipse(c, fx, fy, s * .045, s * .045); c.fill();
+      c.fillStyle = rgba('#FFFFFF', .7); ellipse(c, fx, fy, s * .014, s * .014); c.fill();
+    }
+  } else if (kind === 'bench') {
+    farShadow(c, s * .5, s * .08);
+    const wood = D ? '#6E5A44' : '#A97B4C', iron = D ? '#2C2A2E' : '#4A4038';
+    c.fillStyle = iron;
+    rr(c, -s * .42, -s * .26, s * .05, s * .26, s * .01); c.fill();
+    rr(c, s * .37, -s * .26, s * .05, s * .26, s * .01); c.fill();
+    c.fillStyle = wood;
+    rr(c, -s * .48, -s * .30, s * .96, s * .07, s * .02); c.fill();
+    rr(c, -s * .48, -s * .50, s * .96, s * .06, s * .02); c.fill();
+    rr(c, -s * .48, -s * .41, s * .96, s * .06, s * .02); c.fill();
+  } else if (kind === 'well') {
+    farShadow(c, s * .4, s * .08);
+    c.fillStyle = D ? '#5A5F6C' : '#B9B2A4';
+    rr(c, -s * .3, -s * .3, s * .6, s * .3, s * .06); c.fill();
+    c.fillStyle = D ? '#474B57' : '#9C9586';
+    for (let i = 0; i < 3; i++) { rr(c, -s * .3 + i * s * .2, -s * .2, s * .17, s * .07, s * .02); c.fill(); }
+    c.fillStyle = D ? '#6E5A44' : '#8A6A4A';
+    c.fillRect(-s * .27, -s * .74, s * .05, s * .46); c.fillRect(s * .22, -s * .74, s * .05, s * .46);
+    c.fillStyle = D ? '#6A3E3A' : '#B4685E';
+    c.beginPath(); c.moveTo(-s * .38, -s * .70); c.lineTo(0, -s * .92); c.lineTo(s * .38, -s * .70); c.closePath(); c.fill();
+  } else if (kind === 'veg') {
+    /* three rows of the allotment: soil, and a cabbage at every step */
+    for (let row = 0; row < 3; row++) {
+      const ry = -row * s * .2;
+      c.fillStyle = D ? '#3A2E22' : '#9A7650';
+      rr(c, -s * .62 + row * s * .05, ry - s * .07, s * 1.2, s * .12, s * .06); c.fill();
+      for (let k = 0; k < 5; k++) {
+        const vx = -s * .5 + row * s * .05 + k * s * .25;
+        c.fillStyle = D ? '#3F6B48' : (row === 1 ? '#7DB46A' : '#5E9B5A');
+        ellipse(c, vx, ry - s * .05, s * .085, s * .07); c.fill();
+        c.fillStyle = D ? '#5A8A60' : '#A8D48E';
+        ellipse(c, vx - s * .02, ry - s * .075, s * .035, s * .03); c.fill();
+      }
+    }
+  } else if (kind === 'scarecrow') {
+    farShadow(c, s * .22, s * .06);
+    c.strokeStyle = D ? '#6E5A44' : '#8A6A4A'; c.lineWidth = s * .05; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(0, 0); c.lineTo(0, -s * .9); c.moveTo(-s * .34, -s * .62); c.lineTo(s * .34, -s * .62); c.stroke();
+    c.fillStyle = D ? '#4E5D7A' : '#6B8CC0';
+    rr(c, -s * .16, -s * .70, s * .32, s * .32, s * .04); c.fill();
+    c.fillStyle = D ? '#C9A86A' : '#EBCB7A';
+    ellipse(c, 0, -s * .84, s * .11, s * .11); c.fill();
+    c.fillStyle = D ? '#6A4A30' : '#9A6A3A';
+    c.beginPath(); c.moveTo(-s * .2, -s * .9); c.lineTo(s * .2, -s * .9); c.lineTo(0, -s * 1.08); c.closePath(); c.fill();
+    c.strokeStyle = D ? '#C9A86A' : '#EBCB7A'; c.lineWidth = s * .03;
+    [-1, 1].forEach(sd => { c.beginPath(); c.moveTo(sd * s * .34, -s * .62); c.lineTo(sd * s * .42, -s * .56); c.stroke(); });
+  } else if (kind === 'barrow') {
+    farShadow(c, s * .38, s * .07);
+    c.fillStyle = D ? '#4E6A78' : '#6E9DB2';
+    c.beginPath(); c.moveTo(-s * .34, -s * .34); c.lineTo(s * .22, -s * .34); c.lineTo(s * .12, -s * .12); c.lineTo(-s * .26, -s * .12); c.closePath(); c.fill();
+    c.fillStyle = D ? '#3F6B48' : '#7DB46A';
+    ellipse(c, -s * .06, -s * .36, s * .2, s * .06); c.fill();
+    c.strokeStyle = D ? '#6E5A44' : '#8A6A4A'; c.lineWidth = s * .035; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(s * .12, -s * .2); c.lineTo(s * .44, -s * .3); c.moveTo(-s * .2, -s * .12); c.lineTo(-s * .24, 0); c.stroke();
+    c.fillStyle = D ? '#2C2A2E' : '#4A4038';
+    ellipse(c, s * .02, -s * .08, s * .08, s * .08); c.fill();
+  } else if (kind === 'sheep') {
+    /* two or three, grazing, facing whichever way they like */
+    const n = 2 + (r() > .5 ? 1 : 0);
+    for (let i = 0; i < n; i++) {
+      const sx = (i - (n - 1) / 2) * s * .55 + (r() - .5) * s * .12, sy = (i % 2) * s * .12;
+      const f = r() > .5 ? 1 : -1, k = .8 + r() * .25;
+      c.save(); c.translate(sx, sy); c.scale(f * k, k);
+      farShadow(c, s * .24, s * .05);
+      c.fillStyle = D ? '#2A2830' : '#3A3236';
+      c.fillRect(-s * .12, -s * .1, s * .04, s * .1); c.fillRect(s * .08, -s * .1, s * .04, s * .1);
+      c.fillStyle = D ? '#C9C6C0' : '#FBF7EE';
+      [[-.12, -.2, .13], [0, -.24, .15], [.12, -.2, .13], [0, -.14, .14]].forEach(([a, b2, rad]) => { ellipse(c, a * s, b2 * s, rad * s, rad * s * .85); c.fill(); });
+      c.fillStyle = D ? '#2A2830' : '#3A3236';
+      ellipse(c, s * .24, -s * .22, s * .07, s * .085); c.fill();
+      c.restore();
+    }
+  } else if (kind === 'pond') {
+    c.fillStyle = D ? '#2C4A3A' : '#8FB673';
+    ellipse(c, 0, -s * .08, s * .64, s * .24); c.fill();
+    c.fillStyle = D ? '#1F3A4E' : '#7EB6D6';
+    ellipse(c, 0, -s * .08, s * .56, s * .19); c.fill();
+    c.strokeStyle = rgba('#FFFFFF', D ? .18 : .5); c.lineWidth = 1.2; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(-s * .3, -s * .1); c.lineTo(-s * .1, -s * .1); c.moveTo(s * .1, -s * .02); c.lineTo(s * .28, -s * .02); c.stroke();
+    /* a duck, and sometimes its friend */
+    const duck = (dx, dy, f) => {
+      c.save(); c.translate(dx, dy); c.scale(f, 1);
+      c.fillStyle = D ? '#C9C6C0' : '#FFFFFF';
+      ellipse(c, 0, 0, s * .08, s * .05); c.fill();
+      ellipse(c, s * .06, -s * .05, s * .035, s * .035); c.fill();
+      c.fillStyle = '#E8A33C';
+      c.beginPath(); c.moveTo(s * .09, -s * .05); c.lineTo(s * .13, -s * .04); c.lineTo(s * .09, -s * .035); c.fill();
+      c.restore();
+    };
+    duck(-s * .14, -s * .1, 1);
+    if (r() > .4) duck(s * .2, -s * .06, -1);
+  } else if (kind === 'reeds') {
+    for (let i = 0; i < 9; i++) {
+      const rx = (r() - .5) * s * .9, h = s * (.4 + r() * .35);
+      c.strokeStyle = D ? '#3F6B48' : '#5E9B5A'; c.lineWidth = s * .03; c.lineCap = 'round';
+      c.beginPath(); c.moveTo(rx, 0); c.quadraticCurveTo(rx + s * .03, -h * .5, rx + (r() - .5) * s * .08, -h); c.stroke();
+      if (i % 2) { c.fillStyle = D ? '#5A4632' : '#8A5A34'; ellipse(c, rx + s * .01, -h * .8, s * .025, s * .07); c.fill(); }
+    }
+  } else if (kind === 'apples') {
+    farShadow(c, s * .45, s * .1);
+    c.fillStyle = D ? '#4A3A2A' : '#8A6A4A';
+    c.beginPath(); c.moveTo(-s * .06, 0); c.lineTo(-s * .04, -s * .5); c.lineTo(s * .04, -s * .5); c.lineTo(s * .06, 0); c.closePath(); c.fill();
+    c.fillStyle = D ? '#2E4A38' : '#5E9B5A';
+    ellipse(c, 0, -s * .72, s * .46, s * .34); c.fill();
+    c.fillStyle = D ? '#3C5C46' : '#7DB46A';
+    ellipse(c, -s * .16, -s * .82, s * .24, s * .18); c.fill();
+    c.fillStyle = D ? '#9A4A4A' : '#D8524A';
+    for (let i = 0; i < 7; i++) { ellipse(c, (r() - .5) * s * .7, -s * .72 + (r() - .5) * s * .4, s * .045, s * .045); c.fill(); }
+    ellipse(c, s * .26, -s * .02, s * .04, s * .04); c.fill();
+  } else if (kind === 'hay') {
+    farShadow(c, s * .4, s * .08);
+    c.fillStyle = D ? '#8A7444' : '#E3C26A';
+    rr(c, -s * .36, -s * .34, s * .72, s * .34, s * .1); c.fill();
+    c.strokeStyle = D ? '#6E5A34' : '#C9A24A'; c.lineWidth = 1.2;
+    for (let i = 1; i < 4; i++) { c.beginPath(); c.moveTo(-s * .36 + i * s * .18, -s * .32); c.lineTo(-s * .36 + i * s * .18, -s * .02); c.stroke(); }
+    c.fillStyle = D ? '#A08850' : '#F0D488';
+    rr(c, -s * .2, -s * .56, s * .4, s * .24, s * .08); c.fill();
+  }
+  c.restore();
+}
+
+/* ============================================================
    Small illustrations used by the UI.
    ============================================================ */
 
@@ -18000,6 +18183,34 @@ function drawMap() {
     if (r() > .45) drawBush(c, clamp(n.x - side * (KERB + 20 + r() * 40), 24, W - 24), y + 22, 9 + r() * 6);
   });
 
+  /* ---- the far field: a scene on the side of the road with room ----
+     Placed half way between two levels and well clear of the kerb props,
+     only where the road has left at least a third of the screen, and
+     chosen by the stretch so the walk changes as the lane does. Every
+     ninth one is one of the house's own animals, sitting by the road. */
+  const house = SAVE.pets || [];
+  MAP.nodes.forEach(n => {
+    const r = mulberry(n.n * 4513 + 7);
+    const left = n.x, right = W - n.x;
+    const far = right > left ? 1 : -1;
+    const room = Math.max(left, right);
+    if (room < W * .36) return;
+    const y = n.y + 50;
+    if (!onScreen(y, 120)) return;
+    const x = far > 0 ? n.x + room * (.55 + r() * .12) : n.x - room * (.55 + r() * .12);
+    if (n.n % 9 === 4 && house.length) {
+      const pet = house[(n.n / 9 | 0) % house.length];
+      c.save(); c.translate(clamp(x, 30, W - 30), y - 20);
+      drawBody(c, specOfPet(pet), 26, { mood: 'content', mouth: 'smile' });
+      c.restore();
+      return;
+    }
+    const set = FAR_SCENES[chapterOf(n.n).id] || FAR_SCENES.common;
+    const kind = set[(n.n + (r() * 4 | 0)) % set.length];
+    const sz = 56 + r() * 16;
+    drawFarScene(c, kind, clamp(x, sz * .7, W - sz * .7), y, sz, n.n);
+  });
+
   /* paw prints between nodes */
   c.save();
   c.globalAlpha = .3;
@@ -18582,11 +18793,21 @@ function renderHome() {
      game is, and a player who has met their pet once wants to see it
      again somewhere the hearts do not reach. */
   const napOn = SAVE.reached >= 3 || (SAVE.nap && SAVE.nap.solved > 0);
+  /* TODAY, IN ONE STRIP. The errands of the day — the basket, the nap,
+     the walk, the season book — were a full-width card and then a grid
+     of tiles under it, and with the care panel, the streak and the bond
+     card below them the screen the game opens on was nine panels tall
+     (photographed 31 Oct 2026). They are one row now, swiped sideways,
+     under a heading that says what they have in common: the thing you
+     came to do stays the first thing on the screen, and the rest of the
+     day is one glance under it rather than a scroll. */
   pad.innerHTML = `
     ${heroCard}
-    ${napOn ? napHomeCard() : ''}
-    <div class="todayRow">
+    <div class="todaySec">
+    <div class="sectitle"><h3>${T('home_today')}</h3></div>
+    <div class="todayStrip">
     ${giftReady() ? heroGift() : ''}
+    ${napOn ? napHomeCard() : ''}
     ${!settled ? '' : (() => {
       const d = dailyState();
       const def = dailyLevel(SAVE.reached);
@@ -18618,6 +18839,7 @@ function renderHome() {
         <span class="btn sm">${waiting ? T('pass_take') : T('pass_open')}</span>
       </button>`;
     })()}
+    </div>
     </div>
 
     <div class="card pad16" style="display:flex;flex-direction:column;gap:13px">
