@@ -322,7 +322,7 @@ function renderHome() {
   /* Nap time from the third level: by then the lane has shown what the
      game is, and a player who has met their pet once wants to see it
      again somewhere the hearts do not reach. */
-  const napOn = SAVE.reached >= 3 || (SAVE.nap && SAVE.nap.solved > 0);
+  const napOn = SAVE.reached >= tuneNapFrom() || (SAVE.nap && SAVE.nap.solved > 0);
   /* TODAY, IN ONE STRIP. The errands of the day — the basket, the nap,
      the walk, the season book — were a full-width card and then a grid
      of tiles under it, and with the care panel, the streak and the bond
@@ -331,7 +331,11 @@ function renderHome() {
      under a heading that says what they have in common: the thing you
      came to do stays the first thing on the screen, and the rest of the
      day is one glance under it rather than a scroll. */
+  /* a line from the server, when the build is older than it should be:
+     TUNE.notice() is empty for everyone else */
+  const notice = typeof TUNE !== 'undefined' ? TUNE.notice() : '';
   pad.innerHTML = `
+    ${notice ? `<div class="card quiet pad16 tuneNotice">${IC.info}<span>${notice}</span></div>` : ''}
     ${heroCard}
     <div class="todaySec">
     <div class="sectitle"><h3>${T('home_today')}</h3></div>
@@ -2066,9 +2070,9 @@ function commitWin() {
   const base = Math.round((ECON.winBase + stars * ECON.winPerStar
     + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
   const rate = first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
-  const coins = Math.max(first ? 0 : 1, Math.round(base * rate));
+  const coins = tunePay('coin', Math.max(first ? 0 : 1, Math.round(base * rate)));
   let treats = 0;
-  if (stars === 3 && prev < 3) treats += isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats;
+  if (stars === 3 && prev < 3) treats += tunePay('treat', isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats);
   /* the chest at a gate: its treat is counted on the card like any other,
      its coins and booster are shown when it opens, after the card */
   const chest = first && n % ECON.milestoneEvery === 0 ? gateChest(n) : null;
@@ -2102,7 +2106,7 @@ function settleWin() {
     SAVE.stars[n] = Math.max(SAVE.stars[n] || 0, stars);
     if (stars >= 3 && w.stars < 3) {
       if (w.prev < 3) {
-        const t = isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats;
+        const t = tunePay('treat', isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats);
         w.treats += t; SAVE.treats += t;
       }
       if (w.first) { passStamp('threeStar'); maybeAskForAReview(); }
@@ -2115,7 +2119,7 @@ function settleWin() {
     const rate = w.first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
     const base = Math.round((ECON.winBase + stars * ECON.winPerStar
       + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
-    const coins = Math.max(w.first ? 0 : 1, Math.round(base * rate));
+    const coins = tunePay('coin', Math.max(w.first ? 0 : 1, Math.round(base * rate)));
     if (coins > w.coins) { SAVE.coins += coins - w.coins; w.coins = coins; }
     w.newBest = newBest;
     w.score = G.score;
@@ -2960,31 +2964,31 @@ function maybeTutorial(def) {
   setTimeout(show, 520);
 }
 
-/* ---------------- onboarding ---------------- */
+/* ---------------- onboarding ----------------
+
+   TWO SCREENS, NOT FOUR. The first version put a story card, the breed,
+   the coat and the name on four screens before a tile was touched. The
+   game that took the top of both stores in October 2026 puts its player
+   on the board at screen zero, and every screen between the icon and
+   the first move is a place to stop. The animal is this game's whole
+   identity, so choosing one stays; the story is now the heading above
+   that choice, and the name is asked on the welcome card with a good
+   one already filled in — so the player who does not care taps once,
+   and the one who does types. */
 function runOnboarding() {
   track('onb_open');
   $('#onb').classList.add('on');
   const card = $('#onbCard');
   let step = 0, breedIdx = 0, coat = 0, eye = 0;
-  let name = '';
 
-  const dots = n => `<div class="dots">${[0, 1, 2, 3].map(i => `<i class="${i === n ? 'on' : ''}"></i>`).join('')}</div>`;
+  const dots = n => `<div class="dots">${[0, 1].map(i => `<i class="${i === n ? 'on' : ''}"></i>`).join('')}</div>`;
+  const petVoiceBreed = i => { const b = BREEDS[i], v = b.voice || {}; if (b.species === 'cat') SFX.meow(1.25 * (v.pitch || 1), v); else SFX.bark(1.2 * (v.pitch || 1), v); };
 
   const render = () => {
     if (step === 0) {
       card.innerHTML = `
-        <canvas id="obHero" width="180" height="180" style="width:180px;height:180px;align-self:center"></canvas>
-        <h1 style="font-size:var(--t-hero)">${T('onb_hi')}</h1>
-        <p style="color:var(--text-dim)">${T('onb_hi_sub')}</p>
-        <button class="btn primary wide" id="obNext">${T('onb_start')}</button>
-        ${dots(0)}`;
-      const c = fitCanvas($('#obHero'), 180, 180);
-      c.translate(90, 90);
-      paintPup(c, 150, 0);
-    } else if (step === 1) {
-      card.innerHTML = `
-        <h2>${T('onb_pick')}</h2>
-        <p style="font-size:var(--t-small)">${T('onb_pick_sub')}</p>
+        <h1 style="font-size:var(--t-h2)">${T('onb_hi')}</h1>
+        <p style="color:var(--text-dim);font-size:var(--t-small)">${T('onb_pick_sub')}</p>
         <div class="choiceGrid" style="grid-template-columns:repeat(3,1fr)">
           ${BREEDS.map((b, i) => `
             <button class="choice ${i === breedIdx ? 'on' : ''}" data-b="${i}">
@@ -2993,9 +2997,8 @@ function runOnboarding() {
               <span class="ds">${breedDesc(i)}</span>
             </button>`).join('')}
         </div>
-        <div class="row"><button class="btn ghost" id="obBack">${T('onb_back')}</button>
-        <button class="btn primary" id="obNext">${T('onb_next')}</button></div>
-        ${dots(1)}`;
+        <button class="btn primary wide" id="obNext">${T('onb_next')}</button>
+        ${dots(0)}`;
       paintArtCanvases(card);
       $$('[data-b]', card).forEach(b => b.addEventListener('click', () => {
         breedIdx = +b.dataset.b; coat = 0;
@@ -3003,11 +3006,10 @@ function runOnboarding() {
         SFX.tap(); petVoiceBreed(breedIdx);
         render();
       }));
-    } else if (step === 2) {
+    } else {
       card.innerHTML = `
         <canvas id="obArt" width="150" height="122" style="width:150px;height:122px;align-self:center"></canvas>
         <h2>${T('onb_coat')}</h2>
-        <p style="font-size:var(--t-small)">${T('onb_coat_sub')}</p>
         <div class="choiceGrid" style="grid-template-columns:repeat(3,1fr)">
           ${BREEDS[breedIdx].coats.map((co, i) => `
             <button class="choice ${i === coat ? 'on' : ''}" data-c="${i}" style="padding:10px 5px">
@@ -3020,52 +3022,28 @@ function runOnboarding() {
           ${EYE_COLORS.map((e, i) => `<button class="sw ${i === eye ? 'on' : ''}" data-e="${i}" aria-label="${T('eye_' + e.id)}" title="${T('eye_' + e.id)}" style="background:${e.hex}"></button>`).join('')}
         </div>
         <div class="row"><button class="btn ghost" id="obBack">${T('onb_back')}</button>
-        <button class="btn primary" id="obNext">${T('onb_next')}</button></div>
-        ${dots(2)}`;
+        <button class="btn primary" id="obNext">${T('onb_done')}</button></div>
+        ${dots(1)}`;
       paintArtCanvases(card);
-      const art = () => {
-        const c = fitCanvas($('#obArt'), 150, 122);
-        c.translate(75, 12);
-        drawBody(c, specOf(breedIdx, BREEDS[breedIdx].coats[coat], EYE_COLORS[eye].hex), 74, { mouth: 'smile' });
-      };
-      art();
+      const c = fitCanvas($('#obArt'), 150, 122);
+      c.translate(75, 12);
+      drawBody(c, specOf(breedIdx, BREEDS[breedIdx].coats[coat], EYE_COLORS[eye].hex), 74, { mouth: 'smile' });
       $$('[data-c]', card).forEach(b => b.addEventListener('click', () => { coat = +b.dataset.c; SFX.tap(); render(); }));
       $$('[data-e]', card).forEach(b => b.addEventListener('click', () => { eye = +b.dataset.e; SFX.tap(); render(); }));
-    } else {
-      const names = NAME_POOL[BREEDS[breedIdx].species];
-      card.innerHTML = `
-        <canvas id="obArt" width="146" height="118" style="width:146px;height:118px;align-self:center"></canvas>
-        <h2>${T('onb_name')}</h2>
-        <p style="font-size:var(--t-small)">${T('onb_name_sub')}</p>
-        <input class="field" id="obName" maxlength="14" placeholder="${T('onb_placeholder')}" value="${name}">
-        <div style="font-size:var(--t-micro);color:var(--text-faint)">${T('onb_suggest')}</div>
-        <div class="nameSuggest">${names.slice(0, 6).map(n => `<button data-n="${n}">${n}</button>`).join('')}</div>
-        <div class="row"><button class="btn ghost" id="obBack">${T('onb_back')}</button>
-        <button class="btn primary" id="obNext">${T('onb_done')}</button></div>
-        ${dots(3)}`;
-      const c = fitCanvas($('#obArt'), 146, 118);
-      c.translate(73, 11);
-      drawBody(c, specOf(breedIdx, BREEDS[breedIdx].coats[coat], EYE_COLORS[eye].hex), 68, { mouth: 'smile' });
-      $$('[data-n]', card).forEach(b => b.addEventListener('click', () => {
-        name = b.dataset.n; $('#obName').value = name; SFX.tap();
-      }));
-      $('#obName').addEventListener('input', e => { name = e.target.value; });
     }
     const nx = $('#obNext'); if (nx) nx.addEventListener('click', next);
     const bk = $('#obBack'); if (bk) bk.addEventListener('click', () => { step--; SFX.tap(); render(); });
   };
-  const petVoiceBreed = i => { const b = BREEDS[i], v = b.voice || {}; if (b.species === 'cat') SFX.meow(1.25 * (v.pitch || 1), v); else SFX.bark(1.2 * (v.pitch || 1), v); };
   let adopted = false;
   const next = () => {
     audioResume();
     SFX.tap();
-    if (step < 3) { step++; track('onb_step', { step: step }); render(); return; }
+    if (step < 1) { step++; track('onb_step', { step: step }); render(); return; }
     /* two taps in one frame would adopt twice and greet the first pet
        by the second one's name */
     if (adopted) return;
     adopted = true;
-    const nm = cleanName(name) || pick(NAME_POOL[BREEDS[breedIdx].species]);
-    const p = makePet(breedIdx, coat, eye, nm);
+    const p = makePet(breedIdx, coat, eye, pick(NAME_POOL[BREEDS[breedIdx].species]));
     lookUnlock(breedIdx, coat, eye);
     SAVE.pets = [p];
     SAVE.activePet = p.id;
@@ -3079,16 +3057,27 @@ function runOnboarding() {
   render();
 }
 function welcomeModal(p) {
+  /* the name is asked here, with one already in the field: the card is
+     the first time the animal is called anything, which is the moment
+     a name means something, and the player who does not care taps
+     straight through with a good one */
+  const names = NAME_POOL[BREEDS[p.breed].species];
   const m = modal(`
     <canvas id="wcArt" width="160" height="160" style="width:160px;height:160px;align-self:center"></canvas>
-    <h2>${T('onb_welcome', { name: p.name })}</h2>
-    <p>${T('onb_welcome_sub', { name: p.name, breed: breedName(p.breed) })}</p>
+    <h2>${T('onb_welcome_q')}</h2>
+    <input class="field" id="obName" maxlength="14" placeholder="${T('onb_placeholder')}" value="${p.name}">
+    <div class="nameSuggest">${names.filter(n => n !== p.name).slice(0, 5).map(n => `<button data-n="${n}">${n}</button>`).join('')}</div>
+    <p style="font-size:var(--t-small);color:var(--text-dim)">${T('onb_welcome_sub', { breed: breedName(p.breed) })}</p>
     <button class="btn primary wide" id="wcGo">${T('onb_go')}</button>
   `, { dismissable: false });
   const c = fitCanvas($('#wcArt', m.el), 160, 160);
   c.translate(80, 18);
   drawBody(c, specOfPet(p), 74, { mouth: 'open' });
+  const field = $('#obName', m.el);
+  $$('[data-n]', m.el).forEach(b => b.addEventListener('click', () => { field.value = b.dataset.n; SFX.tap(); }));
   $('#wcGo', m.el).addEventListener('click', () => {
+    const nm = cleanName(field.value);
+    if (nm && nm !== p.name) { p.name = nm; persist(true); }
     m.close();
     renderHome();
     setScreen('map');

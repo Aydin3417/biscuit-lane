@@ -13,7 +13,7 @@
    see it in a diff: a cache name that never changes is a cache that
    `activate` never sweeps, which is how a player ends up on a build that
    is half yesterday's. */
-const VERSION = 'pawtika-9f62416f53b4';
+const VERSION = 'pawtika-d73d74dcf3f7';
 const SHELL = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png'];
 

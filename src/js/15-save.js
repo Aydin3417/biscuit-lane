@@ -74,6 +74,11 @@ function freshSave() {
     /* nap time — see 62-nap-ui.js. `no` is the next rung of the ladder,
        `cur` the board in play, kept so the back button loses nothing */
     nap: { no: 1, solved: 0, seen: false, best: {}, day: { day: 0, done: false, time: 0, clean: false, streak: 0 }, cur: null },
+    /* the last live-tuning file that validated, as { at, data } — see
+       14-tune.js. Kept so that a phone with no signal plays the same game
+       it played with one, rather than snapping back to the compiled
+       numbers; null until the first fetch lands */
+    tune: null,
     /* the win streak: first clears in a row, see WIN_RUN */
     winRun: 0,
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
@@ -1213,10 +1218,11 @@ function dailyDone(score) {
        treats — most of a treat balance that nothing was asking for.
        It is still the best-paid four minutes in the game; it is no
        longer a salary. */
-    SAVE.coins += ECON.dailyWalkCoins;
-    SAVE.treats += ECON.dailyWalkTreats;
+    const coins = tunePay('coin', ECON.dailyWalkCoins), treats = tunePay('treat', ECON.dailyWalkTreats);
+    SAVE.coins += coins;
+    SAVE.treats += treats;
     persist(true);
-    return { coins: ECON.dailyWalkCoins, treats: ECON.dailyWalkTreats, first: true };
+    return { coins, treats, first: true };
   }
   persist(true);
   return { first: false };

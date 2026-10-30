@@ -135,6 +135,25 @@ const SHOTS = [
     }
   },
   {
+    /* nap time: today's board half put to bed, in Day */
+    id: 'nap',
+    go: async page => {
+      await page.evaluate(() => {
+        BL.save.nap = Object.assign(BL.save.nap || {}, { seen: true, solved: 9, no: 41 });
+        BL.nap.open('l:40');
+      });
+      await page.waitForFunction(() => BL.nap.s.b && BL.nap.s.cell, null, { timeout: 30000 });
+      await page.evaluate(() => {
+        const S = BL.nap.s, b = S.b, n = b.n;
+        for (let r = 0; r < n - 3; r++) S.st[r * n + b.sol[r]] = 2;
+        for (let r = n - 3; r < n; r++) for (let c = 0; c < n; c++) if (c !== b.sol[r] && (r + c) % 3 === 0) S.st[r * n + c] = 1;
+        S.t = 102000; S.runFrom = 0;
+        BL.nap.refresh(); BL.nap.header();
+      });
+      await page.waitForTimeout(900);
+    }
+  },
+  {
     id: 'gift',
     go: async page => {
       await page.evaluate(() => { BL.setScreen('home'); BL.renderHome(); BL.save.lastGift = 0; BL.save.streak = 3; BL.openDailyGift(); });
@@ -210,7 +229,11 @@ async function pets(page) {
       /* the breed picker first, on a game nobody has started */
       await page.waitForFunction(() => window.BL, null, { timeout: 20000 });
       await page.evaluate(l => { BL.setLang(l); }, lang);
-      await page.evaluate(() => { const b = document.querySelector('#obNext'); if (b) b.click(); });
+      /* the picker is the first screen now (onboarding is two screens
+         since 31 Oct 2026); a click here would show the coat screen */
+      /* the picker was drawn before the language was set; choosing the
+         first card draws it again in the right one */
+      await page.evaluate(() => { const b = document.querySelector('[data-b="0"]'); if (b) b.click(); });
       await page.waitForTimeout(700);
       if (await page.$('.choiceGrid')) {
         await page.screenshot({ path: path.join(OUT, `${dev.id}-${lang}-breeds.png`) });

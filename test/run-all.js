@@ -11,6 +11,10 @@ const path = require('path');
 
 const steps = [
   ['module integrity', 'check.js', []],
+  /* the one file that can change the game after it ships, fed good,
+     broken and out-of-range copies: cheap, and the fault it guards is a
+     typo in a bucket reaching every phone at once */
+  ['the live-tuning file, clamped', 'live-tune.js', []],
   /* cheapest first: a missing translation is found by reading two
      tables, and it is the fault most likely to reach a player */
   ['every string, in both languages', 'strings.js', []],

@@ -1737,7 +1737,11 @@ function levelDef(n, ref, forceKind) {
   if (n <= LEVELS.length) {
     const def = normaliseGoals(LEVELS[n - 1]);
     def.gate = isGate(n);
-    return def;
+    /* The live correction (14-tune.js), if there is one, goes on a copy:
+       normaliseGoals hands back the table's own row, and adding to it in
+       place would add again on every call. Untuned, the row itself. */
+    const moves = tuneMoves(n, def.moves);
+    return moves === def.moves ? def : Object.assign({}, def, { moves });
   }
   const r = mulberry(n * 7919);
   /* Molehills arrive part way through the run rather than at the start.
@@ -2096,7 +2100,9 @@ function levelDef(n, ref, forceKind) {
      three stars would quietly become unreachable. */
   if (!ref) base = Math.round(base * (.35 + .65 * budgetMult));
 
-  return normaliseGoals({ n, w, h, types, moves, goals, base, map, gate: isGate(n) });
+  /* the live correction last, after the goals were sized to the budget:
+     it is a change to how much room the player has, not to the level */
+  return normaliseGoals({ n, w, h, types, moves: tuneMoves(n, moves), goals, base, map, gate: isGate(n) });
 }
 /* ---------- the daily walk ----------
    Seeded from the date so everyone on a given day gets the same board,
@@ -2256,7 +2262,7 @@ function dailyLevel(reached, dayNo) {
   base = Math.round(base * (.35 + .65 * mult));
 
   return normaliseGoals({
-    n: DAILY_LEVEL, daily: true, day, w, h, types, moves, goals, base, map
+    n: DAILY_LEVEL, daily: true, day, w, h, types, moves: tuneMoves(DAILY_LEVEL, moves), goals, base, map
   });
 }
 /* a level number no handcrafted level will ever use */

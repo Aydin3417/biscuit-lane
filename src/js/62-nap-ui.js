@@ -558,8 +558,8 @@ function napWin() {
       first = true;
       d.done = true; d.time = ms; d.clean = clean;
       d.streak = (d.streak || 0) + 1;
-      coins = NAP_PAY.daily;
-      if (d.streak % 7 === 0) treats = NAP_PAY.week;
+      coins = tunePay('nap', NAP_PAY.daily);
+      if (d.streak % 7 === 0) treats = tunePay('nap', NAP_PAY.week);
       const pet = activePet();
       if (pet) addBond(pet, NAP_PAY.bond);
     }
@@ -569,7 +569,7 @@ function napWin() {
     first = !s.best[no];
     if (!s.best[no] || ms < s.best[no]) s.best[no] = ms;
     if (first) {
-      coins = NAP_PAY.rung;
+      coins = tunePay('nap', NAP_PAY.rung);
       if (no % 10 === 0) treats = 1;
     }
     if (no >= s.no) s.no = no + 1;
@@ -588,7 +588,9 @@ function napWin() {
   NAP.warm();
 }
 /* small on purpose: this sits beside the levels, it does not replace
-   them, and test/economy.js balances coins against what the lane pays */
+   them, and test/economy.js balances coins against what the lane pays.
+   Paid through tunePay('nap', …), so the live file can move all three
+   together, by half to double — see 14-tune.js */
 const NAP_PAY = { daily: 30, rung: 8, week: 2, bond: 2 };
 
 function napWinCard(w) {

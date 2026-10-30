@@ -180,6 +180,9 @@ function installApp() {
 
 function boot() {
   const had = loadSave();
+  /* the live numbers: the save's copy now, today's when the fetch lands;
+     before the map or a level card reads a budget — see 14-tune.js */
+  TUNE.init();
   castRebuild();          /* who stands in each board slot, before anything draws */
   if (SAVE.settings.lang) LANG = SAVE.settings.lang;
   else { LANG = (navigator.language || 'en').toLowerCase().indexOf('tr') === 0 ? 'tr' : 'en'; SAVE.settings.lang = LANG; }
@@ -229,7 +232,7 @@ function boot() {
   if (ADS.ready()) ADS.init();
   /* tonight's cushions and the next rung, made off the main thread while
      the player is still looking at the room */
-  if (SAVE.reached >= 3) setTimeout(() => NAP.warm(), 2500);
+  if (SAVE.reached >= tuneNapFrom()) setTimeout(() => NAP.warm(), 2500);
   /* And, in the same breath, anything the store still says is owed.
 
      A purchase that was taken but never granted — the app killed between

@@ -635,7 +635,9 @@ canvas{ max-width:100%; }
   position:relative; overflow:hidden;
 }
 .good .art{
-  height:82px; display:grid; place-items:center; border-radius:13px; margin-bottom:3px;
+  /* 66, from 82: at 82 a shop screen showed four goods and a half, and
+     a shop you cannot see across is one you do not browse */
+  height:66px; display:grid; place-items:center; border-radius:13px; margin-bottom:2px;
   background:
     radial-gradient(120% 72% at 50% 118%, color-mix(in srgb,var(--accent) 30%, transparent), transparent 72%),
     linear-gradient(180deg, color-mix(in srgb,var(--text) 13%, transparent), color-mix(in srgb,var(--text) 3%, transparent) 62%);
@@ -644,7 +646,7 @@ canvas{ max-width:100%; }
 }
 .good .art canvas{ display:block; }
 .good .nm{ font-weight:700; font-size:var(--t-small); line-height:1.2; }
-.good .ds{ font-size:var(--t-micro); color:var(--text-faint); line-height:1.35; min-height:28px; }
+.good .ds{ font-size:var(--t-micro); color:var(--text-faint); line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .good .have{ font-size:var(--t-micro); color:var(--text-faint); }
 /* the price sits at the end of the card, sized to itself */
 /* Price, not a slab. Four full gold buttons down a shop screen is four
@@ -1239,4 +1241,8 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .todayStrip > :only-child{ width:100%; }
 .todayStrip > .todayTile:only-child{ flex-direction:row; align-items:center; gap:12px; padding:10px 13px; }
 .todayStrip > .todayTile:only-child .btn{ width:auto; margin-top:0; }
+/* a word from the server (14-tune.js): quiet, above everything, gone when
+   the build is current */
+.tuneNotice{ display:flex; align-items:center; gap:10px; font-size:var(--t-small); color:var(--text-dim); border-top:none; padding:8px 4px 2px; }
+.tuneNotice svg{ width:18px; height:18px; flex:0 0 auto; color:var(--accent-strong); }
 

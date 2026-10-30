@@ -693,7 +693,9 @@ canvas{ max-width:100%; }
   position:relative; overflow:hidden;
 }
 .good .art{
-  height:82px; display:grid; place-items:center; border-radius:13px; margin-bottom:3px;
+  /* 66, from 82: at 82 a shop screen showed four goods and a half, and
+     a shop you cannot see across is one you do not browse */
+  height:66px; display:grid; place-items:center; border-radius:13px; margin-bottom:2px;
   background:
     radial-gradient(120% 72% at 50% 118%, color-mix(in srgb,var(--accent) 30%, transparent), transparent 72%),
     linear-gradient(180deg, color-mix(in srgb,var(--text) 13%, transparent), color-mix(in srgb,var(--text) 3%, transparent) 62%);
@@ -702,7 +704,7 @@ canvas{ max-width:100%; }
 }
 .good .art canvas{ display:block; }
 .good .nm{ font-weight:700; font-size:var(--t-small); line-height:1.2; }
-.good .ds{ font-size:var(--t-micro); color:var(--text-faint); line-height:1.35; min-height:28px; }
+.good .ds{ font-size:var(--t-micro); color:var(--text-faint); line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .good .have{ font-size:var(--t-micro); color:var(--text-faint); }
 /* the price sits at the end of the card, sized to itself */
 /* Price, not a slab. Four full gold buttons down a shop screen is four
@@ -1297,6 +1299,10 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .todayStrip > :only-child{ width:100%; }
 .todayStrip > .todayTile:only-child{ flex-direction:row; align-items:center; gap:12px; padding:10px 13px; }
 .todayStrip > .todayTile:only-child .btn{ width:auto; margin-top:0; }
+/* a word from the server (14-tune.js): quiet, above everything, gone when
+   the build is current */
+.tuneNotice{ display:flex; align-items:center; gap:10px; font-size:var(--t-small); color:var(--text-dim); border-top:none; padding:8px 4px 2px; }
+.tuneNotice svg{ width:18px; height:18px; flex:0 0 auto; color:var(--accent-strong); }
 </style>
 
 <div class="stage">
@@ -2106,22 +2112,16 @@ const STRINGS = {
 
     /* onboarding */
     onb_hi: 'Someone left a basket on the step',
-    onb_hi_sub: 'There is a spare room upstairs and nobody to fill it. Pick who comes home with you.',
-    onb_start: 'Open the basket',
-    onb_pick: 'Who is in there?',
-    onb_pick_sub: 'You will see them on the board every time you play. Choose the face you want to keep meeting.',
+    onb_pick_sub: 'There is a spare room upstairs. Pick who comes home with you — you will match their face on every board.',
     onb_coat: 'Pick a coat',
-    onb_coat_sub: 'Just for them. The tiles keep their own colour so the board stays readable.',
     onb_eyes: 'Eye colour',
     onb_name: 'What do you call them?',
-    onb_name_sub: 'You can change it later on the Family page.',
     onb_placeholder: 'Type a name',
-    onb_suggest: 'Or borrow one:',
     onb_done: 'Bring them home',
     onb_next: 'Next',
     onb_back: 'Back',
-    onb_welcome: '{name} is home',
-    onb_welcome_sub: 'They sleep upstairs, they eat what you buy, and they sit beside the board while you play. Matching {breed} tiles charges their move.',
+    onb_welcome_q: 'What do you call them?',
+    onb_welcome_sub: 'They live upstairs and sit beside the board. Matching {breed} tiles charges their move.',
     onb_go: 'Play the first level',
 
     /* top bar / purse */
@@ -2501,22 +2501,16 @@ const STRINGS = {
     tab_home: 'Ev', tab_play: 'Oyna', tab_shop: 'Dükkan', tab_family: 'Aile',
 
     onb_hi: 'Kapının önüne bir sepet bırakmışlar',
-    onb_hi_sub: 'Üst kattaki oda boş duruyor. Kimin seninle eve geleceğine sen karar ver.',
-    onb_start: 'Sepeti aç',
-    onb_pick: 'İçinde kim var?',
-    onb_pick_sub: 'Her oynayışında tahtada onun yüzünü göreceksin. Görmekten sıkılmayacağını seç.',
+    onb_pick_sub: 'Üst katta boş bir oda var. Kimin seninle eve geleceğini seç — her tahtada onun yüzünü eşleyeceksin.',
     onb_coat: 'Tüyünü seç',
-    onb_coat_sub: 'Sadece ona ait. Taşların rengi değişmez, tahta okunaklı kalsın.',
     onb_eyes: 'Göz rengi',
     onb_name: 'Adı ne olsun?',
-    onb_name_sub: 'Sonradan Aile sayfasından değiştirebilirsin.',
     onb_placeholder: 'Bir isim yaz',
-    onb_suggest: 'Ya da bunlardan biri:',
     onb_done: 'Eve götür',
     onb_next: 'Devam',
     onb_back: 'Geri',
-    onb_welcome: '{name} artık evde',
-    onb_welcome_sub: 'Üst katta uyuyor, aldığını yiyor, sen oynarken tahtanın yanında oturuyor. {breed} taşlarını eşledikçe hamlesi doluyor.',
+    onb_welcome_q: 'Adı ne olsun?',
+    onb_welcome_sub: 'Üst katta yaşar, tahtanın yanında oturur. {breed} taşlarını eşledikçe hamlesi dolar.',
     onb_go: 'İlk bölümü oyna',
 
 
@@ -4666,7 +4660,11 @@ function levelDef(n, ref, forceKind) {
   if (n <= LEVELS.length) {
     const def = normaliseGoals(LEVELS[n - 1]);
     def.gate = isGate(n);
-    return def;
+    /* The live correction (14-tune.js), if there is one, goes on a copy:
+       normaliseGoals hands back the table's own row, and adding to it in
+       place would add again on every call. Untuned, the row itself. */
+    const moves = tuneMoves(n, def.moves);
+    return moves === def.moves ? def : Object.assign({}, def, { moves });
   }
   const r = mulberry(n * 7919);
   /* Molehills arrive part way through the run rather than at the start.
@@ -5025,7 +5023,9 @@ function levelDef(n, ref, forceKind) {
      three stars would quietly become unreachable. */
   if (!ref) base = Math.round(base * (.35 + .65 * budgetMult));
 
-  return normaliseGoals({ n, w, h, types, moves, goals, base, map, gate: isGate(n) });
+  /* the live correction last, after the goals were sized to the budget:
+     it is a change to how much room the player has, not to the level */
+  return normaliseGoals({ n, w, h, types, moves: tuneMoves(n, moves), goals, base, map, gate: isGate(n) });
 }
 /* ---------- the daily walk ----------
    Seeded from the date so everyone on a given day gets the same board,
@@ -5185,7 +5185,7 @@ function dailyLevel(reached, dayNo) {
   base = Math.round(base * (.35 + .65 * mult));
 
   return normaliseGoals({
-    n: DAILY_LEVEL, daily: true, day, w, h, types, moves, goals, base, map
+    n: DAILY_LEVEL, daily: true, day, w, h, types, moves: tuneMoves(DAILY_LEVEL, moves), goals, base, map
   });
 }
 /* a level number no handcrafted level will ever use */
@@ -5561,6 +5561,214 @@ function fittedWork(n) {
   return RUN_WORK[n];
 }
 
+/* ===== 14-tune.js ===== */
+/* ============================================================
+   14 — live tuning: the few numbers that may change after the build
+   ============================================================
+
+   Everything about a level is compiled in. The move budgets, the coin a
+   win pays, the level the nap card appears from — all of it is a
+   constant in this bundle, and the bundle is what the store has.
+
+   Twice that has been the wrong shape. The molehill goal shipped broken
+   while every harness said it was fine (test/game-rules.js exists
+   because of it), and the only remedy was a new build. And a new build
+   is not a fix the same day: review has taken anywhere from two days to
+   three weeks, and a level with a budget six moves short is a wall for
+   every player who reaches it until then. A game that measures itself
+   (18-telemetry.js) and cannot act on what it measures is only half a
+   loop.
+
+   So a small, bounded set of knobs is read from one JSON file on the
+   same Supabase project, once per launch, in the background:
+
+     moves   a per-level correction to the move budget, ±6 at most
+     pay     a multiplier on the coins and treats a level or a nap pays
+     nap     the level the nap card appears from
+     notice  a sentence to show players on a build older than `min`
+
+   Bounded is the point. A typo in that file — 60 where 6 was meant, a
+   string where a number was — cannot break the game, because nothing is
+   applied as written: every number is clamped to a range the harnesses
+   have measured as safe, anything unexpected is ignored, and a file
+   that is malformed as a whole is ignored as a whole. The last good
+   copy sits in the save, so a phone offline or a bucket down plays
+   exactly the game it played yesterday.
+
+   Nothing here blocks boot and nothing here throws. The fetch is fire
+   and forget; the first thing the player sees is drawn from the cached
+   copy or from the compiled defaults, whichever is in force. See
+   server/README.md, "Live tuning", for the file and how it is put up. */
+
+/* Six moves either way. Measured with test/ai.js, a level's clear rate
+   moves roughly five to eight points per move near the middle of the
+   band, so six is a forty-point swing: enough to unwall any level in
+   the lane, far short of turning it into a free one. And a floor of
+   eight moves under it all, because no goal in the table resolves in
+   fewer, whatever the file says. */
+const TUNE_MOVES_MAX = 6;
+const TUNE_MOVES_FLOOR = 8;
+/* Half to double. The economy was balanced on paper over ninety days
+   (test/economy.js); halving a payout stretches that to about six
+   months, doubling it compresses it to six weeks, and both are still a
+   game. Beyond either is a different economy, which should go through
+   the suite and a build. */
+const TUNE_MULT_MIN = 0.5, TUNE_MULT_MAX = 2.0;
+/* the nap card can be shown from the first level to the end of the
+   handcrafted lane; past sixty, the player has stopped needing to be
+   introduced to anything */
+const TUNE_NAP_FROM_DEFAULT = 3, TUNE_NAP_FROM_MAX = 60;
+/* a notice is a sentence, not a page */
+const TUNE_NOTICE_MAX = 240;
+
+const TUNE = {
+  /* the validated configuration in force, or null for the defaults */
+  data: null,
+  /* when it was fetched, as a clock reading; 0 for a cached copy of
+     unknown age or for nothing at all */
+  at: 0,
+  started: false,
+
+  url() {
+    return BACKEND.url.replace(/\/$/, '') + '/storage/v1/object/public/config/live.json';
+  },
+
+  /* Take a parsed JSON value and return the configuration it describes,
+     or null if it cannot be trusted at all. Every field is optional and
+     every number is pulled inside its range; the shape that comes out
+     is the same every time, so nothing downstream has to check again.
+
+     `v` is the one field that is required. A file with the wrong
+     version, or none, is a file this build does not know how to read,
+     and guessing at it is how a renamed key becomes a silent default. */
+  validate(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    if (raw.v !== 1) return null;
+    const num = v => typeof v === 'number' && isFinite(v) ? v : NaN;
+    const out = { v: 1, moves: {}, pay: { coin: 1, treat: 1, nap: 1 }, nap: { from: TUNE_NAP_FROM_DEFAULT }, notice: null };
+
+    if (raw.moves && typeof raw.moves === 'object' && !Array.isArray(raw.moves)) {
+      Object.keys(raw.moves).forEach(k => {
+        /* a level number, or the daily walk */
+        if (!(/^[1-9]\d{0,3}$/.test(k) || k === 'daily')) return;
+        const d = Math.round(num(raw.moves[k]));
+        if (isNaN(d)) return;
+        const c = clamp(d, -TUNE_MOVES_MAX, TUNE_MOVES_MAX);
+        if (c) out.moves[k] = c;
+      });
+    }
+    if (raw.pay && typeof raw.pay === 'object') {
+      ['coin', 'treat', 'nap'].forEach(k => {
+        const m = num(raw.pay[k]);
+        if (!isNaN(m)) out.pay[k] = clamp(m, TUNE_MULT_MIN, TUNE_MULT_MAX);
+      });
+    }
+    if (raw.nap && typeof raw.nap === 'object') {
+      const f = Math.round(num(raw.nap.from));
+      if (!isNaN(f)) out.nap.from = clamp(f, 1, TUNE_NAP_FROM_MAX);
+    }
+    if (raw.notice && typeof raw.notice === 'object') {
+      const n = raw.notice;
+      const str = v => typeof v === 'string' ? v.slice(0, TUNE_NOTICE_MAX) : '';
+      /* English is the fallback for every string in the game (05-i18n.js
+         does the same), so a notice with no English is no notice */
+      if (/^\d+(\.\d+){0,2}$/.test(String(n.min || '')) && str(n.en)) {
+        out.notice = { min: String(n.min), en: str(n.en), tr: str(n.tr) || str(n.en) };
+      }
+    }
+    return out;
+  },
+
+  /* put a configuration in force; false if it was not fit to apply */
+  apply(raw, at) {
+    const ok = this.validate(raw);
+    if (!ok) return false;
+    this.data = ok;
+    this.at = at || 0;
+    return true;
+  },
+
+  /* At boot, after loadSave(): the cached copy first, so that the map
+     and the first level are drawn with yesterday's numbers rather than
+     the compiled ones and then corrected under the player; then the
+     fetch, which replaces them when it lands. Re-validated on the way
+     out of the save, not trusted because it was written by us: the
+     ranges above may be tighter in this build than in the one that
+     wrote it. */
+  init() {
+    if (this.started) return;
+    this.started = true;
+    try {
+      const c = SAVE && SAVE.tune;
+      if (c && c.data) this.apply(c.data, +c.at || 0);
+    } catch (e) { /* a cached copy is a convenience; nothing waits on it */ }
+    this.refresh();
+  },
+
+  /* backendOn() is the same gate telemetry uses: nothing from a test,
+     nothing from localhost without the debug flag, so the suites play
+     the compiled game and not whatever is in the bucket today */
+  refresh() {
+    let on = false;
+    try { on = backendOn() && typeof fetch === 'function'; } catch (e) { on = false; }
+    if (!on) return Promise.resolve(false);
+    return fetch(this.url(), { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null)
+      .then(j => {
+        if (!j) return false;
+        if (!this.apply(j, now())) return false;
+        /* the validated copy, not the raw one: what is cached is what
+           was applied, so the two can never disagree */
+        try {
+          if (SAVE) { SAVE.tune = { at: this.at, data: this.data }; persist(); }
+        } catch (e) { /* storage full or gone; the fetch still applied */ }
+        return true;
+      })
+      .catch(() => false);
+  },
+
+  /* The notice for this build, in the current language, or '' — shown
+     only on a build older than `min`. Compared part by part, because
+     '1.10.0' is newer than '1.9.0' and a string compare says otherwise.
+     Where to show it is the home screen's business; see 60-ui.js. */
+  notice() {
+    const n = this.data && this.data.notice;
+    if (!n) return '';
+    const a = String(typeof APP_VERSION === 'string' ? APP_VERSION : '0').split('.').map(Number);
+    const b = n.min.split('.').map(Number);
+    for (let i = 0; i < 3; i++) {
+      const x = a[i] || 0, y = b[i] || 0;
+      if (x !== y) return x < y ? (n[LANG] || n.en) : '';
+    }
+    return '';
+  }
+};
+
+/* The move budget a level is actually dealt: the compiled one plus the
+   correction for that level, if the file carries one. `n` is a level
+   number or DAILY_LEVEL for the walk. The floor is the last word. */
+function tuneMoves(n, base) {
+  const t = TUNE.data;
+  if (!t) return base;
+  const d = t.moves[n === DAILY_LEVEL ? 'daily' : String(n)];
+  if (!d) return base;
+  return Math.max(TUNE_MOVES_FLOOR, base + d);
+}
+/* A payout through its multiplier, as a whole number. `kind` is 'coin',
+   'treat' or 'nap'. Zero stays zero, and anything that paid at all still
+   pays at least one: a reward that rounds to nothing reads as a bug. */
+function tunePay(kind, n) {
+  const t = TUNE.data;
+  if (!t || !n) return n;
+  const m = t.pay[kind];
+  if (!m || m === 1) return n;
+  return Math.max(1, Math.round(n * m));
+}
+/* the level the nap card appears from */
+function tuneNapFrom() {
+  return TUNE.data ? TUNE.data.nap.from : TUNE_NAP_FROM_DEFAULT;
+}
+
 /* ===== 15-save.js ===== */
 /* ============================================================
    15 — persistence
@@ -5638,6 +5846,11 @@ function freshSave() {
     /* nap time — see 62-nap-ui.js. `no` is the next rung of the ladder,
        `cur` the board in play, kept so the back button loses nothing */
     nap: { no: 1, solved: 0, seen: false, best: {}, day: { day: 0, done: false, time: 0, clean: false, streak: 0 }, cur: null },
+    /* the last live-tuning file that validated, as { at, data } — see
+       14-tune.js. Kept so that a phone with no signal plays the same game
+       it played with one, rather than snapping back to the compiled
+       numbers; null until the first fetch lands */
+    tune: null,
     /* the win streak: first clears in a row, see WIN_RUN */
     winRun: 0,
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }
@@ -6777,10 +6990,11 @@ function dailyDone(score) {
        treats — most of a treat balance that nothing was asking for.
        It is still the best-paid four minutes in the game; it is no
        longer a salary. */
-    SAVE.coins += ECON.dailyWalkCoins;
-    SAVE.treats += ECON.dailyWalkTreats;
+    const coins = tunePay('coin', ECON.dailyWalkCoins), treats = tunePay('treat', ECON.dailyWalkTreats);
+    SAVE.coins += coins;
+    SAVE.treats += treats;
     persist(true);
-    return { coins: ECON.dailyWalkCoins, treats: ECON.dailyWalkTreats, first: true };
+    return { coins, treats, first: true };
   }
   persist(true);
   return { first: false };
@@ -18792,7 +19006,7 @@ function renderHome() {
   /* Nap time from the third level: by then the lane has shown what the
      game is, and a player who has met their pet once wants to see it
      again somewhere the hearts do not reach. */
-  const napOn = SAVE.reached >= 3 || (SAVE.nap && SAVE.nap.solved > 0);
+  const napOn = SAVE.reached >= tuneNapFrom() || (SAVE.nap && SAVE.nap.solved > 0);
   /* TODAY, IN ONE STRIP. The errands of the day — the basket, the nap,
      the walk, the season book — were a full-width card and then a grid
      of tiles under it, and with the care panel, the streak and the bond
@@ -18801,7 +19015,11 @@ function renderHome() {
      under a heading that says what they have in common: the thing you
      came to do stays the first thing on the screen, and the rest of the
      day is one glance under it rather than a scroll. */
+  /* a line from the server, when the build is older than it should be:
+     TUNE.notice() is empty for everyone else */
+  const notice = typeof TUNE !== 'undefined' ? TUNE.notice() : '';
   pad.innerHTML = `
+    ${notice ? `<div class="card quiet pad16 tuneNotice">${IC.info}<span>${notice}</span></div>` : ''}
     ${heroCard}
     <div class="todaySec">
     <div class="sectitle"><h3>${T('home_today')}</h3></div>
@@ -20536,9 +20754,9 @@ function commitWin() {
   const base = Math.round((ECON.winBase + stars * ECON.winPerStar
     + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
   const rate = first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
-  const coins = Math.max(first ? 0 : 1, Math.round(base * rate));
+  const coins = tunePay('coin', Math.max(first ? 0 : 1, Math.round(base * rate)));
   let treats = 0;
-  if (stars === 3 && prev < 3) treats += isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats;
+  if (stars === 3 && prev < 3) treats += tunePay('treat', isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats);
   /* the chest at a gate: its treat is counted on the card like any other,
      its coins and booster are shown when it opens, after the card */
   const chest = first && n % ECON.milestoneEvery === 0 ? gateChest(n) : null;
@@ -20572,7 +20790,7 @@ function settleWin() {
     SAVE.stars[n] = Math.max(SAVE.stars[n] || 0, stars);
     if (stars >= 3 && w.stars < 3) {
       if (w.prev < 3) {
-        const t = isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats;
+        const t = tunePay('treat', isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats);
         w.treats += t; SAVE.treats += t;
       }
       if (w.first) { passStamp('threeStar'); maybeAskForAReview(); }
@@ -20585,7 +20803,7 @@ function settleWin() {
     const rate = w.first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
     const base = Math.round((ECON.winBase + stars * ECON.winPerStar
       + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
-    const coins = Math.max(w.first ? 0 : 1, Math.round(base * rate));
+    const coins = tunePay('coin', Math.max(w.first ? 0 : 1, Math.round(base * rate)));
     if (coins > w.coins) { SAVE.coins += coins - w.coins; w.coins = coins; }
     w.newBest = newBest;
     w.score = G.score;
@@ -21430,31 +21648,31 @@ function maybeTutorial(def) {
   setTimeout(show, 520);
 }
 
-/* ---------------- onboarding ---------------- */
+/* ---------------- onboarding ----------------
+
+   TWO SCREENS, NOT FOUR. The first version put a story card, the breed,
+   the coat and the name on four screens before a tile was touched. The
+   game that took the top of both stores in October 2026 puts its player
+   on the board at screen zero, and every screen between the icon and
+   the first move is a place to stop. The animal is this game's whole
+   identity, so choosing one stays; the story is now the heading above
+   that choice, and the name is asked on the welcome card with a good
+   one already filled in — so the player who does not care taps once,
+   and the one who does types. */
 function runOnboarding() {
   track('onb_open');
   $('#onb').classList.add('on');
   const card = $('#onbCard');
   let step = 0, breedIdx = 0, coat = 0, eye = 0;
-  let name = '';
 
-  const dots = n => `<div class="dots">${[0, 1, 2, 3].map(i => `<i class="${i === n ? 'on' : ''}"></i>`).join('')}</div>`;
+  const dots = n => `<div class="dots">${[0, 1].map(i => `<i class="${i === n ? 'on' : ''}"></i>`).join('')}</div>`;
+  const petVoiceBreed = i => { const b = BREEDS[i], v = b.voice || {}; if (b.species === 'cat') SFX.meow(1.25 * (v.pitch || 1), v); else SFX.bark(1.2 * (v.pitch || 1), v); };
 
   const render = () => {
     if (step === 0) {
       card.innerHTML = `
-        <canvas id="obHero" width="180" height="180" style="width:180px;height:180px;align-self:center"></canvas>
-        <h1 style="font-size:var(--t-hero)">${T('onb_hi')}</h1>
-        <p style="color:var(--text-dim)">${T('onb_hi_sub')}</p>
-        <button class="btn primary wide" id="obNext">${T('onb_start')}</button>
-        ${dots(0)}`;
-      const c = fitCanvas($('#obHero'), 180, 180);
-      c.translate(90, 90);
-      paintPup(c, 150, 0);
-    } else if (step === 1) {
-      card.innerHTML = `
-        <h2>${T('onb_pick')}</h2>
-        <p style="font-size:var(--t-small)">${T('onb_pick_sub')}</p>
+        <h1 style="font-size:var(--t-h2)">${T('onb_hi')}</h1>
+        <p style="color:var(--text-dim);font-size:var(--t-small)">${T('onb_pick_sub')}</p>
         <div class="choiceGrid" style="grid-template-columns:repeat(3,1fr)">
           ${BREEDS.map((b, i) => `
             <button class="choice ${i === breedIdx ? 'on' : ''}" data-b="${i}">
@@ -21463,9 +21681,8 @@ function runOnboarding() {
               <span class="ds">${breedDesc(i)}</span>
             </button>`).join('')}
         </div>
-        <div class="row"><button class="btn ghost" id="obBack">${T('onb_back')}</button>
-        <button class="btn primary" id="obNext">${T('onb_next')}</button></div>
-        ${dots(1)}`;
+        <button class="btn primary wide" id="obNext">${T('onb_next')}</button>
+        ${dots(0)}`;
       paintArtCanvases(card);
       $$('[data-b]', card).forEach(b => b.addEventListener('click', () => {
         breedIdx = +b.dataset.b; coat = 0;
@@ -21473,11 +21690,10 @@ function runOnboarding() {
         SFX.tap(); petVoiceBreed(breedIdx);
         render();
       }));
-    } else if (step === 2) {
+    } else {
       card.innerHTML = `
         <canvas id="obArt" width="150" height="122" style="width:150px;height:122px;align-self:center"></canvas>
         <h2>${T('onb_coat')}</h2>
-        <p style="font-size:var(--t-small)">${T('onb_coat_sub')}</p>
         <div class="choiceGrid" style="grid-template-columns:repeat(3,1fr)">
           ${BREEDS[breedIdx].coats.map((co, i) => `
             <button class="choice ${i === coat ? 'on' : ''}" data-c="${i}" style="padding:10px 5px">
@@ -21490,52 +21706,28 @@ function runOnboarding() {
           ${EYE_COLORS.map((e, i) => `<button class="sw ${i === eye ? 'on' : ''}" data-e="${i}" aria-label="${T('eye_' + e.id)}" title="${T('eye_' + e.id)}" style="background:${e.hex}"></button>`).join('')}
         </div>
         <div class="row"><button class="btn ghost" id="obBack">${T('onb_back')}</button>
-        <button class="btn primary" id="obNext">${T('onb_next')}</button></div>
-        ${dots(2)}`;
+        <button class="btn primary" id="obNext">${T('onb_done')}</button></div>
+        ${dots(1)}`;
       paintArtCanvases(card);
-      const art = () => {
-        const c = fitCanvas($('#obArt'), 150, 122);
-        c.translate(75, 12);
-        drawBody(c, specOf(breedIdx, BREEDS[breedIdx].coats[coat], EYE_COLORS[eye].hex), 74, { mouth: 'smile' });
-      };
-      art();
+      const c = fitCanvas($('#obArt'), 150, 122);
+      c.translate(75, 12);
+      drawBody(c, specOf(breedIdx, BREEDS[breedIdx].coats[coat], EYE_COLORS[eye].hex), 74, { mouth: 'smile' });
       $$('[data-c]', card).forEach(b => b.addEventListener('click', () => { coat = +b.dataset.c; SFX.tap(); render(); }));
       $$('[data-e]', card).forEach(b => b.addEventListener('click', () => { eye = +b.dataset.e; SFX.tap(); render(); }));
-    } else {
-      const names = NAME_POOL[BREEDS[breedIdx].species];
-      card.innerHTML = `
-        <canvas id="obArt" width="146" height="118" style="width:146px;height:118px;align-self:center"></canvas>
-        <h2>${T('onb_name')}</h2>
-        <p style="font-size:var(--t-small)">${T('onb_name_sub')}</p>
-        <input class="field" id="obName" maxlength="14" placeholder="${T('onb_placeholder')}" value="${name}">
-        <div style="font-size:var(--t-micro);color:var(--text-faint)">${T('onb_suggest')}</div>
-        <div class="nameSuggest">${names.slice(0, 6).map(n => `<button data-n="${n}">${n}</button>`).join('')}</div>
-        <div class="row"><button class="btn ghost" id="obBack">${T('onb_back')}</button>
-        <button class="btn primary" id="obNext">${T('onb_done')}</button></div>
-        ${dots(3)}`;
-      const c = fitCanvas($('#obArt'), 146, 118);
-      c.translate(73, 11);
-      drawBody(c, specOf(breedIdx, BREEDS[breedIdx].coats[coat], EYE_COLORS[eye].hex), 68, { mouth: 'smile' });
-      $$('[data-n]', card).forEach(b => b.addEventListener('click', () => {
-        name = b.dataset.n; $('#obName').value = name; SFX.tap();
-      }));
-      $('#obName').addEventListener('input', e => { name = e.target.value; });
     }
     const nx = $('#obNext'); if (nx) nx.addEventListener('click', next);
     const bk = $('#obBack'); if (bk) bk.addEventListener('click', () => { step--; SFX.tap(); render(); });
   };
-  const petVoiceBreed = i => { const b = BREEDS[i], v = b.voice || {}; if (b.species === 'cat') SFX.meow(1.25 * (v.pitch || 1), v); else SFX.bark(1.2 * (v.pitch || 1), v); };
   let adopted = false;
   const next = () => {
     audioResume();
     SFX.tap();
-    if (step < 3) { step++; track('onb_step', { step: step }); render(); return; }
+    if (step < 1) { step++; track('onb_step', { step: step }); render(); return; }
     /* two taps in one frame would adopt twice and greet the first pet
        by the second one's name */
     if (adopted) return;
     adopted = true;
-    const nm = cleanName(name) || pick(NAME_POOL[BREEDS[breedIdx].species]);
-    const p = makePet(breedIdx, coat, eye, nm);
+    const p = makePet(breedIdx, coat, eye, pick(NAME_POOL[BREEDS[breedIdx].species]));
     lookUnlock(breedIdx, coat, eye);
     SAVE.pets = [p];
     SAVE.activePet = p.id;
@@ -21549,16 +21741,27 @@ function runOnboarding() {
   render();
 }
 function welcomeModal(p) {
+  /* the name is asked here, with one already in the field: the card is
+     the first time the animal is called anything, which is the moment
+     a name means something, and the player who does not care taps
+     straight through with a good one */
+  const names = NAME_POOL[BREEDS[p.breed].species];
   const m = modal(`
     <canvas id="wcArt" width="160" height="160" style="width:160px;height:160px;align-self:center"></canvas>
-    <h2>${T('onb_welcome', { name: p.name })}</h2>
-    <p>${T('onb_welcome_sub', { name: p.name, breed: breedName(p.breed) })}</p>
+    <h2>${T('onb_welcome_q')}</h2>
+    <input class="field" id="obName" maxlength="14" placeholder="${T('onb_placeholder')}" value="${p.name}">
+    <div class="nameSuggest">${names.filter(n => n !== p.name).slice(0, 5).map(n => `<button data-n="${n}">${n}</button>`).join('')}</div>
+    <p style="font-size:var(--t-small);color:var(--text-dim)">${T('onb_welcome_sub', { breed: breedName(p.breed) })}</p>
     <button class="btn primary wide" id="wcGo">${T('onb_go')}</button>
   `, { dismissable: false });
   const c = fitCanvas($('#wcArt', m.el), 160, 160);
   c.translate(80, 18);
   drawBody(c, specOfPet(p), 74, { mouth: 'open' });
+  const field = $('#obName', m.el);
+  $$('[data-n]', m.el).forEach(b => b.addEventListener('click', () => { field.value = b.dataset.n; SFX.tap(); }));
   $('#wcGo', m.el).addEventListener('click', () => {
+    const nm = cleanName(field.value);
+    if (nm && nm !== p.name) { p.name = nm; persist(true); }
     m.close();
     renderHome();
     setScreen('map');
@@ -22127,8 +22330,8 @@ function napWin() {
       first = true;
       d.done = true; d.time = ms; d.clean = clean;
       d.streak = (d.streak || 0) + 1;
-      coins = NAP_PAY.daily;
-      if (d.streak % 7 === 0) treats = NAP_PAY.week;
+      coins = tunePay('nap', NAP_PAY.daily);
+      if (d.streak % 7 === 0) treats = tunePay('nap', NAP_PAY.week);
       const pet = activePet();
       if (pet) addBond(pet, NAP_PAY.bond);
     }
@@ -22138,7 +22341,7 @@ function napWin() {
     first = !s.best[no];
     if (!s.best[no] || ms < s.best[no]) s.best[no] = ms;
     if (first) {
-      coins = NAP_PAY.rung;
+      coins = tunePay('nap', NAP_PAY.rung);
       if (no % 10 === 0) treats = 1;
     }
     if (no >= s.no) s.no = no + 1;
@@ -22157,7 +22360,9 @@ function napWin() {
   NAP.warm();
 }
 /* small on purpose: this sits beside the levels, it does not replace
-   them, and test/economy.js balances coins against what the lane pays */
+   them, and test/economy.js balances coins against what the lane pays.
+   Paid through tunePay('nap', …), so the live file can move all three
+   together, by half to double — see 14-tune.js */
 const NAP_PAY = { daily: 30, rung: 8, week: 2, bond: 2 };
 
 function napWinCard(w) {
@@ -22550,6 +22755,9 @@ function installApp() {
 
 function boot() {
   const had = loadSave();
+  /* the live numbers: the save's copy now, today's when the fetch lands;
+     before the map or a level card reads a budget — see 14-tune.js */
+  TUNE.init();
   castRebuild();          /* who stands in each board slot, before anything draws */
   if (SAVE.settings.lang) LANG = SAVE.settings.lang;
   else { LANG = (navigator.language || 'en').toLowerCase().indexOf('tr') === 0 ? 'tr' : 'en'; SAVE.settings.lang = LANG; }
@@ -22599,7 +22807,7 @@ function boot() {
   if (ADS.ready()) ADS.init();
   /* tonight's cushions and the next rung, made off the main thread while
      the player is still looking at the room */
-  if (SAVE.reached >= 3) setTimeout(() => NAP.warm(), 2500);
+  if (SAVE.reached >= tuneNapFrom()) setTimeout(() => NAP.warm(), 2500);
   /* And, in the same breath, anything the store still says is owed.
 
      A purchase that was taken but never granted — the app killed between

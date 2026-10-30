@@ -1,6 +1,6 @@
 # App Store screenshots
 
-Seven slides, in English and Turkish, at the one size the App Store asks an iPhone app for: **1320 × 2868** (iPhone 6.9"). Upload `screenshots/en/phone/01.png … 07.png` to English (U.S.) and `screenshots/tr/phone/…` to Turkish, in that order.
+Eight slides, in English and Turkish, at the one size the App Store asks an iPhone app for: **1320 × 2868** (iPhone 6.9"). Upload `screenshots/en/phone/01.png … 08.png` to English (U.S.) and `screenshots/tr/phone/…` to Turkish, in that order.
 
 | File | What it is |
 |---|---|
@@ -24,8 +24,9 @@ python store/slides/render.py
 | 3 | A puzzle lane that **keeps on going** | Hiç bitmeyen bir **bulmaca yolu** | The map around level 31 |
 | 4 | Pick who comes **home with you** | Eve kim gelecek, **sen seç** | The breed picker from the first launch |
 | 5 | Decorate a **cozy** room for them | Onlara **sıcacık** bir oda döşe | The shop's furniture shelf |
-| 6 | **A gift on the step,** a walk to take | **Kapıda bir hediye,** günün yürüyüşü | The daily basket and its seven-day ladder |
-| 7 | Three stars and **one happy cat** | Üç yıldız ve **mutlu bir kedi** | The win card |
+| 6 | A cosy logic puzzle, **a new one daily** | Sakin bir mantık bulmacası, **her gün yenisi** | Nap time, a board two-thirds put to bed |
+| 7 | **A gift on the step,** a walk to take | **Kapıda bir hediye,** günün yürüyüşü | The daily basket and its seven-day ladder |
+| 8 | Three stars and **one happy cat** | Üç yıldız ve **mutlu bir kedi** | The win card |
 
 The first three carry the words of the store name and subtitle (match 3, pets, adopt, cats, dogs, puzzle), because those are the three the search results show and the App Store reads the text in them.
 

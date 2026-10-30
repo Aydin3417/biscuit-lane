@@ -1,0 +1,7 @@
+{
+  "v": 1,
+  "moves": {},
+  "pay": { "coin": 1, "treat": 1, "nap": 1 },
+  "nap": { "from": 3 },
+  "notice": null
+}
