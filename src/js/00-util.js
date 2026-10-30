@@ -415,6 +415,7 @@ function modal(html, opts) {
 
   const api = {
     el: sheet, veil, dismissable: opts.dismissable !== false,
+    get shown() { return shown && !closed; },
     close() {
       if (closed) return;
       closed = true;

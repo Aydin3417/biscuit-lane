@@ -189,9 +189,22 @@ const NOTIFY = {
        it. Scheduled from a walk day it lands the following morning; a
        player who opens the game before ten reschedules it past
        themselves on the way out and never sees it. */
+    /* But not at ten for somebody who plays in the evening. Ten was the
+       hour for everyone, so a player who walks every night at nine was
+       told every morning about a walk they were always going to take —
+       the nag the paragraph above says this is not. Read in the 30 Oct
+       2026 review. Somebody who has walked today is reminded tomorrow an
+       hour after the time they are putting the game down now, kept
+       between ten in the morning and nine at night: the evening player
+       hears from it only on an evening they did not come. */
     const d = new Date();
     d.setHours(10, 0, 0, 0);
-    if (d.getTime() <= Date.now() || dailyState().done) d.setDate(d.getDate() + 1);
+    if (dailyState().done) {
+      const usual = new Date(Date.now() + HOUR);
+      const h = Math.min(21, Math.max(10, usual.getHours()));
+      d.setHours(h, h === usual.getHours() ? usual.getMinutes() : 0, 0, 0);
+      d.setDate(d.getDate() + 1);
+    } else if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
     this.at('walk', d.getTime(), T('note_walk_t'), T('note_walk_s'));
 
     /* The one for somebody who has stopped coming.

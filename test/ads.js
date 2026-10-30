@@ -29,7 +29,10 @@ const mock = mode => `
       if (__ad.mode === 'nofill') throw new Error('Loading failed');
       return { adUnitId: 'x' };
     },
-    addListener: async (ev, fn) => { (__ad.listeners[ev] = __ad.listeners[ev] || []).push(fn); return { remove() { __ad.listeners[ev] = __ad.listeners[ev].filter(f => f !== fn); } }; },
+    /* NOT async: the native bridge hands the handle back directly, and
+       a stand-in that returned a promise hid the bug that broke every
+       video on a real phone (19-ads.js, show) */
+    addListener: (ev, fn) => { (__ad.listeners[ev] = __ad.listeners[ev] || []).push(fn); return { remove() { __ad.listeners[ev] = __ad.listeners[ev].filter(f => f !== fn); } }; },
     /* as on iOS: resolves when a reward is earned, and never otherwise */
     showRewardVideoAd: () => new Promise(resolve => {
       __ad.shown++;

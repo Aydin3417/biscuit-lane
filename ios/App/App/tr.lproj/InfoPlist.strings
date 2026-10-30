@@ -1,0 +1,2 @@
+/* iOS izleme izni penceresinde gösterilir (NSUserTrackingUsageDescription). */
+"NSUserTrackingUsageDescription" = "Pawtika yalnızca sen istediğinde video gösterir. İzlemeye izin verirsen bu videolar sana daha uygun olur; izin vermemek oyunda başka hiçbir şeyi değiştirmez.";

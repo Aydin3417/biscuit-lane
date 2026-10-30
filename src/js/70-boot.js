@@ -305,6 +305,7 @@ function boot() {
     } else {
       try { if (AU.ctx && AU.ctx.state === 'suspended' && SAVE.settings.sound) AU.ctx.resume(); } catch (e) { }
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
+      ADS.resumed();
       if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
       if (!AMB.raf && !reduceMotion()) { AMB.last = performance.now(); AMB.raf = requestAnimationFrame(motesLoop); }
       if (SCREEN === 'home') { renderHome(); roomLayout(); roomStart(); }

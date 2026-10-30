@@ -299,7 +299,8 @@ function loadSave() {
     const base = freshSave();
     SAVE = Object.assign(base, d);
     /* before anything below asks the time: see CLOCK_FLOOR, 00-util.js */
-    SAVE.maxSeen = clockSeen(+SAVE.maxSeen || 0);
+    const seenBefore = +SAVE.maxSeen || 0;
+    SAVE.maxSeen = clockSeen(seenBefore);
     SAVE.settings = Object.assign(freshSave().settings, d.settings || {});
     SAVE.room = Object.assign({ theme: 'oat', placed: [] }, d.room || {});
     SAVE.stats = Object.assign(freshSave().stats, d.stats || {});
@@ -312,6 +313,16 @@ function loadSave() {
     SAVE.granted = Object.assign({}, d.granted || {});
     SAVE.starter = Object.assign({ bought: false }, d.starter || {});
     SAVE.infiniteUntil = +d.infiniteUntil || 0;
+    /* A clock wound back more than three days is trusted (see
+       CLOCK_FLOOR), and unlimited hearts end at an absolute time — so the
+       hour of a biscuit tin, with the clock set back ten days, lasted 241
+       hours. Reproduced on 30 Oct 2026. What was left when the clock was
+       last seen honestly is what is left now. */
+    if (seenBefore && Date.now() < seenBefore - 3 * DAY && SAVE.infiniteUntil > seenBefore) {
+      SAVE.infiniteUntil = Date.now() + (SAVE.infiniteUntil - seenBefore);
+    } else if (seenBefore && Date.now() < seenBefore - 3 * DAY) {
+      SAVE.infiniteUntil = Math.min(SAVE.infiniteUntil, Date.now());
+    }
     SAVE.winRun = Math.max(0, +d.winRun || 0);
     SAVE.coats = Object.assign({}, d.coats || {});
     SAVE.eyes = Object.assign({}, d.eyes || {});
@@ -1090,7 +1101,12 @@ function grantPurchase(kind, id, txId) {
   }
   if (kind === 'jar') {
     const j = jarState();
-    const got = j.fill;
+    /* The jar is only sold full, so a jar paid for is a full jar. Claimed
+       on a save that no longer holds it — a reinstall, "start over", a
+       purchase replayed after the jar was emptied some other way — it
+       paid j.fill, which was nothing, and was still marked granted and
+       handed back to the store: charged for an empty jar. */
+    const got = Math.max(j.fill || 0, JAR.cap);
     SAVE.treats += got;
     j.fill = 0;
     j.opened = (j.opened || 0) + 1;

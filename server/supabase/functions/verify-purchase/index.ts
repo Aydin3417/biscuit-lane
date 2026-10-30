@@ -61,10 +61,15 @@ async function apple(t: Record<string, unknown>, sku: string): Promise<Verdict> 
   if (!r.receipt || r.receipt.bundle_id !== BUNDLE) return { ok: false, code: REFUSED, message: "wrong app" };
   const want = typeof t.id === "string" ? t.id : null;
   const items: Record<string, string>[] = [...(r.receipt.in_app || []), ...(r.latest_receipt_info || [])];
-  const hit = items.find((x) => x.product_id === sku && (!want || x.transaction_id === want || x.original_transaction_id === want));
+  // With no product named (an older client sent the bundle id, which is
+  // what the plugin puts in `id` on iOS), the transaction id alone picks
+  // the line, and the product is whatever Apple says that line was.
+  const hit = items.find((x) => (!sku || x.product_id === sku) &&
+    (!want || x.transaction_id === want || x.original_transaction_id === want) && (sku || want));
   if (!hit) return { ok: false, code: REFUSED, message: "not in receipt" };
+  if (!SKUS.has(hit.product_id)) return { ok: false, code: REFUSED, message: "unknown product" };
   if (hit.cancellation_date) return { ok: false, code: REFUSED, message: "refunded" };
-  return { ok: true, tx: hit.transaction_id, sku, env };
+  return { ok: true, tx: hit.transaction_id, sku: hit.product_id, env };
 }
 
 // ---------- Google ----------
@@ -137,9 +142,12 @@ Deno.serve(async (req) => {
   try { payload = await req.json(); } catch { return answer(false, { code: REFUSED, message: "json" }, 400); }
   const body = payload.body || {};
   const t = (body.transaction || {}) as Record<string, unknown>;
-  const sku = typeof body.id === "string" ? body.id : "";
+  let sku = typeof body.id === "string" ? body.id : "";
   const install = typeof payload.install === "number" ? Math.floor(payload.install) : 0;
-  if (!SKUS.has(sku)) return answer(false, { code: REFUSED, message: "unknown product" });
+  // On the App Store the plugin's `id` is the app, not the product (see
+  // BILLING.named in the game); the receipt names the product instead.
+  if (!SKUS.has(sku) && t.type === "ios-appstore" && sku === BUNDLE) sku = "";
+  else if (!SKUS.has(sku)) return answer(false, { code: REFUSED, message: "unknown product" });
 
   let v: Verdict;
   try {
@@ -151,14 +159,23 @@ Deno.serve(async (req) => {
   }
   if (!v.ok) return answer(false, { code: v.code, message: v.message });
 
-  // One transaction, one install. The same receipt presented again by the
-  // install that bought it is fine (a retry, a restore); by another
-  // install it is a shared or copied receipt.
+  // One transaction, one install at a time. This refused a transaction
+  // shown by a second install outright, as a shared or copied receipt —
+  // but a store only shows a transaction again while it is unfinished,
+  // and the game finishes one only after the treats are in the save. So a
+  // second install holding it is, far more often, the same player after a
+  // reinstall or a "start over" with a purchase the kill left unpaid, and
+  // refusing it charged them for nothing for ever. It moves to the new
+  // install instead, and the move is kept so a receipt that hops between
+  // many installs can be seen and refused later if it ever happens.
   const { data: seen } = await db.from("purchases").select("install").eq("transaction_id", v.tx).maybeSingle();
-  if (seen && seen.install !== install && install) return answer(false, { code: REFUSED, message: "already redeemed" });
+  if (seen && seen.install !== install && install) {
+    await db.from("purchases").update({ install }).eq("transaction_id", v.tx);
+    console.log("moved", v.tx, seen.install, "->", install);
+  }
   if (!seen) {
     await db.from("purchases").insert({
-      transaction_id: v.tx, platform: t.type === "ios-appstore" ? "ios" : "android", sku, install, environment: v.env,
+      transaction_id: v.tx, platform: t.type === "ios-appstore" ? "ios" : "android", sku: v.sku, install, environment: v.env,
     });
   }
   return answer(true, { env: v.env });

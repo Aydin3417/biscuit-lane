@@ -72,6 +72,8 @@ const ADS = {
   inited: false,
   initing: null,
   personalised: false,
+  privacyOptions: false,   // Google says this player must be able to revisit consent
+  blocked: false,          // consent says no ad may be requested yet
   loading: null,
   loaded: false,
   retry: null,
@@ -110,8 +112,17 @@ const ADS = {
         try {
           const info = await A.requestConsentInfo();
           if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') await A.showConsentForm();
+          const after = info && info.status === 'REQUIRED' ? await A.requestConsentInfo() : info;
+          /* where the law asks for consent it also asks for a way to
+             change it later: Settings draws one when this is set */
+          this.privacyOptions = !!(after && after.privacyOptionsRequirementStatus === 'REQUIRED');
+          /* no ad is asked for until Google's form says one may be */
+          if (after && after.canRequestAds === false) this.blocked = true;
         } catch (e) { /* no form, or no network: non-personalised it is */ }
         await this.askTracking();
+        /* and once more shortly, for the launch where iOS said nothing
+           because the app had not finished coming to the front */
+        if (this.attPending) setTimeout(() => this.resumed(), 1500);
         this.inited = true;
         this.preload();
         return true;
@@ -138,14 +149,35 @@ const ADS = {
         st = await this.plugin.trackingAuthorizationStatus();
       }
       this.personalised = !!(st && st.status === 'authorized');
+      /* Still undecided after asking means iOS did not show it — an app
+         not yet active when boot asked, or Google's form still on its way
+         out. The next time the game comes to the front, it asks again. */
+      this.attPending = !!(st && st.status === 'notDetermined');
     } catch (e) { this.personalised = false; }
+  },
+  attPending: false,
+  async resumed() {
+    if (!this.attPending || !this.plugin || nativePlatform() !== 'ios') return;
+    this.attPending = false;
+    const was = this.personalised;
+    await this.askTracking();
+    /* a video loaded before the answer was loaded non-personalised; one
+       loaded after a yes may be personalised */
+    if (this.personalised !== was && !this.loading) { this.loaded = false; this.preload(); }
+  },
+
+  /* Google's own sheet for changing the consent given earlier. Only
+     where Google says it is required, which is where the form was. */
+  async privacyChoices() {
+    if (!this.plugin || !this.privacyOptions) return false;
+    try { await this.plugin.showPrivacyOptionsForm(); return true; } catch (e) { return false; }
   },
 
   /* A video loaded ahead, so the button does not sit there for three
      seconds after it is pressed. One at a time; a failed load is simply
      tried again next time. */
   preload() {
-    if (this.loading || !this.inited) return this.loading;
+    if (this.loading || !this.inited || this.blocked) return this.loading;
     this.loaded = false;
     this.loading = this.plugin.prepareRewardVideoAd({ adId: this.unit(), isTesting: this.testing(), npa: !this.personalised })
       .then(() => { this.loaded = true; return true; }, () => {
@@ -199,7 +231,15 @@ const ADS = {
       this.loaded = false;
       if (!loaded) return false;
       const over = new Promise(res => {
-        const on = (ev, fn) => A.addListener(ev, fn).then(h => handles.push(h));
+        /* Promise.resolve, because the plugins reached through
+           window.Capacitor.Plugins hand back the handle itself, not a
+           promise of one: the native bridge on both platforms returns
+           { remove } straight away. `.then` on that threw, the catch
+           below turned it into "not watched", and every video button in
+           the game played the error sound and nothing else — seen on the
+           emulator on 30 Oct 2026. test/ads.js's stand-in returned a
+           promise, which is why it never failed. */
+        const on = (ev, fn) => Promise.resolve(A.addListener(ev, fn)).then(h => handles.push(h));
         Promise.all([
           on('onRewardedVideoAdReward', () => { rewarded = true; }),
           on('onRewardedVideoAdDismissed', () => res()),

@@ -44,7 +44,11 @@ const LEAVE_WINDOW = 2000;
 function nativeBack() {
   /* a sheet first, whatever else is true: it is the thing in front */
   if (sheetIsOpen()) {
-    const top = modalStack[modalStack.length - 1];
+    /* The top sheet the player can SEE. modalStack also holds sheets
+       that are only queued behind it, and the last of those is what this
+       took: back on the win card threw away the review question waiting
+       behind it, unseen, and the card stayed exactly where it was. */
+    const top = modalStack.filter(m => m.shown).pop();
     /* A card that cannot be dismissed (the win and lose cards, the
        gift) was closed by back all the same, which on the lose card left
        a finished board with no buttons on it. Back on one of those means

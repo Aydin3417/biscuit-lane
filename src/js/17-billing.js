@@ -134,7 +134,7 @@ const BILLING = {
              at all. Only an answer that says "refused" stops a grant. */
           S.validator = (body, cb) => {
             const good = { ok: true, data: { id: body.id, latest_receipt: true, transaction: body.transaction } };
-            backendCall('verify-purchase', { body: body, install: SAVE.install || 0, platform: ios ? 'ios' : 'android' })
+            backendCall('verify-purchase', { body: this.named(body), install: SAVE.install || 0, platform: ios ? 'ios' : 'android' })
               .then(r => r.status >= 500 ? null : r.json().then(j => ({ status: r.status, j: j })))
               .then(x => {
                 if (!x || !x.j || typeof x.j.ok !== 'boolean') { track('verify_skip', { why: 'noanswer' }); cb(good); return; }
@@ -174,6 +174,38 @@ const BILLING = {
       setTimeout(() => done(false), 12000);
     });
     return this.started;
+  },
+
+  /* The body the plugin hands the validator, with the product named.
+
+     On Google Play `body.id` is the product. On the App Store it is the
+     APP: the plugin validates Apple's one receipt for the whole bundle,
+     so `id` is "com.pawtika.game" and the product is only inside the
+     receipt. verify-purchase read `id` as the product, answered "unknown
+     product" to every iPhone purchase, and the player was charged and
+     told nothing had been — found by reading the plugin's source on
+     30 Oct 2026, before any real money went through it. So the product
+     is looked up here, by the transaction id the body carries, in the
+     receipts the phone already holds; failing that, the one buy() that
+     is open is the one being checked. The server is told the product
+     and still finds it in Apple's own copy of the receipt, so naming it
+     here proves nothing on its own. */
+  named(body) {
+    const mine = this.skus();
+    if (!body || mine.indexOf(body.id) >= 0) return body;
+    const want = body.transaction && body.transaction.id;
+    let sku = null;
+    ((this.store && this.store.localReceipts) || (window.CdvPurchase && CdvPurchase.store && CdvPurchase.store.localReceipts) || [])
+      .forEach(r => ((r && r.transactions) || []).forEach(tx => {
+        if (sku || !tx || !want || tx.transactionId !== want) return;
+        const p = (tx.products || []).find(x => x && mine.indexOf(x.id) >= 0);
+        if (p) sku = p.id;
+      }));
+    if (!sku) {
+      const open = Object.keys(this.waiting);
+      if (open.length === 1) sku = open[0];
+    }
+    return sku ? Object.assign({}, body, { id: sku, app: body.id }) : body;
   },
 
   /* a product the store has described: keep its price as the store wrote
@@ -336,7 +368,15 @@ const BILLING = {
      This file knows about receipts and nothing about treats. */
   async restore() {
     if (!(await this.boot())) return { ok: false, why: 'nostore', skus: [], receipts: [] };
-    try { await this.store.restorePurchases(); } catch (e) { /* what already arrived still counts */ }
+    /* Not on iOS. StoreKit replays an unfinished transaction by itself
+       every time the store starts, which is all this is for, and never
+       restores a consumable at all; what restorePurchases adds there is a
+       receipt refresh, which on a phone with no Apple ID signed in is a
+       "Sign in to the App Store" sheet — at every launch, before the game
+       has been seen. */
+    if (nativePlatform() !== 'ios') {
+      try { await this.store.restorePurchases(); } catch (e) { /* what already arrived still counts */ }
+    }
     const mine = this.skus();
     const ours = tx => ((tx && tx.products) || []).some(p => p && mine.indexOf(p.id) >= 0);
     (this.store.localReceipts || []).forEach(r => ((r && r.transactions) || []).forEach(tx => {

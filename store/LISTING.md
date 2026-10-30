@@ -289,7 +289,7 @@ Data types:
 
 | Type | Collected / Shared | Why | Optional? |
 |---|---|---|---|
-| Device or other IDs (advertising id) | Collected and **shared with Google AdMob** | Advertising | Only when a video is asked for; iOS asks first |
+| Device or other IDs (advertising id) | Collected and **shared with Google AdMob** | Advertising | No: the ad SDK starts and loads one video when the game opens (EEA/UK: after Google's consent form); a video is only ever shown when asked for |
 | App activity → App interactions | Collected, not shared | Analytics | Yes, Settings → Share play data |
 | App info and performance → Crash logs, Diagnostics | Collected, not shared | Analytics | Yes, the same switch |
 | Financial info → Purchase history | Collected, not shared (transaction id only) | Fraud prevention | No, only on purchase |
@@ -321,7 +321,10 @@ submitted, and the privacy answers have not been published.
 - **Category** Games, Puzzle and Casual. **Age rating** 4+, with
   "advertising: yes" and everything else none. **Content rights:** no
   third-party content. **Price** free, all 175 countries and regions.
-- **In-app purchases:** all seven, consumable, with the ids and prices in
+- **In-app purchases:** six of the seven (the Pocketful, `treats_pocket_40`,
+  was never created in App Store Connect; the game draws no row for a
+  product the store has not priced, so it simply does not appear on
+  iPhone until it is), consumable, with the ids and prices in
   the table further down, a display name and description in English and
   Turkish, a review screenshot (`store/review/`) and a review note each.
   The Turkish display names: Bir Avuç / Bir Kese / Bir Kutu / Bir Çuval
@@ -365,13 +368,16 @@ submitted, and the privacy answers have not been published.
 
 ## App Store privacy ("nutrition label")
 
-App Store Connect → App Privacy. Data **used to track you**: Device ID
-(the advertising identifier, only if the player allows tracking when
-asked). Data **not linked to you**: Usage Data (Product Interaction,
-Advertising Data), Diagnostics (Crash Data, Other Diagnostic Data),
-Purchases (Purchase History). No contact info, no location, no user
-content. Tracking domains are declared by Google's SDK in its own
-privacy manifest.
+App Store Connect → App Privacy. What was entered on 3 Oct 2026 (the
+list above) is the answer to keep: it follows Google's own disclosure
+for the Mobile Ads SDK, which collects Device ID, Advertising Data,
+Product Interaction and Coarse Location for third-party advertising,
+and a label wider than the app needs is never a rejection, where a
+narrower one is. This paragraph used to say only Device ID was used for
+tracking and "no location"; that was the game's own collection, not
+Google's, and the two disagreed (30 Oct 2026 review). Not linked to the
+user, all of it. No contact info, no user content. Tracking domains are
+declared by Google's SDK in its own privacy manifest.
 
 The age rating questionnaire now answers "Contains ads: yes" as well,
 and the App Store listing must not say "no ads" anywhere.
@@ -384,15 +390,24 @@ Paste into App Store Connect -> App Review Information -> Notes:
 No account or sign-in is needed; the game starts on first launch.
 
 In-app purchases: tap the purple treat chip at the top of any screen to
-open the store. All seven products are consumable.
+open the store; the treat packs and the welcome pack are there from the
+first launch. All products are consumable.
+- Treat jar: it fills by 4 treats per level cleared and is sold only
+  when full (100), so it is not purchasable on a new install.
+- Season book: its card appears on the Home screen from level 5.
+Both can be bought in the sandbox once reached; nothing else about the
+game changes with them.
 
 Advertising: rewarded video only, never shown unless the player taps a
 "Watch a video" button. Those buttons appear only when a video has
 loaded, on the out-of-moves card, the out-of-hearts sheet and the
 level-cleared card. The App Tracking Transparency prompt is shown on
 first launch, straight after Google's consent form where that form is
-shown, and before the ad SDK loads any ad. If no video is available the
-buttons are simply absent.
+shown, and before the ad SDK loads any ad (if iOS does not present it
+because the app was not yet active, it is asked again the next time the
+app comes to the foreground). If no video is available the buttons are
+simply absent. Where Google's consent form applies, Settings (gear
+icon) -> Ad privacy choices reopens it.
 
 The app targets iPhone. It works offline; a connection is used only for
 purchases, the optional videos and anonymous play statistics, which can

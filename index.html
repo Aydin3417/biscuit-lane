@@ -1759,6 +1759,7 @@ function modal(html, opts) {
 
   const api = {
     el: sheet, veil, dismissable: opts.dismissable !== false,
+    get shown() { return shown && !closed; },
     close() {
       if (closed) return;
       closed = true;
@@ -2177,11 +2178,11 @@ const STRINGS = {
     fam_fav: 'Charges on',
     fam_adopted: 'Welcome, {name}',
     fam_groom: 'Change their coat',
-    rate_t: 'How are you finding it?',
+    rate_t: 'Would you rate Pawtika?',
     rate_s: 'A minute of your time on the store page does more for a small game than anything else anybody can do for it.',
-    rate_yes: 'I am enjoying it',
-    rate_no: 'Not really',
-    rate_thanks: 'Fair enough. Thank you for saying.',
+    rate_yes: 'Rate it on the store',
+    rate_no: 'Not now',
+    rate_thanks: 'No trouble. It will not ask again.',
     share_btn: 'Tell somebody about them',
     share_text: 'I am bringing {name} up in Pawtika. Come and meet the rest of them.',
     share_copied: 'Copied — paste it wherever you like.',
@@ -2211,6 +2212,7 @@ const STRINGS = {
     set_reset_yes: 'Delete it all', set_reset_no: 'Keep my pets',
     set_credits: 'Every cat, dog, sound and biscuit here is drawn and synthesised in code — no audio files. The rooms and lanes behind them are painted.',
     set_privacy: 'Privacy policy',
+    set_ad_choices: 'Ad privacy choices',
 
     /* daily */
     daily_t: 'Left on the step',
@@ -2539,11 +2541,11 @@ const STRINGS = {
     fam_fav: 'Şununla dolar',
     fam_adopted: 'Hoş geldin {name}',
     fam_groom: 'Postunu değiştir',
-    rate_t: 'Nasıl buldun?',
+    rate_t: 'Pawtika’yı puanlar mısın?',
     rate_s: 'Mağaza sayfasına ayıracağın bir dakika, küçük bir oyun için yapılabilecek her şeyden daha faydalı.',
-    rate_yes: 'Beğeniyorum',
-    rate_no: 'Pek değil',
-    rate_thanks: 'Anlaşıldı. Söylediğin için teşekkürler.',
+    rate_yes: 'Mağazada puanla',
+    rate_no: 'Şimdi değil',
+    rate_thanks: 'Sorun değil. Bir daha sormayacak.',
     share_btn: 'Birine onlardan bahset',
     share_text: '{name} Pawtika\'da yaşıyor. Gel, diğerleriyle de tanış.',
     share_copied: 'Kopyalandı — istediğin yere yapıştır.',
@@ -2572,6 +2574,7 @@ const STRINGS = {
     set_reset_yes: 'Hepsini sil', set_reset_no: 'Vazgeçtim',
     set_credits: 'Buradaki her kedi, her köpek, her ses kodla çiziliyor ve sentezleniyor — ses dosyası yok. Arkadaki oda ve yollar boyama.',
     set_privacy: 'Gizlilik politikası',
+    set_ad_choices: 'Reklam gizlilik tercihleri',
 
     daily_t: 'Kapıya bırakılmış',
     daily_s: 'Serinin {n}. günü.',
@@ -4328,9 +4331,18 @@ function normaliseGoals(def) {
       /* A bramble only spreads from another bramble, so once the patch is
          fully cut there is nothing left to grow — asking for more cuts
          than the patch holds can strand the level one short. The goal is
-         "clear the patch"; the regrowth is what makes that hard. */
+         "clear the patch"; the regrowth is what makes that hard.
+
+         So the number is the patch, not the one the level asked for. It
+         was min(asked, patch) while the win was every bramble gone, and
+         in 27 of the 58 bramble levels in 1-400 the patch was the bigger:
+         level 162 promised 11 cuts with 19 on the board, so the first
+         eight cuts did not move the counter at all. The solver read the
+         same counter; replayed at twenty games on 67, 77, 84, 95, 106
+         and 162 with the whole patch asked for, no clear rate moved by
+         more than five points, so the budgets stand. */
       if (stock.bram <= 0) return;
-      goals.push([kind, arg, Math.min(count, stock.bram)]);
+      goals.push([kind, arg, stock.bram]);
       return;
     }
     if (kind === GK.MUD || kind === GK.CRATE) {
@@ -5708,7 +5720,8 @@ function loadSave() {
     const base = freshSave();
     SAVE = Object.assign(base, d);
     /* before anything below asks the time: see CLOCK_FLOOR, 00-util.js */
-    SAVE.maxSeen = clockSeen(+SAVE.maxSeen || 0);
+    const seenBefore = +SAVE.maxSeen || 0;
+    SAVE.maxSeen = clockSeen(seenBefore);
     SAVE.settings = Object.assign(freshSave().settings, d.settings || {});
     SAVE.room = Object.assign({ theme: 'oat', placed: [] }, d.room || {});
     SAVE.stats = Object.assign(freshSave().stats, d.stats || {});
@@ -5721,6 +5734,16 @@ function loadSave() {
     SAVE.granted = Object.assign({}, d.granted || {});
     SAVE.starter = Object.assign({ bought: false }, d.starter || {});
     SAVE.infiniteUntil = +d.infiniteUntil || 0;
+    /* A clock wound back more than three days is trusted (see
+       CLOCK_FLOOR), and unlimited hearts end at an absolute time — so the
+       hour of a biscuit tin, with the clock set back ten days, lasted 241
+       hours. Reproduced on 30 Oct 2026. What was left when the clock was
+       last seen honestly is what is left now. */
+    if (seenBefore && Date.now() < seenBefore - 3 * DAY && SAVE.infiniteUntil > seenBefore) {
+      SAVE.infiniteUntil = Date.now() + (SAVE.infiniteUntil - seenBefore);
+    } else if (seenBefore && Date.now() < seenBefore - 3 * DAY) {
+      SAVE.infiniteUntil = Math.min(SAVE.infiniteUntil, Date.now());
+    }
     SAVE.winRun = Math.max(0, +d.winRun || 0);
     SAVE.coats = Object.assign({}, d.coats || {});
     SAVE.eyes = Object.assign({}, d.eyes || {});
@@ -6499,7 +6522,12 @@ function grantPurchase(kind, id, txId) {
   }
   if (kind === 'jar') {
     const j = jarState();
-    const got = j.fill;
+    /* The jar is only sold full, so a jar paid for is a full jar. Claimed
+       on a save that no longer holds it — a reinstall, "start over", a
+       purchase replayed after the jar was emptied some other way — it
+       paid j.fill, which was nothing, and was still marked granted and
+       handed back to the store: charged for an empty jar. */
+    const got = Math.max(j.fill || 0, JAR.cap);
     SAVE.treats += got;
     j.fill = 0;
     j.opened = (j.opened || 0) + 1;
@@ -6855,9 +6883,22 @@ const NOTIFY = {
        it. Scheduled from a walk day it lands the following morning; a
        player who opens the game before ten reschedules it past
        themselves on the way out and never sees it. */
+    /* But not at ten for somebody who plays in the evening. Ten was the
+       hour for everyone, so a player who walks every night at nine was
+       told every morning about a walk they were always going to take —
+       the nag the paragraph above says this is not. Read in the 30 Oct
+       2026 review. Somebody who has walked today is reminded tomorrow an
+       hour after the time they are putting the game down now, kept
+       between ten in the morning and nine at night: the evening player
+       hears from it only on an evening they did not come. */
     const d = new Date();
     d.setHours(10, 0, 0, 0);
-    if (d.getTime() <= Date.now() || dailyState().done) d.setDate(d.getDate() + 1);
+    if (dailyState().done) {
+      const usual = new Date(Date.now() + HOUR);
+      const h = Math.min(21, Math.max(10, usual.getHours()));
+      d.setHours(h, h === usual.getHours() ? usual.getMinutes() : 0, 0, 0);
+      d.setDate(d.getDate() + 1);
+    } else if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
     this.at('walk', d.getTime(), T('note_walk_t'), T('note_walk_s'));
 
     /* The one for somebody who has stopped coming.
@@ -7022,7 +7063,7 @@ const BILLING = {
              at all. Only an answer that says "refused" stops a grant. */
           S.validator = (body, cb) => {
             const good = { ok: true, data: { id: body.id, latest_receipt: true, transaction: body.transaction } };
-            backendCall('verify-purchase', { body: body, install: SAVE.install || 0, platform: ios ? 'ios' : 'android' })
+            backendCall('verify-purchase', { body: this.named(body), install: SAVE.install || 0, platform: ios ? 'ios' : 'android' })
               .then(r => r.status >= 500 ? null : r.json().then(j => ({ status: r.status, j: j })))
               .then(x => {
                 if (!x || !x.j || typeof x.j.ok !== 'boolean') { track('verify_skip', { why: 'noanswer' }); cb(good); return; }
@@ -7062,6 +7103,38 @@ const BILLING = {
       setTimeout(() => done(false), 12000);
     });
     return this.started;
+  },
+
+  /* The body the plugin hands the validator, with the product named.
+
+     On Google Play `body.id` is the product. On the App Store it is the
+     APP: the plugin validates Apple's one receipt for the whole bundle,
+     so `id` is "com.pawtika.game" and the product is only inside the
+     receipt. verify-purchase read `id` as the product, answered "unknown
+     product" to every iPhone purchase, and the player was charged and
+     told nothing had been — found by reading the plugin's source on
+     30 Oct 2026, before any real money went through it. So the product
+     is looked up here, by the transaction id the body carries, in the
+     receipts the phone already holds; failing that, the one buy() that
+     is open is the one being checked. The server is told the product
+     and still finds it in Apple's own copy of the receipt, so naming it
+     here proves nothing on its own. */
+  named(body) {
+    const mine = this.skus();
+    if (!body || mine.indexOf(body.id) >= 0) return body;
+    const want = body.transaction && body.transaction.id;
+    let sku = null;
+    ((this.store && this.store.localReceipts) || (window.CdvPurchase && CdvPurchase.store && CdvPurchase.store.localReceipts) || [])
+      .forEach(r => ((r && r.transactions) || []).forEach(tx => {
+        if (sku || !tx || !want || tx.transactionId !== want) return;
+        const p = (tx.products || []).find(x => x && mine.indexOf(x.id) >= 0);
+        if (p) sku = p.id;
+      }));
+    if (!sku) {
+      const open = Object.keys(this.waiting);
+      if (open.length === 1) sku = open[0];
+    }
+    return sku ? Object.assign({}, body, { id: sku, app: body.id }) : body;
   },
 
   /* a product the store has described: keep its price as the store wrote
@@ -7224,7 +7297,15 @@ const BILLING = {
      This file knows about receipts and nothing about treats. */
   async restore() {
     if (!(await this.boot())) return { ok: false, why: 'nostore', skus: [], receipts: [] };
-    try { await this.store.restorePurchases(); } catch (e) { /* what already arrived still counts */ }
+    /* Not on iOS. StoreKit replays an unfinished transaction by itself
+       every time the store starts, which is all this is for, and never
+       restores a consumable at all; what restorePurchases adds there is a
+       receipt refresh, which on a phone with no Apple ID signed in is a
+       "Sign in to the App Store" sheet — at every launch, before the game
+       has been seen. */
+    if (nativePlatform() !== 'ios') {
+      try { await this.store.restorePurchases(); } catch (e) { /* what already arrived still counts */ }
+    }
     const mine = this.skus();
     const ours = tx => ((tx && tx.products) || []).some(p => p && mine.indexOf(p.id) >= 0);
     (this.store.localReceipts || []).forEach(r => ((r && r.transactions) || []).forEach(tx => {
@@ -7501,6 +7582,8 @@ const ADS = {
   inited: false,
   initing: null,
   personalised: false,
+  privacyOptions: false,   // Google says this player must be able to revisit consent
+  blocked: false,          // consent says no ad may be requested yet
   loading: null,
   loaded: false,
   retry: null,
@@ -7539,8 +7622,17 @@ const ADS = {
         try {
           const info = await A.requestConsentInfo();
           if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') await A.showConsentForm();
+          const after = info && info.status === 'REQUIRED' ? await A.requestConsentInfo() : info;
+          /* where the law asks for consent it also asks for a way to
+             change it later: Settings draws one when this is set */
+          this.privacyOptions = !!(after && after.privacyOptionsRequirementStatus === 'REQUIRED');
+          /* no ad is asked for until Google's form says one may be */
+          if (after && after.canRequestAds === false) this.blocked = true;
         } catch (e) { /* no form, or no network: non-personalised it is */ }
         await this.askTracking();
+        /* and once more shortly, for the launch where iOS said nothing
+           because the app had not finished coming to the front */
+        if (this.attPending) setTimeout(() => this.resumed(), 1500);
         this.inited = true;
         this.preload();
         return true;
@@ -7567,14 +7659,35 @@ const ADS = {
         st = await this.plugin.trackingAuthorizationStatus();
       }
       this.personalised = !!(st && st.status === 'authorized');
+      /* Still undecided after asking means iOS did not show it — an app
+         not yet active when boot asked, or Google's form still on its way
+         out. The next time the game comes to the front, it asks again. */
+      this.attPending = !!(st && st.status === 'notDetermined');
     } catch (e) { this.personalised = false; }
+  },
+  attPending: false,
+  async resumed() {
+    if (!this.attPending || !this.plugin || nativePlatform() !== 'ios') return;
+    this.attPending = false;
+    const was = this.personalised;
+    await this.askTracking();
+    /* a video loaded before the answer was loaded non-personalised; one
+       loaded after a yes may be personalised */
+    if (this.personalised !== was && !this.loading) { this.loaded = false; this.preload(); }
+  },
+
+  /* Google's own sheet for changing the consent given earlier. Only
+     where Google says it is required, which is where the form was. */
+  async privacyChoices() {
+    if (!this.plugin || !this.privacyOptions) return false;
+    try { await this.plugin.showPrivacyOptionsForm(); return true; } catch (e) { return false; }
   },
 
   /* A video loaded ahead, so the button does not sit there for three
      seconds after it is pressed. One at a time; a failed load is simply
      tried again next time. */
   preload() {
-    if (this.loading || !this.inited) return this.loading;
+    if (this.loading || !this.inited || this.blocked) return this.loading;
     this.loaded = false;
     this.loading = this.plugin.prepareRewardVideoAd({ adId: this.unit(), isTesting: this.testing(), npa: !this.personalised })
       .then(() => { this.loaded = true; return true; }, () => {
@@ -7628,7 +7741,15 @@ const ADS = {
       this.loaded = false;
       if (!loaded) return false;
       const over = new Promise(res => {
-        const on = (ev, fn) => A.addListener(ev, fn).then(h => handles.push(h));
+        /* Promise.resolve, because the plugins reached through
+           window.Capacitor.Plugins hand back the handle itself, not a
+           promise of one: the native bridge on both platforms returns
+           { remove } straight away. `.then` on that threw, the catch
+           below turned it into "not watched", and every video button in
+           the game played the error sound and nothing else — seen on the
+           emulator on 30 Oct 2026. test/ads.js's stand-in returned a
+           promise, which is why it never failed. */
+        const on = (ev, fn) => Promise.resolve(A.addListener(ev, fn)).then(h => handles.push(h));
         Promise.all([
           on('onRewardedVideoAdReward', () => { rewarded = true; }),
           on('onRewardedVideoAdDismissed', () => res()),
@@ -13698,6 +13819,25 @@ function specialFor(group) {
   return SP.NONE;
 }
 
+/* Where a run's new special is born: the swapped cell if it is in the
+   run, else the middle of the run — but never a cell that already holds
+   a special. The birth cell is kept out of the blast and stamped after
+   it, so a rocket swapped into a four used to be stamped over without
+   firing: the player watched their rocket turn into a different one.
+   It stays in the blast now like the rest of the run, and the new piece
+   goes to the plain tile nearest the middle. A run with no plain tile
+   left makes nothing. The game and the solver both ask this, so they
+   cannot disagree about it. */
+function specialCell(B, g, swapCells) {
+  const plain = ([r, c]) => { const t = B.cell[r][c].tile; return !!t && t.sp === SP.NONE; };
+  const inRun = ([r0, c0]) => g.cells.some(([r, c]) => r === r0 && c === c0);
+  if (swapCells) for (const sc of swapCells) if (inRun(sc) && plain(sc)) return sc;
+  const mid = Math.floor(g.cells.length / 2);
+  const order = g.cells.map((p, i) => [Math.abs(i - mid), i, p]).sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+  for (const o of order) if (plain(o[2])) return o[2];
+  return null;
+}
+
 /* ---------------- move detection ---------------- */
 function canSwap(B, a, b) {
   const ca = openCell(B, a[0], a[1]), cb = openCell(B, b[0], b[1]);
@@ -13893,6 +14033,14 @@ function moleHit(B, cell) {
   B.moleHitThisMove.add(key);
   cell.mole--;
   return true;
+}
+/* The cap is one layer per action, and an action is more than a swap.
+   The set was cleared only in moleTick, which runs after a swap, so a
+   hill the hammer or the pet chipped between swaps was still in it when
+   the next swap cleared the tile beside it, and that swap did nothing to
+   the hill. Everything the player does on the board starts here. */
+function moleFresh(B) {
+  if (B) B.moleHitThisMove = null;
 }
 
 function moleCount(B) {
@@ -14377,7 +14525,16 @@ function startLevel(n, opts) {
     cell.tile.tw.force = .45;
   });
   gameLoopStart();
-  setTimeout(() => { G.busy = false; G.hintT = 0; }, 700);
+  /* A kill during the last move's cascade keeps the board from before it
+     with the move charged, so it comes back with nothing left to play
+     and nothing that would ever call checkEnd. It is judged once the
+     board has dealt in, the way the move would have been: a win if the
+     goals were already met, otherwise the loss card and its offer. */
+  const _ep = levelEpoch();
+  setTimeout(() => {
+    G.busy = false; G.hintT = 0;
+    if (res && !stale(_ep) && !G.over && G.moves <= 0) checkEnd();
+  }, 700);
   if (!res) SAVE.stats.played++;
   keepLevel();
 }
@@ -14461,6 +14618,9 @@ function paintGoalIcon(g) {
   else if (g.kind === GK.MUD) { c.save(); c.scale(.9, .9); paintMud(c, px * .9, 1); c.restore(); }
   else if (g.kind === GK.BRAMBLE) { paintBramble(c, px * .92); paintBrambleOver(c, px * .92); }
   else if (g.kind === GK.RESCUE) paintPup(c, px * .95, 0);
+  /* the hill as the board draws it at two layers, which is how an 'o'
+     starts; with no branch here the chip was blank */
+  else if (g.kind === GK.MOLE) paintMole(c, px * .9, 2);
   else if (g.kind === GK.SCORE) {
     c.fillStyle = PAL.accent;
     c.save(); c.scale(px / 24, px / 24); c.translate(-12, -12);
@@ -14623,7 +14783,7 @@ async function useHammer(r, c) {
   SAVE.boosters.hammer--; persist();
   track('booster_use', { id: 'hammer', n: G.n });
   G.armed = null; syncBoosterBar();
-  G.busy = true;
+  G.busy = true; moleFresh(G.B);
   SFX.crate();
   const keys = new Set([r + ':' + c]);
   await blastWaves(keys, 1, true);
@@ -14641,7 +14801,7 @@ async function useFreeSwap(a, b) {
   SAVE.boosters.swap--; persist();
   track('booster_use', { id: 'swap', n: G.n });
   G.armed = null; G.armedFirst = null; syncBoosterBar();
-  G.busy = true;
+  G.busy = true; moleFresh(G.B);
   const ca = G.B.cell[a[0]][a[1]], cb = G.B.cell[b[0]][b[1]];
   swapTiles(G.B, a, b);
   setTarget(ca.tile, a[1], a[0], .18);
@@ -14656,7 +14816,7 @@ async function useFreeSwap(a, b) {
 }
 async function doShuffle() {
   const _ep = levelEpoch();
-  G.busy = true;
+  G.busy = true; moleFresh(G.B);
   eachCell(G.B, cell => { if (cell.tile) cell.tile.jiggle = 1; });
   await wait(180);
   if (stale(_ep)) return;
@@ -14800,7 +14960,11 @@ async function blastWaves(startKeys, chain, silent) {
   let guard = 0;
   let totalTiles = 0;
   while (wave.length && guard++ < 24) {
-    const ctx = { touched: new Set(), removed: [], chain: [], collect: {}, mud: 0, crate: 0, ice: 0, bram: 0, count: 0, delay: 0 };
+    /* `mole` was missing from this, so closing a hill did undefined + 1,
+       applyCounts read NaN as nothing, and every molehill level from 76
+       on could not be won — while the solver, which had the field,
+       measured them as fine. Every counter hitCell bumps lives here. */
+    const ctx = { touched: new Set(), removed: [], chain: [], collect: {}, mud: 0, crate: 0, ice: 0, bram: 0, mole: 0, count: 0, delay: 0 };
     wave.forEach(k => {
       const [r, c] = k.split(':').map(Number);
       hitCell(G.B, r, c, ctx);
@@ -14941,13 +15105,9 @@ async function clearGroups(groups, swapCells) {
     const sp = specialFor(g);
     let at = null;
     if (sp !== SP.NONE) {
-      if (swapCells) {
-        for (const sc of swapCells) {
-          if (g.cells.some(([r, c]) => r === sc[0] && c === sc[1])) { at = sc; break; }
-        }
-      }
-      if (!at) at = g.cells[Math.floor(g.cells.length / 2)];
-      makeSpecials.push({ r: at[0], c: at[1], sp, type: g.type });
+      /* never a cell that already holds a special: see specialCell */
+      at = specialCell(G.B, g, swapCells);
+      if (at) makeSpecials.push({ r: at[0], c: at[1], sp, type: g.type });
     }
     g.cells.forEach(([r, c]) => {
       if (at && r === at[0] && c === at[1]) return;      // survives, becomes the special
@@ -15397,9 +15557,13 @@ function spendMove() {
 
 async function tryMove(a, b) {
   const _ep = levelEpoch();
-  if (G.busy || G.over) return;
+  /* No moves, no move. Nothing here asked, so a level resumed with the
+     last move already paid for (see the snapshot below) took that move
+     again on the old board and a fresh refill, every relaunch — spendMove
+     clamps at nought and the level never ended. */
+  if (G.busy || G.over || G.moves <= 0) return;
   if (!canSwap(G.B, a, b)) { SFX.bad(); return; }
-  G.busy = true;
+  G.busy = true; moleFresh(G.B);
   G.sel = null;
   const ca = G.B.cell[a[0]][a[1]], cb = G.B.cell[b[0]][b[1]];
   const ta = ca.tile, tb = cb.tile;
@@ -15456,7 +15620,7 @@ async function firePetAbility() {
   const _ep = levelEpoch();
   const pet = activePet();
   if (!pet || G.busy || G.over || G.charge < 100) return;
-  G.busy = true;
+  G.busy = true; moleFresh(G.B);
   G.charge = 0;
   /* An ability's own clears must not refill the meter that paid for it.
      They did, and firing costs no move — so a chorus that took out three
@@ -16344,6 +16508,9 @@ function goalWords() {
     else if (g.kind === GK.CRATE) label = T('goal_crate', { n: g.need });
     else if (g.kind === GK.MUD) label = T('goal_mud', { n: g.need });
     else if (g.kind === GK.BRAMBLE) label = T('goal_bramble', { n: g.need });
+    /* a molehill goal fell through to the rescue line and was read out
+       as pups to walk home */
+    else if (g.kind === GK.MOLE) label = T('goal_mole', { n: g.need });
     else label = T('goal_rescue', { n: g.need });
     const have = g.kind === GK.SCORE ? G.score : g.have;
     return T('a11y_goal_line', { label, have: fmt(Math.min(have, g.need)), need: fmt(g.need) });
@@ -18699,6 +18866,13 @@ function customiseSheet(breedIdx, done) {
 
    And it is switched off entirely until there is a listing to send
    anybody to. See STORE_LINKS. */
+/* THE QUESTION IS NO LONGER A FILTER. It asked "how are you finding
+   it?" and only "I am enjoying it" led to the store, which is review
+   gating by name: Apple's 5.6.1 and Google's policy both refuse an app
+   that sends only the happy players to rate it. Read in the 30 Oct 2026
+   review. Now it asks the one thing it wants — a rating — and both
+   answers are honoured the same way; the store's own form is where
+   somebody unhappy says so. */
 function maybeAskForAReview() {
   /* The app only. On the web this would be asking somebody playing in a
      browser to go and rate an Android app they have not installed, which
@@ -18914,6 +19088,9 @@ function paintGoalIcons(root) {
     else if (k === GK.MUD) paintMud(c, px * .88, 1);
     else if (k === GK.BRAMBLE) { paintBramble(c, px * .9); paintBrambleOver(c, px * .9); }
     else if (k === GK.RESCUE) paintPup(c, px, 0);
+    /* without this a molehill goal fell through to the star, and the lose
+       card for level 76 read "★ 0 / 3" */
+    else if (k === GK.MOLE) paintMole(c, px * .9, 2);
     else { c.fillStyle = PAL.accent; c.save(); c.scale(px / 24, px / 24); c.translate(-12, -12); c.fill(new Path2D('m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5-4.7-4.6 6.5-.9z')); c.restore(); }
   });
 }
@@ -19097,6 +19274,11 @@ function treatStore(why, need, done) {
   const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
     : why === 'coins' ? T('store_why_coins', { n: need || COIN_PURSES[0].treats })
     : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
+  /* A row is drawn only for a product the store has priced. The pocket
+     pack was declared in Play and never in App Store Connect, and its
+     row showed "about $1.99" beside four real prices and answered "the
+     shop is shut" when tapped. A product the store has not described is
+     one it will not sell, so it is not offered. */
   const tag = (sku, usd) => {
     const p = BILLING.price(sku, null);
     return p ? p : `<span style="opacity:.75">${T('store_about', { p: usd })}</span>`;
@@ -19113,14 +19295,14 @@ function treatStore(why, need, done) {
     <h2>${T('store_t')}</h2>
     ${reason ? `<p><b style="color:var(--accent-strong)">${reason}</b></p>` : ''}
     <p style="color:var(--text-dim)">${T('store_s')}</p>
-    ${SAVE.starter && SAVE.starter.bought ? '' : `
+    ${SAVE.starter && SAVE.starter.bought || !BILLING.prices[STARTER.sku] ? '' : `
     <div class="offer" style="background:color-mix(in srgb,var(--accent) 12%, var(--surface-2))">
       <span class="ot"><b>${T('store_starter_t')}</b>
         <small>${T('store_starter_s', { n: STARTER.treats, m: STARTER.boosters.moves, h: STARTER.boosters.hammer, s: STARTER.boosters.shuffle, i: durText(STARTER.infinite) })}</small></span>
       <button class="btn primary sm" data-pay="starter" data-kind="starter">${tag(STARTER.sku, STARTER.usd)}</button>
     </div>`}
 
-    ${!j.fill ? '' : jarFull()
+    ${!j.fill ? '' : jarFull() && !BILLING.prices[JAR.sku] ? '' : jarFull()
       ? row('jar', 'jar', T('store_jar_t'), T('store_jar_full', { n: j.fill }),
         `${T('store_jar_open')} · ${tag(JAR.sku, JAR.usd)}`)
       /* A jar that is not full has no button on it.
@@ -19140,7 +19322,7 @@ function treatStore(why, need, done) {
             </span></span>
         </div>`}
 
-    ${TREAT_PACKS.map(p => row(p.id, 'pack',
+    ${TREAT_PACKS.filter(p => BILLING.prices[p.sku]).map(p => row(p.id, 'pack',
       T('store_pack', { n: p.treats }) + (p.best ? ' ★' : ''),
       (p[LANG] || p.en) + (p.infinite ? ' · ' + T('inf_for', { t: durText(p.infinite) }) : ''), tag(p.sku, p.usd))).join('')}
 
@@ -20119,6 +20301,7 @@ function openSettings() {
     <button class="btn ghost wide" id="setHow">${T('how_open')}</button>
     ${touchOnly() ? '' : `<button class="btn ghost wide" id="setKeys">${T('a11y_help_t')}</button>`}
     ${STORE_LINKS.privacy ? `<a class="btn ghost wide" id="setPrivacy" href="${STORE_LINKS.privacy}" target="_blank" rel="noopener">${T('set_privacy')}</a>` : ''}
+    ${ADS.privacyOptions ? `<button class="btn ghost wide" id="setAdChoices">${T('set_ad_choices')}</button>` : ''}
     <div style="font-size:var(--t-micro);color:var(--text-faint);line-height:1.5">${T('set_credits')}</div>
     <div style="font-size:var(--t-micro);color:var(--text-faint);display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <span>${T('set_played')}: <b class="num">${SAVE.stats.played}</b></span>
@@ -20167,6 +20350,10 @@ function openSettings() {
   const sk = $('#setKeys', m.el);
   if (sk) sk.addEventListener('click', () => { m.close(); keyboardHelp(); });
   $('#setClose', m.el).addEventListener('click', m.close);
+  /* The way back to the consent form, which Google requires wherever it
+     required the form: a choice that cannot be changed is not one. */
+  const ac = $('#setAdChoices', m.el);
+  if (ac) ac.addEventListener('click', () => { m.close(); ADS.privacyChoices(); });
   $('#setReset', m.el).addEventListener('click', () => {
     const c2 = modal(`
       <h2>${T('set_reset_confirm')}</h2>
@@ -20746,6 +20933,7 @@ function boot() {
     } else {
       try { if (AU.ctx && AU.ctx.state === 'suspended' && SAVE.settings.sound) AU.ctx.resume(); } catch (e) { }
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
+      ADS.resumed();
       if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
       if (!AMB.raf && !reduceMotion()) { AMB.last = performance.now(); AMB.raf = requestAnimationFrame(motesLoop); }
       if (SCREEN === 'home') { renderHome(); roomLayout(); roomStart(); }
@@ -20937,7 +21125,11 @@ const LEAVE_WINDOW = 2000;
 function nativeBack() {
   /* a sheet first, whatever else is true: it is the thing in front */
   if (sheetIsOpen()) {
-    const top = modalStack[modalStack.length - 1];
+    /* The top sheet the player can SEE. modalStack also holds sheets
+       that are only queued behind it, and the last of those is what this
+       took: back on the win card threw away the review question waiting
+       behind it, unseen, and the card stayed exactly where it was. */
+    const top = modalStack.filter(m => m.shown).pop();
     /* A card that cannot be dismissed (the win and lose cards, the
        gift) was closed by back all the same, which on the lose card left
        a finished board with no buttons on it. Back on one of those means

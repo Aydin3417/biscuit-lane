@@ -1269,6 +1269,13 @@ function customiseSheet(breedIdx, done) {
 
    And it is switched off entirely until there is a listing to send
    anybody to. See STORE_LINKS. */
+/* THE QUESTION IS NO LONGER A FILTER. It asked "how are you finding
+   it?" and only "I am enjoying it" led to the store, which is review
+   gating by name: Apple's 5.6.1 and Google's policy both refuse an app
+   that sends only the happy players to rate it. Read in the 30 Oct 2026
+   review. Now it asks the one thing it wants — a rating — and both
+   answers are honoured the same way; the store's own form is where
+   somebody unhappy says so. */
 function maybeAskForAReview() {
   /* The app only. On the web this would be asking somebody playing in a
      browser to go and rate an Android app they have not installed, which
@@ -1484,6 +1491,9 @@ function paintGoalIcons(root) {
     else if (k === GK.MUD) paintMud(c, px * .88, 1);
     else if (k === GK.BRAMBLE) { paintBramble(c, px * .9); paintBrambleOver(c, px * .9); }
     else if (k === GK.RESCUE) paintPup(c, px, 0);
+    /* without this a molehill goal fell through to the star, and the lose
+       card for level 76 read "★ 0 / 3" */
+    else if (k === GK.MOLE) paintMole(c, px * .9, 2);
     else { c.fillStyle = PAL.accent; c.save(); c.scale(px / 24, px / 24); c.translate(-12, -12); c.fill(new Path2D('m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5-4.7-4.6 6.5-.9z')); c.restore(); }
   });
 }
@@ -1667,6 +1677,11 @@ function treatStore(why, need, done) {
   const reason = why === 'continue' ? T('store_why_continue', { n: need || ECON.continueTreats })
     : why === 'coins' ? T('store_why_coins', { n: need || COIN_PURSES[0].treats })
     : why === 'hearts' ? T('store_why_hearts', { n: ECON.heartRefillTreats }) : '';
+  /* A row is drawn only for a product the store has priced. The pocket
+     pack was declared in Play and never in App Store Connect, and its
+     row showed "about $1.99" beside four real prices and answered "the
+     shop is shut" when tapped. A product the store has not described is
+     one it will not sell, so it is not offered. */
   const tag = (sku, usd) => {
     const p = BILLING.price(sku, null);
     return p ? p : `<span style="opacity:.75">${T('store_about', { p: usd })}</span>`;
@@ -1683,14 +1698,14 @@ function treatStore(why, need, done) {
     <h2>${T('store_t')}</h2>
     ${reason ? `<p><b style="color:var(--accent-strong)">${reason}</b></p>` : ''}
     <p style="color:var(--text-dim)">${T('store_s')}</p>
-    ${SAVE.starter && SAVE.starter.bought ? '' : `
+    ${SAVE.starter && SAVE.starter.bought || !BILLING.prices[STARTER.sku] ? '' : `
     <div class="offer" style="background:color-mix(in srgb,var(--accent) 12%, var(--surface-2))">
       <span class="ot"><b>${T('store_starter_t')}</b>
         <small>${T('store_starter_s', { n: STARTER.treats, m: STARTER.boosters.moves, h: STARTER.boosters.hammer, s: STARTER.boosters.shuffle, i: durText(STARTER.infinite) })}</small></span>
       <button class="btn primary sm" data-pay="starter" data-kind="starter">${tag(STARTER.sku, STARTER.usd)}</button>
     </div>`}
 
-    ${!j.fill ? '' : jarFull()
+    ${!j.fill ? '' : jarFull() && !BILLING.prices[JAR.sku] ? '' : jarFull()
       ? row('jar', 'jar', T('store_jar_t'), T('store_jar_full', { n: j.fill }),
         `${T('store_jar_open')} · ${tag(JAR.sku, JAR.usd)}`)
       /* A jar that is not full has no button on it.
@@ -1710,7 +1725,7 @@ function treatStore(why, need, done) {
             </span></span>
         </div>`}
 
-    ${TREAT_PACKS.map(p => row(p.id, 'pack',
+    ${TREAT_PACKS.filter(p => BILLING.prices[p.sku]).map(p => row(p.id, 'pack',
       T('store_pack', { n: p.treats }) + (p.best ? ' ★' : ''),
       (p[LANG] || p.en) + (p.infinite ? ' · ' + T('inf_for', { t: durText(p.infinite) }) : ''), tag(p.sku, p.usd))).join('')}
 
@@ -2689,6 +2704,7 @@ function openSettings() {
     <button class="btn ghost wide" id="setHow">${T('how_open')}</button>
     ${touchOnly() ? '' : `<button class="btn ghost wide" id="setKeys">${T('a11y_help_t')}</button>`}
     ${STORE_LINKS.privacy ? `<a class="btn ghost wide" id="setPrivacy" href="${STORE_LINKS.privacy}" target="_blank" rel="noopener">${T('set_privacy')}</a>` : ''}
+    ${ADS.privacyOptions ? `<button class="btn ghost wide" id="setAdChoices">${T('set_ad_choices')}</button>` : ''}
     <div style="font-size:var(--t-micro);color:var(--text-faint);line-height:1.5">${T('set_credits')}</div>
     <div style="font-size:var(--t-micro);color:var(--text-faint);display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
       <span>${T('set_played')}: <b class="num">${SAVE.stats.played}</b></span>
@@ -2737,6 +2753,10 @@ function openSettings() {
   const sk = $('#setKeys', m.el);
   if (sk) sk.addEventListener('click', () => { m.close(); keyboardHelp(); });
   $('#setClose', m.el).addEventListener('click', m.close);
+  /* The way back to the consent form, which Google requires wherever it
+     required the form: a choice that cannot be changed is not one. */
+  const ac = $('#setAdChoices', m.el);
+  if (ac) ac.addEventListener('click', () => { m.close(); ADS.privacyChoices(); });
   $('#setReset', m.el).addEventListener('click', () => {
     const c2 = modal(`
       <h2>${T('set_reset_confirm')}</h2>
