@@ -248,7 +248,7 @@ function napSprite(spec, size, awake) {
   c.translate(size / 2, size * .5);
   /* as big as the square allows: on a nine-by-nine a phone gives each
      sleeper about forty pixels, and a face drawn small reads as a dot */
-  drawFace(c, spec, size * (NS.b && NS.b.n >= 7 ? .58 : .5), { blink: awake ? 0 : 1, tongue: false });
+  drawFace(c, spec, size * (NS.b && NS.b.n >= 7 ? .58 : .5), { blink: awake ? 0 : 1, tongue: false, mood: awake ? 'content' : 'sleeping' });
   NS.sprites[key] = cv;
   return cv;
 }

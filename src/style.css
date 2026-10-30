@@ -678,7 +678,7 @@ canvas{ max-width:100%; }
 
 /* ---------- family / pets ---------- */
 .petrow{ display:flex; align-items:center; gap:8px; padding:11px 10px; }
-.petrow canvas{ width:56px; height:56px; flex:0 0 auto; }
+.petrow canvas{ width:66px; height:66px; flex:0 0 auto; }
 .petrow .info{ flex:1 1 auto; min-width:0; }
 .petrow .info .nm{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); }
 .petrow .info .br{ font-size:var(--t-micro); color:var(--text-faint); font-weight:600; }
@@ -786,6 +786,8 @@ canvas{ max-width:100%; }
 .goalList{ display:flex; flex-direction:column; gap:8px; }
 .goalItem{ display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:15px; background:var(--surface-2); border:1px solid var(--line-soft); text-align:left; }
 .goalItem canvas{ width:32px; height:32px; flex:0 0 auto; }
+/* the pet on the level card is a portrait, not a goal icon */
+.goalItem canvas[data-face]{ width:48px; height:48px; }
 .goalItem .t{ flex:1 1 auto; font-size:var(--t-small); font-weight:600; color:var(--text-dim); }
 .goalItem .t b{ color:var(--text); font-size:var(--t-small); display:block; font-family:"Grandstander",sans-serif; }
 

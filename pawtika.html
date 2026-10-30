@@ -736,7 +736,7 @@ canvas{ max-width:100%; }
 
 /* ---------- family / pets ---------- */
 .petrow{ display:flex; align-items:center; gap:8px; padding:11px 10px; }
-.petrow canvas{ width:56px; height:56px; flex:0 0 auto; }
+.petrow canvas{ width:66px; height:66px; flex:0 0 auto; }
 .petrow .info{ flex:1 1 auto; min-width:0; }
 .petrow .info .nm{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); }
 .petrow .info .br{ font-size:var(--t-micro); color:var(--text-faint); font-weight:600; }
@@ -844,6 +844,8 @@ canvas{ max-width:100%; }
 .goalList{ display:flex; flex-direction:column; gap:8px; }
 .goalItem{ display:flex; align-items:center; gap:10px; padding:9px 11px; border-radius:15px; background:var(--surface-2); border:1px solid var(--line-soft); text-align:left; }
 .goalItem canvas{ width:32px; height:32px; flex:0 0 auto; }
+/* the pet on the level card is a portrait, not a goal icon */
+.goalItem canvas[data-face]{ width:48px; height:48px; }
 .goalItem .t{ flex:1 1 auto; font-size:var(--t-small); font-weight:600; color:var(--text-dim); }
 .goalItem .t b{ color:var(--text); font-size:var(--t-small); display:block; font-family:"Grandstander",sans-serif; }
 
@@ -9502,8 +9504,37 @@ function drawBody(c, spec, s, o) {
   };
   const tailW = (b.id === 'pug' ? .10 : cat ? .16 : .15) * s;
   const tailFur = b.mark === 'points' ? (spec.point || spec.fur2) : b.mark === 'patch' ? spec.fur2 : spec.fur;
-  tail(); c.strokeStyle = inkLine(spec); c.lineWidth = tailW + W * 2; c.lineCap = 'round'; c.stroke();
-  tail(); c.strokeStyle = tailFur; c.lineWidth = tailW; c.stroke();
+  if (b.id === 'retriever') {
+    /* A golden's tail is a plume, not a rope: the same curve, but filled
+       as a shape that widens to the middle and is cut along its lower
+       edge into feathers, the way the character sheet draws it. */
+    const P = t => {
+      const a = [.26, .82], b1 = [.62 + tailA * .12, .86], b2 = [.74 + tailA * .18, .44], d = [.58 + tailA * .24, .30 - tailA * .08];
+      const u = 1 - t;
+      return [u * u * u * a[0] + 3 * u * u * t * b1[0] + 3 * u * t * t * b2[0] + t * t * t * d[0],
+        u * u * u * a[1] + 3 * u * u * t * b1[1] + 3 * u * t * t * b2[1] + t * t * t * d[1]];
+    };
+    const N = 14, top = [], bot = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, p0 = P(Math.max(0, t - .01)), p1 = P(Math.min(1, t + .01)), p = P(t);
+      let nx = -(p1[1] - p0[1]), ny = p1[0] - p0[0];
+      const L = Math.hypot(nx, ny) || 1; nx /= L; ny /= L;
+      const w = (.045 + Math.sin(t * Math.PI) * .075) * s;
+      /* odd points are pushed out and become the round of a feather */
+      const feather = i > 0 && i < N && i % 2 ? 1.5 : 1;
+      top.push([p[0] * s - nx * w, p[1] * s - ny * w]);
+      bot.push([p[0] * s + nx * w * feather, p[1] * s + ny * w * feather]);
+    }
+    c.beginPath();
+    top.forEach((q, i) => i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]));
+    c.lineTo(bot[N][0], bot[N][1]);
+    for (let i = N - 1; i >= 1; i -= 2) c.quadraticCurveTo(bot[i][0], bot[i][1], bot[i - 1][0], bot[i - 1][1]);
+    c.closePath();
+    c.fillStyle = tailFur; c.fill(); inkStroke(c, spec, s);
+  } else {
+    tail(); c.strokeStyle = inkLine(spec); c.lineWidth = tailW + W * 2; c.lineCap = 'round'; c.stroke();
+    tail(); c.strokeStyle = tailFur; c.lineWidth = tailW; c.stroke();
+  }
   if (b.mark === 'patch') {
     /* the white tip every beagle has */
     c.save(); tail(); c.strokeStyle = spec.belly; c.lineWidth = tailW; c.setLineDash([tailW * .9, s * 3]); c.lineDashOffset = -s * 1.02; c.stroke(); c.restore();
@@ -18897,10 +18928,17 @@ function paintArtCanvases(root) {
   $$('canvas[data-face]', root).forEach(cv => {
     const px = askSize(cv, 64);
     const c = fitCanvas(cv, px, px);
-    c.translate(px / 2, px / 2 + px * .02);
+    /* The face fills its box. At .42 of it, with the ears counted, a
+       portrait was a third of the card it sat in — the family list, the
+       adoption cards and the first screen all showed a small animal in
+       a lot of cream (photographed 31 Oct 2026). A head is about 1.35
+       of its size from ear tip to chin and sits a fifth of that below
+       the middle, so it is centred by that. */
+    const fs = px * .54;
+    c.translate(px / 2, px / 2 + fs * .2);
     const idx = +cv.dataset.face;
     const coat = cv.dataset.coat !== undefined ? BREEDS[idx].coats[+cv.dataset.coat] : null;
-    drawFace(c, Object.assign(specOf(idx, coat, cv.dataset.eye), { hat: cv.dataset.hat, collar: cv.dataset.collar }), px * .42, { mouth: 'smile' });
+    drawFace(c, Object.assign(specOf(idx, coat, cv.dataset.eye), { hat: cv.dataset.hat, collar: cv.dataset.collar }), fs, { mouth: 'smile' });
   });
   $$('canvas[data-body]', root).forEach(cv => {
     const px = askSize(cv, 64);
@@ -18908,11 +18946,14 @@ function paintArtCanvases(root) {
     /* a list row wants a small pet in a lot of air; the win sheet wants
        the pet to be the picture. data-scale lets the caller say which */
     const k = +(cv.dataset.scale || 1);
-    c.translate(px / 2, px * (k > 1 ? .20 : .14));
+    /* a row's pet was drawn at .40 and hung from .14, which put its ears
+       above the box and left a small body in the middle of a big one */
+    const rowK = k > 1 ? 1 : 1.12;
+    c.translate(px / 2, px * (k > 1 ? .20 : .33));
     const idx = +cv.dataset.body;
     const coat = cv.dataset.coat !== undefined ? BREEDS[idx].coats[+cv.dataset.coat] : null;
     drawBody(c, Object.assign(specOf(idx, coat, cv.dataset.eye),
-      { hat: cv.dataset.hat, collar: cv.dataset.collar, stage: +(cv.dataset.stage || 0) }), px * .40 * k,
+      { hat: cv.dataset.hat, collar: cv.dataset.collar, stage: +(cv.dataset.stage || 0) }), px * .40 * k * rowK,
       { mouth: cv.dataset.mouth || 'smile', mood: cv.dataset.mood || undefined });
   });
   $$('canvas[data-tile]', root).forEach(cv => {
@@ -18937,14 +18978,16 @@ function paintArtCanvases(root) {
      active pet. The last write won, so every pet in the family list was
      drawn as whichever pet was on the board. Two canvases, byte for
      byte identical, with the right breed in their own data attributes. */
-  $$('canvas[data-hat]:not([data-body])', root).forEach(cv => {
+  /* nor a portrait: the level card's pet carries data-hat too, and was
+     repainted here as a small preview face over its own */
+  $$('canvas[data-hat]:not([data-body]):not([data-face])', root).forEach(cv => {
     const px = askSize(cv, 54);
     const c = fitCanvas(cv, px, px);
     c.translate(px / 2, px * .62);
     const pet = activePet();
     drawFace(c, Object.assign(specOfPet(pet), { hat: cv.dataset.hat, collar: 'none' }), px * .34, { mouth: 'smile' });
   });
-  $$('canvas[data-collar]:not([data-body])', root).forEach(cv => {
+  $$('canvas[data-collar]:not([data-body]):not([data-face])', root).forEach(cv => {
     const px = askSize(cv, 54);
     const c = fitCanvas(cv, px, px);
     c.translate(px / 2, px * .18);
@@ -19282,7 +19325,7 @@ function renderFamily() {
     ${SAVE.pets.map(p => {
     const active = p.id === (activePet() || {}).id;
     return `<button class="card petrow ${active ? 'active' : ''}" data-pet="${p.id}">
-        <canvas data-body="${p.breed}" data-coat="${p.coat}" data-eye="${petEye(p)}" data-hat="${p.hat}" data-collar="${p.collar}" data-stage="${petStageIdx(p)}" width="56" height="56"></canvas>
+        <canvas data-body="${p.breed}" data-coat="${p.coat}" data-eye="${petEye(p)}" data-hat="${p.hat}" data-collar="${p.collar}" data-stage="${petStageIdx(p)}" width="68" height="68"></canvas>
         <span class="info" style="text-align:left">
           <span class="nm">${p.name}</span>
           <span class="br">${breedName(p.breed)} · ${stageName(p)} · ${T('ui_bond_l')} ${p.bond}</span>
@@ -19303,7 +19346,7 @@ function renderFamily() {
       <div class="grid3">
         ${BREEDS.map((b, i) => ownedBreeds.indexOf(i) >= 0 ? '' : `
           <button class="choice" data-adopt="${i}" style="padding:10px 6px">
-            <canvas data-face="${i}" width="56" height="56"></canvas>
+            <canvas data-face="${i}" width="64" height="64"></canvas>
             <span class="nm" style="font-size:var(--t-small)">${breedName(i)}</span>
           </button>`).join('')}
       </div>
@@ -19838,7 +19881,7 @@ function openLevelIntro(n) {
     </div>
     ${pet ? `
     <div class="goalItem" style="background:color-mix(in srgb,var(--accent) 10%, var(--surface-2))">
-      <canvas data-face="${pet.breed}" data-coat="${pet.coat}" data-eye="${petEye(pet)}" data-hat="${pet.hat}" width="44" height="44"></canvas>
+      <canvas data-face="${pet.breed}" data-coat="${pet.coat}" data-eye="${petEye(pet)}" data-hat="${pet.hat}" width="52" height="52"></canvas>
       <span class="t"><b>${pet.name} · ${abilityName(pet)} · ${abilityPower(pet)}</b>
       ${perks.length
         ? `<span class="perkchips">${perkChips(perks).map(x => `<span class="pill ok">${x}</span>`).join('')}</span>`
@@ -21552,7 +21595,7 @@ function napSprite(spec, size, awake) {
   c.translate(size / 2, size * .5);
   /* as big as the square allows: on a nine-by-nine a phone gives each
      sleeper about forty pixels, and a face drawn small reads as a dot */
-  drawFace(c, spec, size * (NS.b && NS.b.n >= 7 ? .58 : .5), { blink: awake ? 0 : 1, tongue: false });
+  drawFace(c, spec, size * (NS.b && NS.b.n >= 7 ? .58 : .5), { blink: awake ? 0 : 1, tongue: false, mood: awake ? 'content' : 'sleeping' });
   NS.sprites[key] = cv;
   return cv;
 }

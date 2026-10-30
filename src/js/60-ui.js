@@ -669,10 +669,17 @@ function paintArtCanvases(root) {
   $$('canvas[data-face]', root).forEach(cv => {
     const px = askSize(cv, 64);
     const c = fitCanvas(cv, px, px);
-    c.translate(px / 2, px / 2 + px * .02);
+    /* The face fills its box. At .42 of it, with the ears counted, a
+       portrait was a third of the card it sat in — the family list, the
+       adoption cards and the first screen all showed a small animal in
+       a lot of cream (photographed 31 Oct 2026). A head is about 1.35
+       of its size from ear tip to chin and sits a fifth of that below
+       the middle, so it is centred by that. */
+    const fs = px * .54;
+    c.translate(px / 2, px / 2 + fs * .2);
     const idx = +cv.dataset.face;
     const coat = cv.dataset.coat !== undefined ? BREEDS[idx].coats[+cv.dataset.coat] : null;
-    drawFace(c, Object.assign(specOf(idx, coat, cv.dataset.eye), { hat: cv.dataset.hat, collar: cv.dataset.collar }), px * .42, { mouth: 'smile' });
+    drawFace(c, Object.assign(specOf(idx, coat, cv.dataset.eye), { hat: cv.dataset.hat, collar: cv.dataset.collar }), fs, { mouth: 'smile' });
   });
   $$('canvas[data-body]', root).forEach(cv => {
     const px = askSize(cv, 64);
@@ -680,11 +687,14 @@ function paintArtCanvases(root) {
     /* a list row wants a small pet in a lot of air; the win sheet wants
        the pet to be the picture. data-scale lets the caller say which */
     const k = +(cv.dataset.scale || 1);
-    c.translate(px / 2, px * (k > 1 ? .20 : .14));
+    /* a row's pet was drawn at .40 and hung from .14, which put its ears
+       above the box and left a small body in the middle of a big one */
+    const rowK = k > 1 ? 1 : 1.12;
+    c.translate(px / 2, px * (k > 1 ? .20 : .33));
     const idx = +cv.dataset.body;
     const coat = cv.dataset.coat !== undefined ? BREEDS[idx].coats[+cv.dataset.coat] : null;
     drawBody(c, Object.assign(specOf(idx, coat, cv.dataset.eye),
-      { hat: cv.dataset.hat, collar: cv.dataset.collar, stage: +(cv.dataset.stage || 0) }), px * .40 * k,
+      { hat: cv.dataset.hat, collar: cv.dataset.collar, stage: +(cv.dataset.stage || 0) }), px * .40 * k * rowK,
       { mouth: cv.dataset.mouth || 'smile', mood: cv.dataset.mood || undefined });
   });
   $$('canvas[data-tile]', root).forEach(cv => {
@@ -709,14 +719,16 @@ function paintArtCanvases(root) {
      active pet. The last write won, so every pet in the family list was
      drawn as whichever pet was on the board. Two canvases, byte for
      byte identical, with the right breed in their own data attributes. */
-  $$('canvas[data-hat]:not([data-body])', root).forEach(cv => {
+  /* nor a portrait: the level card's pet carries data-hat too, and was
+     repainted here as a small preview face over its own */
+  $$('canvas[data-hat]:not([data-body]):not([data-face])', root).forEach(cv => {
     const px = askSize(cv, 54);
     const c = fitCanvas(cv, px, px);
     c.translate(px / 2, px * .62);
     const pet = activePet();
     drawFace(c, Object.assign(specOfPet(pet), { hat: cv.dataset.hat, collar: 'none' }), px * .34, { mouth: 'smile' });
   });
-  $$('canvas[data-collar]:not([data-body])', root).forEach(cv => {
+  $$('canvas[data-collar]:not([data-body]):not([data-face])', root).forEach(cv => {
     const px = askSize(cv, 54);
     const c = fitCanvas(cv, px, px);
     c.translate(px / 2, px * .18);
@@ -1054,7 +1066,7 @@ function renderFamily() {
     ${SAVE.pets.map(p => {
     const active = p.id === (activePet() || {}).id;
     return `<button class="card petrow ${active ? 'active' : ''}" data-pet="${p.id}">
-        <canvas data-body="${p.breed}" data-coat="${p.coat}" data-eye="${petEye(p)}" data-hat="${p.hat}" data-collar="${p.collar}" data-stage="${petStageIdx(p)}" width="56" height="56"></canvas>
+        <canvas data-body="${p.breed}" data-coat="${p.coat}" data-eye="${petEye(p)}" data-hat="${p.hat}" data-collar="${p.collar}" data-stage="${petStageIdx(p)}" width="68" height="68"></canvas>
         <span class="info" style="text-align:left">
           <span class="nm">${p.name}</span>
           <span class="br">${breedName(p.breed)} · ${stageName(p)} · ${T('ui_bond_l')} ${p.bond}</span>
@@ -1075,7 +1087,7 @@ function renderFamily() {
       <div class="grid3">
         ${BREEDS.map((b, i) => ownedBreeds.indexOf(i) >= 0 ? '' : `
           <button class="choice" data-adopt="${i}" style="padding:10px 6px">
-            <canvas data-face="${i}" width="56" height="56"></canvas>
+            <canvas data-face="${i}" width="64" height="64"></canvas>
             <span class="nm" style="font-size:var(--t-small)">${breedName(i)}</span>
           </button>`).join('')}
       </div>
@@ -1610,7 +1622,7 @@ function openLevelIntro(n) {
     </div>
     ${pet ? `
     <div class="goalItem" style="background:color-mix(in srgb,var(--accent) 10%, var(--surface-2))">
-      <canvas data-face="${pet.breed}" data-coat="${pet.coat}" data-eye="${petEye(pet)}" data-hat="${pet.hat}" width="44" height="44"></canvas>
+      <canvas data-face="${pet.breed}" data-coat="${pet.coat}" data-eye="${petEye(pet)}" data-hat="${pet.hat}" width="52" height="52"></canvas>
       <span class="t"><b>${pet.name} · ${abilityName(pet)} · ${abilityPower(pet)}</b>
       ${perks.length
         ? `<span class="perkchips">${perkChips(perks).map(x => `<span class="pill ok">${x}</span>`).join('')}</span>`

@@ -949,8 +949,37 @@ function drawBody(c, spec, s, o) {
   };
   const tailW = (b.id === 'pug' ? .10 : cat ? .16 : .15) * s;
   const tailFur = b.mark === 'points' ? (spec.point || spec.fur2) : b.mark === 'patch' ? spec.fur2 : spec.fur;
-  tail(); c.strokeStyle = inkLine(spec); c.lineWidth = tailW + W * 2; c.lineCap = 'round'; c.stroke();
-  tail(); c.strokeStyle = tailFur; c.lineWidth = tailW; c.stroke();
+  if (b.id === 'retriever') {
+    /* A golden's tail is a plume, not a rope: the same curve, but filled
+       as a shape that widens to the middle and is cut along its lower
+       edge into feathers, the way the character sheet draws it. */
+    const P = t => {
+      const a = [.26, .82], b1 = [.62 + tailA * .12, .86], b2 = [.74 + tailA * .18, .44], d = [.58 + tailA * .24, .30 - tailA * .08];
+      const u = 1 - t;
+      return [u * u * u * a[0] + 3 * u * u * t * b1[0] + 3 * u * t * t * b2[0] + t * t * t * d[0],
+        u * u * u * a[1] + 3 * u * u * t * b1[1] + 3 * u * t * t * b2[1] + t * t * t * d[1]];
+    };
+    const N = 14, top = [], bot = [];
+    for (let i = 0; i <= N; i++) {
+      const t = i / N, p0 = P(Math.max(0, t - .01)), p1 = P(Math.min(1, t + .01)), p = P(t);
+      let nx = -(p1[1] - p0[1]), ny = p1[0] - p0[0];
+      const L = Math.hypot(nx, ny) || 1; nx /= L; ny /= L;
+      const w = (.045 + Math.sin(t * Math.PI) * .075) * s;
+      /* odd points are pushed out and become the round of a feather */
+      const feather = i > 0 && i < N && i % 2 ? 1.5 : 1;
+      top.push([p[0] * s - nx * w, p[1] * s - ny * w]);
+      bot.push([p[0] * s + nx * w * feather, p[1] * s + ny * w * feather]);
+    }
+    c.beginPath();
+    top.forEach((q, i) => i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]));
+    c.lineTo(bot[N][0], bot[N][1]);
+    for (let i = N - 1; i >= 1; i -= 2) c.quadraticCurveTo(bot[i][0], bot[i][1], bot[i - 1][0], bot[i - 1][1]);
+    c.closePath();
+    c.fillStyle = tailFur; c.fill(); inkStroke(c, spec, s);
+  } else {
+    tail(); c.strokeStyle = inkLine(spec); c.lineWidth = tailW + W * 2; c.lineCap = 'round'; c.stroke();
+    tail(); c.strokeStyle = tailFur; c.lineWidth = tailW; c.stroke();
+  }
   if (b.mark === 'patch') {
     /* the white tip every beagle has */
     c.save(); tail(); c.strokeStyle = spec.belly; c.lineWidth = tailW; c.setLineDash([tailW * .9, s * 3]); c.lineDashOffset = -s * 1.02; c.stroke(); c.restore();
