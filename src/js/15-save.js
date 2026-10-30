@@ -71,6 +71,9 @@ function freshSave() {
     starter: { bought: false },
     /* until when a lost level costs no heart — see heartsInfinite */
     infiniteUntil: 0,
+    /* nap time — see 62-nap-ui.js. `no` is the next rung of the ladder,
+       `cur` the board in play, kept so the back button loses nothing */
+    nap: { no: 1, solved: 0, seen: false, best: {}, day: { day: 0, done: false, time: 0, clean: false, streak: 0 }, cur: null },
     /* the win streak: first clears in a row, see WIN_RUN */
     winRun: 0,
     stats: { played: 0, cleared: 0, bestCombo: 0, tilesPopped: 0, rescued: 0, cared: 0, biggestClear: 0 }

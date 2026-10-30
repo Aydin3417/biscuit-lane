@@ -4674,3 +4674,42 @@ Connect compares bytes. So the runner makes a key, `tools/ios-cert.js`
 asks the App Store Connect API for a certificate and an App Store profile
 for that one build, and both are revoked in a step that always runs.
 Build 1.2.0 (202610041833) reached TestFlight that way.
+
+## Nap time
+
+On 30 Oct 2026 the top free game on both stores was Meowdoku!: the rule
+of LinkedIn's Queens with cats on it, 25 million installs in its first
+year and a 4.7 from 771 thousand ratings. What it showed is that the
+rule is the hook — one sentence, no luck, a loss that is your own — and
+that a cosy skin on it is enough to sell it. This game already had the
+skin. So it has the rule now, as the part of the house the hearts do not
+reach: every cushion gets one sleeping pet, one per row and column, and
+no two touching, or they wake each other up.
+
+`src/js/32-nap.js` is the puzzle. A board is grown from its answer — the
+pets placed first, the cushions grown out from them — and then mended: a
+randomly grown seven-by-seven had one answer about one time in several
+hundred, so instead of throwing boards away the generator finds a second
+answer, hands one of its cells to a neighbouring cushion, and asks
+again. A few dozen mends and nearly every board is unique. Then four
+rules of the kind a person uses (one spot left; a cushion inside one
+line owns the line; a pet that would empty another cushion cannot go
+there; k cushions in k lines own them) must solve it alone, so no board
+ever asks for a guess, and the hardest rule it needs is its difficulty.
+The same four rules are the hint button, which shows the step before it
+takes it, and names a wrong pet before anything else.
+
+`src/js/62-nap-ui.js` is the screen. A nine-by-nine can take two seconds
+on a desk, so boards are made in a Worker built from the puzzle's own
+functions, and the next one is made while the player is on this one.
+Once taps to rule out, twice lays a pet down, a drag rules out a row;
+a pet's shadow is dimmed for you; two pets in breach of the rule open
+their eyes and go red. The daily is the same board on every phone, small
+on Monday and big on Sunday, and shares as a grid of coloured squares —
+the cushions' shape and never the answer. It pays 30 coins a day and
+treats every seventh day; the ladder pays 8 a rung. A player out of
+hearts is offered it on the sheet that used to offer only the wait.
+
+`node test/nap.js` deals every rung and every day it is asked for and
+holds each to one answer, reached by reasoning, with every hint on the
+answer.

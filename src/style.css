@@ -1160,3 +1160,59 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
   .passRow, .passHead{ grid-template-columns:24px 1fr 1fr; gap:4px; }
   .passRow .pc{ padding:5px 6px; }
 }
+
+/* ---------- nap time ----------
+   Its own screen, laid out like a level's: a head, the board taking
+   whatever height is left, and three buttons under the thumb. */
+.napTop{
+  display:flex; align-items:center; gap:10px; padding:calc(8px + env(safe-area-inset-top)) 12px 8px;
+  background:var(--surface); flex:0 0 auto; border-bottom:1px solid var(--line-soft);
+  box-shadow:0 6px 16px -10px rgba(70,45,20,.35); position:relative; z-index:2;
+}
+.napTitle{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
+.napTitle b{ font-family:"Grandstander",sans-serif; font-size:var(--t-title); line-height:1.15; }
+.napTitle small{ font-size:var(--t-micro); color:var(--text-faint); font-weight:700; }
+.napClock{
+  font-family:"Grandstander",sans-serif; font-size:var(--t-title); font-variant-numeric:tabular-nums;
+  padding:7px 12px; border-radius:var(--r-sm); background:var(--surface-2); border:1px solid var(--line-soft);
+  box-shadow:var(--shadow-1); min-width:66px; text-align:center;
+}
+.napRules{ display:flex; gap:6px; padding:10px 12px 0; flex-wrap:wrap; justify-content:center; flex:0 0 auto; }
+.napRule{
+  display:inline-flex; align-items:center; gap:6px; padding:5px 10px 5px 7px; border-radius:999px;
+  background:var(--surface-2); border:1px solid var(--line-soft); font-size:var(--t-micro); font-weight:700; color:var(--text-dim);
+}
+.napRule svg{ width:17px; height:17px; flex:0 0 auto; color:var(--accent-strong); }
+.napRulesCol{ display:flex; flex-direction:column; gap:6px; align-items:stretch; }
+.napRulesCol .napRule{ border-radius:var(--r-sm); padding:8px 11px; font-size:var(--t-small); }
+.napWrap{ position:relative; flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; padding:8px 9px; }
+#napBoard{ display:block; touch-action:none; border-radius:18px; box-shadow:0 14px 30px -14px rgba(70,45,20,.55); }
+.napLoading{
+  position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px;
+  opacity:0; pointer-events:none; transition:opacity .2s ease; color:var(--text-dim); font-family:"Grandstander",sans-serif;
+}
+.napLoading.on{ opacity:1; }
+.napLoading span{ width:38px; height:38px; border-radius:50%; border:4px solid var(--surface-3); border-top-color:var(--accent); animation:napspin .9s linear infinite; }
+@keyframes napspin{ to{ transform:rotate(360deg); } }
+.napHelp{ text-align:center; font-size:var(--t-micro); color:var(--text-faint); padding:0 18px; margin:0; flex:0 0 auto; }
+.napBar{
+  display:grid; grid-template-columns:1fr 1fr 1.25fr; gap:8px; padding:10px 12px calc(12px + env(safe-area-inset-bottom));
+  flex:0 0 auto;
+}
+.napBar .btn{ padding:11px 8px; }
+#napHint{ background:var(--accent-soft); color:var(--accent-ink); border-color:color-mix(in srgb,var(--accent) 40%, var(--line-soft)); }
+.napWinStats{ display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+.napWinArt, .napHowArt{ align-self:center; display:block; }
+
+/* the home card: a picture of the thing, then the two ways in */
+.napCard{
+  display:grid; grid-template-columns:auto 1fr; gap:6px 13px; padding:13px; align-items:center;
+  background:linear-gradient(135deg, color-mix(in srgb,var(--plum) 10%, var(--surface-lit)), var(--surface-lit));
+}
+.napCardArt{ grid-row:span 2; border-radius:12px; box-shadow:0 6px 14px -8px rgba(70,45,20,.5); }
+.napCard .nc-t{ display:flex; flex-direction:column; min-width:0; }
+.napCard .nc-t b{ font-family:"Grandstander",sans-serif; font-size:var(--t-title); line-height:1.2; }
+.napCard .nc-t small{ font-size:var(--t-micro); color:var(--text-dim); }
+.napCard .nc-b{ display:flex; gap:7px; flex-wrap:wrap; }
+.napCard .nc-b .btn{ flex:1 1 auto; }
+

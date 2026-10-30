@@ -85,6 +85,26 @@
         </div>
       </section>
 
+      <!-- ============ NAP TIME ============ -->
+      <section class="screen" id="scr-nap">
+        <div class="napTop">
+          <button class="iconbtn" id="napBack" aria-label="Home"></button>
+          <div class="napTitle"><b id="napTitle">Nap time</b><small id="napSub"></small></div>
+          <div class="napClock num" id="napClock" aria-label="Time">0:00</div>
+        </div>
+        <div class="napRules" id="napRules"></div>
+        <div class="napWrap" id="napWrap">
+          <canvas id="napBoard" role="application" aria-label="Nap time board"></canvas>
+          <div class="napLoading" id="napLoading"><span></span><b id="napLoadingT">Fluffing the cushions</b></div>
+        </div>
+        <p class="napHelp" id="napHelp"></p>
+        <div class="napBar">
+          <button class="btn ghost" id="napUndo"><span>Undo</span></button>
+          <button class="btn ghost" id="napClear"><span>Clear</span></button>
+          <button class="btn" id="napHint"><span>Hint</span></button>
+        </div>
+      </section>
+
     </div>
 
     <nav class="tabbar" id="tabbar"></nav>

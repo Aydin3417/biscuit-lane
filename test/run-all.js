@@ -31,6 +31,7 @@ const steps = [
      one resolves moves in a copy, and the molehill goal broke in the
      game while every copy said it was fine */
   ['the rules, through the real game', 'game-rules.js', []],
+  ['every nap board has one answer, reached by reasoning', 'nap.js', ['60', '60']],
   ['the care loop', 'care.js', []],
   ['the mobile app layer', 'mobile.js', []],
   /* The endless run is designed now, not rolled — this asks whether it

@@ -75,6 +75,14 @@ the little ones home in their baskets. Every tenth level is a gate: a
 wooden gate in the hedge that stands open once you have come through it,
 so you can see how far you have walked.
 
+NAP TIME
+A logic puzzle beside the lane, and a new one every day. Every cushion
+gets one sleeping pet: one in each row and each column, and no two
+touching, not even at a corner, or they wake each other up. No luck and
+no hearts — just you, the cushions and the house going quiet. A board
+for every day of the week, small on Monday and big on Sunday, a ladder
+of puzzles that grows with you, and a hint that shows its reasoning.
+
 THE ROOM UPSTAIRS
 Your animal lives there. Feed it, play with it, wash it, let it sleep. It
 gets hungry while you are away and pleased when you come back, it grows
@@ -127,6 +135,14 @@ Yüzleri topla, kasaları kır, çamuru temizle, böğürtlenleri buda,
 minikleri sepetleriyle eve yürüt. Her onuncu bölüm bir kapı: çitteki
 tahta kapı, bir kez geçtikten sonra açık kalır — nereye kadar
 yürüdüğünü görürsün.
+
+ŞEKERLEME
+Sokağın yanında bir mantık bulmacası, her gün yenisi. Her mindere bir
+uykucu: her satırda ve her sütunda bir tane, ve hiçbiri birbirine
+değmeyecek, köşeden bile — yoksa birbirlerini uyandırırlar. Şans yok,
+kalp yok; sadece sen, minderler ve sessizleşen ev. Haftanın her günü
+bir tahta, pazartesi küçük, pazar büyük; seninle büyüyen bir bulmaca
+merdiveni ve nasıl düşündüğünü gösteren bir ipucu.
 
 ÜST KATTAKİ ODA
 Hayvanın orada yaşıyor. Yedir, oyna, yıka, uyut. Sen yokken acıkır, geri
@@ -195,16 +211,18 @@ people type, and Apple joins words across the fields to make them.
 **Promotional text** (170 max, changeable without review)
 
 ```
-Sixty hand-built levels, six animals to adopt, and a pet whose move you charge by matching their face. No forced ads, and it plays entirely offline.
+Match-3 with your own pets, plus Nap time: a new cat & dog logic puzzle every day, no hearts needed. No forced ads, and it plays entirely offline.
 ```
-[148]
+[146]
 
 **Keywords** (100 max, comma-separated, no spaces)
 
 ```
-3,three,matching,kitten,puppy,kitty,animal,adopt,cozy,offline,relax,casual,tile,swap,home,decor,care
+3,three,matching,kitten,puppy,kitty,animal,adopt,cozy,offline,relax,casual,sudoku,logic,daily,care
 ```
-[100] — singular only (Apple indexes the plural itself), commas with no
+[98] — "sudoku", "logic" and "daily" replaced "tile,swap,home" on 30 Oct
+2026, for Nap time: the cat logic puzzle is what the chart's top free
+game was being found by; — singular only (Apple indexes the plural itself), commas with no
 spaces, and nothing already in the name or subtitle. "3" and "three"
 join "match" in the name to cover "match 3" and "match three".
 
@@ -253,16 +271,17 @@ the searches, so those forms are the ones written out.
 **Tanıtım metni** (170 max)
 
 ```
-Elle kurulmuş altmış bölüm, sahiplenilecek altı hayvan ve yüzünü eşleştirerek hamlesini doldurduğun bir dost. Zorla reklam yok, çevrimdışı oynanır.
+Kendi hayvanlarınla eşleştirme, bir de Şekerleme: her gün yeni bir kedi köpek mantık bulmacası, kalp gerekmez. Zorla reklam yok, çevrimdışı oynanır.
 ```
-[147]
+[148]
 
 **Anahtar kelimeler** (100 max)
 
 ```
-bulmaca,oyunları,evcil,hayvan,patlatma,üçlü,yavru,sahiplen,bakım,sevimli,zeka,internetsiz,pati,besle
+bulmaca,oyunları,evcil,hayvan,patlatma,üçlü,yavru,sahiplen,bakım,sevimli,zeka,internetsiz,sudoku
 ```
-[100] — "patlatma" and "internetsiz" are how Turkish players name the
+[96] — "sudoku" since 30 Oct 2026, for the people who search for a
+logic puzzle and find Şekerleme; — "patlatma" and "internetsiz" are how Turkish players name the
 genre and the offline wish ("şeker patlatma", "internetsiz oyunlar").
 
 ---

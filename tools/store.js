@@ -86,7 +86,32 @@ const SHOTS = [
     go: async page => page.evaluate(() => { BL.setScreen('home'); BL.renderHome(); })
   },
   {
-    file: '3-lane',
+    /* Nap time, third: the first three are what a thumbnail row shows,
+       and the logic puzzle is the half of the game a Meowdoku! player
+       is searching for. Two-thirds asleep, a few spots ruled out and the
+       clock running — a board somebody is in the middle of, in Day. */
+    file: '3-nap',
+    caption: { en: 'A cosy logic puzzle every day', tr: 'Her gün sakin bir mantık bulmacası' },
+    go: async page => {
+      await page.evaluate(() => {
+        BL.save.nap = Object.assign(BL.save.nap || {}, { seen: true, solved: 9, no: 41 });
+        BL.nap.open('l:40');
+      });
+      await page.waitForFunction(() => BL.nap.s.b && BL.nap.s.cell, null, { timeout: 30000 });
+    },
+    after: async page => {
+      await page.evaluate(() => {
+        const S = BL.nap.s, b = S.b, n = b.n;
+        for (let r = 0; r < n - 3; r++) S.st[r * n + b.sol[r]] = 2;
+        for (let r = n - 3; r < n; r++) for (let c = 0; c < n; c++) if (c !== b.sol[r] && (r + c) % 3 === 0) S.st[r * n + c] = 1;
+        S.t = 102000; S.runFrom = 0;
+        BL.nap.refresh(); BL.nap.header();
+      });
+      await page.waitForTimeout(900);
+    }
+  },
+  {
+    file: '4-lane',
     caption: { en: 'Hundreds of puzzle levels', tr: 'Yüzlerce bulmaca bölümü' },
     go: async page => page.evaluate(() => {
       BL.setScreen('map');
@@ -96,7 +121,7 @@ const SHOTS = [
     })
   },
   {
-    file: '4-family',
+    file: '5-family',
     caption: { en: 'Six pets, six special moves', tr: 'Altı dost, altı özel hamle' },
     go: async page => page.evaluate(() => { BL.setScreen('family'); BL.renderFamily(); })
   },
@@ -106,7 +131,7 @@ const SHOTS = [
        line in the description; the moment a level is won is not
        anywhere else in the listing, and it is the moment the game is
        built around. Shot in Dusk, so the palette is still seen. */
-    file: '5-win',
+    file: '6-win',
     caption: { en: 'Three stars, one happy cat', tr: 'Üç yıldız, bir mutlu kedi' },
     go: async page => page.evaluate(() => {
       BL.save.settings.theme = 'dark'; BL.applyTheme(); BL.persist(true);

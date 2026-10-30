@@ -38,9 +38,9 @@ const CALL = /(?<![.:\w$?])([a-zA-Z_$][\w$]*)\(/g;
 const BUILTIN = new Set(('if for while switch catch return typeof function new await yield delete void ' +
   'do else try in of instanceof case default break continue throw class extends this super export import ' +
   'Math JSON Object Array Set Map WeakMap Number String Boolean Promise Date RegExp Error Symbol Path2D ' +
-  'Float32Array Float64Array Uint8Array Uint8ClampedArray Int16Array Uint16Array Int32Array Uint32Array ' +
+  'Int8Array Float32Array Float64Array Uint8Array Uint8ClampedArray Int16Array Uint16Array Int32Array Uint32Array ' +
   'parseInt parseFloat isNaN isFinite encodeURIComponent decodeURIComponent structuredClone queueMicrotask ' +
-  'requestAnimationFrame cancelAnimationFrame setTimeout clearTimeout setInterval clearInterval ' +
+  'requestAnimationFrame cancelAnimationFrame Worker postMessage setTimeout clearTimeout setInterval clearInterval ' +
   'getComputedStyle matchMedia fetch alert confirm prompt console localStorage sessionStorage ' +
   'document window navigator performance location history screen Image Audio Blob URL FileReader ' +
   'AudioContext webkitAudioContext DOMMatrix OffscreenCanvas ResizeObserver IntersectionObserver ' +

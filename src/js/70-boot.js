@@ -203,6 +203,8 @@ function boot() {
     if (rt) rt.textContent = T('rot_t');
     if (rs) rs.textContent = T('rot_s'); }
   buildTabs();
+  napBindInput();
+  napLabels();
   bindBoard();
   bindMap();
   bindRoomTap();
@@ -225,6 +227,9 @@ function boot() {
   /* and the videos, so that one is loaded by the time a card could offer
      it: a slot is only drawn when a video is ready (ADS.available) */
   if (ADS.ready()) ADS.init();
+  /* tonight's cushions and the next rung, made off the main thread while
+     the player is still looking at the room */
+  if (SAVE.reached >= 3) setTimeout(() => NAP.warm(), 2500);
   /* And, in the same breath, anything the store still says is owed.
 
      A purchase that was taken but never granted — the app killed between
@@ -419,6 +424,8 @@ if (BL_OPEN) window.BL = {
   track, TRACK, ADS, earnTreatsSheet,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
+  /* nap time: the board in play, and the way in */
+  nap: { get s() { return NS; }, open: openNap, make: napMake, level: napLevel, daily: napDaily, hint: napHint, refresh: napRefresh, header: napHeader },
   /* the drawing itself, so an art pass can render a sheet of every
      breed at any size instead of judging it through a screenshot */
   art: { drawFace, drawBody, specOf, tileSprite, get BREEDS() { return BREEDS; }, get STAGE_BUILD() { return STAGE_BUILD; } },

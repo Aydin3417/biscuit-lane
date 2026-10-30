@@ -44,7 +44,9 @@ function setScreen(name) {
   SCREEN = name;
   EV.emit('screen', name);
   $$('.screen').forEach(s => s.classList.toggle('on', s.id === 'scr-' + name));
-  const inGame = name === 'game';
+  /* nap time is a board of its own, played the way a level is: no top
+     bar, no tabs, the whole height for the cushions */
+  const inGame = name === 'game' || name === 'nap';
   $('#topbar').style.display = inGame ? 'none' : '';
   $('#tabbar').style.display = inGame ? 'none' : '';
   if (name === 'home') { renderHome(); roomLayout(); roomStart(); } else roomStop();
@@ -54,6 +56,7 @@ function setScreen(name) {
     setTimeout(() => { const b = $('#board'); if (b) b.focus({ preventScroll: true }); }, 60);
   } else gameLoopStop();
   if (name === 'map') { mapLayout(); scrollMapToCurrent(true); }
+  if (name === 'nap') napLayout();
   if (name === 'shop') renderShop();
   if (name === 'family') renderFamily();
   syncTabs();
@@ -316,8 +319,13 @@ function renderHome() {
      Ten ideas on the first screen is how a first minute ends; the lane
      is the first screen's whole job. */
   const settled = SAVE.reached >= 5;
+  /* Nap time from the third level: by then the lane has shown what the
+     game is, and a player who has met their pet once wants to see it
+     again somewhere the hearts do not reach. */
+  const napOn = SAVE.reached >= 3 || (SAVE.nap && SAVE.nap.solved > 0);
   pad.innerHTML = `
     ${heroCard}
+    ${napOn ? napHomeCard() : ''}
     <div class="todayRow">
     ${giftReady() ? heroGift() : ''}
     ${!settled ? '' : (() => {
@@ -397,6 +405,7 @@ function renderHome() {
 
   `;
 
+  if (napOn) napHomeBind(pad);
   const gc = $('#giftCard'); if (gc) gc.addEventListener('click', openDailyGift);
   const dc = $('#dailyCard'); if (dc) dc.addEventListener('click', startDailyWalk);
   const pc = $('#passCard'); if (pc) pc.addEventListener('click', passSheet);
@@ -1276,14 +1285,40 @@ function customiseSheet(breedIdx, done) {
    review. Now it asks the one thing it wants — a rating — and both
    answers are honoured the same way; the store's own form is where
    somebody unhappy says so. */
-function maybeAskForAReview() {
+/* THE STORE'S OWN SHEET, WHERE THERE IS ONE. A rating that takes two
+   taps and never leaves the game is given far more often than one that
+   opens the store page — Meowdoku! carries 771 thousand of them — and
+   the system decides itself whether to show it (Apple: three times a
+   year at most), so there is no question of ours in front of it to gate
+   anything. It is asked at a moment that is already good: a first
+   three-star clear from level six, or a third nap put to bed. Once,
+   and once more two months later for somebody still playing. */
+function nativeReview() {
+  const P = (window.Capacitor && window.Capacitor.Plugins) || {};
+  return P.InAppReview && P.InAppReview.requestReview ? P.InAppReview : null;
+}
+function maybeAskForAReview(why) {
   /* The app only. On the web this would be asking somebody playing in a
      browser to go and rate an Android app they have not installed, which
      is not a favour, it is a non sequitur. The share button below is
      different and stays: a link to the listing is a useful thing for a
      web player to send somebody. */
-  if (!nativeShell() || !storeLink()) return;
+  if (!nativeShell()) return;
   if (!SAVE.rated) SAVE.rated = { asked: 0, said: 0 };
+  const R = nativeReview();
+  if (R) {
+    const r = SAVE.rated;
+    const ready = why === 'nap' ? (SAVE.nap && SAVE.nap.solved >= 3) : SAVE.reached >= 6;
+    const again = r.asked && (r.n || 1) < 2 && now() - r.asked > 60 * DAY && SAVE.reached >= 25;
+    if (!ready || (r.asked && !again)) return;
+    r.asked = now(); r.n = (r.n || 0) + 1;
+    persist(true);
+    track('review_ask', { n: SAVE.reached, why: why || 'win', native: 1 });
+    /* behind the win card's confetti, not on top of it */
+    setTimeout(() => { try { R.requestReview(); } catch (e) { } }, 1600);
+    return;
+  }
+  if (!storeLink()) return;
   if (SAVE.rated.asked) return;
   if (SAVE.reached < 15 || SAVE.stats.cleared < 12) return;
   SAVE.rated.asked = now();
@@ -1869,7 +1904,16 @@ function noHeartsSheet() {
     </div>
     ${ADS.available('heart') ? `<button class="btn wide" id="nhAd">${IC.heart}${T('ad_heart')}</button>` : ''}
     ${offer ? `<button class="btn wide" id="nhNotify" style="margin-top:4px">${T('nh_notify')}</button>` : ''}
+    <button class="btn wide" id="nhNap" style="margin-top:4px">${IC.moon}${T('nap_hearts')}</button>
   `, { onClose: () => { if (tick) clearInterval(tick); onHeartArrived = () => { }; } });
+  /* The wait was the only thing on offer here. Nap time costs no
+     hearts, so the sheet that says "you cannot play" now also says what
+     you can. */
+  $('#nhNap', m.el).addEventListener('click', () => {
+    m.close();
+    const d = napDayState();
+    openNap(napEntry(d.done ? 'l:' + napSave().no : 'd:' + dayNumber()));
+  });
   const nb = $('#nhNotify', m.el);
   if (nb) nb.addEventListener('click', () => {
     nb.disabled = true;
@@ -2806,6 +2850,7 @@ function relabelEverything() {
   if (rs) rs.textContent = T('rot_s');
   relabelControls();
   buildTabs();
+  napLabels();
   renderHome();
   if (SCREEN === 'shop') renderShop();
   if (SCREEN === 'family') renderFamily();
