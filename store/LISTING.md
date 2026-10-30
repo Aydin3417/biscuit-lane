@@ -389,9 +389,10 @@ open the store. All seven products are consumable.
 Advertising: rewarded video only, never shown unless the player taps a
 "Watch a video" button. Those buttons appear only when a video has
 loaded, on the out-of-moves card, the out-of-hearts sheet and the
-level-cleared card. The App Tracking Transparency prompt is shown the
-first time a video is requested, before any ad is displayed. If no video
-is available the buttons are simply absent.
+level-cleared card. The App Tracking Transparency prompt is shown on
+first launch, straight after Google's consent form where that form is
+shown, and before the ad SDK loads any ad. If no video is available the
+buttons are simply absent.
 
 The app targets iPhone. It works offline; a connection is used only for
 purchases, the optional videos and anonymous play statistics, which can

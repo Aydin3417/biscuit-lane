@@ -26,9 +26,13 @@
    THE ORDER THINGS HAPPEN IN, because each is a legal requirement:
      1. Google's consent form (UMP), only where the law asks for one —
         the EEA, the UK, and the US states that regulate this.
-     2. On iOS, Apple's tracking prompt (ATT), the first time a video is
-        actually asked for — not at launch, where it would read as the
-        price of opening the app.
+     2. On iOS, Apple's tracking prompt (ATT), straight after it — before
+        the SDK loads a single video. 1.2.0 asked only when a video was
+        first wanted, and App Review rejected it under 5.1.2(i) on
+        30 Oct 2026: the reviewer met Google's form at launch, which says
+        the app tracks, and never met Apple's, because they never pressed
+        a video. Apple's reading is that a launch that can track must ask
+        at launch.
      3. The video, personalised only if both said yes.
 
    A VIDEO THAT DOES NOT FINISH PAYS NOTHING. On iOS the plugin's show
@@ -68,7 +72,6 @@ const ADS = {
   inited: false,
   initing: null,
   personalised: false,
-  asked: false,
   loading: null,
   loaded: false,
   retry: null,
@@ -108,6 +111,7 @@ const ADS = {
           const info = await A.requestConsentInfo();
           if (info && info.isConsentFormAvailable && info.status === 'REQUIRED') await A.showConsentForm();
         } catch (e) { /* no form, or no network: non-personalised it is */ }
+        await this.askTracking();
         this.inited = true;
         this.preload();
         return true;
@@ -119,14 +123,17 @@ const ADS = {
     return this.initing;
   },
 
-  /* Apple's prompt, once ever, and only when a video is first wanted.
-     Declined or unavailable, videos are still shown, non-personalised. */
+  /* Apple's prompt, from init(), after Google's form and before any
+     video is loaded. iOS itself shows it once ever, so "notDetermined"
+     is the whole guard: a save flag would also swallow the case where
+     iOS quietly declines to show it (an app not yet active) and leave
+     the player never asked. Declined or unavailable, videos are still
+     shown, non-personalised. */
   async askTracking() {
     if (nativePlatform() !== 'ios') { this.personalised = true; return; }
     try {
       let st = await this.plugin.trackingAuthorizationStatus();
-      if (st && st.status === 'notDetermined' && !SAVE.attAsked) {
-        SAVE.attAsked = true; persist(true);
+      if (st && st.status === 'notDetermined') {
         await this.plugin.requestTrackingAuthorization();
         st = await this.plugin.trackingAuthorizationStatus();
       }
@@ -184,7 +191,6 @@ const ADS = {
     if (!this.available(slot)) return false;
     if (!await this.init()) return false;
     const A = this.plugin;
-    if (!this.asked) { this.asked = true; await this.askTracking(); }
     const handles = [];
     let rewarded = false;
     try {

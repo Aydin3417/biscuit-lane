@@ -4528,8 +4528,9 @@ casual player still never runs dry of hearts.
 `@capacitor-community/admob`: three moves on the lose card (nine treats
 buy five), a heart on the empty-hearts sheet, double coins on a first
 clear, two treats in the earn sheet, each capped per day. Google's consent
-form where the law asks for one; Apple's tracking prompt the first time a
-video is asked for, never at launch. On iOS the plugin's show call
+form where the law asks for one, then Apple's tracking prompt straight
+after it, before any video is loaded (1.2.0 asked only when a video was
+first wanted, and App Review rejected that under 5.1.2(i)). On iOS the plugin's show call
 resolves only when a reward is earned — closed early, it never returns —
 so a video is judged by its events. The real ids went in on 3 Oct 2026
 (two apps and two rewarded units in AdMob, content rating G, the EU
