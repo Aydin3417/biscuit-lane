@@ -414,7 +414,16 @@ function startLevel(n, opts) {
     cell.tile.tw.force = .45;
   });
   gameLoopStart();
-  setTimeout(() => { G.busy = false; G.hintT = 0; }, 700);
+  /* A kill during the last move's cascade keeps the board from before it
+     with the move charged, so it comes back with nothing left to play
+     and nothing that would ever call checkEnd. It is judged once the
+     board has dealt in, the way the move would have been: a win if the
+     goals were already met, otherwise the loss card and its offer. */
+  const _ep = levelEpoch();
+  setTimeout(() => {
+    G.busy = false; G.hintT = 0;
+    if (res && !stale(_ep) && !G.over && G.moves <= 0) checkEnd();
+  }, 700);
   if (!res) SAVE.stats.played++;
   keepLevel();
 }
@@ -498,6 +507,9 @@ function paintGoalIcon(g) {
   else if (g.kind === GK.MUD) { c.save(); c.scale(.9, .9); paintMud(c, px * .9, 1); c.restore(); }
   else if (g.kind === GK.BRAMBLE) { paintBramble(c, px * .92); paintBrambleOver(c, px * .92); }
   else if (g.kind === GK.RESCUE) paintPup(c, px * .95, 0);
+  /* the hill as the board draws it at two layers, which is how an 'o'
+     starts; with no branch here the chip was blank */
+  else if (g.kind === GK.MOLE) paintMole(c, px * .9, 2);
   else if (g.kind === GK.SCORE) {
     c.fillStyle = PAL.accent;
     c.save(); c.scale(px / 24, px / 24); c.translate(-12, -12);
@@ -660,7 +672,7 @@ async function useHammer(r, c) {
   SAVE.boosters.hammer--; persist();
   track('booster_use', { id: 'hammer', n: G.n });
   G.armed = null; syncBoosterBar();
-  G.busy = true;
+  G.busy = true; moleFresh(G.B);
   SFX.crate();
   const keys = new Set([r + ':' + c]);
   await blastWaves(keys, 1, true);
@@ -678,7 +690,7 @@ async function useFreeSwap(a, b) {
   SAVE.boosters.swap--; persist();
   track('booster_use', { id: 'swap', n: G.n });
   G.armed = null; G.armedFirst = null; syncBoosterBar();
-  G.busy = true;
+  G.busy = true; moleFresh(G.B);
   const ca = G.B.cell[a[0]][a[1]], cb = G.B.cell[b[0]][b[1]];
   swapTiles(G.B, a, b);
   setTarget(ca.tile, a[1], a[0], .18);
@@ -693,7 +705,7 @@ async function useFreeSwap(a, b) {
 }
 async function doShuffle() {
   const _ep = levelEpoch();
-  G.busy = true;
+  G.busy = true; moleFresh(G.B);
   eachCell(G.B, cell => { if (cell.tile) cell.tile.jiggle = 1; });
   await wait(180);
   if (stale(_ep)) return;
@@ -837,7 +849,11 @@ async function blastWaves(startKeys, chain, silent) {
   let guard = 0;
   let totalTiles = 0;
   while (wave.length && guard++ < 24) {
-    const ctx = { touched: new Set(), removed: [], chain: [], collect: {}, mud: 0, crate: 0, ice: 0, bram: 0, count: 0, delay: 0 };
+    /* `mole` was missing from this, so closing a hill did undefined + 1,
+       applyCounts read NaN as nothing, and every molehill level from 76
+       on could not be won — while the solver, which had the field,
+       measured them as fine. Every counter hitCell bumps lives here. */
+    const ctx = { touched: new Set(), removed: [], chain: [], collect: {}, mud: 0, crate: 0, ice: 0, bram: 0, mole: 0, count: 0, delay: 0 };
     wave.forEach(k => {
       const [r, c] = k.split(':').map(Number);
       hitCell(G.B, r, c, ctx);
@@ -978,13 +994,9 @@ async function clearGroups(groups, swapCells) {
     const sp = specialFor(g);
     let at = null;
     if (sp !== SP.NONE) {
-      if (swapCells) {
-        for (const sc of swapCells) {
-          if (g.cells.some(([r, c]) => r === sc[0] && c === sc[1])) { at = sc; break; }
-        }
-      }
-      if (!at) at = g.cells[Math.floor(g.cells.length / 2)];
-      makeSpecials.push({ r: at[0], c: at[1], sp, type: g.type });
+      /* never a cell that already holds a special: see specialCell */
+      at = specialCell(G.B, g, swapCells);
+      if (at) makeSpecials.push({ r: at[0], c: at[1], sp, type: g.type });
     }
     g.cells.forEach(([r, c]) => {
       if (at && r === at[0] && c === at[1]) return;      // survives, becomes the special
@@ -1434,9 +1446,13 @@ function spendMove() {
 
 async function tryMove(a, b) {
   const _ep = levelEpoch();
-  if (G.busy || G.over) return;
+  /* No moves, no move. Nothing here asked, so a level resumed with the
+     last move already paid for (see the snapshot below) took that move
+     again on the old board and a fresh refill, every relaunch — spendMove
+     clamps at nought and the level never ended. */
+  if (G.busy || G.over || G.moves <= 0) return;
   if (!canSwap(G.B, a, b)) { SFX.bad(); return; }
-  G.busy = true;
+  G.busy = true; moleFresh(G.B);
   G.sel = null;
   const ca = G.B.cell[a[0]][a[1]], cb = G.B.cell[b[0]][b[1]];
   const ta = ca.tile, tb = cb.tile;
@@ -1493,7 +1509,7 @@ async function firePetAbility() {
   const _ep = levelEpoch();
   const pet = activePet();
   if (!pet || G.busy || G.over || G.charge < 100) return;
-  G.busy = true;
+  G.busy = true; moleFresh(G.B);
   G.charge = 0;
   /* An ability's own clears must not refill the meter that paid for it.
      They did, and firing costs no move — so a chorus that took out three
@@ -2381,6 +2397,9 @@ function goalWords() {
     else if (g.kind === GK.CRATE) label = T('goal_crate', { n: g.need });
     else if (g.kind === GK.MUD) label = T('goal_mud', { n: g.need });
     else if (g.kind === GK.BRAMBLE) label = T('goal_bramble', { n: g.need });
+    /* a molehill goal fell through to the rescue line and was read out
+       as pups to walk home */
+    else if (g.kind === GK.MOLE) label = T('goal_mole', { n: g.need });
     else label = T('goal_rescue', { n: g.need });
     const have = g.kind === GK.SCORE ? G.score : g.have;
     return T('a11y_goal_line', { label, have: fmt(Math.min(have, g.need)), need: fmt(g.need) });

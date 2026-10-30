@@ -58,13 +58,13 @@ require('./_modules.js').CORE.forEach(f =>
   vm.runInContext(read(f).replace(/^'use strict';?$/m, ''), ctx, { filename: f }));
 
 const X = vm.runInContext(
-  '({ makeBoard, findMatches, specialFor, settle, hasMove, allMoves, canSwap,' +
+  '({ makeBoard, findMatches, specialFor, specialCell, settle, hasMove, allMoves, canSwap,' +
   '   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,' +
   '   commonType, shuffleTypes, ensureMove, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,' +
   '   moleCount, moleTick, moleHit, MOLE_EVERY,' +
 '   targetClear, isGate, budgetFor, budgetRange, LEVELS, winRunGifts })', ctx);
 const {
-  makeBoard, findMatches, specialFor, settle, hasMove, allMoves, canSwap,
+  makeBoard, findMatches, specialFor, specialCell, settle, hasMove, allMoves, canSwap,
   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,
   commonType, shuffleTypes, ensureMove, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,
   moleCount, moleTick, moleHit
@@ -199,10 +199,10 @@ function resolve(B, swapCells, tally) {
       const sp = specialFor(g);
       let at = null;
       if (sp !== SP.NONE) {
-        if (swapCells) for (const sc of swapCells) if (g.cells.some(([r, c]) => r === sc[0] && c === sc[1])) { at = sc; break; }
-        if (!at) at = g.cells[Math.floor(g.cells.length / 2)];
-        specials.push({ r: at[0], c: at[1], sp });
-        tally.made++;
+        /* the game's own rule, so a special already in the run fires
+           rather than being stamped over (30-engine.js specialCell) */
+        at = specialCell(B, g, swapCells);
+        if (at) { specials.push({ r: at[0], c: at[1], sp }); tally.made++; }
       }
       g.cells.forEach(([r, c]) => { if (!(at && r === at[0] && c === at[1])) keys.add(r + ':' + c); });
     });

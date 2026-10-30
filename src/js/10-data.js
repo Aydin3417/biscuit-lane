@@ -1545,9 +1545,18 @@ function normaliseGoals(def) {
       /* A bramble only spreads from another bramble, so once the patch is
          fully cut there is nothing left to grow — asking for more cuts
          than the patch holds can strand the level one short. The goal is
-         "clear the patch"; the regrowth is what makes that hard. */
+         "clear the patch"; the regrowth is what makes that hard.
+
+         So the number is the patch, not the one the level asked for. It
+         was min(asked, patch) while the win was every bramble gone, and
+         in 27 of the 58 bramble levels in 1-400 the patch was the bigger:
+         level 162 promised 11 cuts with 19 on the board, so the first
+         eight cuts did not move the counter at all. The solver read the
+         same counter; replayed at twenty games on 67, 77, 84, 95, 106
+         and 162 with the whole patch asked for, no clear rate moved by
+         more than five points, so the budgets stand. */
       if (stock.bram <= 0) return;
-      goals.push([kind, arg, Math.min(count, stock.bram)]);
+      goals.push([kind, arg, stock.bram]);
       return;
     }
     if (kind === GK.MUD || kind === GK.CRATE) {

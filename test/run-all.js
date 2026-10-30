@@ -27,6 +27,10 @@ const steps = [
   ['the economy, ninety days', 'economy.js', ['90', '--plays', '8']],
   ['engine soak + level design audit', 'sim.js', []],
   ['the ice rule', 'ice.js', []],
+  /* the one harness that plays the game's own 40-game.js: every other
+     one resolves moves in a copy, and the molehill goal broke in the
+     game while every copy said it was fine */
+  ['the rules, through the real game', 'game-rules.js', []],
   ['the care loop', 'care.js', []],
   ['the mobile app layer', 'mobile.js', []],
   /* The endless run is designed now, not rolled — this asks whether it

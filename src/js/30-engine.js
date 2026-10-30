@@ -268,6 +268,25 @@ function specialFor(group) {
   return SP.NONE;
 }
 
+/* Where a run's new special is born: the swapped cell if it is in the
+   run, else the middle of the run — but never a cell that already holds
+   a special. The birth cell is kept out of the blast and stamped after
+   it, so a rocket swapped into a four used to be stamped over without
+   firing: the player watched their rocket turn into a different one.
+   It stays in the blast now like the rest of the run, and the new piece
+   goes to the plain tile nearest the middle. A run with no plain tile
+   left makes nothing. The game and the solver both ask this, so they
+   cannot disagree about it. */
+function specialCell(B, g, swapCells) {
+  const plain = ([r, c]) => { const t = B.cell[r][c].tile; return !!t && t.sp === SP.NONE; };
+  const inRun = ([r0, c0]) => g.cells.some(([r, c]) => r === r0 && c === c0);
+  if (swapCells) for (const sc of swapCells) if (inRun(sc) && plain(sc)) return sc;
+  const mid = Math.floor(g.cells.length / 2);
+  const order = g.cells.map((p, i) => [Math.abs(i - mid), i, p]).sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+  for (const o of order) if (plain(o[2])) return o[2];
+  return null;
+}
+
 /* ---------------- move detection ---------------- */
 function canSwap(B, a, b) {
   const ca = openCell(B, a[0], a[1]), cb = openCell(B, b[0], b[1]);
@@ -463,6 +482,14 @@ function moleHit(B, cell) {
   B.moleHitThisMove.add(key);
   cell.mole--;
   return true;
+}
+/* The cap is one layer per action, and an action is more than a swap.
+   The set was cleared only in moleTick, which runs after a swap, so a
+   hill the hammer or the pet chipped between swaps was still in it when
+   the next swap cleared the tile beside it, and that swap did nothing to
+   the hill. Everything the player does on the board starts here. */
+function moleFresh(B) {
+  if (B) B.moleHitThisMove = null;
 }
 
 function moleCount(B) {
