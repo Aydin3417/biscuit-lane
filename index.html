@@ -1303,6 +1303,18 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
    the build is current */
 .tuneNotice{ display:flex; align-items:center; gap:10px; font-size:var(--t-small); color:var(--text-dim); border-top:none; padding:8px 4px 2px; }
 .tuneNotice svg{ width:18px; height:18px; flex:0 0 auto; color:var(--accent-strong); }
+
+/* ---------- settings, in groups ---------- */
+.setEyebrow{ text-align:left; padding:4px 4px 0; margin-bottom:-6px; }
+.setCard{ text-align:left; }
+.setCard .switchRow{ padding:9px 13px; }
+.setCard .divide:last-child{ display:none; }
+.setLinks{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+.setLinks .btn.sm{ padding:7px 11px; font-size:var(--t-micro); }
+.setFoot{ font-size:var(--t-micro); color:var(--text-faint); display:flex; gap:12px; justify-content:center; flex-wrap:wrap; line-height:1.5; }
+/* the video on the lose card: a line, not a second offer box */
+.adLine{ font-size:var(--t-small); padding:9px 12px; color:var(--text-dim); }
+.adLine svg{ width:16px; height:16px; }
 </style>
 
 <div class="stage">
@@ -2312,6 +2324,7 @@ const STRINGS = {
     set_credits: 'Every cat, dog, sound and biscuit here is drawn and synthesised in code — no audio files. The rooms and lanes behind them are painted.',
     set_privacy: 'Privacy policy',
     set_ad_choices: 'Ad privacy choices', home_today: 'Today',
+    set_sec_game: 'Playing', set_sec_look: 'Look and language', set_sec_data: 'Your data',
     nap_t: 'Nap time', nap_new: 'New · Nap time', nap_daily: 'Today’s nap', nap_level: 'Nap {n}',
     nap_size: '{n}×{n}', nap_tricky: 'a tricky one',
     nap_card_s: 'One sleeper on every cushion. No hearts needed.',
@@ -2690,6 +2703,7 @@ const STRINGS = {
     set_credits: 'Buradaki her kedi, her köpek, her ses kodla çiziliyor ve sentezleniyor — ses dosyası yok. Arkadaki oda ve yollar boyama.',
     set_privacy: 'Gizlilik politikası',
     set_ad_choices: 'Reklam gizlilik tercihleri', home_today: 'Bugün',
+    set_sec_game: 'Oyun', set_sec_look: 'Görünüm ve dil', set_sec_data: 'Verilerin',
     nap_t: 'Şekerleme', nap_new: 'Yeni · Şekerleme', nap_daily: 'Günün şekerlemesi', nap_level: 'Şekerleme {n}',
     nap_size: '{n}×{n}', nap_tricky: 'zorlu bir tane',
     nap_card_s: 'Her mindere bir uykucu. Kalp gerekmez.',
@@ -10871,7 +10885,32 @@ function paintPup(c, s, type) {
 }
 
 /* ---------------- goods art ---------------- */
+/* The goods are drawn as flat fills and the animals as flat fills with
+   a warm ink line round them, and on the shop page the two stood side
+   by side as two kinds of picture: the mama and the ton balığı read as
+   clip art next to a drawn cat (31 Oct 2026). Rather than redraw eight
+   objects, the line is put on afterwards: the good is painted to an
+   offscreen canvas at twice the size, its silhouette is stamped in ink
+   round the compass at the animals' own line weight, and the picture
+   sits on top. One hand for everything in the shop. */
 function paintGood(c, id, s) {
+  const k = 2, pad = s * .16;
+  const W = Math.ceil((s + pad * 2) * k);
+  const oc = document.createElement('canvas'); oc.width = oc.height = W;
+  const o = oc.getContext('2d'); o.translate(W / 2, W / 2); o.scale(k, k);
+  paintGoodShape(o, id, s);
+  const line = document.createElement('canvas'); line.width = line.height = W;
+  const l = line.getContext('2d');
+  const w = s * LINE * k;
+  for (let a = 0; a < 16; a++) l.drawImage(oc, Math.cos(a / 16 * Math.PI * 2) * w, Math.sin(a / 16 * Math.PI * 2) * w);
+  l.globalCompositeOperation = 'source-in';
+  l.fillStyle = INK; l.fillRect(0, 0, W, W);
+  c.save();
+  c.drawImage(line, -W / 2 / k, -W / 2 / k, W / k, W / k);
+  c.drawImage(oc, -W / 2 / k, -W / 2 / k, W / k, W / k);
+  c.restore();
+}
+function paintGoodShape(c, id, s) {
   c.save();
   switch (id) {
     case 'kibble': {
@@ -21153,8 +21192,7 @@ function showLose() {
         </span></span>
       </div>`).join('')}
     </div>
-    ${tip ? `<p style="font-size:var(--t-micro);color:var(--text-dim);margin-top:-4px"><b style="color:var(--text)">${T('lose_why')}:</b> ${tip}</p>` : ''}
-    ${pet ? `<p>${T('lose_petline', { name: pet.name })}</p>` : ''}
+    ${tip ? `<p style="font-size:var(--t-micro);color:var(--text-dim);margin-top:-4px"><b style="color:var(--text)">${T('lose_why')}:</b> ${tip}${pet ? ' ' + T('lose_petline', { name: pet.name }) : ''}</p>` : (pet ? `<p style="font-size:var(--t-micro);color:var(--text-dim)">${T('lose_petline', { name: pet.name })}</p>` : '')}
     ${G.runAtRisk ? `<div class="goalItem runNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('run_lost', { n: G.runAtRisk })}</b>${(G.extras || 0) < 2 && worthCarryingOn ? T('run_lost_keep') : ''}</span>
@@ -21167,13 +21205,7 @@ function showLose() {
       </span>
       <button class="btn primary sm" id="lExtra">${T('lose_extra_go')} ${IC.treat}${price}</button>
     </div>` + (!(G.extras || 0) && ADS.available('carry') ? `
-    <div class="offer">
-      <span class="ot">
-        <b>${T('ad_watch', { n: ECON.adMoves })}</b>
-        <small>${T('ad_watch_sub', { t: ECON.continueTreats })}</small>
-      </span>
-      <button class="btn sm" id="lAd">${T('ad_go')}</button>
-    </div>` : '')}
+    <button class="btn ghost wide adLine" id="lAd">${IC.play}${T('ad_watch', { n: ECON.adMoves })} · ${T('ad_go')}</button>` : '')}
     <div class="row">
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn${offered ? '' : ' primary'}" id="lRetry">${T('retry')}</button>
@@ -21529,14 +21561,23 @@ function openSettings() {
       <span class="lb">${label}<small>${sub}</small></span>
       <span class="sw2 ${on ? 'on' : ''}"></span>
     </button><div class="divide"></div>`;
+  /* THREE GROUPS, NOT ONE LIST. Eleven rows in one card, with the two
+     things people actually change (sound, language) at opposite ends and
+     the privacy link and reset below the fold, was a page to scroll
+     rather than a panel to glance at (31 Oct 2026). Grouped by what
+     the question is about, and the rarely-touched links are a row of
+     small buttons rather than four full-width ones. */
   const m = modal(`
     <h2>${T('set_t')}</h2>
-    <div class="card" style="text-align:left">
+    <div class="eyebrow setEyebrow">${T('set_sec_game')}</div>
+    <div class="card setCard">
       ${row('sound', T('set_sound'), T('set_sound_s'), SAVE.settings.sound)}
       ${row('haptics', T('set_haptics'), T('set_haptics_s'), SAVE.settings.haptics)}
       ${row('marks', T('set_marks'), T('set_marks_s'), SAVE.settings.marks)}
-      ${row('telemetry', T('set_data'), T('set_data_s'), SAVE.settings.telemetry !== false)}
       ${NOTIFY.ready() ? row('notify', T('set_notify'), T('set_notify_s'), SAVE.settings.notify) : ''}
+    </div>
+    <div class="eyebrow setEyebrow">${T('set_sec_look')}</div>
+    <div class="card setCard">
       <div class="switchRow themeRow">
         <span class="lb">${T('set_theme')}<small>${T('set_theme_s')}</small></span>
         <span class="seg" id="segTheme">
@@ -21554,17 +21595,23 @@ function openSettings() {
         </span>
       </div>
     </div>
-    <button class="btn ghost wide" id="setHow">${T('how_open')}</button>
-    ${touchOnly() ? '' : `<button class="btn ghost wide" id="setKeys">${T('a11y_help_t')}</button>`}
-    ${STORE_LINKS.privacy ? `<a class="btn ghost wide" id="setPrivacy" href="${STORE_LINKS.privacy}" target="_blank" rel="noopener">${T('set_privacy')}</a>` : ''}
-    ${ADS.privacyOptions ? `<button class="btn ghost wide" id="setAdChoices">${T('set_ad_choices')}</button>` : ''}
-    <div style="font-size:var(--t-micro);color:var(--text-faint);line-height:1.5">${T('set_credits')}</div>
-    <div style="font-size:var(--t-micro);color:var(--text-faint);display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-      <span>${T('set_played')}: <b class="num">${SAVE.stats.played}</b></span>
-      <span>${T('set_cleared')}: <b class="num">${SAVE.stats.cleared}</b></span>
-      <span>${T('set_bestcombo')}: <b class="num">x${SAVE.stats.bestCombo || 0}</b></span>
+    <div class="eyebrow setEyebrow">${T('set_sec_data')}</div>
+    <div class="card setCard">
+      ${row('telemetry', T('set_data'), T('set_data_s'), SAVE.settings.telemetry !== false)}
     </div>
-    <button class="btn ghost wide" id="setReset" style="color:var(--rose)">${T('set_reset')}</button>
+    <div class="setLinks">
+      <button class="btn ghost sm" id="setHow">${T('how_open')}</button>
+      ${touchOnly() ? '' : `<button class="btn ghost sm" id="setKeys">${T('a11y_help_t')}</button>`}
+      ${STORE_LINKS.privacy ? `<a class="btn ghost sm" id="setPrivacy" href="${STORE_LINKS.privacy}" target="_blank" rel="noopener">${T('set_privacy')}</a>` : ''}
+      ${ADS.privacyOptions ? `<button class="btn ghost sm" id="setAdChoices">${T('set_ad_choices')}</button>` : ''}
+      <button class="btn ghost sm" id="setReset" style="color:var(--rose)">${T('set_reset')}</button>
+    </div>
+    <div class="setFoot">
+      <span>${T('set_played')} <b class="num">${SAVE.stats.played}</b></span>
+      <span>${T('set_cleared')} <b class="num">${SAVE.stats.cleared}</b></span>
+      <span>${T('set_bestcombo')} <b class="num">x${SAVE.stats.bestCombo || 0}</b></span>
+    </div>
+    <div class="setFoot" style="opacity:.8">${T('set_credits')}</div>
     <button class="btn primary wide" id="setClose">${T('close')}</button>
   `);
   $$('[data-toggle]', m.el).forEach(b => b.addEventListener('click', () => {

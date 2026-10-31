@@ -1982,7 +1982,32 @@ function paintPup(c, s, type) {
 }
 
 /* ---------------- goods art ---------------- */
+/* The goods are drawn as flat fills and the animals as flat fills with
+   a warm ink line round them, and on the shop page the two stood side
+   by side as two kinds of picture: the mama and the ton balığı read as
+   clip art next to a drawn cat (31 Oct 2026). Rather than redraw eight
+   objects, the line is put on afterwards: the good is painted to an
+   offscreen canvas at twice the size, its silhouette is stamped in ink
+   round the compass at the animals' own line weight, and the picture
+   sits on top. One hand for everything in the shop. */
 function paintGood(c, id, s) {
+  const k = 2, pad = s * .16;
+  const W = Math.ceil((s + pad * 2) * k);
+  const oc = document.createElement('canvas'); oc.width = oc.height = W;
+  const o = oc.getContext('2d'); o.translate(W / 2, W / 2); o.scale(k, k);
+  paintGoodShape(o, id, s);
+  const line = document.createElement('canvas'); line.width = line.height = W;
+  const l = line.getContext('2d');
+  const w = s * LINE * k;
+  for (let a = 0; a < 16; a++) l.drawImage(oc, Math.cos(a / 16 * Math.PI * 2) * w, Math.sin(a / 16 * Math.PI * 2) * w);
+  l.globalCompositeOperation = 'source-in';
+  l.fillStyle = INK; l.fillRect(0, 0, W, W);
+  c.save();
+  c.drawImage(line, -W / 2 / k, -W / 2 / k, W / k, W / k);
+  c.drawImage(oc, -W / 2 / k, -W / 2 / k, W / k, W / k);
+  c.restore();
+}
+function paintGoodShape(c, id, s) {
   c.save();
   switch (id) {
     case 'kibble': {

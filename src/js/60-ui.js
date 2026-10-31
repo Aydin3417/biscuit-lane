@@ -2371,8 +2371,7 @@ function showLose() {
         </span></span>
       </div>`).join('')}
     </div>
-    ${tip ? `<p style="font-size:var(--t-micro);color:var(--text-dim);margin-top:-4px"><b style="color:var(--text)">${T('lose_why')}:</b> ${tip}</p>` : ''}
-    ${pet ? `<p>${T('lose_petline', { name: pet.name })}</p>` : ''}
+    ${tip ? `<p style="font-size:var(--t-micro);color:var(--text-dim);margin-top:-4px"><b style="color:var(--text)">${T('lose_why')}:</b> ${tip}${pet ? ' ' + T('lose_petline', { name: pet.name }) : ''}</p>` : (pet ? `<p style="font-size:var(--t-micro);color:var(--text-dim)">${T('lose_petline', { name: pet.name })}</p>` : '')}
     ${G.runAtRisk ? `<div class="goalItem runNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('run_lost', { n: G.runAtRisk })}</b>${(G.extras || 0) < 2 && worthCarryingOn ? T('run_lost_keep') : ''}</span>
@@ -2385,13 +2384,7 @@ function showLose() {
       </span>
       <button class="btn primary sm" id="lExtra">${T('lose_extra_go')} ${IC.treat}${price}</button>
     </div>` + (!(G.extras || 0) && ADS.available('carry') ? `
-    <div class="offer">
-      <span class="ot">
-        <b>${T('ad_watch', { n: ECON.adMoves })}</b>
-        <small>${T('ad_watch_sub', { t: ECON.continueTreats })}</small>
-      </span>
-      <button class="btn sm" id="lAd">${T('ad_go')}</button>
-    </div>` : '')}
+    <button class="btn ghost wide adLine" id="lAd">${IC.play}${T('ad_watch', { n: ECON.adMoves })} · ${T('ad_go')}</button>` : '')}
     <div class="row">
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn${offered ? '' : ' primary'}" id="lRetry">${T('retry')}</button>
@@ -2747,14 +2740,23 @@ function openSettings() {
       <span class="lb">${label}<small>${sub}</small></span>
       <span class="sw2 ${on ? 'on' : ''}"></span>
     </button><div class="divide"></div>`;
+  /* THREE GROUPS, NOT ONE LIST. Eleven rows in one card, with the two
+     things people actually change (sound, language) at opposite ends and
+     the privacy link and reset below the fold, was a page to scroll
+     rather than a panel to glance at (31 Oct 2026). Grouped by what
+     the question is about, and the rarely-touched links are a row of
+     small buttons rather than four full-width ones. */
   const m = modal(`
     <h2>${T('set_t')}</h2>
-    <div class="card" style="text-align:left">
+    <div class="eyebrow setEyebrow">${T('set_sec_game')}</div>
+    <div class="card setCard">
       ${row('sound', T('set_sound'), T('set_sound_s'), SAVE.settings.sound)}
       ${row('haptics', T('set_haptics'), T('set_haptics_s'), SAVE.settings.haptics)}
       ${row('marks', T('set_marks'), T('set_marks_s'), SAVE.settings.marks)}
-      ${row('telemetry', T('set_data'), T('set_data_s'), SAVE.settings.telemetry !== false)}
       ${NOTIFY.ready() ? row('notify', T('set_notify'), T('set_notify_s'), SAVE.settings.notify) : ''}
+    </div>
+    <div class="eyebrow setEyebrow">${T('set_sec_look')}</div>
+    <div class="card setCard">
       <div class="switchRow themeRow">
         <span class="lb">${T('set_theme')}<small>${T('set_theme_s')}</small></span>
         <span class="seg" id="segTheme">
@@ -2772,17 +2774,23 @@ function openSettings() {
         </span>
       </div>
     </div>
-    <button class="btn ghost wide" id="setHow">${T('how_open')}</button>
-    ${touchOnly() ? '' : `<button class="btn ghost wide" id="setKeys">${T('a11y_help_t')}</button>`}
-    ${STORE_LINKS.privacy ? `<a class="btn ghost wide" id="setPrivacy" href="${STORE_LINKS.privacy}" target="_blank" rel="noopener">${T('set_privacy')}</a>` : ''}
-    ${ADS.privacyOptions ? `<button class="btn ghost wide" id="setAdChoices">${T('set_ad_choices')}</button>` : ''}
-    <div style="font-size:var(--t-micro);color:var(--text-faint);line-height:1.5">${T('set_credits')}</div>
-    <div style="font-size:var(--t-micro);color:var(--text-faint);display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-      <span>${T('set_played')}: <b class="num">${SAVE.stats.played}</b></span>
-      <span>${T('set_cleared')}: <b class="num">${SAVE.stats.cleared}</b></span>
-      <span>${T('set_bestcombo')}: <b class="num">x${SAVE.stats.bestCombo || 0}</b></span>
+    <div class="eyebrow setEyebrow">${T('set_sec_data')}</div>
+    <div class="card setCard">
+      ${row('telemetry', T('set_data'), T('set_data_s'), SAVE.settings.telemetry !== false)}
     </div>
-    <button class="btn ghost wide" id="setReset" style="color:var(--rose)">${T('set_reset')}</button>
+    <div class="setLinks">
+      <button class="btn ghost sm" id="setHow">${T('how_open')}</button>
+      ${touchOnly() ? '' : `<button class="btn ghost sm" id="setKeys">${T('a11y_help_t')}</button>`}
+      ${STORE_LINKS.privacy ? `<a class="btn ghost sm" id="setPrivacy" href="${STORE_LINKS.privacy}" target="_blank" rel="noopener">${T('set_privacy')}</a>` : ''}
+      ${ADS.privacyOptions ? `<button class="btn ghost sm" id="setAdChoices">${T('set_ad_choices')}</button>` : ''}
+      <button class="btn ghost sm" id="setReset" style="color:var(--rose)">${T('set_reset')}</button>
+    </div>
+    <div class="setFoot">
+      <span>${T('set_played')} <b class="num">${SAVE.stats.played}</b></span>
+      <span>${T('set_cleared')} <b class="num">${SAVE.stats.cleared}</b></span>
+      <span>${T('set_bestcombo')} <b class="num">x${SAVE.stats.bestCombo || 0}</b></span>
+    </div>
+    <div class="setFoot" style="opacity:.8">${T('set_credits')}</div>
     <button class="btn primary wide" id="setClose">${T('close')}</button>
   `);
   $$('[data-toggle]', m.el).forEach(b => b.addEventListener('click', () => {

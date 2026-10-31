@@ -1246,3 +1246,15 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .tuneNotice{ display:flex; align-items:center; gap:10px; font-size:var(--t-small); color:var(--text-dim); border-top:none; padding:8px 4px 2px; }
 .tuneNotice svg{ width:18px; height:18px; flex:0 0 auto; color:var(--accent-strong); }
 
+/* ---------- settings, in groups ---------- */
+.setEyebrow{ text-align:left; padding:4px 4px 0; margin-bottom:-6px; }
+.setCard{ text-align:left; }
+.setCard .switchRow{ padding:9px 13px; }
+.setCard .divide:last-child{ display:none; }
+.setLinks{ display:flex; flex-wrap:wrap; gap:6px; justify-content:center; }
+.setLinks .btn.sm{ padding:7px 11px; font-size:var(--t-micro); }
+.setFoot{ font-size:var(--t-micro); color:var(--text-faint); display:flex; gap:12px; justify-content:center; flex-wrap:wrap; line-height:1.5; }
+/* the video on the lose card: a line, not a second offer box */
+.adLine{ font-size:var(--t-small); padding:9px 12px; color:var(--text-dim); }
+.adLine svg{ width:16px; height:16px; }
+
