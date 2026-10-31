@@ -2244,7 +2244,18 @@ function dailyLevel(reached, dayNo) {
     goals.push([GK.COLLECT, b, pair[1]]);
     base = GEN.collect.base + tier * 500;
   }
-  else if (kind === GK.MUD) { goals.push([GK.MUD, 0, share(stock.mud, (.74 + tier * .05) * goalEase)]); base = GEN.mud.base; }
+  else if (kind === GK.MUD) {
+    /* A share of the mud is the mistake the run's generator already
+       corrected (workShare, above): the shaped boards hold 28 to 48 mud
+       cells, most two layers deep, so the share asked for 33 to 76
+       layers in twelve moves, and the mud walk cleared 29% of games
+       against 81-100% for every other kind (test/all-levels.js, 31 Oct
+       2026). The goal is a fixed amount of work now, 2.4 layers a move,
+       which is what the run's own mud levels ask of a move; the board
+       keeps its spread and the walk keeps its promise. */
+    goals.push([GK.MUD, 0, Math.min(share(stock.mud, (.74 + tier * .05) * goalEase), Math.round(moves * 2.4))]);
+    base = GEN.mud.base;
+  }
   else if (kind === GK.MOLE) {
     /* every hill on the board, because leaving one open means leaving
        the board getting worse, and a goal that lets you ignore the

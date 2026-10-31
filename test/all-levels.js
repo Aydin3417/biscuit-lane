@@ -57,6 +57,8 @@ const FIRST = +args[1] || 1;
 const LAST = +args[2] || 400;
 const ranged = args.length > 1;
 const DAILY = !ranged && !flag('no-daily');
+/* --only-daily: the sixty days at every tier and no levels, for tuning the walk */
+const ONLY_DAILY = !!flag('only-daily');
 const VERBOSE = !!flag('verbose');
 const JOBS = flag('jobs') ? Math.max(1, +flag('jobs')) : Math.min(8, os.cpus().length);
 const SHARD = flag('shard');                 /* "i/N": a worker, printing JSON */
@@ -69,11 +71,11 @@ const TIERS = [1, 14, 28, 42, 60, 90];
 const seedsFor = (n, g) => ({ reseed: g * 7331, random: n * 50021 + g * 7331 + 17 });
 function workList() {
   const tasks = [];
-  for (let n = FIRST; n <= LAST; n++) {
+  for (let n = FIRST; n <= LAST && !ONLY_DAILY; n++) {
     const seeds = []; for (let g = 0; g < K; g++) seeds.push(seedsFor(n, g));
     tasks.push({ label: 'level ' + n, n, seeds });
   }
-  if (DAILY) for (const reached of TIERS) for (let day = 1; day <= 60; day++) {
+  if (DAILY || ONLY_DAILY) for (const reached of TIERS) for (let day = 1; day <= 60; day++) {
     const seeds = []; for (let g = 0; g < K; g++) seeds.push(seedsFor(1000 + reached * 61 + day, g));
     tasks.push({ label: 'daily reached ' + reached + ' day ' + day, daily: { reached, day: 20700 + day }, seeds });
   }
