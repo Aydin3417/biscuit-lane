@@ -8,6 +8,7 @@
 */
 const { execFileSync } = require('child_process');
 const path = require('path');
+const QUICK = process.argv[2] === 'quick';
 
 const steps = [
   ['module integrity', 'check.js', []],
@@ -35,6 +36,12 @@ const steps = [
      one resolves moves in a copy, and the molehill goal broke in the
      game while every copy said it was fine */
   ['the rules, through the real game', 'game-rules.js', []],
+  /* and every level through the same file, so a goal the engine cannot
+     move fails here rather than on a phone. Four games a level is 3,040
+     games including the daily and four to seven minutes on eight
+     processes; quick plays each level once and leaves the daily out,
+     which still asks whether every level deals, ends and can progress. */
+  ['every level, through the real game', 'all-levels.js', QUICK ? ['1', '--no-daily'] : ['4']],
   ['every nap board has one answer, reached by reasoning', 'nap.js', ['60', '60']],
   ['the care loop', 'care.js', []],
   ['the mobile app layer', 'mobile.js', []],
@@ -100,7 +107,6 @@ const steps = [
    gate. It answers the one question worth asking every few minutes —
    does every level still build, deal and finish — and leaves the rest
    to the full run before a release. */
-const QUICK = process.argv[2] === 'quick';
 const CURVE_GAMES = QUICK ? 2 : 9;
 const CURVES = [
   ['the handcrafted lane', 1, 60, 0, 55, 90],
