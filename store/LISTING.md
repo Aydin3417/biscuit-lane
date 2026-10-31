@@ -335,8 +335,13 @@ version 1.2.0. Everything below is saved as a draft; nothing has been
 submitted, and the privacy answers have not been published.
 
 - **Localisations:** English (U.S.) primary, English (U.K.) with its own
-  keyword field, Turkish. Seven screenshots each for U.S. and Turkish in
-  the 6.9" slot; the U.K. one borrows the U.S. set.
+  keyword field, Turkish. Re-entered 31 Oct 2026 after the rejection:
+  the eight marketing slides (store/slides) in both of App Store
+  Connect's iPhone slots — the required "medium display" one at
+  1206 × 2622 (`resize63.py`) and the optional "large display" one at
+  1320 × 2868 — for U.S. and Turkish; the U.K. one borrows the U.S. set.
+  Description, promotional text, keywords and the review notes are the
+  ones in this file.
 - **Category** Games, Puzzle and Casual. **Age rating** 4+, with
   "advertising: yes" and everything else none. **Content rights:** no
   third-party content. **Price** free, all 175 countries and regions.

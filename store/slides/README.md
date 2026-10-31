@@ -1,6 +1,6 @@
 # App Store screenshots
 
-Eight slides, in English and Turkish, at the one size the App Store asks an iPhone app for: **1320 × 2868** (iPhone 6.9"). Upload `screenshots/en/phone/01.png … 08.png` to English (U.S.) and `screenshots/tr/phone/…` to Turkish, in that order.
+Eight slides, in English and Turkish, at the one size the App Store asks an iPhone app for: **1320 × 2868** (iPhone 6.9"). Upload `screenshots/en/phone63/01.png … 08.png` (1206 × 2622, from `resize63.py`) to the required "medium display" slot and `screenshots/en/phone/…` (1320 × 2868) to the optional "large display" slot, for English (U.S.); the same from `tr/` for Turkish, in that order. English (U.K.) inherits the U.S. set.
 
 | File | What it is |
 |---|---|
