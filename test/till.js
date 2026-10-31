@@ -213,6 +213,25 @@ ok(skus.indexOf(X.PASS.sku) >= 0, 'the store is asked the price of ' + X.PASS.sk
   ok(X.claimOutstanding([], [{ transactionId: 'tx-3', products: [{ id: 'not-ours' }] }]) === 0,
     'a transaction for something this game does not sell grants nothing');
 
+  /* ---------- the App Store names the app, not the product ----------
+
+     On iOS the purchase plugin's validator body carries the bundle id in
+     `id` and the product only inside the receipt; verify-purchase read
+     `id` as the product and refused every iPhone purchase as "unknown
+     product" (found 30 Oct 2026, before any real money went through).
+     BILLING.named looks the product up by the transaction id in the
+     receipts the phone holds, or from the one buy() left open. */
+  X.BILLING.store = { localReceipts: [{ transactions: [{ transactionId: 'ios-77', products: [{ id: X.TREAT_PACKS[1].sku }] }] }] };
+  const named = X.BILLING.named({ id: 'com.pawtika.game', transaction: { type: 'ios-appstore', id: 'ios-77', appStoreReceipt: 'x' } });
+  ok(named.id === X.TREAT_PACKS[1].sku && named.app === 'com.pawtika.game', 'an App Store body is given the product from the receipt');
+  X.BILLING.waiting[X.JAR.sku] = () => {};
+  const open = X.BILLING.named({ id: 'com.pawtika.game', transaction: { type: 'ios-appstore', id: 'ios-unknown' } });
+  ok(open.id === X.JAR.sku, 'with no receipt to match, the one open purchase names it');
+  delete X.BILLING.waiting[X.JAR.sku];
+  const android = X.BILLING.named({ id: X.TREAT_PACKS[0].sku, transaction: { type: 'android-playstore' } });
+  ok(android.id === X.TREAT_PACKS[0].sku, 'a Play body already names the product and is left alone');
+  X.BILLING.store = null;
+
   /* ---------- the welcome pack ---------- */
   ok(X.BILLING.skus().indexOf(X.STARTER.sku) >= 0, 'the store is asked the price of the welcome pack');
   X.setSave(X.freshSave());

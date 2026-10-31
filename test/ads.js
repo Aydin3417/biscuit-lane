@@ -17,14 +17,17 @@
 const { launch, at, serve } = require('../tools/_pw.js');
 
 const mock = mode => `
-  window.__ad = { mode: ${JSON.stringify(mode)}, prepared: 0, shown: 0, listeners: {} };
+  window.__ad = { mode: ${JSON.stringify(mode)}, prepared: 0, shown: 0, listeners: {}, calls: [], att: 'notDetermined', attAsked: 0 };
   const AdMob = {
-    initialize: async () => {},
-    requestConsentInfo: async () => ({ status: 'NOT_REQUIRED', isConsentFormAvailable: false }),
+    initialize: async () => { __ad.calls.push('init'); },
+    requestConsentInfo: async () => { __ad.calls.push('consent'); return { status: 'NOT_REQUIRED', isConsentFormAvailable: false, canRequestAds: true }; },
     showConsentForm: async () => ({}),
-    trackingAuthorizationStatus: async () => ({ status: 'authorized' }),
-    requestTrackingAuthorization: async () => {},
+    /* 'att' mode plays iOS declining to show the prompt the first time
+       (the app not yet active): the status stays undetermined */
+    trackingAuthorizationStatus: async () => ({ status: __ad.mode === 'att' ? __ad.att : 'authorized' }),
+    requestTrackingAuthorization: async () => { __ad.calls.push('att'); __ad.attAsked++; if (__ad.mode === 'att' && __ad.attAsked >= 2) __ad.att = 'authorized'; },
     prepareRewardVideoAd: async () => {
+      __ad.calls.push('load');
       __ad.prepared++;
       if (__ad.mode === 'nofill') throw new Error('Loading failed');
       return { adUnitId: 'x' };
@@ -53,7 +56,7 @@ const mock = mode => `
   let bad = 0;
   const ok = (cond, name, got) => { console.log((cond ? '  ✓ ' : '  ✗ ') + name + (cond ? '' : '   got ' + JSON.stringify(got))); if (!cond) bad++; };
 
-  for (const mode of ['nofill', 'watched', 'closed']) {
+  for (const mode of ['att', 'nofill', 'watched', 'closed']) {
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -63,7 +66,18 @@ const mock = mode => `
     await page.waitForTimeout(600);
     const before = await page.evaluate(() => ({ avail: BL.ADS.available('carry'), prepared: __ad.prepared, inited: BL.ADS.inited }));
     console.log(mode);
-    if (mode === 'nofill') {
+    if (mode === 'att') {
+      /* The rejection of 30 Oct 2026, 5.1.2(i): the reviewer met the
+         consent form at launch and never Apple's prompt, because it
+         waited for a video nobody asked for. The prompt comes before any
+         ad is loaded now, and if iOS swallowed it, it is asked again
+         when the game comes to the front. */
+      const calls = await page.evaluate(() => __ad.calls.slice());
+      ok(calls.indexOf('att') >= 0 && calls.indexOf('att') < calls.indexOf('load'), "Apple's prompt is asked before the first ad is loaded", calls);
+      ok(calls.indexOf('consent') < calls.indexOf('att'), "and after Google's consent form", calls);
+      const again = await page.evaluate(async () => { await new Promise(r => setTimeout(r, 2200)); await BL.ADS.resumed(); return { asked: __ad.attAsked, status: __ad.att, personalised: BL.ADS.personalised }; });
+      ok(again.asked >= 2 && again.status === 'authorized', 'a prompt iOS did not show is asked again', again);
+    } else if (mode === 'nofill') {
       ok(before.inited && before.prepared >= 1, 'the SDK was started and a video asked for', before);
       ok(before.avail === false, 'no video, so no slot is offered', before);
       const r = await page.evaluate(() => BL.ADS.show('carry'));
