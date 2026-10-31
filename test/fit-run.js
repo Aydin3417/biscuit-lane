@@ -43,7 +43,11 @@ const MODULE = path.join(__dirname, '..', 'src', 'js', '13-run-fit.js');
 /* ---------- writing the module ---------- */
 function writeModule(rows, games) {
   rows.sort((a, b) => a.n - b.n);
-  const miss = rows.reduce((s, r) => s + Math.abs(r.p - r.want), 0) / rows.length;
+  /* rows read back out of an earlier module (fit-run --merge with a
+     file built from RUN_MOVES) carry no measurement, so the miss is
+     over the rows that do */
+  const measured = rows.filter(r => typeof r.p === 'number' && typeof r.want === 'number');
+  const miss = measured.length ? measured.reduce((s, r) => s + Math.abs(r.p - r.want), 0) / measured.length : 0;
   const floor = rows.filter(r => r.pin === 'floor').length;
   const ceil = rows.filter(r => r.pin === 'ceiling').length;
   const worked = rows.filter(r => r.work && r.work !== 1);
