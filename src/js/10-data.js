@@ -2273,7 +2273,7 @@ function dailyLevel(reached, dayNo) {
   base = Math.round(base * (.35 + .65 * mult));
 
   return normaliseGoals({
-    n: DAILY_LEVEL, daily: true, day, w, h, types, moves: tuneMoves(DAILY_LEVEL, moves), goals, base, map
+    n: DAILY_LEVEL, daily: true, day, w, h, types, moves: tuneMoves('daily', moves), goals, base, map
   });
 }
 /* a level number no handcrafted level will ever use */

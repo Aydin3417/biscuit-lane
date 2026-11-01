@@ -2420,7 +2420,6 @@ const STRINGS = {
     ad_watch: '{n} more moves',
     ad_heart: 'Watch a video for a heart',
     ad_double: 'Watch a video: +{n} more',
-    ad_watch_sub: 'A short video instead of {t} treats.',
     ad_go: 'Watch',
     pass_t: 'The season book',
     pass_sub: 'Tier {n} of {c} · {d} days left',
@@ -2796,7 +2795,6 @@ const STRINGS = {
     ad_watch: '{n} hamle daha',
     ad_heart: 'Video izle, bir kalp al',
     ad_double: 'Video izle: +{n} daha',
-    ad_watch_sub: '{t} ödül yerine kısa bir video.',
     ad_go: 'İzle',
     pass_t: 'Sezon defteri',
     pass_sub: 'Kademe {n}/{c} · {d} gün kaldı',
@@ -5210,7 +5208,7 @@ function dailyLevel(reached, dayNo) {
   base = Math.round(base * (.35 + .65 * mult));
 
   return normaliseGoals({
-    n: DAILY_LEVEL, daily: true, day, w, h, types, moves: tuneMoves(DAILY_LEVEL, moves), goals, base, map
+    n: DAILY_LEVEL, daily: true, day, w, h, types, moves: tuneMoves('daily', moves), goals, base, map
   });
 }
 /* a level number no handcrafted level will ever use */
@@ -5740,10 +5738,16 @@ const TUNE = {
      unknown age or for nothing at all */
   at: 0,
   started: false,
-
-  url() {
-    return BACKEND.url.replace(/\/$/, '') + '/storage/v1/object/public/config/live.json';
-  },
+  /* What boot hands in, and this file never looks up for itself: the
+     file's address, whether a fetch is allowed at all, this build's
+     version, and where the last good copy is kept. Handed in rather
+     than named because the data and the save both read from here
+     (tuneMoves, tunePay), and a module that also named them back would
+     be a loop, not a layer (test/deps.js). Headless, with nothing
+     handed in, every knob is at its compiled default and refresh() is
+     a no-op. */
+  io: null,
+  version: '0',
 
   /* Take a parsed JSON value and return the configuration it describes,
      or null if it cannot be trusted at all. Every field is optional and
@@ -5807,24 +5811,27 @@ const TUNE = {
      out of the save, not trusted because it was written by us: the
      ranges above may be tighter in this build than in the one that
      wrote it. */
-  init() {
+  init(io) {
     if (this.started) return;
     this.started = true;
+    this.io = io || {};
+    if (typeof this.io.version === 'string') this.version = this.io.version;
     try {
-      const c = SAVE && SAVE.tune;
+      const c = this.io.load ? this.io.load() : null;
       if (c && c.data) this.apply(c.data, +c.at || 0);
     } catch (e) { /* a cached copy is a convenience; nothing waits on it */ }
     this.refresh();
   },
 
-  /* backendOn() is the same gate telemetry uses: nothing from a test,
-     nothing from localhost without the debug flag, so the suites play
-     the compiled game and not whatever is in the bucket today */
+  /* io.on is the same gate telemetry uses (backendOn): nothing from a
+     test, nothing from localhost without the debug flag, so the suites
+     play the compiled game and not whatever is in the bucket today */
   refresh() {
+    const io = this.io || {};
     let on = false;
-    try { on = backendOn() && typeof fetch === 'function'; } catch (e) { on = false; }
+    try { on = !!(io.url && io.on && io.on() && typeof fetch === 'function'); } catch (e) { on = false; }
     if (!on) return Promise.resolve(false);
-    return fetch(this.url(), { cache: 'no-store' })
+    return fetch(io.url, { cache: 'no-store' })
       .then(r => r.ok ? r.json() : null)
       .then(j => {
         if (!j) return false;
@@ -5832,7 +5839,7 @@ const TUNE = {
         /* the validated copy, not the raw one: what is cached is what
            was applied, so the two can never disagree */
         try {
-          if (SAVE) { SAVE.tune = { at: this.at, data: this.data }; persist(); }
+          if (io.store) io.store({ at: this.at, data: this.data });
         } catch (e) { /* storage full or gone; the fetch still applied */ }
         return true;
       })
@@ -5846,7 +5853,7 @@ const TUNE = {
   notice() {
     const n = this.data && this.data.notice;
     if (!n) return '';
-    const a = String(typeof APP_VERSION === 'string' ? APP_VERSION : '0').split('.').map(Number);
+    const a = String(this.version).split('.').map(Number);
     const b = n.min.split('.').map(Number);
     for (let i = 0; i < 3; i++) {
       const x = a[i] || 0, y = b[i] || 0;
@@ -5858,11 +5865,13 @@ const TUNE = {
 
 /* The move budget a level is actually dealt: the compiled one plus the
    correction for that level, if the file carries one. `n` is a level
-   number or DAILY_LEVEL for the walk. The floor is the last word. */
+   number, or the word 'daily' for the walk: the walk's own level
+   number is the data's business, and this file does not name it. The
+   floor is the last word. */
 function tuneMoves(n, base) {
   const t = TUNE.data;
   if (!t) return base;
-  const d = t.moves[n === DAILY_LEVEL ? 'daily' : String(n)];
+  const d = t.moves[String(n)];
   if (!d) return base;
   return Math.max(TUNE_MOVES_FLOOR, base + d);
 }
@@ -18877,7 +18886,8 @@ function setScreen(name) {
     setTimeout(() => { const b = $('#board'); if (b) b.focus({ preventScroll: true }); }, 60);
   } else gameLoopStop();
   if (name === 'map') { mapLayout(); scrollMapToCurrent(true); }
-  if (name === 'nap') napLayout();
+  /* the nap screen lays itself out when its puzzle arrives (openNap in
+     62-nap-ui.js): there is no board to measure at this point */
   if (name === 'shop') renderShop();
   if (name === 'family') renderFamily();
   syncTabs();
@@ -22901,8 +22911,16 @@ function installApp() {
 function boot() {
   const had = loadSave();
   /* the live numbers: the save's copy now, today's when the fetch lands;
-     before the map or a level card reads a budget — see 14-tune.js */
-  TUNE.init();
+     before the map or a level card reads a budget — see 14-tune.js,
+     which is told where the file is and where the copy lives here, so
+     that it names neither the backend nor the save itself */
+  TUNE.init({
+    url: BACKEND.url.replace(/\/$/, '') + '/storage/v1/object/public/config/live.json',
+    on: () => backendOn(),
+    version: APP_VERSION,
+    load: () => SAVE.tune,
+    store: t => { SAVE.tune = t; persist(); },
+  });
   castRebuild();          /* who stands in each board slot, before anything draws */
   if (SAVE.settings.lang) LANG = SAVE.settings.lang;
   else { LANG = (navigator.language || 'en').toLowerCase().indexOf('tr') === 0 ? 'tr' : 'en'; SAVE.settings.lang = LANG; }

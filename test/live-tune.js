@@ -39,6 +39,9 @@ const X = vm.runInContext(
   '({ TUNE, tuneMoves, tunePay, tuneNapFrom, levelDef, dailyLevel, DAILY_LEVEL, LEVELS, APP_VERSION,' +
   '   setLang: l => { LANG = l; }, setSave: s => { SAVE = s; }, freshSave })', ctx);
 const { TUNE, tuneMoves, tunePay, tuneNapFrom, levelDef, dailyLevel, DAILY_LEVEL } = X;
+/* what boot hands in; headless there is no address and no fetch */
+TUNE.version = X.APP_VERSION;
+const io = s => ({ version: X.APP_VERSION, load: () => s.tune, store: t => { s.tune = t; } });
 
 let fails = 0, checks = 0;
 function ok(cond, what) {
@@ -52,7 +55,7 @@ function reset() { TUNE.data = null; TUNE.at = 0; }
 console.log('nothing applied');
 reset();
 eq(tuneMoves(5, 31), 31, 'moves pass through untouched');
-eq(tuneMoves(DAILY_LEVEL, 28), 28, 'the walk passes through untouched');
+eq(tuneMoves('daily', 28), 28, 'the walk passes through untouched');
 eq(tunePay('coin', 120), 120, 'coins pass through untouched');
 eq(tunePay('nap', 0), 0, 'a zero payout stays zero');
 eq(tuneNapFrom(), 3, 'the nap card from level three');
@@ -73,7 +76,7 @@ ok(TUNE.apply(good, 1000), 'applies');
 eq(tuneMoves(5, 31), 34, '+3 on level five');
 eq(tuneMoves(12, 36), 34, '-2 on level twelve');
 eq(tuneMoves(7, 36), 36, 'a level not in the file is untouched');
-eq(tuneMoves(DAILY_LEVEL, 28), 29, '+1 on the walk');
+eq(tuneMoves('daily', 28), 29, '+1 on the walk');
 eq(tunePay('coin', 100), 125, 'coins ×1.25');
 eq(tunePay('treat', 2), 2, 'treats ×0.75: 1.5 rounds to 2, a whole number');
 eq(tunePay('treat', 1), 1, 'a treat that paid still pays at least one');
@@ -184,7 +187,7 @@ const s = X.freshSave();
 eq(s.tune, null, 'a fresh save carries no tuning');
 s.tune = { at: 5, data: { v: 1, moves: { 5: 60 }, pay: { coin: 9 } } };
 X.setSave(s);
-TUNE.init();
+TUNE.init(io(s));
 eq(tuneMoves(5, 20), 26, 'a cached copy from a build with looser ranges is clamped on the way in');
 eq(tunePay('coin', 10), 20, 'both ways');
 eq(TUNE.at, 5, 'and keeps its time');
@@ -192,7 +195,7 @@ reset();
 TUNE.started = false;
 s.tune = { at: 1, data: { v: 7 } };
 X.setSave(s);
-TUNE.init();
+TUNE.init(io(s));
 eq(TUNE.data, null, 'a cached copy of the wrong version is left alone');
 /* headless there is no location and no fetch: refresh() says so and
    does not throw, which is what keeps the suites off the bucket */

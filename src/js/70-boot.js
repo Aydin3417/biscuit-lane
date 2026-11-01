@@ -181,8 +181,16 @@ function installApp() {
 function boot() {
   const had = loadSave();
   /* the live numbers: the save's copy now, today's when the fetch lands;
-     before the map or a level card reads a budget — see 14-tune.js */
-  TUNE.init();
+     before the map or a level card reads a budget — see 14-tune.js,
+     which is told where the file is and where the copy lives here, so
+     that it names neither the backend nor the save itself */
+  TUNE.init({
+    url: BACKEND.url.replace(/\/$/, '') + '/storage/v1/object/public/config/live.json',
+    on: () => backendOn(),
+    version: APP_VERSION,
+    load: () => SAVE.tune,
+    store: t => { SAVE.tune = t; persist(); },
+  });
   castRebuild();          /* who stands in each board slot, before anything draws */
   if (SAVE.settings.lang) LANG = SAVE.settings.lang;
   else { LANG = (navigator.language || 'en').toLowerCase().indexOf('tr') === 0 ? 'tr' : 'en'; SAVE.settings.lang = LANG; }

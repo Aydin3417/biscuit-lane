@@ -56,7 +56,8 @@ function setScreen(name) {
     setTimeout(() => { const b = $('#board'); if (b) b.focus({ preventScroll: true }); }, 60);
   } else gameLoopStop();
   if (name === 'map') { mapLayout(); scrollMapToCurrent(true); }
-  if (name === 'nap') napLayout();
+  /* the nap screen lays itself out when its puzzle arrives (openNap in
+     62-nap-ui.js): there is no board to measure at this point */
   if (name === 'shop') renderShop();
   if (name === 'family') renderFamily();
   syncTabs();
