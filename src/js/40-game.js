@@ -385,6 +385,13 @@ function startLevel(n, opts) {
       G.runGifts.push(g);
     });
   }
+  /* The board is dealt with a move on it, and then baskets are dropped
+     onto it. A basket takes a tile's place, and on one seed of level 85
+     in ten the tile it took was half of the only move there was: the
+     level opened dead, with thirty-four moves and nothing to spend one
+     on, and the dead-board shuffle runs after a move, so it never came.
+     Found by test/all-levels.js, the same seed under both players. */
+  if (!res) ensureMove(G.B);
   /* said on the board too: the opening levels skip the card that says it */
   if (G.runGifts.length) {
     const ep = G.epoch;
