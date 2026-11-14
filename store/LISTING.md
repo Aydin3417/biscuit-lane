@@ -367,6 +367,18 @@ submitted, and the privacy answers have not been published.
   repository, `Aydin3417/aydin3417.github.io` (one line: google.com,
   pub-3062307440336080, DIRECT, f08c47fec0942fa0). AdMob can only verify
   it once the app is on sale and linked to its store record.
+
+  **It never verified, and cannot.** Linked to its App Store record on
+  15 Nov 2026, the iOS app failed verification with "a file exists but
+  does not match": AdMob reads app-ads.txt from the registrable root of
+  the developer website, which for a github.io address is github.io
+  itself — that redirects to GitHub's own HTML page. 168 requests, 0
+  impressions in the week before. The same line is now served from the
+  owner's own domain, `https://www.hellocotidie.com/app-ads.txt`
+  (repository yldzEmreOmer/Cotidie-Website, commit 2fead6a), and from
+  1.3.0 the **Marketing URL is `https://www.hellocotidie.com/`** in all
+  three localisations. After Apple approves that version: AdMob → Apps →
+  Pawtika iOS → app-ads.txt → Check for updates, then request review.
 - **Left for the account holder:** the review contact (name, phone,
   e-mail), the Digital Services Act trader declaration, Publish on the
   privacy page, choosing the build once one has been uploaded, and Add
