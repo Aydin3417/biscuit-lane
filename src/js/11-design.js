@@ -38,6 +38,18 @@
 /* Ten levels to a block. The gate is the last of them; the level after a
    gate is the softest thing in the game. */
 const BLOCK = 10;
+/* DEEPER, 14 Nov 2026. Two weeks in the store and the owner's report
+   was that anybody who knows the genre finds the game easy. Measured
+   the same day through the real game (test/all-levels.js, ten games a
+   level), the player who cannot see a cascade and never fires two
+   specials into each other cleared 93% of levels 1-20, 85% of 21-40
+   and 83% of 41-60, with a third of the budget still unspent at the
+   moment the goal was met, and not one of the first sixty levels
+   below 50%. A player who plans specials is well above that. So the
+   block asks harder at its seventh and ninth beats — the two the map
+   now marks as hard levels (isHard) — and its gate is deeper. The
+   relief after a gate is untouched: the shape is the same shape with
+   a lower trough. */
 const RHYTHM = [
   +.13,   /* 1  — relief. You have just come through a gate. */
   +.06,   /* 2  — still gentle, but it asks for something */
@@ -45,10 +57,10 @@ const RHYTHM = [
   -.03,   /* 4  — the first one that can go wrong */
   +.05,   /* 5  — a breather in the middle of the block */
   -.04,   /* 6 */
-  -.07,   /* 7 */
+  -.10,   /* 7  — a hard level */
   -.02,   /* 8  — a small step back before the run-up */
-  -.09,   /* 9  — the run-up */
-  -.18    /* 10 — the gate */
+  -.12,   /* 9  — the run-up, and a hard level */
+  -.21    /* 10 — the gate */
 ];
 
 /* Where the authored lane ends and the generator takes over. The lane is
@@ -79,20 +91,26 @@ const RUN_START = 61;
    The lane is untouched. The first sixty levels are where a new player
    learns the game, and nothing should be sold there to somebody who is
    still working out what a rocket is. */
-const EASE_FROM = .70, EASE_TO = .52, EASE_OVER = 210;
+/* .70 and .52 until 14 Nov 2026, measured too kind (see RHYTHM) */
+const EASE_FROM = .64, EASE_TO = .47, EASE_OVER = 210;
 
 /* Where the game opens, and how it bends down to meet EASE_FROM at the
    handoff. A bend of 1 would be a straight line and would spend the
    whole of the first twenty levels being nearly as hard as level fifty;
    1.4 puts the give where a new player needs it and flattens out by the
    time they don't. */
-const LANE_FROM = .93, LANE_BEND = 1.6;
+/* The bend was 1.6, which kept the first forty levels near the top of
+   the band: level 40 was drawn at .80 and measured at 85% bare. At 1.15
+   the give is still where a new player needs it — level ten is drawn
+   within two points of where it was — and it is spent by the middle of
+   the lane instead of at the end of it. */
+const LANE_FROM = .93, LANE_BEND = 1.15;
 
 /* Never certain, never impossible. The lane is allowed to be gentler at
    both ends than the run: nobody should fail level one, and nobody
    should meet a 45% wall before they have met every mechanic. */
 const CLEAR_FLOOR = .35, CLEAR_CEIL = .88;
-const LANE_FLOOR = .58, LANE_CEIL = .97;
+const LANE_FLOOR = .50, LANE_CEIL = .97;
 
 /* A level that teaches a mechanic for the first time is not a test of
    it. The lift is big enough to be felt and small enough that the level
@@ -173,4 +191,18 @@ function targetClear(n) {
    is sixty long and sixty is a multiple of ten. */
 function isGate(n) {
   return n >= BLOCK && n % BLOCK === 0;
+}
+
+/* A hard level: one the curve draws well below its own block, said on
+   the map and on the card the way a gate is, and paid for — a wall you
+   were warned about and rewarded for is a challenge; the same wall
+   unannounced is the game cheating. Read off the target rather than off
+   the position, because the lane hands its beats out by what each level
+   can carry (test/fit-lane.js), so its hard levels are not always the
+   seventh and the ninth. Never in the first dozen levels, and never a
+   gate, which is already its own thing. */
+const HARD_BELOW = .065;
+function isHard(n) {
+  if (n < 12 || isGate(n) || n === DAILY_LEVEL) return false;
+  return easeAt(n) - targetClear(n) >= HARD_BELOW * Math.min(1, beatScale(n) + .2);
 }

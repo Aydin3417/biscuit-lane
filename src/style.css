@@ -544,6 +544,13 @@ canvas{ max-width:100%; }
 .moves b{ font-family:"Grandstander",sans-serif; font-size:var(--t-h2); line-height:1; font-variant-numeric:tabular-nums; }
 .moves span{ font-size:var(--t-nano); letter-spacing:.13em; text-transform:uppercase; color:var(--text-faint); font-weight:700; margin-top:1px; }
 .moves.low b{ color:var(--rose); }
+.moves{ position:relative; }
+.moves.hard{ border-color:color-mix(in srgb,var(--rose) 55%, transparent); }
+.moves.hard::after{
+  content:attr(data-tag); position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  padding:1px 7px; border-radius:var(--r-full); background:var(--rose); color:#fff;
+  font-size:var(--t-nano); font-weight:800; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap;
+}
 .moves.tick{ animation:chipbump .4s cubic-bezier(.2,1.5,.4,1); }
 .goals{ display:flex; gap:6px; flex:1 1 auto; justify-content:center; flex-wrap:wrap; }
 .goal{

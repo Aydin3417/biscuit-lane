@@ -5,6 +5,8 @@ const STRINGS = {
   en: {
     brandSub: 'Pet Home',
     gate_t: 'The end of the block',
+    g_hard: 'Hard', g_gate: 'Super hard',
+    hard_t: 'A hard level', hard_s: 'Fewer moves than it looks. Pays {n}% more the first time.',
     gate_s: 'Harder than the nine before it. Take your time.',
     rot_t: 'Turn your phone back',
     rot_s: 'Pawtika is played the tall way up.',
@@ -398,6 +400,8 @@ const STRINGS = {
   tr: {
     brandSub: 'Pati Evi',
     gate_t: 'Bölümün kapısı',
+    g_hard: 'Zor', g_gate: 'Çok zor',
+    hard_t: 'Zor seviye', hard_s: 'Hamleler göründüğünden az. İlk geçişte %{n} fazla öder.',
     gate_s: 'Öncesindeki dokuzdan zor. Acele etme.',
     rot_t: 'Telefonu geri çevir',
     rot_s: 'Pawtika dikey oynanıyor.',

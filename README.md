@@ -4713,3 +4713,102 @@ hearts is offered it on the sheet that used to offer only the wait.
 `node test/nap.js` deals every rung and every day it is asked for and
 holds each to one answer, reached by reasoning, with every hint on the
 answer.
+
+
+## Two weeks in the store
+
+1.2.0 went live in mid-November, and the owner played it as a player
+does and came back with three things: videos almost never appeared, the
+game was easy for anybody who knows the genre, and something about it
+still looked cheap. Each was measured before anything was changed.
+
+**The videos.** The game offered a video at four moments — out of moves
+on the lose card, out of hearts, the earn-treats sheet, doubling a first
+clear — and three of the four only reach a player who is losing. A
+player who wins never sees them, and the arithmetic below says most
+players win, so the whole day's offer was three "double your coins"
+buttons. Worse, nobody could tell that from the other explanation: a
+button is only drawn when a video is loaded, a new AdMob app serves next
+to nothing until it is approved, and the only ad event the game had ever
+sent home was a reward. So the funnel is counted now (`ad_load` with
+AdMob's error code, `ad_offer`, `ad_miss` with the reason, `ad_tap`,
+`ad_unpaid`), read by `v_ads` and `v_ad_fail` in the server's views;
+every cap is higher; and three slots sit where a winning player does
+arrive — the daily gift and a gate chest, doubled, and three moves on
+the level card from the second attempt at a level, which is where being
+stuck starts. A between-levels interstitial is written and waits for
+its unit id: after a win and never a loss, from level 20, every third
+win, three minutes from any other video, never on the day of install,
+never for anybody who has paid, never on top of a chest. Every one of
+those numbers but the last three is in the live-tuning file.
+
+**The difficulty.** Through the real game at ten games a level, the
+player every budget is fitted to — who scores what a match visibly does
+and cannot see a cascade — cleared 93% of levels 1–20, 85% of 21–40 and
+83% of 41–60, met the goal with a third of the budget still unspent, and
+did not find one level of the first sixty below 50%. A player who plans
+specials and fires them into each other sits well above that. Both
+readings are right, so there are two answers:
+
+- The curve is deeper. The lane bends to .64 at the handoff instead of
+  .78 (the fitter's copy of the constants had drifted three revisions
+  behind 11-design.js, and is back in step), the run settles at .47
+  instead of .52, and each block asks harder at its seventh and ninth
+  beats and at its gate. Those are marked: a rose node and a flame on the
+  map, a line on the level card, a tag on the moves counter, and half
+  again in coins on the first clear — a wall you were warned about and
+  paid for is a challenge, the same wall unannounced is the game cheating.
+- The budget follows the player (`adaptMoves`, 15-save.js). Ten first
+  attempts won with room to spare take up to 18% off the next level not
+  yet cleared, in proportion to the room left; a third failure at one
+  level starts giving a move back per failure, four at most. Harnesses
+  play the fitted budget, the tuning file can switch it off or scale it,
+  and `test/adapt.js` holds every rule.
+
+**The look.** Every board had the outline of a rectangle. A third had a
+few holes, scattered one cell at a time, drawn as dark pits in the felt —
+which reads as damage, not as a shape. The engine has always handled
+any outline, so boards have outlines now: eight of them, cut from the
+edges over plain cells only (so no goal changes size), never beside a
+hill or a crate and never on a rescue board, on seven boards in ten in
+the run and twenty-two more of the lane by hand. The tray follows the
+cells — frame where there is no board, inner shade along every edge
+that has frame above it or beside it — so a heart-shaped board is a
+heart, and a hole is wood rather than a stain.
+
+**The refit, and a second engine.** Every budget from 1 to 414 was
+refitted to the outlines and the curve (fit-lane.js, then fit-run.js in
+slices), and then checked on the game itself — and the two engines
+disagreed: played through 40-game.js, the lane came out six points
+easier than the copy in test/_solver.js said it would and the run
+eleven, with single levels thirty and forty points off. `test/real-fit.js`
+is the second pass: every level replayed on the real game at six
+budgets around its own through the live-tuning seam, and the one
+nearest its target written back where the miss was outside the noise —
+25 lane levels and 168 run levels moved. Measured afterwards on the real
+game, ten games a level, by the same player who cannot see a cascade:
+
+| levels | before | after |
+|---|---|---|
+| 1–20 | 93% | 89% |
+| 21–40 | 85% | 78% |
+| 41–60 | 83% | 70% |
+| 61–90 | 75% | 71% |
+| 91–120 | 74% | 68% |
+| 121–160 | 73% | 64% |
+| 161–200 | 72% | 65% |
+
+That is a bare pet, and the floor of what anyone meets: a player in
+form is cut up to eighteen percent further. Not done: levels 415–1000
+keep their 1 Nov budgets (rectangular boards, the kinder curve) until
+the next fit, and a third of the run's gates still swing between 20%
+and 90% on small samples, because their budgets sit at the floor and the
+work, not the moves, decides them. `v_first_try` in the server views is
+the real answer to both, and the tuning file can move any level six
+moves either way without a build.
+
+Also: level 85 dealt a dead board on one seed in ten (a basket dropped
+on the only move; `ensureMove` now runs after the baskets), the shop's
+drawings are measured and fitted to their boxes instead of scaled by a
+third whether they fit or not, and every video button wears a video
+icon rather than the Play tab's four squares.

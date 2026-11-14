@@ -765,6 +765,7 @@ function drawMap() {
 }
 function drawMapNode(c, n) {
   const gate = typeof isGate === 'function' && isGate(n.n);
+  const hard = typeof isHard === 'function' && isHard(n.n);
   const cleared = SAVE.stars[n.n] > 0;
   const unlocked = n.n <= SAVE.reached;
   const current = n.n === SAVE.reached;
@@ -777,6 +778,9 @@ function drawMapNode(c, n) {
   let fill1, fill2, txt;
   if (!unlocked) { fill1 = PAL.surface3; fill2 = shade(PAL.surface3, -.14); txt = PAL.textDim; }
   else if (cleared) { fill1 = mix(PAL.sage, '#FFFFFF', .25); fill2 = PAL.sage; txt = inkOn(PAL.sage); }
+  /* a hard level not yet cleared is rose rather than amber, from as far
+     down the lane as it can be seen (isHard, 11-design.js) */
+  else if (hard) { fill1 = mix(PAL.rose, '#FFFFFF', .28); fill2 = PAL.rose; txt = inkOn(PAL.rose); }
   else { fill1 = mix(PAL.accent, '#FFFFFF', .3); fill2 = PAL.accent; txt = inkOn(PAL.accent); }
   const g = c.createLinearGradient(0, n.y - R, 0, n.y + R);
   g.addColorStop(0, fill1); g.addColorStop(1, fill2);
@@ -797,6 +801,21 @@ function drawMapNode(c, n) {
     c.save();
     c.strokeStyle = rgba(PAL.rose, .5); c.lineWidth = 2;
     ellipse(c, n.x, n.y, R + 4, R + 4); c.stroke();
+    c.restore();
+  }
+  /* and a flame on its shoulder, locked or not, until it is beaten */
+  if (hard && !cleared) {
+    const fx = n.x + R * .74, fy = n.y - R * .74, s = Math.max(7, R * .34);
+    c.save();
+    c.fillStyle = PAL.rose; c.strokeStyle = rgba('#FFFFFF', .9); c.lineWidth = 1.6;
+    c.beginPath();
+    c.moveTo(fx, fy - s * 1.25);
+    c.bezierCurveTo(fx + s * 1.05, fy - s * .2, fx + s * .9, fy + s, fx, fy + s);
+    c.bezierCurveTo(fx - s * .9, fy + s, fx - s * 1.05, fy - s * .1, fx - s * .25, fy - s * .55);
+    c.quadraticCurveTo(fx - s * .1, fy - s * .1, fx, fy - s * 1.25);
+    c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = rgba('#FFFFFF', .85);
+    c.beginPath(); c.ellipse(fx, fy + s * .35, s * .32, s * .45, 0, 0, 6.2832); c.fill();
     c.restore();
   }
   if (current) {

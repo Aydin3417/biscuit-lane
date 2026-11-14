@@ -90,8 +90,15 @@ module.exports = function apply(state) {
         : block.replace(/\bbase:\s*(\d+)/, 'base: $1, want: ' + row.want);
     }
 
+    /* a row the fit left exactly as it was is not a row that failed to
+       patch: level 5 came back 31 moves, 16600, 0.9 on 14 Nov 2026 and
+       this threw away the other fifty-nine */
+    const has = re => { const m = before.match(re); return m ? +m[1] : undefined; };
+    const same = (row.moves === undefined || has(/\bmoves:\s*(\d+)/) === row.moves) &&
+      (row.base === undefined || has(/\bbase:\s*(\d+)/) === row.base);
+    if (block === before && same) continue;
     if (block === before) { missed.push(row.n); continue; }
-    if (row.m0 !== undefined && row.moves !== row.m0) moved++;
+    if (row.moves !== undefined && (row.m0 === undefined || row.moves !== row.m0)) moved++;
     if (row.base0 !== undefined && row.base !== row.base0) restarred++;
     if (row.want !== undefined) aimed++;
     table = table.slice(0, found.open) + block + table.slice(found.close);

@@ -36,7 +36,10 @@ function el() {
 const stubs = {
   SFX: 'new Proxy({}, { get: () => () => {} })', FX: 'new Proxy({}, { get: () => () => {} })',
   SAVE: '{ stats: { tilesPopped: 0, played: 0 }, boosters: { hammer: 3, swap: 3, shuffle: 3 }, settings: {}, stars: {}, winRun: 0, reached: 999, seen: {} }',
-  persist: '() => {}', track: '() => {}', toast: '() => {}', activePet: '() => null',
+  persist: '() => {}', track: '() => {}',
+  /* the budget that follows the player (15-save.js) is off in every
+     harness: they measure the level as fitted, not as dealt to one person */
+  adaptMoves: '() => 0', noteForm: '() => {}', toast: '() => {}', activePet: '() => null',
   slotGem: "() => '#fff'", PAL: "new Proxy({}, { get: () => '#000' })",
   audioResume: '() => {}', petVoice: '() => {}', say: '() => {}', drawLevelScene: '() => {}',
   clearSprites: '() => {}', tileSprite: '() => {}', sceneProgress: '() => 0',

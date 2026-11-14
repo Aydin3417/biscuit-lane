@@ -144,12 +144,16 @@ let TRAY = { key: '', cv: null, w: 0, h: 0, m: 0 };
 function stampTray(c) {
   const pad = BOARD_PAD, m = Math.ceil(pad * 1.7);
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  const key = [G.boardW, G.boardH, PAL.boardBg, PAL.dark ? 1 : 0, dpr].join('|');
+  /* the outline is part of the tray now, so it is part of the key */
+  const shaped = boardHasHoles(G.B);
+  const outline = shaped ? G.B.cell.map(row => row.map(cell => cell.hole ? 1 : 0).join('')).join('/') : '';
+  const key = [G.boardW, G.boardH, PAL.boardBg, PAL.dark ? 1 : 0, dpr, outline].join('|');
   if (TRAY.key !== key) {
     const w = Math.ceil(G.boardW + m * 2), h = Math.ceil(G.boardH + m * 2);
     const cv = document.createElement('canvas');
     const cc = fitCanvas(cv, w, h);
-    drawTray(cc, m, m, G.boardW, G.boardH, pad);
+    if (shaped) drawShapedTray(cc, m, m, G.cell, G.B, pad);
+    else drawTray(cc, m, m, G.boardW, G.boardH, pad);
     TRAY = { key, cv, w, h, m };
   }
   c.drawImage(TRAY.cv, G.ox - TRAY.m, G.oy - TRAY.m, TRAY.w, TRAY.h);
@@ -297,13 +301,20 @@ function startLevel(n, opts) {
   /* which attempt at this level, not how many levels ever: the number a
      wall shows up in is attempts per level */
   if (!res && n > 0) { if (!SAVE.tries) SAVE.tries = {}; SAVE.tries[n] = (SAVE.tries[n] || 0) + 1; }
-  track('level_start', { n: n, moves: G.def.moves, attempt: n > 0 ? ((SAVE.tries && SAVE.tries[n]) || 1) : 0, tries: (SAVE.stats.played || 0), resumed: !!res });
+  /* the budget that follows the player (adaptMoves, 15-save.js), read
+     before anything is added to it; a resumed level keeps what it had */
+  const tries = n > 0 ? ((SAVE.tries && SAVE.tries[n]) || 1) : 0;
+  const adapt = res || n <= 0 ? 0 : adaptMoves(n, G.def.moves, tries - 1);
+  /* this attempt counts towards the form only if it is the first at a
+     level not yet cleared, and only once (noteForm) */
+  G.formOpen = !res && n > 0 && tries === 1 && !SAVE.stars[n];
+  track('level_start', { n: n, moves: G.def.moves + adapt, adapt: adapt, attempt: tries, tries: (SAVE.stats.played || 0), resumed: !!res });
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
   if (res) restoreBoard(G.B, res);
   const pet = activePet();
   const perks = res ? [] : (opts.perks || []);
-  let moves = res ? res.moves : G.def.moves;
+  let moves = res ? res.moves : G.def.moves + adapt;
   G.scoreMul = res ? (res.scoreMul || 1) : 1;
   G.charge = res ? (res.charge || 0) : 0;
   perks.forEach(p => {
@@ -313,6 +324,7 @@ function startLevel(n, opts) {
   });
   if (opts.extraMoves && !res) moves += opts.extraMoves;
   G.moves = moves;
+  G.budget = moves;
   /* moves actually played, which is what quitting asks about; a level
      kept before this was counted had been played, or it was not kept */
   G.made = res ? (res.made !== undefined ? res.made : 1) : 0;
@@ -575,6 +587,11 @@ function syncHud() {
   $('#movesLbl').textContent = T('g_moves');
   $('#scoreLbl').textContent = T('g_score');
   $('#movesBox').classList.toggle('low', G.moves <= 5);
+  /* a hard level or a gate says so on the board as well as on the card:
+     the card is gone by the time it matters */
+  const tag = G.n > 0 && !SAVE.stars[G.n] ? (isGate(G.n) ? T('g_gate') : isHard(G.n) ? T('g_hard') : '') : '';
+  $('#movesBox').classList.toggle('hard', !!tag);
+  $('#movesBox').dataset.tag = tag;
   $('#scoreN').textContent = fmt(G.score);
   const pct = clamp(G.score / G.starTargets[2], 0, 1) * 100;
   $('#starFill').style.width = pct + '%';
@@ -1760,9 +1777,17 @@ function checkEnd() {
   keepLevel();
 }
 
+/* one entry in the player's form per first attempt (adaptMoves) */
+function closeForm(won) {
+  if (!G.formOpen) return;
+  G.formOpen = false;
+  if (scoreOnlyLevel()) return;
+  noteForm(won && !(G.extras || 0), G.moves / Math.max(1, G.budget || G.def.moves));
+}
 async function finishWin() {
   const _ep = levelEpoch();
   G.busy = true;
+  closeForm(true);
   track('level_win', { n: G.n, left: G.moves, score: G.score,
     stars: G.starsEarned, chain: G.bestChain, secs: (now() - (G.startedAt || now())) / 1000 });
   SFX.win();
@@ -1836,6 +1861,7 @@ async function finishWin() {
 async function finishLose() {
   const _ep = levelEpoch();
   G.busy = true;
+  closeForm(false);
   /* `short` is the share of the goal still outstanding: a level
      people lose at 5% is tuned, one they lose at 60% is a wall. */
   const need = G.goals.reduce((a, g) => a + g.need, 0);
@@ -1902,7 +1928,7 @@ function renderGame(dt) {
   /* cells */
   eachCell(B, (cell, r, c2) => {
     const x = cellX(c2) + G.cell / 2, y = cellY(r) + G.cell / 2;
-    if (cell.hole) { drawHole(c, x, y, G.cell); return; }
+    if (cell.hole) return;
     drawCellBed(c, x, y, G.cell - 3, cell, (r + c2) % 2 === 0);
     if (cell.mud > 0) {
       /* full cell, so it shows around the tile's rounded corners */

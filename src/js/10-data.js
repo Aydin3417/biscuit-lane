@@ -349,7 +349,9 @@ const ECON = {
   /* what a rewarded video carries on with: three moves, where nine treats
      buy five. The video is the free way through, and it should be the
      smaller one, or nobody would ever pay for the other. */
-  adMoves: 3
+  adMoves: 3,
+  /* the first clear of a hard level (isHard, 11-design.js) */
+  hardPay: 1.5
 };
 
 /* ---------- where this game lives, once it lives anywhere ----------
@@ -1277,8 +1279,8 @@ const LEVELS = [
      boosters, no perks and no stage moves, and has just been asked to
      name an animal. The first three carry a real cushion; the curve
      descends from level 4, where it already did. */
-  { n: 1, w: 7, h: 7, types: 5, moves: 27, goals: [[GK.COLLECT, 0, 34]], base: 10600, want: 0.97, tut: 'swap' },
-  { n: 2, w: 7, h: 7, types: 5, moves: 25, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 10700, want: 0.95 },
+  { n: 1, w: 7, h: 7, types: 5, moves: 28, goals: [[GK.COLLECT, 0, 34]], base: 10700, want: 0.97, tut: 'swap' },
+  { n: 2, w: 7, h: 7, types: 5, moves: 24, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 10700, want: 0.95 },
   /* A score goal is the one kind of level a person cannot plan: nothing
      on the board says which swap is worth more, so the only strategy is
      to keep matching and hope the cascade is kind. Measured with the
@@ -1289,229 +1291,229 @@ const LEVELS = [
      of a rescue. All three are collect goals now, which a person can
      look at and go after. The score levels that remain sit past level
      35, where a player has specials to make and knows it. */
-  { n: 3, w: 7, h: 8, types: 5, moves: 24, goals: [[GK.COLLECT, 2, 30]], base: 9700, want: 0.97, tut: 'special' },
+  { n: 3, w: 7, h: 8, types: 5, moves: 27, goals: [[GK.COLLECT, 2, 30]], base: 9500, want: 1, tut: 'special' },
   {
-    n: 4, w: 7, h: 8, types: 5, moves: 20, goals: [[GK.MUD, 0, 76]], base: 10000, want: 0.93,
+    n: 4, w: 7, h: 8, types: 5, moves: 20, goals: [[GK.MUD, 0, 76]], base: 10000, want: 0.92,
     map: ['.......', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', '.......']
   },
   { n: 5, w: 8, h: 8, types: 5, moves: 31, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 16600, want: 0.9 },
   {
-    n: 6, w: 8, h: 8, types: 5, moves: 19, goals: [[GK.CRATE, 0, 28]], base: 7200, want: 0.9,
+    n: 6, w: 8, h: 8, types: 5, moves: 16, goals: [[GK.CRATE, 0, 28]], base: 7200, want: 0.89,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
-  { n: 7, w: 8, h: 8, types: 5, moves: 36, goals: [[GK.RESCUE, 0, 2]], base: 7000, want: 0.95, tut: 'rescue' },
+  { n: 7, w: 8, h: 8, types: 5, moves: 32, goals: [[GK.RESCUE, 0, 2]], base: 8700, want: 0.95, tut: 'rescue' },
   {
-    n: 8, w: 8, h: 8, types: 5, moves: 34, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 19300, want: 0.87,
+    n: 8, w: 8, h: 8, types: 5, moves: 38, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 19000, want: 0.85,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 9, w: 8, h: 8, types: 5, moves: 23, goals: [[GK.COLLECT, 1, 34], [GK.COLLECT, 4, 28]], base: 11300, want: 0.91,
+    n: 9, w: 8, h: 8, types: 5, moves: 22, goals: [[GK.COLLECT, 1, 34], [GK.COLLECT, 4, 28]], base: 11200, want: 0.83,
     map: ['##....##', '#......#', '........', '........', '........', '........', '#......#', '##....##']
   },
   {
-    n: 10, w: 8, h: 9, types: 5, moves: 42, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26600, want: 0.82,
+    n: 10, w: 8, h: 9, types: 5, moves: 41, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 25900, want: 0.79,
     map: ['##....##', '#......#', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 11, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.CRATE, 0, 28]], base: 9400, want: 0.96,
+    n: 11, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.CRATE, 0, 28]], base: 9200, want: 0.97,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', '........', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
   {
-    n: 12, w: 8, h: 9, types: 5, moves: 36, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 15400, want: 0.92,
+    n: 12, w: 8, h: 9, types: 5, moves: 34, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 14600, want: 0.9,
     map: ['#......#', '........', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 13, w: 8, h: 8, types: 6, moves: 22, goals: [[GK.MUD, 0, 24]], base: 6100, want: 0.91,
+    n: 13, w: 8, h: 8, types: 6, moves: 23, goals: [[GK.MUD, 0, 24]], base: 6800, want: 0.81,
     map: ['MMMM....', 'MMMM....', '........', '........', '........', '........', '....MMMM', '....MMMM']
   },
   {
-    n: 14, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.BRAMBLE, 0, 18]], base: 9900, want: 0.95, tut: 'bramble',
+    n: 14, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.BRAMBLE, 0, 18]], base: 9700, want: 0.94, tut: 'bramble',
     map: ['........', '........', '.vvvvvv.', '.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........']
   },
   {
-    n: 15, w: 8, h: 9, types: 5, moves: 32, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 18700, want: 0.87,
+    n: 15, w: 8, h: 9, types: 5, moves: 29, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 18200, want: 0.86,
     map: ['..c..c..', '.cc..cc.', '........', '.c....c.', '........', '.c....c.', '........', '.cc..cc.', '..c..c..']
   },
   {
-    n: 16, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 7900, want: 0.82,
+    n: 16, w: 8, h: 9, types: 6, moves: 51, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 12000, want: 0.97,
     map: ['........', '...mm...', '..mmmm..', '.mmmmmm.', 'mmmmmmmm', '.mmmmmm.', '..mmmm..', '...mm...', '........']
   },
   {
-    n: 17, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12100, want: 0.85,
+    n: 17, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12000, want: 0.83,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 18, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.CRATE, 0, 16]], base: 11400, want: 0.84,
+    n: 18, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.CRATE, 0, 16]], base: 11700, want: 0.82,
     map: ['C......C', '........', '..cccc..', '..c..c..', '..c..c..', '..cccc..', '........', 'C......C', '........']
   },
   {
-    n: 19, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15100, want: 0.82,
+    n: 19, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15100, want: 0.78,
     map: ['####..##', '###....#', '##......', '#.......', '........', '........', '........', '........', '........']
   },
   {
-    n: 20, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.RESCUE, 0, 1], [GK.COLLECT, 3, 26]], base: 10400, want: 0.77,
+    n: 20, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.RESCUE, 0, 1], [GK.COLLECT, 3, 26]], base: 10500, want: 0.71,
     map: ['..####..', '..####..', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 21, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.MUD, 0, 24]], base: 10200, want: 0.94,
+    n: 21, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.MUD, 0, 24]], base: 9900, want: 0.9,
     map: ['........', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', '........']
   },
   {
-    n: 22, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 12000, want: 0.89,
+    n: 22, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 13100, want: 0.85,
     map: ['..CCCC..', '........', '.c....c.', '..c..c..', '..c..c..', '........', '.c....c.', '........', '........']
   },
   {
-    n: 23, w: 8, h: 9, types: 6, moves: 51, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 12600, want: 0.88,
+    n: 23, w: 8, h: 9, types: 6, moves: 52, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 11000, want: 0.91,
     map: ['........', '.m....m.', '..m..m..', '...mm...', '........', '...mm...', '..m..m..', '.m....m.', '........']
   },
   {
-    n: 24, w: 8, h: 9, types: 6, moves: 52, goals: [[GK.BRAMBLE, 0, 28]], base: 14500, want: 0.8,
+    n: 24, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.BRAMBLE, 0, 28]], base: 12800, want: 0.74,
     map: ['........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........']
   },
   {
-    n: 25, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 9700, want: 0.86,
+    n: 25, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 9700, want: 0.81,
     map: ['mmmmmmmm', 'm.c..c.m', 'm......m', 'm..cc..m', 'm..cc..m', 'm......m', 'm.c..c.m', 'mmmmmmmm', '........']
   },
   {
-    n: 26, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 9900, want: 0.78,
+    n: 26, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 9800, want: 0.82,
     map: ['##....##', '#......#', '#......#', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 27, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.CRATE, 0, 22]], base: 9700, want: 0.83,
+    n: 27, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 22]], base: 9100, want: 0.78,
     map: ['CC....CC', 'C......C', '..cccc..', '..c..c..', '..c..c..', '..cccc..', 'C......C', 'CC....CC', '........']
   },
   {
-    n: 28, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 12200, want: 0.82,
+    n: 28, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 11600, want: 0.77,
     map: ['MMMMMMMM', 'MMMMMMMM', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 29, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 9600, want: 0.81,
+    n: 29, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 8700, want: 0.75,
     map: ['.######.', '.######.', '..####..', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 30, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 10800, want: 0.72,
+    n: 30, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 10600, want: 0.64,
     map: ['........', '........', '.vvvvvv.', '.v....v.', '.v....v.', '.v....v.', '.vvvvvv.', '........', '........']
   },
   {
-    n: 31, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 7700, want: 0.92,
+    n: 31, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 7700, want: 0.91,
     map: ['mccccccm', 'm......m', 'm.mmmm.m', 'm......m', '........', 'm......m', 'm.mmmm.m', 'm......m', 'mccccccm']
   },
   {
-    n: 32, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 11800, want: 0.87,
+    n: 32, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 10100, want: 0.82,
     map: ['........', '.c....c.', '........', '..c..c..', '........', '..c..c..', '........', '.c....c.', '........']
   },
   {
-    n: 33, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.COLLECT, 0, 42], [GK.COLLECT, 3, 36], [GK.COLLECT, 5, 30]], base: 16000, want: 0.86,
+    n: 33, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.COLLECT, 0, 42], [GK.COLLECT, 3, 36], [GK.COLLECT, 5, 30]], base: 15800, want: 0.75,
     map: ['.######.', '..####..', '...##...', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 34, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 60]], base: 11100, want: 0.84,
+    n: 34, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 60]], base: 13000, want: 0.73,
     map: ['MMMMMMMM', 'M......M', 'M.mmmm.M', 'M.m..m.M', 'M.m..m.M', 'M.mmmm.M', 'M......M', 'MMMMMMMM', '........']
   },
   {
-    n: 35, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 10200, want: 0.82,
+    n: 35, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 8600, want: 0.72,
     map: ['........', '.cc..cc.', '........', '..c..c..', '........', '..c..c..', '........', '.cc..cc.', '........']
   },
   {
-    n: 36, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.SCORE, 0, 16000]], base: 20200, want: 0.75,
+    n: 36, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.SCORE, 0, 16000]], base: 19300, want: 0.79,
     map: ['###..###', '##....##', '##....##', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 37, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 12000, want: 0.79,
+    n: 37, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 11400, want: 0.65,
     map: ['mmmmmmmm', '........', '..mmmm..', '........', '........', '........', '..mmmm..', '........', 'mmmmmmmm']
   },
   {
-    n: 38, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 10300, want: 0.78,
+    n: 38, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 10600, want: 0.77,
     map: ['C.C..C.C', '........', 'iCiiiiCi', '........', '..CCCC..', '........', 'iCiiiiCi', '........', 'C.C..C.C']
   },
   {
-    n: 39, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 12000, want: 0.75,
+    n: 39, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 12500, want: 0.66,
     map: ['MMMMMMMM', 'Mc.cc.cM', 'M......M', 'M......M', 'M......M', 'M......M', 'M......M', 'Mc.cc.cM', 'MMMMMMMM']
   },
   {
-    n: 40, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 11400, want: 0.74,
+    n: 40, w: 8, h: 9, types: 6, moves: 20, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 11100, want: 0.56,
     map: ['##....##', '##....##', '........', '........', '........', '........', '........', '........', '........']
   },
 
   /* ---- the lane keeps going: 41 to 60 ---- */
   {
-    n: 41, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.COLLECT, 0, 34], [GK.COLLECT, 3, 28]], base: 13500, want: 0.91,
+    n: 41, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.COLLECT, 0, 34], [GK.COLLECT, 3, 28]], base: 13300, want: 0.82,
     map: ['#.#..#.#', '#.#..#.#', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 42, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11700, want: 0.78,
+    n: 42, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11700, want: 0.7,
     map: ['........', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 43, w: 8, h: 9, types: 6, moves: 23, goals: [[GK.CRATE, 0, 28]], base: 6900, want: 0.85,
+    n: 43, w: 8, h: 9, types: 6, moves: 20, goals: [[GK.CRATE, 0, 28]], base: 6100, want: 0.76,
     map: ['c......c', '.cccccc.', '.c....c.', '.c.cc.c.', '.c.cc.c.', '.c....c.', '.cccccc.', 'c......c', '........']
   },
   {
-    n: 44, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 11700, want: 0.78,
+    n: 44, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 7700, want: 0.69,
     map: ['........', '........', '..mmmm..', '.mmmmmm.', '.mmmmmm.', '..mmmm..', '........', '........', '........']
   },
   {
-    n: 45, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.SCORE, 0, 11200]], base: 14800, want: 0.84,
+    n: 45, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.SCORE, 0, 11200]], base: 13500, want: 0.68,
     map: ['##....##', '#......#', '........', '...##...', '...##...', '........', '#......#', '##....##', '........']
   },
   {
-    n: 46, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.BRAMBLE, 0, 14]], base: 6500, want: 0.91,
+    n: 46, w: 8, h: 9, types: 6, moves: 21, goals: [[GK.BRAMBLE, 0, 14]], base: 6800, want: 0.74,
     map: ['........', '..vvvv..', '..v..v..', '..v..v..', '..v..v..', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 47, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 12300, want: 0.81,
+    n: 47, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 12800, want: 0.74,
     map: ['........', '..iiii..', '........', '.i....i.', '.i....i.', '........', '..iiii..', '........', '........']
   },
   {
-    n: 48, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 10200, want: 0.91,
+    n: 48, w: 8, h: 9, types: 6, moves: 24, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 10400, want: 0.82,
     map: ['cc....cc', '........', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '........', 'cc....cc', '........']
   },
   {
-    n: 49, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 11000]], base: 11600, want: 0.71,
+    n: 49, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 11000]], base: 11500, want: 0.6,
     map: ['########', '.###.###', '..#...#.', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 50, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 40], [GK.CRATE, 0, 8], [GK.COLLECT, 0, 26]], base: 10400, want: 0.66,
+    n: 50, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.MUD, 0, 40], [GK.CRATE, 0, 8], [GK.COLLECT, 0, 26]], base: 9200, want: 0.5,
     map: ['MMMMMMMM', 'M.cccc.M', 'M......M', 'M......M', 'M......M', 'M......M', 'M.cccc.M', 'MMMMMMMM', '........']
   },
   {
-    n: 51, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 13400, want: 0.91,
+    n: 51, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 12700, want: 0.79,
     map: ['###..###', '##....##', '#......#', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 52, w: 8, h: 9, types: 6, moves: 52, goals: [[GK.BRAMBLE, 0, 24]], base: 13700, want: 0.82,
+    n: 52, w: 8, h: 9, types: 6, moves: 57, goals: [[GK.BRAMBLE, 0, 24]], base: 17100, want: 0.82,
     map: ['.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........', '.vvvvvv.', '.vvvvvv.', '........']
   },
   {
-    n: 53, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 14800, want: 0.84,
+    n: 53, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 15400, want: 0.78,
     map: ['iCiiiiCi', '........', '..CCCC..', '........', '........', '........', '..CCCC..', '........', 'iCiiiiCi']
   },
   {
-    n: 54, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.RESCUE, 0, 3]], base: 9400, want: 0.77,
+    n: 54, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.RESCUE, 0, 3]], base: 10800, want: 0.66,
     map: ['##....##', '##....##', '#......#', '#......#', '........', '........', '........', '........', '........']
   },
   {
-    n: 55, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.SCORE, 0, 16400]], base: 19500, want: 0.76,
+    n: 55, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.SCORE, 0, 16400]], base: 18800, want: 0.57,
     map: ['#####...', '####....', '###.....', '##......', '#.......', '........', '........', '........', '........']
   },
   {
-    n: 56, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 38]], base: 8400, want: 0.83,
+    n: 56, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.MUD, 0, 38]], base: 7900, want: 0.7,
     map: ['mmmmmmmm', 'mmmmmmmm', 'mmmmmmmm', '........', '........', '........', 'mmmmmmmm', 'mmmmmmmm', '........']
   },
   {
-    n: 57, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 13900, want: 0.74,
+    n: 57, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 17200, want: 0.62,
     map: ['mmmmmmmm', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', 'mmmmmmmm', '........']
   },
   {
-    n: 58, w: 8, h: 9, types: 6, moves: 23, goals: [[GK.CRATE, 0, 30]], base: 6100, want: 0.8,
+    n: 58, w: 8, h: 9, types: 6, moves: 20, goals: [[GK.CRATE, 0, 30]], base: 6100, want: 0.67,
     map: ['CCCCCCCC', 'C......C', 'C.cccc.C', 'C.c..c.C', 'C.c..c.C', 'C.cccc.C', 'C......C', 'CCCCCCCC', '........']
   },
   {
-    n: 59, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 11000, want: 0.74,
+    n: 59, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 10400, want: 0.53,
     map: ['..####..', '...##...', '...##...', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 60, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 13800, want: 0.63,
+    n: 60, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 12700, want: 0.43,
     map: ['mmmmmmmm', '.cc..cc.', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '.cc..cc.', 'mmmmmmmm', '........']
   }
 ];
@@ -1712,6 +1714,88 @@ function shapeMask(name, w, h, r) {
 }
 const SHAPES = ['bands', 'columns', 'diamond', 'ring', 'corners', 'checker', 'wedge', 'blob'];
 
+/* ---------- the board's outline ----------
+
+   Every board in the game had the outline of a rectangle. A third of
+   them carried a few holes — three on the average one, scattered one
+   cell at a time — which reads as damage rather than as a shape, and a
+   player who knows the genre names that within a few levels as the
+   thing that makes a game look cheap (14 Nov 2026, the owner's own
+   words for it). The engine has always handled any outline: a hole is
+   skipped by gravity, tiles slide diagonally past it, and a cell no
+   column can reach is filled where it stands (settle, 30-engine.js).
+
+   So these are outlines, cut from the edges inward, where they change
+   the silhouette and not the flow down the middle. Each names the cells
+   it removes; a cut only ever takes a plain cell ('.'), so no goal's
+   stock changes, and it keeps clear of a molehill's or a crate's
+   neighbours, which measured as the two places a missing cell moves a
+   level's difficulty more than its budget does. Never on a rescue
+   board: a basket has to fall the whole height of its column. */
+function silhouette(name, w, h) {
+  const out = [];
+  const cut = (y, x) => { if (y >= 0 && y < h && x >= 0 && x < w) out.push([y, x]); };
+  const mid = Math.floor((h - 1) / 2), R = w - 1, B = h - 1;
+  if (name === 'notch') {          /* the two top corners clipped */
+    cut(0, 0); cut(0, 1); cut(1, 0); cut(0, R); cut(0, R - 1); cut(1, R);
+  } else if (name === 'corners') { /* all four corners rounded off */
+    cut(0, 0); cut(0, R); cut(B, 0); cut(B, R); cut(1, 0); cut(1, R); cut(B - 1, 0); cut(B - 1, R);
+  } else if (name === 'waist') {   /* pinched in at the middle */
+    for (let y = mid - 1; y <= mid + 1; y++) { cut(y, 0); cut(y, R); }
+    cut(mid, 1); cut(mid, R - 1);
+  } else if (name === 'tower') {   /* a tower rising out of the top */
+    const side = w >= 8 ? 2 : 1;
+    for (let y = 0; y < 2; y++) for (let x = 0; x < side; x++) { cut(y, x); cut(y, R - x); }
+  } else if (name === 'crown') {   /* crenellations along the top */
+    for (let x = 0; x < w; x += 2) cut(0, x);
+  } else if (name === 'steps') {   /* a staircase down one side */
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 3 - y; x++) cut(y, x);
+  } else if (name === 'heart') {   /* the game's own shape */
+    cut(0, 0); cut(0, R);
+    if (w % 2 === 0) { cut(0, w / 2 - 1); cut(0, w / 2); } else cut(0, (w - 1) / 2);
+    for (let x = 0; x < 3; x++) { cut(B, x); cut(B, R - x); }
+    for (let x = 0; x < 2; x++) { cut(B - 1, x); cut(B - 1, R - x); }
+    cut(B - 2, 0); cut(B - 2, R);
+  } else if (name === 'hollow') {  /* a well in the middle of the board */
+    const cx = Math.floor((w - 1) / 2), cy = mid;
+    cut(cy, cx); cut(cy, cx + 1); cut(cy + 1, cx); cut(cy + 1, cx + 1);
+  }
+  return out;
+}
+const SILHOUETTES = ['notch', 'corners', 'waist', 'tower', 'crown', 'steps', 'heart', 'hollow'];
+/* Cut an outline into a map, in place. Returns how many cells went. */
+function cutSilhouette(map, name, w, h) {
+  if (!name) return 0;
+  const near = (y, x, chars) => [[-1, 0], [1, 0], [0, -1], [0, 1]].some(([dy, dx]) => {
+    const row = map[y + dy];
+    return row && chars.indexOf(row[x + dx]) >= 0;
+  });
+  let n = 0;
+  silhouette(name, w, h).forEach(([y, x]) => {
+    if (map[y][x] !== '.' || near(y, x, 'oOcC')) return;
+    map[y] = map[y].slice(0, x) + '#' + map[y].slice(x + 1);
+    n++;
+  });
+  return n;
+}
+/* The authored lane, outlined by hand: the levels that had no holes and
+   no baskets to walk, from the point the player has stopped learning
+   the controls. The ones that already had a designed shape keep it. */
+const LANE_OUTLINE = {
+  8: 'heart', 11: 'crown', 13: 'notch', 15: 'waist', 17: 'tower', 18: 'corners',
+  21: 'steps', 22: 'heart', 25: 'notch', 27: 'waist', 28: 'crown', 31: 'tower',
+  34: 'heart', 38: 'corners', 43: 'steps', 46: 'waist', 47: 'heart', 50: 'crown',
+  53: 'notch', 56: 'tower', 57: 'corners', 58: 'heart'
+};
+/* the run: seven boards in ten take an outline, by a die of their own so
+   that every other roll the generator makes lands where it always did */
+function runOutline(n, kind) {
+  if (kind === GK.RESCUE) return null;
+  const d = mulberry(n * 6007 + 3);
+  if (d() < .3) return null;
+  return SILHOUETTES[Math.floor(d() * SILHOUETTES.length)];
+}
+
 /* `ref` builds the level as it would be with no target at all: the
    generator's own move count, its own goal sizes, nothing solved for.
 
@@ -1735,7 +1819,14 @@ function levelDef(n, ref, forceKind) {
      def.gate: the same level was a gate in one place and not in the
      other. */
   if (n <= LEVELS.length) {
-    const def = normaliseGoals(LEVELS[n - 1]);
+    let def = normaliseGoals(LEVELS[n - 1]);
+    if (LANE_OUTLINE[n]) {
+      /* on a copy: the table's own row is handed out, and cutting it in
+         place would cut it again on every call */
+      const map = (def.map || Array.from({ length: def.h }, () => '.'.repeat(def.w))).slice();
+      cutSilhouette(map, LANE_OUTLINE[n], def.w, def.h);
+      def = Object.assign({}, def, { map });
+    }
     def.gate = isGate(n);
     /* The live correction (14-tune.js), if there is one, goes on a copy:
        normaliseGoals hands back the table's own row, and adding to it in
@@ -1989,6 +2080,10 @@ function levelDef(n, ref, forceKind) {
   /* the goal is a share of what this particular map holds: the last few
      obstacles on a board cost many moves each, so asking for all of them
      turns the end of a level into a search */
+  /* the outline last, over plain cells only, so the goal below is sized
+     to exactly the stock it would have had */
+  cutSilhouette(map, runOutline(n, kind), w, h);
+
   const stock = mapStock({ map });
 
   /* A goal is priced in work, not in cells.

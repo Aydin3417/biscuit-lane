@@ -94,7 +94,7 @@ const SAVE_VERSION = 2;
 /* what a build calls itself when it reports anything. Bumped by hand,
    with android/app/build.gradle's versionName, so a crash from an old
    install is not read as one from the current one. */
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 
 function migrate(d) {
   const v = d.v || 1;
@@ -491,6 +491,66 @@ function returnHeart() {
   return true;
 }
 function forfeitHeart() { SAVE.heartHeld = false; }
+
+/* ---------- a budget that follows the player ----------
+
+   Every move budget in the game is fitted to one player: the one in
+   test/_solver.js who scores what a match visibly does and cannot see
+   a cascade coming. That is the right player to fit to — it is about
+   where a person new to the genre plays — and it is the wrong game for
+   anybody who has played a hundred match-3 levels before, who meets
+   the same budget a third of it unspent. The owner's report two weeks
+   after launch was exactly that, and both readings of it are true at
+   once, so the answer is not one curve but two ends of one:
+
+     a player who keeps winning first time with room to spare is dealt
+     fewer moves on a level they have not cleared, up to eighteen
+     percent fewer, in proportion to how much room they have been
+     leaving; and
+
+     a player who has failed the same level three times is dealt one
+     more move for each further failure, up to four (three on a gate),
+     because the fourth attempt at a wall is where people uninstall.
+
+   The form is the last ten first attempts at levels not yet cleared:
+   won or not, and the share of the budget left when the goal was met.
+   Score-only levels play their moves out, so they say nothing and are
+   not counted; a win bought with a carry-on counts as a loss, because
+   it was one. Every reading is local and clamped, the floor is the
+   live-tuning floor, and the whole thing can be switched off or scaled
+   from the tuning file (tuneAdapt) without a build. */
+const FORM_KEEP = 10, FORM_MIN = 6, ADAPT_CUT_MAX = .18;
+function noteForm(won, spare) {
+  if (!SAVE.form) SAVE.form = [];
+  SAVE.form.push({ w: won ? 1 : 0, s: won ? Math.round(clamp(spare, 0, 1) * 100) / 100 : 0 });
+  if (SAVE.form.length > FORM_KEEP) SAVE.form.splice(0, SAVE.form.length - FORM_KEEP);
+}
+function formOf() {
+  const f = SAVE.form || [];
+  const wins = f.filter(x => x.w);
+  return {
+    n: f.length,
+    W: f.length ? wins.length / f.length : 0,
+    S: wins.length ? wins.reduce((a, x) => a + x.s, 0) / wins.length : 0
+  };
+}
+/* The change to level n's budget: negative for a player in form,
+   positive for one stuck here. `fails` is how many attempts at this
+   level came before the one about to be played. */
+function adaptMoves(n, base, fails) {
+  const rule = tuneAdapt();
+  if (!rule.on || n < 15 || n === DAILY_LEVEL || (SAVE.stars && SAVE.stars[n])) return 0;
+  const k = rule.k || 1;
+  if (fails >= 3) {
+    const help = Math.min(isGate(n) ? 3 : 4, fails - 2);
+    return Math.round(help * k);
+  }
+  const F = formOf();
+  if (fails >= 2 || F.n < FORM_MIN || F.W < .75 || F.S < .22) return 0;
+  const frac = clamp(((F.S - .18) * .6 + (F.W - .75) * .2) * k, 0, ADAPT_CUT_MAX);
+  const cut = Math.round(base * frac);
+  return -Math.min(cut, Math.max(0, base - TUNE_MOVES_FLOOR));
+}
 
 /* ---------- unlimited hearts ----------
 

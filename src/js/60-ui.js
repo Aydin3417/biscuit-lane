@@ -473,7 +473,7 @@ function openFeed() {
     <div class="grid2" id="feedGrid">
       ${owned.map(f => `
         <button class="good" data-id="${f.id}">
-          <div class="art"><canvas data-art="${f.id}" width="74" height="74"></canvas></div>
+          <div class="art"><canvas data-art="${f.id}" width="66" height="66"></canvas></div>
           <div class="nm">${goodName(f)}</div>
           <div class="ds">+${f.food} ${T('st_food').toLowerCase()} · +${f.joy} ${T('st_joy').toLowerCase()}</div>
           <span class="pill info" style="align-self:center">x${SAVE.food[f.id]}</span>
@@ -665,6 +665,28 @@ function askSize(cv, fallback) {
   if (cv.dataset.px === undefined) cv.dataset.px = cv.width || fallback;
   return +cv.dataset.px;
 }
+const GOOD_FIT = new Map();
+function goodFit(id, px) {
+  const key = id + '|' + px;
+  if (GOOD_FIT.has(key)) return GOOD_FIT.get(key);
+  let k = 1.32;
+  try {
+    const W = px * 3, cv = document.createElement('canvas');
+    cv.width = cv.height = W;
+    const c = cv.getContext('2d');
+    c.translate(W / 2, W / 2);
+    paintGood(c, id, px);
+    const d = c.getImageData(0, 0, W, W).data;
+    let ext = 0;
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+      if (d[(y * W + x) * 4 + 3] > 24) ext = Math.max(ext, Math.abs(x - W / 2), Math.abs(y - W / 2));
+    }
+    /* the widest reach from the centre, kept inside 46% of the box */
+    if (ext > 0) k = Math.min(1.32, px * .46 / ext);
+  } catch (e) { /* a canvas that cannot be read back keeps the old size */ }
+  GOOD_FIT.set(key, k);
+  return k;
+}
 function paintArtCanvases(root) {
   $$('canvas[data-art]', root).forEach(cv => {
     const px = askSize(cv, 54);
@@ -676,9 +698,15 @@ function paintArtCanvases(root) {
     c.fillStyle = rgba('#3A2A16', .13);
     ellipse(c, 0, px * .30, px * .21, px * .045); c.fill();
     c.restore();
-    /* the drawings are laid out inside about six tenths of their box;
-       filling more of it is the difference between a good and an icon */
-    c.save(); c.scale(1.32, 1.32);
+    /* The drawings are laid out inside about six tenths of their box,
+       and filling more of it is the difference between a good and an
+       icon — so they were all drawn a third larger. Not all of them
+       were six tenths: the ball of yarn ran off the right of its card
+       and the tuna lost the top of its tin (seen on a phone-sized
+       shop, 14 Nov 2026). Each is now measured once and scaled to fill
+       the box without leaving it. */
+    const k = goodFit(cv.dataset.art, px);
+    c.save(); c.scale(k, k);
     paintGood(c, cv.dataset.art, px);
     c.restore();
   });
@@ -890,7 +918,7 @@ function shopFood() {
   return `<div class="sectitle"><h3>${T('shop_food')}</h3></div>
   <div class="grid2">${FOODS.map(f => `
     <div class="good">
-      <div class="art"><canvas data-art="${f.id}" width="74" height="74"></canvas>
+      <div class="art"><canvas data-art="${f.id}" width="66" height="66"></canvas>
         ${(SAVE.food[f.id] || 0) ? `<span class="stock" title="${T('shop_have', { n: SAVE.food[f.id] })}">&times;${SAVE.food[f.id]}</span>` : ''}</div>
       <div class="nm">${goodName(f)}</div>
       <div class="ds">${goodDesc(f)}${foodEffect(f)}</div>
@@ -902,7 +930,7 @@ function shopToys() {
   <div class="grid2">${TOYS.map(t => {
     const owned = !!SAVE.toys[t.id];
     return `<div class="good ${owned ? 'owned' : ''}">
-      <div class="art"><canvas data-art="${t.id}" width="74" height="74"></canvas></div>
+      <div class="art"><canvas data-art="${t.id}" width="66" height="66"></canvas></div>
       <div class="nm">${goodName(t)}</div>
       <div class="ds">${goodDesc(t)} +${t.joy} ${T('st_joy').toLowerCase()}</div>
       ${owned ? `<span class="pill ok" style="align-self:flex-start">${IC.check}${T('shop_owned')}</span>`
@@ -1624,11 +1652,15 @@ function openLevelIntro(n) {
   let adMoves = 0;
 
   const m = modal(`
-    <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
+    <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + adaptMoves(n, def.moves, (SAVE.tries && SAVE.tries[n]) || 0) + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
     <h2>${T('lvl_goals')}</h2>
     ${def.gate ? `<div class="goalItem gateNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('gate_t')}</b>${T('gate_s')}</span>
+    </div>` : ''}
+    ${isHard(n) && !SAVE.stars[n] ? `<div class="goalItem gateNote">
+      <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
+      <span class="t"><b>${T('hard_t')}</b>${T('hard_s', { n: Math.round((ECON.hardPay - 1) * 100) })}</span>
     </div>` : ''}
     ${n !== DAILY_LEVEL && !SAVE.stars[n] && SAVE.winRun > 0 ? `<div class="goalItem runNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
@@ -2085,7 +2117,9 @@ function commitWin() {
      or a quarter if you actually beat the number you left there. */
   const base = Math.round((ECON.winBase + stars * ECON.winPerStar
     + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
-  const rate = first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
+  /* a hard level pays half again the first time: warned about and paid
+     for, it is a challenge rather than a wall (isHard) */
+  const rate = first ? (isHard(n) ? ECON.hardPay : 1) : (newBest ? ECON.replayBestRate : ECON.replayRate);
   const coins = tunePay('coin', Math.max(first ? 0 : 1, Math.round(base * rate)));
   let treats = 0;
   if (stars === 3 && prev < 3) treats += tunePay('treat', isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats);

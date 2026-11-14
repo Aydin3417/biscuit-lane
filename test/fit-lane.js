@@ -39,14 +39,17 @@ const ENV = path.join(__dirname, '..', 'lane-envelope.json');
 if (!fs.existsSync(ENV)) { console.error('önce: node test/envelope.js'); process.exit(1); }
 const E = JSON.parse(fs.readFileSync(ENV, 'utf8'));
 const BLOCK = 10, RUN_START = 61;
-const RHYTHM = [+.13, +.06, +.02, -.03, +.05, -.04, -.07, -.02, -.09, -.15];
+/* a copy of 11-design.js's constants, kept in step by hand: changed
+   together on 14 Nov 2026, when this copy was found three revisions
+   behind the module (handoff .78 against .70, gate -.15 against -.18) */
+const RHYTHM = [+.13, +.06, +.02, -.03, +.05, -.04, -.10, -.02, -.12, -.21];
 
 /* The descent, as designed. It is still a formula — what changes is
    that the beats around it are placed rather than assumed. */
-const LANE_FROM = .93, LANE_BEND = 1.6, EASE_AT_HANDOFF = .78;
+const LANE_FROM = .93, LANE_BEND = 1.15, EASE_AT_HANDOFF = .64;
 const easeAt = n => EASE_AT_HANDOFF + (LANE_FROM - EASE_AT_HANDOFF) *
   Math.pow(1 - (n - 1) / (RUN_START - 1), LANE_BEND);
-const beatScale = n => .45 + .55 * ((n - 1) / (RUN_START - 1));
+const beatScale = n => .35 + .65 * ((n - 1) / (RUN_START - 1));
 const TUT_LIFT = .06;
 
 const rowOf = {};

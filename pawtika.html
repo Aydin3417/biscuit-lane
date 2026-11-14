@@ -602,6 +602,13 @@ canvas{ max-width:100%; }
 .moves b{ font-family:"Grandstander",sans-serif; font-size:var(--t-h2); line-height:1; font-variant-numeric:tabular-nums; }
 .moves span{ font-size:var(--t-nano); letter-spacing:.13em; text-transform:uppercase; color:var(--text-faint); font-weight:700; margin-top:1px; }
 .moves.low b{ color:var(--rose); }
+.moves{ position:relative; }
+.moves.hard{ border-color:color-mix(in srgb,var(--rose) 55%, transparent); }
+.moves.hard::after{
+  content:attr(data-tag); position:absolute; bottom:-9px; left:50%; transform:translateX(-50%);
+  padding:1px 7px; border-radius:var(--r-full); background:var(--rose); color:#fff;
+  font-size:var(--t-nano); font-weight:800; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap;
+}
 .moves.tick{ animation:chipbump .4s cubic-bezier(.2,1.5,.4,1); }
 .goals{ display:flex; gap:6px; flex:1 1 auto; justify-content:center; flex-wrap:wrap; }
 .goal{
@@ -2119,6 +2126,8 @@ const STRINGS = {
   en: {
     brandSub: 'Pet Home',
     gate_t: 'The end of the block',
+    g_hard: 'Hard', g_gate: 'Super hard',
+    hard_t: 'A hard level', hard_s: 'Fewer moves than it looks. Pays {n}% more the first time.',
     gate_s: 'Harder than the nine before it. Take your time.',
     rot_t: 'Turn your phone back',
     rot_s: 'Pawtika is played the tall way up.',
@@ -2512,6 +2521,8 @@ const STRINGS = {
   tr: {
     brandSub: 'Pati Evi',
     gate_t: 'Bölümün kapısı',
+    g_hard: 'Zor', g_gate: 'Çok zor',
+    hard_t: 'Zor seviye', hard_s: 'Hamleler göründüğünden az. İlk geçişte %{n} fazla öder.',
     gate_s: 'Öncesindeki dokuzdan zor. Acele etme.',
     rot_t: 'Telefonu geri çevir',
     rot_s: 'Pawtika dikey oynanıyor.',
@@ -3292,7 +3303,9 @@ const ECON = {
   /* what a rewarded video carries on with: three moves, where nine treats
      buy five. The video is the free way through, and it should be the
      smaller one, or nobody would ever pay for the other. */
-  adMoves: 3
+  adMoves: 3,
+  /* the first clear of a hard level (isHard, 11-design.js) */
+  hardPay: 1.5
 };
 
 /* ---------- where this game lives, once it lives anywhere ----------
@@ -4220,8 +4233,8 @@ const LEVELS = [
      boosters, no perks and no stage moves, and has just been asked to
      name an animal. The first three carry a real cushion; the curve
      descends from level 4, where it already did. */
-  { n: 1, w: 7, h: 7, types: 5, moves: 27, goals: [[GK.COLLECT, 0, 34]], base: 10600, want: 0.97, tut: 'swap' },
-  { n: 2, w: 7, h: 7, types: 5, moves: 25, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 10700, want: 0.95 },
+  { n: 1, w: 7, h: 7, types: 5, moves: 28, goals: [[GK.COLLECT, 0, 34]], base: 10700, want: 0.97, tut: 'swap' },
+  { n: 2, w: 7, h: 7, types: 5, moves: 24, goals: [[GK.COLLECT, 3, 33], [GK.COLLECT, 1, 28]], base: 10700, want: 0.95 },
   /* A score goal is the one kind of level a person cannot plan: nothing
      on the board says which swap is worth more, so the only strategy is
      to keep matching and hope the cascade is kind. Measured with the
@@ -4232,229 +4245,229 @@ const LEVELS = [
      of a rescue. All three are collect goals now, which a person can
      look at and go after. The score levels that remain sit past level
      35, where a player has specials to make and knows it. */
-  { n: 3, w: 7, h: 8, types: 5, moves: 24, goals: [[GK.COLLECT, 2, 30]], base: 9700, want: 0.97, tut: 'special' },
+  { n: 3, w: 7, h: 8, types: 5, moves: 27, goals: [[GK.COLLECT, 2, 30]], base: 9500, want: 1, tut: 'special' },
   {
-    n: 4, w: 7, h: 8, types: 5, moves: 20, goals: [[GK.MUD, 0, 76]], base: 10000, want: 0.93,
+    n: 4, w: 7, h: 8, types: 5, moves: 20, goals: [[GK.MUD, 0, 76]], base: 10000, want: 0.92,
     map: ['.......', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', 'MMMMMMM', '.......']
   },
   { n: 5, w: 8, h: 8, types: 5, moves: 31, goals: [[GK.COLLECT, 2, 50], [GK.COLLECT, 4, 40]], base: 16600, want: 0.9 },
   {
-    n: 6, w: 8, h: 8, types: 5, moves: 19, goals: [[GK.CRATE, 0, 28]], base: 7200, want: 0.9,
+    n: 6, w: 8, h: 8, types: 5, moves: 16, goals: [[GK.CRATE, 0, 28]], base: 7200, want: 0.89,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
-  { n: 7, w: 8, h: 8, types: 5, moves: 36, goals: [[GK.RESCUE, 0, 2]], base: 7000, want: 0.95, tut: 'rescue' },
+  { n: 7, w: 8, h: 8, types: 5, moves: 32, goals: [[GK.RESCUE, 0, 2]], base: 8700, want: 0.95, tut: 'rescue' },
   {
-    n: 8, w: 8, h: 8, types: 5, moves: 34, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 19300, want: 0.87,
+    n: 8, w: 8, h: 8, types: 5, moves: 38, goals: [[GK.COLLECT, 4, 60], [GK.MUD, 0, 16]], base: 19000, want: 0.85,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 9, w: 8, h: 8, types: 5, moves: 23, goals: [[GK.COLLECT, 1, 34], [GK.COLLECT, 4, 28]], base: 11300, want: 0.91,
+    n: 9, w: 8, h: 8, types: 5, moves: 22, goals: [[GK.COLLECT, 1, 34], [GK.COLLECT, 4, 28]], base: 11200, want: 0.83,
     map: ['##....##', '#......#', '........', '........', '........', '........', '#......#', '##....##']
   },
   {
-    n: 10, w: 8, h: 9, types: 5, moves: 42, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 26600, want: 0.82,
+    n: 10, w: 8, h: 9, types: 5, moves: 41, goals: [[GK.COLLECT, 1, 82], [GK.COLLECT, 3, 64]], base: 25900, want: 0.79,
     map: ['##....##', '#......#', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 11, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.CRATE, 0, 28]], base: 9400, want: 0.96,
+    n: 11, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.CRATE, 0, 28]], base: 9200, want: 0.97,
     map: ['..cccc..', '.cc..cc.', 'cc....cc', 'c......c', '........', 'c......c', 'cc....cc', '.cc..cc.', '..cccc..']
   },
   {
-    n: 12, w: 8, h: 9, types: 5, moves: 36, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 15400, want: 0.92,
+    n: 12, w: 8, h: 9, types: 5, moves: 34, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 44]], base: 14600, want: 0.9,
     map: ['#......#', '........', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 13, w: 8, h: 8, types: 6, moves: 22, goals: [[GK.MUD, 0, 24]], base: 6100, want: 0.91,
+    n: 13, w: 8, h: 8, types: 6, moves: 23, goals: [[GK.MUD, 0, 24]], base: 6800, want: 0.81,
     map: ['MMMM....', 'MMMM....', '........', '........', '........', '........', '....MMMM', '....MMMM']
   },
   {
-    n: 14, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.BRAMBLE, 0, 18]], base: 9900, want: 0.95, tut: 'bramble',
+    n: 14, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.BRAMBLE, 0, 18]], base: 9700, want: 0.94, tut: 'bramble',
     map: ['........', '........', '.vvvvvv.', '.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........']
   },
   {
-    n: 15, w: 8, h: 9, types: 5, moves: 32, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 18700, want: 0.87,
+    n: 15, w: 8, h: 9, types: 5, moves: 29, goals: [[GK.COLLECT, 4, 60], [GK.CRATE, 0, 16]], base: 18200, want: 0.86,
     map: ['..c..c..', '.cc..cc.', '........', '.c....c.', '........', '.c....c.', '........', '.cc..cc.', '..c..c..']
   },
   {
-    n: 16, w: 8, h: 9, types: 6, moves: 44, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 7900, want: 0.82,
+    n: 16, w: 8, h: 9, types: 6, moves: 51, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 16]], base: 12000, want: 0.97,
     map: ['........', '...mm...', '..mmmm..', '.mmmmmm.', 'mmmmmmmm', '.mmmmmm.', '..mmmm..', '...mm...', '........']
   },
   {
-    n: 17, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12100, want: 0.85,
+    n: 17, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12000, want: 0.83,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
-    n: 18, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.CRATE, 0, 16]], base: 11400, want: 0.84,
+    n: 18, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.CRATE, 0, 16]], base: 11700, want: 0.82,
     map: ['C......C', '........', '..cccc..', '..c..c..', '..c..c..', '..cccc..', '........', 'C......C', '........']
   },
   {
-    n: 19, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15100, want: 0.82,
+    n: 19, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15100, want: 0.78,
     map: ['####..##', '###....#', '##......', '#.......', '........', '........', '........', '........', '........']
   },
   {
-    n: 20, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.RESCUE, 0, 1], [GK.COLLECT, 3, 26]], base: 10400, want: 0.77,
+    n: 20, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.RESCUE, 0, 1], [GK.COLLECT, 3, 26]], base: 10500, want: 0.71,
     map: ['..####..', '..####..', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 21, w: 8, h: 9, types: 6, moves: 36, goals: [[GK.MUD, 0, 24]], base: 10200, want: 0.94,
+    n: 21, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.MUD, 0, 24]], base: 9900, want: 0.9,
     map: ['........', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', '........']
   },
   {
-    n: 22, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 12000, want: 0.89,
+    n: 22, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 13100, want: 0.85,
     map: ['..CCCC..', '........', '.c....c.', '..c..c..', '..c..c..', '........', '.c....c.', '........', '........']
   },
   {
-    n: 23, w: 8, h: 9, types: 6, moves: 51, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 12600, want: 0.88,
+    n: 23, w: 8, h: 9, types: 6, moves: 52, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 8]], base: 11000, want: 0.91,
     map: ['........', '.m....m.', '..m..m..', '...mm...', '........', '...mm...', '..m..m..', '.m....m.', '........']
   },
   {
-    n: 24, w: 8, h: 9, types: 6, moves: 52, goals: [[GK.BRAMBLE, 0, 28]], base: 14500, want: 0.8,
+    n: 24, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.BRAMBLE, 0, 28]], base: 12800, want: 0.74,
     map: ['........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........', '.vv..vv.', '.vvvvvv.', '.vv..vv.', '........']
   },
   {
-    n: 25, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 9700, want: 0.86,
+    n: 25, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.MUD, 0, 26], [GK.CRATE, 0, 8]], base: 9700, want: 0.81,
     map: ['mmmmmmmm', 'm.c..c.m', 'm......m', 'm..cc..m', 'm..cc..m', 'm......m', 'm.c..c.m', 'mmmmmmmm', '........']
   },
   {
-    n: 26, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 9900, want: 0.78,
+    n: 26, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.COLLECT, 1, 20], [GK.RESCUE, 0, 2]], base: 9800, want: 0.82,
     map: ['##....##', '#......#', '#......#', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 27, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.CRATE, 0, 22]], base: 9700, want: 0.83,
+    n: 27, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 22]], base: 9100, want: 0.78,
     map: ['CC....CC', 'C......C', '..cccc..', '..c..c..', '..c..c..', '..cccc..', 'C......C', 'CC....CC', '........']
   },
   {
-    n: 28, w: 8, h: 9, types: 6, moves: 39, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 12200, want: 0.82,
+    n: 28, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 32], [GK.COLLECT, 4, 24]], base: 11600, want: 0.77,
     map: ['MMMMMMMM', 'MMMMMMMM', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 29, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 9600, want: 0.81,
+    n: 29, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 8700, want: 0.75,
     map: ['.######.', '.######.', '..####..', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 30, w: 8, h: 9, types: 6, moves: 32, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 10800, want: 0.72,
+    n: 30, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 10600, want: 0.64,
     map: ['........', '........', '.vvvvvv.', '.v....v.', '.v....v.', '.v....v.', '.vvvvvv.', '........', '........']
   },
   {
-    n: 31, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 7700, want: 0.92,
+    n: 31, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 7700, want: 0.91,
     map: ['mccccccm', 'm......m', 'm.mmmm.m', 'm......m', '........', 'm......m', 'm.mmmm.m', 'm......m', 'mccccccm']
   },
   {
-    n: 32, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 11800, want: 0.87,
+    n: 32, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.RESCUE, 0, 2], [GK.CRATE, 0, 8]], base: 10100, want: 0.82,
     map: ['........', '.c....c.', '........', '..c..c..', '........', '..c..c..', '........', '.c....c.', '........']
   },
   {
-    n: 33, w: 8, h: 9, types: 6, moves: 46, goals: [[GK.COLLECT, 0, 42], [GK.COLLECT, 3, 36], [GK.COLLECT, 5, 30]], base: 16000, want: 0.86,
+    n: 33, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.COLLECT, 0, 42], [GK.COLLECT, 3, 36], [GK.COLLECT, 5, 30]], base: 15800, want: 0.75,
     map: ['.######.', '..####..', '...##...', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 34, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.MUD, 0, 60]], base: 11100, want: 0.84,
+    n: 34, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 60]], base: 13000, want: 0.73,
     map: ['MMMMMMMM', 'M......M', 'M.mmmm.M', 'M.m..m.M', 'M.m..m.M', 'M.mmmm.M', 'M......M', 'MMMMMMMM', '........']
   },
   {
-    n: 35, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 10200, want: 0.82,
+    n: 35, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 12], [GK.RESCUE, 0, 1]], base: 8600, want: 0.72,
     map: ['........', '.cc..cc.', '........', '..c..c..', '........', '..c..c..', '........', '.cc..cc.', '........']
   },
   {
-    n: 36, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.SCORE, 0, 16000]], base: 20200, want: 0.75,
+    n: 36, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.SCORE, 0, 16000]], base: 19300, want: 0.79,
     map: ['###..###', '##....##', '##....##', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 37, w: 8, h: 9, types: 6, moves: 43, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 12000, want: 0.79,
+    n: 37, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 11400, want: 0.65,
     map: ['mmmmmmmm', '........', '..mmmm..', '........', '........', '........', '..mmmm..', '........', 'mmmmmmmm']
   },
   {
-    n: 38, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 10300, want: 0.78,
+    n: 38, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 2, 28]], base: 10600, want: 0.77,
     map: ['C.C..C.C', '........', 'iCiiiiCi', '........', '..CCCC..', '........', 'iCiiiiCi', '........', 'C.C..C.C']
   },
   {
-    n: 39, w: 8, h: 9, types: 6, moves: 48, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 12000, want: 0.75,
+    n: 39, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 12500, want: 0.66,
     map: ['MMMMMMMM', 'Mc.cc.cM', 'M......M', 'M......M', 'M......M', 'M......M', 'M......M', 'Mc.cc.cM', 'MMMMMMMM']
   },
   {
-    n: 40, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 11400, want: 0.74,
+    n: 40, w: 8, h: 9, types: 6, moves: 20, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 11100, want: 0.56,
     map: ['##....##', '##....##', '........', '........', '........', '........', '........', '........', '........']
   },
 
   /* ---- the lane keeps going: 41 to 60 ---- */
   {
-    n: 41, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.COLLECT, 0, 34], [GK.COLLECT, 3, 28]], base: 13500, want: 0.91,
+    n: 41, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.COLLECT, 0, 34], [GK.COLLECT, 3, 28]], base: 13300, want: 0.82,
     map: ['#.#..#.#', '#.#..#.#', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 42, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11700, want: 0.78,
+    n: 42, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.BRAMBLE, 0, 20], [GK.COLLECT, 1, 26]], base: 11700, want: 0.7,
     map: ['........', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 43, w: 8, h: 9, types: 6, moves: 23, goals: [[GK.CRATE, 0, 28]], base: 6900, want: 0.85,
+    n: 43, w: 8, h: 9, types: 6, moves: 20, goals: [[GK.CRATE, 0, 28]], base: 6100, want: 0.76,
     map: ['c......c', '.cccccc.', '.c....c.', '.c.cc.c.', '.c.cc.c.', '.c....c.', '.cccccc.', 'c......c', '........']
   },
   {
-    n: 44, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 11700, want: 0.78,
+    n: 44, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.MUD, 0, 14], [GK.RESCUE, 0, 2]], base: 7700, want: 0.69,
     map: ['........', '........', '..mmmm..', '.mmmmmm.', '.mmmmmm.', '..mmmm..', '........', '........', '........']
   },
   {
-    n: 45, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.SCORE, 0, 11200]], base: 14800, want: 0.84,
+    n: 45, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.SCORE, 0, 11200]], base: 13500, want: 0.68,
     map: ['##....##', '#......#', '........', '...##...', '...##...', '........', '#......#', '##....##', '........']
   },
   {
-    n: 46, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.BRAMBLE, 0, 14]], base: 6500, want: 0.91,
+    n: 46, w: 8, h: 9, types: 6, moves: 21, goals: [[GK.BRAMBLE, 0, 14]], base: 6800, want: 0.74,
     map: ['........', '..vvvv..', '..v..v..', '..v..v..', '..v..v..', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 47, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 12300, want: 0.81,
+    n: 47, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 12800, want: 0.74,
     map: ['........', '..iiii..', '........', '.i....i.', '.i....i.', '........', '..iiii..', '........', '........']
   },
   {
-    n: 48, w: 8, h: 9, types: 6, moves: 35, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 10200, want: 0.91,
+    n: 48, w: 8, h: 9, types: 6, moves: 24, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8]], base: 10400, want: 0.82,
     map: ['cc....cc', '........', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '........', 'cc....cc', '........']
   },
   {
-    n: 49, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 11000]], base: 11600, want: 0.71,
+    n: 49, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 11000]], base: 11500, want: 0.6,
     map: ['########', '.###.###', '..#...#.', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 50, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 40], [GK.CRATE, 0, 8], [GK.COLLECT, 0, 26]], base: 10400, want: 0.66,
+    n: 50, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.MUD, 0, 40], [GK.CRATE, 0, 8], [GK.COLLECT, 0, 26]], base: 9200, want: 0.5,
     map: ['MMMMMMMM', 'M.cccc.M', 'M......M', 'M......M', 'M......M', 'M......M', 'M.cccc.M', 'MMMMMMMM', '........']
   },
   {
-    n: 51, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 13400, want: 0.91,
+    n: 51, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.COLLECT, 1, 32], [GK.COLLECT, 3, 28], [GK.COLLECT, 5, 24]], base: 12700, want: 0.79,
     map: ['###..###', '##....##', '#......#', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 52, w: 8, h: 9, types: 6, moves: 52, goals: [[GK.BRAMBLE, 0, 24]], base: 13700, want: 0.82,
+    n: 52, w: 8, h: 9, types: 6, moves: 57, goals: [[GK.BRAMBLE, 0, 24]], base: 17100, want: 0.82,
     map: ['.vvvvvv.', '.vvvvvv.', '........', '........', '........', '........', '.vvvvvv.', '.vvvvvv.', '........']
   },
   {
-    n: 53, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 14800, want: 0.84,
+    n: 53, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 4, 28]], base: 15400, want: 0.78,
     map: ['iCiiiiCi', '........', '..CCCC..', '........', '........', '........', '..CCCC..', '........', 'iCiiiiCi']
   },
   {
-    n: 54, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.RESCUE, 0, 3]], base: 9400, want: 0.77,
+    n: 54, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.RESCUE, 0, 3]], base: 10800, want: 0.66,
     map: ['##....##', '##....##', '#......#', '#......#', '........', '........', '........', '........', '........']
   },
   {
-    n: 55, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.SCORE, 0, 16400]], base: 19500, want: 0.76,
+    n: 55, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.SCORE, 0, 16400]], base: 18800, want: 0.57,
     map: ['#####...', '####....', '###.....', '##......', '#.......', '........', '........', '........', '........']
   },
   {
-    n: 56, w: 8, h: 9, types: 6, moves: 26, goals: [[GK.MUD, 0, 38]], base: 8400, want: 0.83,
+    n: 56, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.MUD, 0, 38]], base: 7900, want: 0.7,
     map: ['mmmmmmmm', 'mmmmmmmm', 'mmmmmmmm', '........', '........', '........', 'mmmmmmmm', 'mmmmmmmm', '........']
   },
   {
-    n: 57, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 13900, want: 0.74,
+    n: 57, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 17200, want: 0.62,
     map: ['mmmmmmmm', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', 'mmmmmmmm', '........']
   },
   {
-    n: 58, w: 8, h: 9, types: 6, moves: 23, goals: [[GK.CRATE, 0, 30]], base: 6100, want: 0.8,
+    n: 58, w: 8, h: 9, types: 6, moves: 20, goals: [[GK.CRATE, 0, 30]], base: 6100, want: 0.67,
     map: ['CCCCCCCC', 'C......C', 'C.cccc.C', 'C.c..c.C', 'C.c..c.C', 'C.cccc.C', 'C......C', 'CCCCCCCC', '........']
   },
   {
-    n: 59, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 11000, want: 0.74,
+    n: 59, w: 8, h: 9, types: 6, moves: 34, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 0, 24], [GK.COLLECT, 4, 20]], base: 10400, want: 0.53,
     map: ['..####..', '...##...', '...##...', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 60, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 13800, want: 0.63,
+    n: 60, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 12700, want: 0.43,
     map: ['mmmmmmmm', '.cc..cc.', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '.cc..cc.', 'mmmmmmmm', '........']
   }
 ];
@@ -4655,6 +4668,88 @@ function shapeMask(name, w, h, r) {
 }
 const SHAPES = ['bands', 'columns', 'diamond', 'ring', 'corners', 'checker', 'wedge', 'blob'];
 
+/* ---------- the board's outline ----------
+
+   Every board in the game had the outline of a rectangle. A third of
+   them carried a few holes — three on the average one, scattered one
+   cell at a time — which reads as damage rather than as a shape, and a
+   player who knows the genre names that within a few levels as the
+   thing that makes a game look cheap (14 Nov 2026, the owner's own
+   words for it). The engine has always handled any outline: a hole is
+   skipped by gravity, tiles slide diagonally past it, and a cell no
+   column can reach is filled where it stands (settle, 30-engine.js).
+
+   So these are outlines, cut from the edges inward, where they change
+   the silhouette and not the flow down the middle. Each names the cells
+   it removes; a cut only ever takes a plain cell ('.'), so no goal's
+   stock changes, and it keeps clear of a molehill's or a crate's
+   neighbours, which measured as the two places a missing cell moves a
+   level's difficulty more than its budget does. Never on a rescue
+   board: a basket has to fall the whole height of its column. */
+function silhouette(name, w, h) {
+  const out = [];
+  const cut = (y, x) => { if (y >= 0 && y < h && x >= 0 && x < w) out.push([y, x]); };
+  const mid = Math.floor((h - 1) / 2), R = w - 1, B = h - 1;
+  if (name === 'notch') {          /* the two top corners clipped */
+    cut(0, 0); cut(0, 1); cut(1, 0); cut(0, R); cut(0, R - 1); cut(1, R);
+  } else if (name === 'corners') { /* all four corners rounded off */
+    cut(0, 0); cut(0, R); cut(B, 0); cut(B, R); cut(1, 0); cut(1, R); cut(B - 1, 0); cut(B - 1, R);
+  } else if (name === 'waist') {   /* pinched in at the middle */
+    for (let y = mid - 1; y <= mid + 1; y++) { cut(y, 0); cut(y, R); }
+    cut(mid, 1); cut(mid, R - 1);
+  } else if (name === 'tower') {   /* a tower rising out of the top */
+    const side = w >= 8 ? 2 : 1;
+    for (let y = 0; y < 2; y++) for (let x = 0; x < side; x++) { cut(y, x); cut(y, R - x); }
+  } else if (name === 'crown') {   /* crenellations along the top */
+    for (let x = 0; x < w; x += 2) cut(0, x);
+  } else if (name === 'steps') {   /* a staircase down one side */
+    for (let y = 0; y < 3; y++) for (let x = 0; x < 3 - y; x++) cut(y, x);
+  } else if (name === 'heart') {   /* the game's own shape */
+    cut(0, 0); cut(0, R);
+    if (w % 2 === 0) { cut(0, w / 2 - 1); cut(0, w / 2); } else cut(0, (w - 1) / 2);
+    for (let x = 0; x < 3; x++) { cut(B, x); cut(B, R - x); }
+    for (let x = 0; x < 2; x++) { cut(B - 1, x); cut(B - 1, R - x); }
+    cut(B - 2, 0); cut(B - 2, R);
+  } else if (name === 'hollow') {  /* a well in the middle of the board */
+    const cx = Math.floor((w - 1) / 2), cy = mid;
+    cut(cy, cx); cut(cy, cx + 1); cut(cy + 1, cx); cut(cy + 1, cx + 1);
+  }
+  return out;
+}
+const SILHOUETTES = ['notch', 'corners', 'waist', 'tower', 'crown', 'steps', 'heart', 'hollow'];
+/* Cut an outline into a map, in place. Returns how many cells went. */
+function cutSilhouette(map, name, w, h) {
+  if (!name) return 0;
+  const near = (y, x, chars) => [[-1, 0], [1, 0], [0, -1], [0, 1]].some(([dy, dx]) => {
+    const row = map[y + dy];
+    return row && chars.indexOf(row[x + dx]) >= 0;
+  });
+  let n = 0;
+  silhouette(name, w, h).forEach(([y, x]) => {
+    if (map[y][x] !== '.' || near(y, x, 'oOcC')) return;
+    map[y] = map[y].slice(0, x) + '#' + map[y].slice(x + 1);
+    n++;
+  });
+  return n;
+}
+/* The authored lane, outlined by hand: the levels that had no holes and
+   no baskets to walk, from the point the player has stopped learning
+   the controls. The ones that already had a designed shape keep it. */
+const LANE_OUTLINE = {
+  8: 'heart', 11: 'crown', 13: 'notch', 15: 'waist', 17: 'tower', 18: 'corners',
+  21: 'steps', 22: 'heart', 25: 'notch', 27: 'waist', 28: 'crown', 31: 'tower',
+  34: 'heart', 38: 'corners', 43: 'steps', 46: 'waist', 47: 'heart', 50: 'crown',
+  53: 'notch', 56: 'tower', 57: 'corners', 58: 'heart'
+};
+/* the run: seven boards in ten take an outline, by a die of their own so
+   that every other roll the generator makes lands where it always did */
+function runOutline(n, kind) {
+  if (kind === GK.RESCUE) return null;
+  const d = mulberry(n * 6007 + 3);
+  if (d() < .3) return null;
+  return SILHOUETTES[Math.floor(d() * SILHOUETTES.length)];
+}
+
 /* `ref` builds the level as it would be with no target at all: the
    generator's own move count, its own goal sizes, nothing solved for.
 
@@ -4678,7 +4773,14 @@ function levelDef(n, ref, forceKind) {
      def.gate: the same level was a gate in one place and not in the
      other. */
   if (n <= LEVELS.length) {
-    const def = normaliseGoals(LEVELS[n - 1]);
+    let def = normaliseGoals(LEVELS[n - 1]);
+    if (LANE_OUTLINE[n]) {
+      /* on a copy: the table's own row is handed out, and cutting it in
+         place would cut it again on every call */
+      const map = (def.map || Array.from({ length: def.h }, () => '.'.repeat(def.w))).slice();
+      cutSilhouette(map, LANE_OUTLINE[n], def.w, def.h);
+      def = Object.assign({}, def, { map });
+    }
     def.gate = isGate(n);
     /* The live correction (14-tune.js), if there is one, goes on a copy:
        normaliseGoals hands back the table's own row, and adding to it in
@@ -4932,6 +5034,10 @@ function levelDef(n, ref, forceKind) {
   /* the goal is a share of what this particular map holds: the last few
      obstacles on a board cost many moves each, so asking for all of them
      turns the end of a level into a search */
+  /* the outline last, over plain cells only, so the goal below is sized
+     to exactly the stock it would have had */
+  cutSilhouette(map, runOutline(n, kind), w, h);
+
   const stock = mapStock({ map });
 
   /* A goal is priced in work, not in cells.
@@ -5268,6 +5374,18 @@ function starTargets(def) {
 /* Ten levels to a block. The gate is the last of them; the level after a
    gate is the softest thing in the game. */
 const BLOCK = 10;
+/* DEEPER, 14 Nov 2026. Two weeks in the store and the owner's report
+   was that anybody who knows the genre finds the game easy. Measured
+   the same day through the real game (test/all-levels.js, ten games a
+   level), the player who cannot see a cascade and never fires two
+   specials into each other cleared 93% of levels 1-20, 85% of 21-40
+   and 83% of 41-60, with a third of the budget still unspent at the
+   moment the goal was met, and not one of the first sixty levels
+   below 50%. A player who plans specials is well above that. So the
+   block asks harder at its seventh and ninth beats — the two the map
+   now marks as hard levels (isHard) — and its gate is deeper. The
+   relief after a gate is untouched: the shape is the same shape with
+   a lower trough. */
 const RHYTHM = [
   +.13,   /* 1  — relief. You have just come through a gate. */
   +.06,   /* 2  — still gentle, but it asks for something */
@@ -5275,10 +5393,10 @@ const RHYTHM = [
   -.03,   /* 4  — the first one that can go wrong */
   +.05,   /* 5  — a breather in the middle of the block */
   -.04,   /* 6 */
-  -.07,   /* 7 */
+  -.10,   /* 7  — a hard level */
   -.02,   /* 8  — a small step back before the run-up */
-  -.09,   /* 9  — the run-up */
-  -.18    /* 10 — the gate */
+  -.12,   /* 9  — the run-up, and a hard level */
+  -.21    /* 10 — the gate */
 ];
 
 /* Where the authored lane ends and the generator takes over. The lane is
@@ -5309,20 +5427,26 @@ const RUN_START = 61;
    The lane is untouched. The first sixty levels are where a new player
    learns the game, and nothing should be sold there to somebody who is
    still working out what a rocket is. */
-const EASE_FROM = .70, EASE_TO = .52, EASE_OVER = 210;
+/* .70 and .52 until 14 Nov 2026, measured too kind (see RHYTHM) */
+const EASE_FROM = .64, EASE_TO = .47, EASE_OVER = 210;
 
 /* Where the game opens, and how it bends down to meet EASE_FROM at the
    handoff. A bend of 1 would be a straight line and would spend the
    whole of the first twenty levels being nearly as hard as level fifty;
    1.4 puts the give where a new player needs it and flattens out by the
    time they don't. */
-const LANE_FROM = .93, LANE_BEND = 1.6;
+/* The bend was 1.6, which kept the first forty levels near the top of
+   the band: level 40 was drawn at .80 and measured at 85% bare. At 1.15
+   the give is still where a new player needs it — level ten is drawn
+   within two points of where it was — and it is spent by the middle of
+   the lane instead of at the end of it. */
+const LANE_FROM = .93, LANE_BEND = 1.15;
 
 /* Never certain, never impossible. The lane is allowed to be gentler at
    both ends than the run: nobody should fail level one, and nobody
    should meet a 45% wall before they have met every mechanic. */
 const CLEAR_FLOOR = .35, CLEAR_CEIL = .88;
-const LANE_FLOOR = .58, LANE_CEIL = .97;
+const LANE_FLOOR = .50, LANE_CEIL = .97;
 
 /* A level that teaches a mechanic for the first time is not a test of
    it. The lift is big enough to be felt and small enough that the level
@@ -5403,6 +5527,20 @@ function targetClear(n) {
    is sixty long and sixty is a multiple of ten. */
 function isGate(n) {
   return n >= BLOCK && n % BLOCK === 0;
+}
+
+/* A hard level: one the curve draws well below its own block, said on
+   the map and on the card the way a gate is, and paid for — a wall you
+   were warned about and rewarded for is a challenge; the same wall
+   unannounced is the game cheating. Read off the target rather than off
+   the position, because the lane hands its beats out by what each level
+   can carry (test/fit-lane.js), so its hard levels are not always the
+   seventh and the ninth. Never in the first dozen levels, and never a
+   gate, which is already its own thing. */
+const HARD_BELOW = .065;
+function isHard(n) {
+  if (n < 12 || isGate(n) || n === DAILY_LEVEL) return false;
+  return easeAt(n) - targetClear(n) >= HARD_BELOW * Math.min(1, beatScale(n) + .2);
 }
 
 /* ===== 12-curve.js ===== */
@@ -5524,55 +5662,61 @@ function budgetFor(kind, wantClear) {
    target 11-design.js draws for it. 16 games a point. A level with
    no row here takes the budget the curves give it.
 
-   940 levels fitted, mean miss 6% at that
-   sample size; 56 pinned at the floor (easier than drawn at six tenths of
+   On 14 Nov 2026 levels 61-414 were refitted to outlined boards and
+   the deeper curve, and then corrected against the real game by
+   test/real-fit.js. Rows from 415 on are still the 1 Nov fit, made for
+   rectangular boards and the kinder curve — easier than now drawn, and
+   the next fit to run.
+
+   940 levels fitted, mean miss 7% at that
+   sample size; 32 pinned at the floor (easier than drawn at six tenths of
    their budget) and 13 at the ceiling (harder than drawn at twice it). */
 const RUN_MOVES = {
-  61: 8, 62: 22, 63: 20, 64: 20, 65: 30, 66: 36, 67: 26, 68: 38,
-  69: 8, 70: 14, 71: 29, 72: 43, 73: 27, 74: 9, 75: 39, 76: 11,
-  77: 32, 78: 44, 79: 28, 80: 14, 81: 12, 82: 34, 83: 20, 84: 29,
-  85: 34, 86: 9, 87: 23, 88: 34, 89: 42, 90: 23, 91: 12, 92: 42,
-  93: 40, 94: 25, 95: 53, 96: 18, 97: 8, 98: 37, 99: 10, 100: 23,
-  101: 22, 102: 16, 103: 28, 104: 20, 105: 38, 106: 28, 107: 13, 108: 9,
-  109: 29, 110: 26, 111: 10, 112: 14, 113: 33, 114: 24, 115: 26, 116: 32,
-  117: 33, 118: 35, 119: 8, 120: 9, 121: 17, 122: 32, 123: 34, 124: 31,
-  125: 23, 126: 37, 127: 38, 128: 17, 129: 31, 130: 11, 131: 36, 132: 12,
-  133: 12, 134: 30, 135: 9, 136: 32, 137: 37, 138: 52, 139: 37, 140: 24,
-  141: 11, 142: 8, 143: 38, 144: 15, 145: 44, 146: 13, 147: 29, 148: 18,
-  149: 39, 150: 9, 151: 21, 152: 35, 153: 16, 154: 30, 155: 22, 156: 9,
-  157: 29, 158: 37, 159: 27, 160: 8, 161: 8, 162: 64, 163: 42, 164: 26,
-  165: 20, 166: 29, 167: 24, 168: 30, 169: 29, 170: 32, 171: 17, 172: 8,
-  173: 29, 174: 12, 175: 24, 176: 27, 177: 33, 178: 8, 179: 24, 180: 24,
-  181: 31, 182: 51, 183: 11, 184: 43, 185: 16, 186: 27, 187: 18, 188: 8,
-  189: 8, 190: 23, 191: 22, 192: 30, 193: 40, 194: 25, 195: 37, 196: 30,
-  197: 35, 198: 9, 199: 28, 200: 8, 201: 15, 202: 38, 203: 24, 204: 16,
-  205: 32, 206: 8, 207: 24, 208: 11, 209: 29, 210: 18, 211: 29, 212: 17,
-  213: 11, 214: 10, 215: 30, 216: 10, 217: 20, 218: 27, 219: 31, 220: 19,
-  221: 8, 222: 34, 223: 23, 224: 33, 225: 33, 226: 9, 227: 15, 228: 8,
-  229: 33, 230: 9, 231: 37, 232: 30, 233: 29, 234: 35, 235: 25, 236: 10,
-  237: 26, 238: 22, 239: 33, 240: 41, 241: 26, 242: 28, 243: 12, 244: 26,
-  245: 33, 246: 14, 247: 34, 248: 45, 249: 10, 250: 8, 251: 31, 252: 12,
-  253: 19, 254: 48, 255: 36, 256: 18, 257: 25, 258: 19, 259: 9, 260: 31,
-  261: 30, 262: 9, 263: 31, 264: 16, 265: 31, 266: 24, 267: 38, 268: 28,
-  269: 16, 270: 8, 271: 21, 272: 8, 273: 9, 274: 14, 275: 33, 276: 21,
-  277: 26, 278: 26, 279: 8, 280: 18, 281: 35, 282: 41, 283: 41, 284: 12,
-  285: 12, 286: 8, 287: 36, 288: 26, 289: 27, 290: 36, 291: 23, 292: 13,
-  293: 37, 294: 29, 295: 12, 296: 28, 297: 18, 298: 8, 299: 26, 300: 31,
-  301: 22, 302: 22, 303: 26, 304: 28, 305: 8, 306: 11, 307: 30, 308: 28,
-  309: 35, 310: 9, 311: 19, 312: 11, 313: 18, 314: 11, 315: 33, 316: 26,
-  317: 21, 318: 9, 319: 31, 320: 8, 321: 19, 322: 31, 323: 28, 324: 10,
-  325: 11, 326: 32, 327: 9, 328: 28, 329: 25, 330: 10, 331: 11, 332: 52,
-  333: 12, 334: 30, 335: 26, 336: 26, 337: 23, 338: 8, 339: 44, 340: 33,
-  341: 21, 342: 30, 343: 48, 344: 10, 345: 9, 346: 28, 347: 15, 348: 28,
-  349: 11, 350: 8, 351: 18, 352: 39, 353: 27, 354: 20, 355: 32, 356: 31,
-  357: 10, 358: 28, 359: 15, 360: 8, 361: 24, 362: 23, 363: 8, 364: 37,
-  365: 34, 366: 24, 367: 30, 368: 12, 369: 17, 370: 21, 371: 11, 372: 48,
-  373: 8, 374: 26, 375: 33, 376: 8, 377: 23, 378: 10, 379: 20, 380: 27,
-  381: 18, 382: 10, 383: 9, 384: 16, 385: 34, 386: 27, 387: 10, 388: 22,
-  389: 28, 390: 8, 391: 20, 392: 27, 393: 27, 394: 8, 395: 34, 396: 8,
-  397: 25, 398: 34, 399: 28, 400: 30, 401: 9, 402: 39, 403: 8, 404: 16,
-  405: 32, 406: 8, 407: 40, 408: 10, 409: 25, 410: 28, 411: 11, 412: 21,
-  413: 13, 414: 29, 415: 9, 416: 25, 417: 21, 418: 11, 419: 26, 420: 23,
+  61: 9, 62: 21, 63: 20, 64: 16, 65: 28, 66: 37, 67: 16, 68: 44,
+  69: 9, 70: 21, 71: 27, 72: 31, 73: 25, 74: 9, 75: 38, 76: 10,
+  77: 26, 78: 39, 79: 28, 80: 16, 81: 16, 82: 33, 83: 13, 84: 29,
+  85: 32, 86: 8, 87: 24, 88: 39, 89: 35, 90: 27, 91: 13, 92: 47,
+  93: 37, 94: 17, 95: 46, 96: 17, 97: 8, 98: 31, 99: 11, 100: 26,
+  101: 36, 102: 14, 103: 26, 104: 12, 105: 31, 106: 27, 107: 13, 108: 10,
+  109: 25, 110: 23, 111: 10, 112: 13, 113: 32, 114: 20, 115: 22, 116: 29,
+  117: 33, 118: 31, 119: 8, 120: 9, 121: 17, 122: 30, 123: 33, 124: 28,
+  125: 13, 126: 30, 127: 34, 128: 16, 129: 42, 130: 10, 131: 33, 132: 10,
+  133: 15, 134: 30, 135: 8, 136: 28, 137: 41, 138: 34, 139: 29, 140: 21,
+  141: 10, 142: 10, 143: 44, 144: 13, 145: 38, 146: 16, 147: 17, 148: 18,
+  149: 38, 150: 9, 151: 13, 152: 32, 153: 15, 154: 30, 155: 22, 156: 8,
+  157: 24, 158: 31, 159: 27, 160: 8, 161: 8, 162: 41, 163: 48, 164: 23,
+  165: 17, 166: 26, 167: 22, 168: 30, 169: 24, 170: 18, 171: 13, 172: 11,
+  173: 31, 174: 8, 175: 20, 176: 28, 177: 25, 178: 8, 179: 24, 180: 8,
+  181: 33, 182: 48, 183: 9, 184: 31, 185: 14, 186: 25, 187: 15, 188: 8,
+  189: 8, 190: 43, 191: 29, 192: 28, 193: 27, 194: 33, 195: 43, 196: 31,
+  197: 24, 198: 9, 199: 24, 200: 8, 201: 14, 202: 37, 203: 29, 204: 21,
+  205: 22, 206: 8, 207: 23, 208: 11, 209: 24, 210: 17, 211: 25, 212: 16,
+  213: 18, 214: 10, 215: 31, 216: 9, 217: 26, 218: 23, 219: 24, 220: 21,
+  221: 8, 222: 28, 223: 18, 224: 31, 225: 28, 226: 11, 227: 16, 228: 8,
+  229: 31, 230: 8, 231: 36, 232: 33, 233: 24, 234: 34, 235: 21, 236: 9,
+  237: 23, 238: 20, 239: 28, 240: 36, 241: 26, 242: 24, 243: 12, 244: 32,
+  245: 32, 246: 13, 247: 26, 248: 27, 249: 9, 250: 8, 251: 27, 252: 9,
+  253: 18, 254: 46, 255: 31, 256: 20, 257: 24, 258: 21, 259: 10, 260: 24,
+  261: 32, 262: 8, 263: 30, 264: 17, 265: 33, 266: 19, 267: 30, 268: 25,
+  269: 18, 270: 8, 271: 17, 272: 8, 273: 10, 274: 14, 275: 26, 276: 26,
+  277: 24, 278: 22, 279: 8, 280: 19, 281: 34, 282: 42, 283: 36, 284: 13,
+  285: 13, 286: 8, 287: 30, 288: 28, 289: 22, 290: 23, 291: 28, 292: 14,
+  293: 37, 294: 27, 295: 15, 296: 29, 297: 19, 298: 8, 299: 16, 300: 20,
+  301: 22, 302: 25, 303: 28, 304: 26, 305: 8, 306: 10, 307: 20, 308: 29,
+  309: 38, 310: 9, 311: 16, 312: 12, 313: 16, 314: 9, 315: 27, 316: 26,
+  317: 25, 318: 8, 319: 29, 320: 10, 321: 12, 322: 24, 323: 21, 324: 10,
+  325: 8, 326: 27, 327: 21, 328: 28, 329: 18, 330: 8, 331: 10, 332: 54,
+  333: 11, 334: 31, 335: 24, 336: 27, 337: 8, 338: 8, 339: 36, 340: 25,
+  341: 19, 342: 31, 343: 53, 344: 8, 345: 8, 346: 39, 347: 28, 348: 27,
+  349: 8, 350: 8, 351: 12, 352: 43, 353: 28, 354: 18, 355: 23, 356: 32,
+  357: 11, 358: 20, 359: 8, 360: 8, 361: 34, 362: 20, 363: 8, 364: 28,
+  365: 27, 366: 23, 367: 19, 368: 11, 369: 9, 370: 19, 371: 8, 372: 45,
+  373: 8, 374: 25, 375: 26, 376: 10, 377: 16, 378: 20, 379: 22, 380: 15,
+  381: 21, 382: 9, 383: 9, 384: 16, 385: 27, 386: 29, 387: 9, 388: 15,
+  389: 24, 390: 10, 391: 17, 392: 21, 393: 22, 394: 8, 395: 30, 396: 8,
+  397: 27, 398: 27, 399: 27, 400: 31, 401: 9, 402: 38, 403: 8, 404: 18,
+  405: 21, 406: 8, 407: 29, 408: 16, 409: 26, 410: 17, 411: 14, 412: 14,
+  413: 13, 414: 24, 415: 9, 416: 25, 417: 21, 418: 11, 419: 26, 420: 23,
   421: 29, 422: 17, 423: 14, 424: 43, 425: 10, 426: 27, 427: 24, 428: 8,
   429: 8, 430: 28, 431: 15, 432: 34, 433: 11, 434: 25, 435: 29, 436: 9,
   437: 22, 438: 31, 439: 22, 440: 23, 441: 22, 442: 35, 443: 24, 444: 32,
@@ -5652,22 +5796,23 @@ const RUN_MOVES = {
    work was changed as well: the goal is this many times what the
    generator would have asked for, before the budget above was fitted. */
 const RUN_WORK = {
-  61: 2, 62: 1.5, 63: 2, 97: 2, 99: 1.25, 101: 2, 104: 0.55, 114: 0.55,
-  119: 2, 142: 2, 151: 2, 160: 2, 161: 2, 162: 0.55, 167: 0.85, 178: 2,
-  180: 0.85, 187: 0.55, 188: 2, 200: 2, 221: 2, 228: 2, 241: 0.55, 250: 2,
-  254: 0.85, 269: 0.55, 270: 2, 271: 2, 279: 2, 285: 1.25, 298: 2, 305: 2,
-  311: 2, 313: 0.55, 321: 2, 338: 2, 350: 2, 360: 2, 363: 2, 372: 0.85,
-  373: 2, 376: 2, 381: 2, 383: 1.25, 384: 0.55, 394: 2, 396: 2, 403: 2,
-  406: 2, 429: 2, 445: 2, 447: 2, 448: 0.7, 449: 2, 451: 1.25, 456: 2,
-  464: 2, 480: 2, 492: 0.55, 512: 1.25, 516: 2, 517: 1.5, 518: 2, 519: 0.7,
-  524: 2, 529: 2, 537: 0.55, 549: 2, 554: 0.55, 558: 0.55, 559: 2, 567: 2,
-  577: 2, 600: 2, 604: 2, 612: 2, 613: 2, 617: 1.25, 619: 2, 637: 0.55,
-  650: 2, 663: 2, 677: 2, 678: 2, 680: 2, 681: 2, 688: 0.55, 697: 2,
-  700: 1.25, 709: 2, 713: 2, 721: 2, 728: 2, 731: 0.55, 757: 2, 759: 0.85,
-  760: 2, 764: 2, 769: 0.55, 780: 2, 785: 2, 792: 2, 793: 2, 816: 2,
-  820: 1.25, 821: 2, 827: 1.25, 841: 1.25, 858: 0.55, 865: 2, 871: 1.25, 879: 1.25,
-  884: 2, 901: 0.55, 905: 2, 910: 2, 921: 0.55, 938: 0.55, 945: 2, 955: 2,
-  957: 0.55, 960: 2, 981: 2, 996: 2
+  62: 2, 67: 2, 69: 1.25, 74: 1.25, 97: 2, 99: 1.25, 104: 0.55, 114: 0.55,
+  119: 2, 148: 0.55, 150: 1.25, 151: 2, 155: 0.55, 156: 2, 160: 2, 161: 2,
+  167: 0.7, 180: 2, 188: 2, 200: 2, 221: 2, 230: 1.5, 240: 0.55, 241: 0.55,
+  250: 2, 269: 0.55, 270: 2, 272: 2, 273: 1.25, 279: 2, 286: 2, 298: 2,
+  305: 2, 311: 2, 313: 0.55, 320: 1.5, 321: 2, 324: 1.5, 332: 0.55, 337: 2,
+  338: 2, 345: 2, 349: 2, 350: 2, 359: 2, 360: 2, 372: 0.85, 376: 0.55,
+  378: 0.55, 381: 2, 384: 0.55, 394: 2, 396: 2, 406: 2, 408: 0.55, 429: 2,
+  445: 2, 447: 2, 448: 0.7, 449: 2, 451: 1.25, 456: 2, 464: 2, 480: 2,
+  492: 0.55, 512: 1.25, 516: 2, 517: 1.5, 518: 2, 519: 0.7, 524: 2, 529: 2,
+  537: 0.55, 549: 2, 554: 0.55, 558: 0.55, 559: 2, 567: 2, 577: 2, 600: 2,
+  604: 2, 612: 2, 613: 2, 617: 1.25, 619: 2, 637: 0.55, 650: 2, 663: 2,
+  677: 2, 678: 2, 680: 2, 681: 2, 688: 0.55, 697: 2, 700: 1.25, 709: 2,
+  713: 2, 721: 2, 728: 2, 731: 0.55, 757: 2, 759: 0.85, 760: 2, 764: 2,
+  769: 0.55, 780: 2, 785: 2, 792: 2, 793: 2, 816: 2, 820: 1.25, 821: 2,
+  827: 1.25, 841: 1.25, 858: 0.55, 865: 2, 871: 1.25, 879: 1.25, 884: 2, 901: 0.55,
+  905: 2, 910: 2, 921: 0.55, 938: 0.55, 945: 2, 955: 2, 957: 0.55, 960: 2,
+  981: 2, 996: 2
 };
 
 /* the fitted budget for a level, or undefined when it was never fitted */
@@ -6021,7 +6166,7 @@ const SAVE_VERSION = 2;
 /* what a build calls itself when it reports anything. Bumped by hand,
    with android/app/build.gradle's versionName, so a crash from an old
    install is not read as one from the current one. */
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 
 function migrate(d) {
   const v = d.v || 1;
@@ -6418,6 +6563,66 @@ function returnHeart() {
   return true;
 }
 function forfeitHeart() { SAVE.heartHeld = false; }
+
+/* ---------- a budget that follows the player ----------
+
+   Every move budget in the game is fitted to one player: the one in
+   test/_solver.js who scores what a match visibly does and cannot see
+   a cascade coming. That is the right player to fit to — it is about
+   where a person new to the genre plays — and it is the wrong game for
+   anybody who has played a hundred match-3 levels before, who meets
+   the same budget a third of it unspent. The owner's report two weeks
+   after launch was exactly that, and both readings of it are true at
+   once, so the answer is not one curve but two ends of one:
+
+     a player who keeps winning first time with room to spare is dealt
+     fewer moves on a level they have not cleared, up to eighteen
+     percent fewer, in proportion to how much room they have been
+     leaving; and
+
+     a player who has failed the same level three times is dealt one
+     more move for each further failure, up to four (three on a gate),
+     because the fourth attempt at a wall is where people uninstall.
+
+   The form is the last ten first attempts at levels not yet cleared:
+   won or not, and the share of the budget left when the goal was met.
+   Score-only levels play their moves out, so they say nothing and are
+   not counted; a win bought with a carry-on counts as a loss, because
+   it was one. Every reading is local and clamped, the floor is the
+   live-tuning floor, and the whole thing can be switched off or scaled
+   from the tuning file (tuneAdapt) without a build. */
+const FORM_KEEP = 10, FORM_MIN = 6, ADAPT_CUT_MAX = .18;
+function noteForm(won, spare) {
+  if (!SAVE.form) SAVE.form = [];
+  SAVE.form.push({ w: won ? 1 : 0, s: won ? Math.round(clamp(spare, 0, 1) * 100) / 100 : 0 });
+  if (SAVE.form.length > FORM_KEEP) SAVE.form.splice(0, SAVE.form.length - FORM_KEEP);
+}
+function formOf() {
+  const f = SAVE.form || [];
+  const wins = f.filter(x => x.w);
+  return {
+    n: f.length,
+    W: f.length ? wins.length / f.length : 0,
+    S: wins.length ? wins.reduce((a, x) => a + x.s, 0) / wins.length : 0
+  };
+}
+/* The change to level n's budget: negative for a player in form,
+   positive for one stuck here. `fails` is how many attempts at this
+   level came before the one about to be played. */
+function adaptMoves(n, base, fails) {
+  const rule = tuneAdapt();
+  if (!rule.on || n < 15 || n === DAILY_LEVEL || (SAVE.stars && SAVE.stars[n])) return 0;
+  const k = rule.k || 1;
+  if (fails >= 3) {
+    const help = Math.min(isGate(n) ? 3 : 4, fails - 2);
+    return Math.round(help * k);
+  }
+  const F = formOf();
+  if (fails >= 2 || F.n < FORM_MIN || F.W < .75 || F.S < .22) return 0;
+  const frac = clamp(((F.S - .18) * .6 + (F.W - .75) * .2) * k, 0, ADAPT_CUT_MAX);
+  const cut = Math.round(base * frac);
+  return -Math.min(cut, Math.max(0, base - TUNE_MOVES_FLOOR));
+}
 
 /* ---------- unlimited hearts ----------
 
@@ -12399,38 +12604,84 @@ function drawTileShadow(c, cx, cy, s, lift) {
   c.restore();
 }
 
-/* a hole in the board: you can see down into the dark */
-const holeCache = new Map();
-function holeSprite(px) {
-  const key = Math.round(px) + (PAL.dark ? 'd' : 'l');
-  let cv = holeCache.get(key);
-  if (cv) return cv;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  const W = Math.round(px) + 4;
-  cv = document.createElement('canvas');
-  cv.width = Math.round(W * dpr); cv.height = Math.round(W * dpr);
-  const c = cv.getContext('2d');
-  c.setTransform(dpr, 0, 0, dpr, 0, 0);
-  c.translate(W / 2, W / 2);
-  const s = px;
-  const g = c.createRadialGradient(0, -s * .08, s * .04, 0, 0, s * .52);
-  g.addColorStop(0, rgba('#000000', PAL.dark ? .62 : .44));
-  g.addColorStop(.72, rgba('#000000', PAL.dark ? .3 : .18));
-  g.addColorStop(1, rgba('#000000', 0));
-  c.fillStyle = g;
-  c.beginPath(); c.arc(0, 0, s * .52, 0, 6.2832); c.fill();
-  /* a glint on the far lip so it reads as an opening, not a stain */
-  c.strokeStyle = rgba('#FFFFFF', PAL.dark ? .08 : .22);
-  c.lineWidth = Math.max(.8, s * .02);
-  c.beginPath(); c.arc(0, s * .02, s * .34, Math.PI * .15, Math.PI * .85);
-  c.stroke();
-  cv._w = W;
-  holeCache.set(key, cv);
-  return cv;
+/* A board with an outline.
+
+   A hole used to be drawn as a pit in the felt — a dark radial blot with
+   a glint on its lip — inside a tray that stayed a rectangle whatever
+   the board was. Ninety-odd levels in three hundred carried a few, and
+   they read as damage. With outlines on most of the run (cutSilhouette,
+   10-data.js) the tray follows the cells instead: the frame is the union
+   of every open cell grown by the pad, the well is the union of the
+   cells themselves, and a hole is simply frame — wood where there is no
+   board, at the edge and in the middle alike. The inner shade falls
+   along whichever edge of a cell has frame above it or to its left, so
+   a notch is lit like the rim it is. */
+function cellsPath(c, B, x, y, cs, grow, rad) {
+  c.beginPath();
+  for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) {
+    if (B.cell[r][k].hole) continue;
+    const L = x + k * cs - grow, T = y + r * cs - grow, S = cs + grow * 2;
+    if (rad > 0) {
+      c.moveTo(L + rad, T);
+      c.arcTo(L + S, T, L + S, T + S, rad); c.arcTo(L + S, T + S, L, T + S, rad);
+      c.arcTo(L, T + S, L, T, rad); c.arcTo(L, T, L + S, T, rad);
+      c.closePath();
+    } else c.rect(L, T, S, S);
+  }
 }
-function drawHole(c, cx, cy, s) {
-  const sp = holeSprite(s);
-  c.drawImage(sp, cx - sp._w / 2, cy - sp._w / 2, sp._w, sp._w);
+function boardHasHoles(B) {
+  if (!B) return false;
+  for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) if (B.cell[r][k].hole) return true;
+  return false;
+}
+function drawShapedTray(c, x, y, cs, B, pad) {
+  const w = cs * B.w, h = cs * B.h, rad = pad * 1.25;
+  c.save();
+  /* drop shadow, then the frame with its grain */
+  c.save(); c.translate(0, pad * .5);
+  cellsPath(c, B, x, y, cs, pad, rad);
+  c.fillStyle = rgba('#2A1E12', PAL.dark ? .55 : .2); c.fill();
+  c.restore();
+  const g = c.createLinearGradient(x - pad, y - pad, x + w * .2, y + h + pad);
+  if (PAL.dark) { g.addColorStop(0, '#3A4A5C'); g.addColorStop(.5, '#2A3746'); g.addColorStop(1, '#1C2836'); }
+  else { g.addColorStop(0, '#E2C9A2'); g.addColorStop(.5, '#CDA97C'); g.addColorStop(1, '#AE8A62'); }
+  cellsPath(c, B, x, y, cs, pad, rad);
+  c.fillStyle = g; c.fill();
+  c.save();
+  cellsPath(c, B, x, y, cs, pad, rad); c.clip();
+  c.strokeStyle = rgba('#3A2614', PAL.dark ? .22 : .16);
+  c.lineWidth = Math.max(.6, pad * .1);
+  for (let i = 0; i < 7; i++) {
+    const yy = y - pad + (i + .5) * (h + pad * 2) / 7;
+    c.beginPath(); c.moveTo(x - pad, yy);
+    c.quadraticCurveTo(x + w * .5, yy + (i % 2 ? pad * .3 : -pad * .3), x + w + pad, yy);
+    c.stroke();
+  }
+  c.restore();
+  /* the well, and its inner shade along every edge that has frame on
+     its upper or left side */
+  cellsPath(c, B, x, y, cs, 0, 0);
+  c.fillStyle = PAL.boardBg; c.fill();
+  c.save();
+  cellsPath(c, B, x, y, cs, 0, 0); c.clip();
+  const open = (r, k) => r >= 0 && k >= 0 && r < B.h && k < B.w && !B.cell[r][k].hole;
+  const depth = pad * 2.6, side = pad * 2;
+  for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) {
+    if (!open(r, k)) continue;
+    const L = x + k * cs, T = y + r * cs;
+    if (!open(r - 1, k)) {
+      const sh = c.createLinearGradient(0, T, 0, T + depth);
+      sh.addColorStop(0, rgba('#000000', PAL.dark ? .45 : .2)); sh.addColorStop(1, rgba('#000000', 0));
+      c.fillStyle = sh; c.fillRect(L, T, cs, depth);
+    }
+    if (!open(r, k - 1)) {
+      const sv = c.createLinearGradient(L, 0, L + side, 0);
+      sv.addColorStop(0, rgba('#000000', PAL.dark ? .3 : .13)); sv.addColorStop(1, rgba('#000000', 0));
+      c.fillStyle = sv; c.fillRect(L, T, side, cs);
+    }
+  }
+  c.restore();
+  c.restore();
 }
 
 /* the frame around the whole board */
@@ -15626,12 +15877,16 @@ let TRAY = { key: '', cv: null, w: 0, h: 0, m: 0 };
 function stampTray(c) {
   const pad = BOARD_PAD, m = Math.ceil(pad * 1.7);
   const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  const key = [G.boardW, G.boardH, PAL.boardBg, PAL.dark ? 1 : 0, dpr].join('|');
+  /* the outline is part of the tray now, so it is part of the key */
+  const shaped = boardHasHoles(G.B);
+  const outline = shaped ? G.B.cell.map(row => row.map(cell => cell.hole ? 1 : 0).join('')).join('/') : '';
+  const key = [G.boardW, G.boardH, PAL.boardBg, PAL.dark ? 1 : 0, dpr, outline].join('|');
   if (TRAY.key !== key) {
     const w = Math.ceil(G.boardW + m * 2), h = Math.ceil(G.boardH + m * 2);
     const cv = document.createElement('canvas');
     const cc = fitCanvas(cv, w, h);
-    drawTray(cc, m, m, G.boardW, G.boardH, pad);
+    if (shaped) drawShapedTray(cc, m, m, G.cell, G.B, pad);
+    else drawTray(cc, m, m, G.boardW, G.boardH, pad);
     TRAY = { key, cv, w, h, m };
   }
   c.drawImage(TRAY.cv, G.ox - TRAY.m, G.oy - TRAY.m, TRAY.w, TRAY.h);
@@ -15779,13 +16034,20 @@ function startLevel(n, opts) {
   /* which attempt at this level, not how many levels ever: the number a
      wall shows up in is attempts per level */
   if (!res && n > 0) { if (!SAVE.tries) SAVE.tries = {}; SAVE.tries[n] = (SAVE.tries[n] || 0) + 1; }
-  track('level_start', { n: n, moves: G.def.moves, attempt: n > 0 ? ((SAVE.tries && SAVE.tries[n]) || 1) : 0, tries: (SAVE.stats.played || 0), resumed: !!res });
+  /* the budget that follows the player (adaptMoves, 15-save.js), read
+     before anything is added to it; a resumed level keeps what it had */
+  const tries = n > 0 ? ((SAVE.tries && SAVE.tries[n]) || 1) : 0;
+  const adapt = res || n <= 0 ? 0 : adaptMoves(n, G.def.moves, tries - 1);
+  /* this attempt counts towards the form only if it is the first at a
+     level not yet cleared, and only once (noteForm) */
+  G.formOpen = !res && n > 0 && tries === 1 && !SAVE.stars[n];
+  track('level_start', { n: n, moves: G.def.moves + adapt, adapt: adapt, attempt: tries, tries: (SAVE.stats.played || 0), resumed: !!res });
   G.B = makeBoard(G.def, n * 104729 + (opts.reseed || 0));
   G.B.pupQueue = 0;
   if (res) restoreBoard(G.B, res);
   const pet = activePet();
   const perks = res ? [] : (opts.perks || []);
-  let moves = res ? res.moves : G.def.moves;
+  let moves = res ? res.moves : G.def.moves + adapt;
   G.scoreMul = res ? (res.scoreMul || 1) : 1;
   G.charge = res ? (res.charge || 0) : 0;
   perks.forEach(p => {
@@ -15795,6 +16057,7 @@ function startLevel(n, opts) {
   });
   if (opts.extraMoves && !res) moves += opts.extraMoves;
   G.moves = moves;
+  G.budget = moves;
   /* moves actually played, which is what quitting asks about; a level
      kept before this was counted had been played, or it was not kept */
   G.made = res ? (res.made !== undefined ? res.made : 1) : 0;
@@ -16057,6 +16320,11 @@ function syncHud() {
   $('#movesLbl').textContent = T('g_moves');
   $('#scoreLbl').textContent = T('g_score');
   $('#movesBox').classList.toggle('low', G.moves <= 5);
+  /* a hard level or a gate says so on the board as well as on the card:
+     the card is gone by the time it matters */
+  const tag = G.n > 0 && !SAVE.stars[G.n] ? (isGate(G.n) ? T('g_gate') : isHard(G.n) ? T('g_hard') : '') : '';
+  $('#movesBox').classList.toggle('hard', !!tag);
+  $('#movesBox').dataset.tag = tag;
   $('#scoreN').textContent = fmt(G.score);
   const pct = clamp(G.score / G.starTargets[2], 0, 1) * 100;
   $('#starFill').style.width = pct + '%';
@@ -17242,9 +17510,17 @@ function checkEnd() {
   keepLevel();
 }
 
+/* one entry in the player's form per first attempt (adaptMoves) */
+function closeForm(won) {
+  if (!G.formOpen) return;
+  G.formOpen = false;
+  if (scoreOnlyLevel()) return;
+  noteForm(won && !(G.extras || 0), G.moves / Math.max(1, G.budget || G.def.moves));
+}
 async function finishWin() {
   const _ep = levelEpoch();
   G.busy = true;
+  closeForm(true);
   track('level_win', { n: G.n, left: G.moves, score: G.score,
     stars: G.starsEarned, chain: G.bestChain, secs: (now() - (G.startedAt || now())) / 1000 });
   SFX.win();
@@ -17318,6 +17594,7 @@ async function finishWin() {
 async function finishLose() {
   const _ep = levelEpoch();
   G.busy = true;
+  closeForm(false);
   /* `short` is the share of the goal still outstanding: a level
      people lose at 5% is tuned, one they lose at 60% is a wall. */
   const need = G.goals.reduce((a, g) => a + g.need, 0);
@@ -17384,7 +17661,7 @@ function renderGame(dt) {
   /* cells */
   eachCell(B, (cell, r, c2) => {
     const x = cellX(c2) + G.cell / 2, y = cellY(r) + G.cell / 2;
-    if (cell.hole) { drawHole(c, x, y, G.cell); return; }
+    if (cell.hole) return;
     drawCellBed(c, x, y, G.cell - 3, cell, (r + c2) % 2 === 0);
     if (cell.mud > 0) {
       /* full cell, so it shows around the tile's rounded corners */
@@ -18856,6 +19133,7 @@ function drawMap() {
 }
 function drawMapNode(c, n) {
   const gate = typeof isGate === 'function' && isGate(n.n);
+  const hard = typeof isHard === 'function' && isHard(n.n);
   const cleared = SAVE.stars[n.n] > 0;
   const unlocked = n.n <= SAVE.reached;
   const current = n.n === SAVE.reached;
@@ -18868,6 +19146,9 @@ function drawMapNode(c, n) {
   let fill1, fill2, txt;
   if (!unlocked) { fill1 = PAL.surface3; fill2 = shade(PAL.surface3, -.14); txt = PAL.textDim; }
   else if (cleared) { fill1 = mix(PAL.sage, '#FFFFFF', .25); fill2 = PAL.sage; txt = inkOn(PAL.sage); }
+  /* a hard level not yet cleared is rose rather than amber, from as far
+     down the lane as it can be seen (isHard, 11-design.js) */
+  else if (hard) { fill1 = mix(PAL.rose, '#FFFFFF', .28); fill2 = PAL.rose; txt = inkOn(PAL.rose); }
   else { fill1 = mix(PAL.accent, '#FFFFFF', .3); fill2 = PAL.accent; txt = inkOn(PAL.accent); }
   const g = c.createLinearGradient(0, n.y - R, 0, n.y + R);
   g.addColorStop(0, fill1); g.addColorStop(1, fill2);
@@ -18888,6 +19169,21 @@ function drawMapNode(c, n) {
     c.save();
     c.strokeStyle = rgba(PAL.rose, .5); c.lineWidth = 2;
     ellipse(c, n.x, n.y, R + 4, R + 4); c.stroke();
+    c.restore();
+  }
+  /* and a flame on its shoulder, locked or not, until it is beaten */
+  if (hard && !cleared) {
+    const fx = n.x + R * .74, fy = n.y - R * .74, s = Math.max(7, R * .34);
+    c.save();
+    c.fillStyle = PAL.rose; c.strokeStyle = rgba('#FFFFFF', .9); c.lineWidth = 1.6;
+    c.beginPath();
+    c.moveTo(fx, fy - s * 1.25);
+    c.bezierCurveTo(fx + s * 1.05, fy - s * .2, fx + s * .9, fy + s, fx, fy + s);
+    c.bezierCurveTo(fx - s * .9, fy + s, fx - s * 1.05, fy - s * .1, fx - s * .25, fy - s * .55);
+    c.quadraticCurveTo(fx - s * .1, fy - s * .1, fx, fy - s * 1.25);
+    c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = rgba('#FFFFFF', .85);
+    c.beginPath(); c.ellipse(fx, fy + s * .35, s * .32, s * .45, 0, 0, 6.2832); c.fill();
     c.restore();
   }
   if (current) {
@@ -19476,7 +19772,7 @@ function openFeed() {
     <div class="grid2" id="feedGrid">
       ${owned.map(f => `
         <button class="good" data-id="${f.id}">
-          <div class="art"><canvas data-art="${f.id}" width="74" height="74"></canvas></div>
+          <div class="art"><canvas data-art="${f.id}" width="66" height="66"></canvas></div>
           <div class="nm">${goodName(f)}</div>
           <div class="ds">+${f.food} ${T('st_food').toLowerCase()} · +${f.joy} ${T('st_joy').toLowerCase()}</div>
           <span class="pill info" style="align-self:center">x${SAVE.food[f.id]}</span>
@@ -19668,6 +19964,28 @@ function askSize(cv, fallback) {
   if (cv.dataset.px === undefined) cv.dataset.px = cv.width || fallback;
   return +cv.dataset.px;
 }
+const GOOD_FIT = new Map();
+function goodFit(id, px) {
+  const key = id + '|' + px;
+  if (GOOD_FIT.has(key)) return GOOD_FIT.get(key);
+  let k = 1.32;
+  try {
+    const W = px * 3, cv = document.createElement('canvas');
+    cv.width = cv.height = W;
+    const c = cv.getContext('2d');
+    c.translate(W / 2, W / 2);
+    paintGood(c, id, px);
+    const d = c.getImageData(0, 0, W, W).data;
+    let ext = 0;
+    for (let y = 0; y < W; y++) for (let x = 0; x < W; x++) {
+      if (d[(y * W + x) * 4 + 3] > 24) ext = Math.max(ext, Math.abs(x - W / 2), Math.abs(y - W / 2));
+    }
+    /* the widest reach from the centre, kept inside 46% of the box */
+    if (ext > 0) k = Math.min(1.32, px * .46 / ext);
+  } catch (e) { /* a canvas that cannot be read back keeps the old size */ }
+  GOOD_FIT.set(key, k);
+  return k;
+}
 function paintArtCanvases(root) {
   $$('canvas[data-art]', root).forEach(cv => {
     const px = askSize(cv, 54);
@@ -19679,9 +19997,15 @@ function paintArtCanvases(root) {
     c.fillStyle = rgba('#3A2A16', .13);
     ellipse(c, 0, px * .30, px * .21, px * .045); c.fill();
     c.restore();
-    /* the drawings are laid out inside about six tenths of their box;
-       filling more of it is the difference between a good and an icon */
-    c.save(); c.scale(1.32, 1.32);
+    /* The drawings are laid out inside about six tenths of their box,
+       and filling more of it is the difference between a good and an
+       icon — so they were all drawn a third larger. Not all of them
+       were six tenths: the ball of yarn ran off the right of its card
+       and the tuna lost the top of its tin (seen on a phone-sized
+       shop, 14 Nov 2026). Each is now measured once and scaled to fill
+       the box without leaving it. */
+    const k = goodFit(cv.dataset.art, px);
+    c.save(); c.scale(k, k);
     paintGood(c, cv.dataset.art, px);
     c.restore();
   });
@@ -19893,7 +20217,7 @@ function shopFood() {
   return `<div class="sectitle"><h3>${T('shop_food')}</h3></div>
   <div class="grid2">${FOODS.map(f => `
     <div class="good">
-      <div class="art"><canvas data-art="${f.id}" width="74" height="74"></canvas>
+      <div class="art"><canvas data-art="${f.id}" width="66" height="66"></canvas>
         ${(SAVE.food[f.id] || 0) ? `<span class="stock" title="${T('shop_have', { n: SAVE.food[f.id] })}">&times;${SAVE.food[f.id]}</span>` : ''}</div>
       <div class="nm">${goodName(f)}</div>
       <div class="ds">${goodDesc(f)}${foodEffect(f)}</div>
@@ -19905,7 +20229,7 @@ function shopToys() {
   <div class="grid2">${TOYS.map(t => {
     const owned = !!SAVE.toys[t.id];
     return `<div class="good ${owned ? 'owned' : ''}">
-      <div class="art"><canvas data-art="${t.id}" width="74" height="74"></canvas></div>
+      <div class="art"><canvas data-art="${t.id}" width="66" height="66"></canvas></div>
       <div class="nm">${goodName(t)}</div>
       <div class="ds">${goodDesc(t)} +${t.joy} ${T('st_joy').toLowerCase()}</div>
       ${owned ? `<span class="pill ok" style="align-self:flex-start">${IC.check}${T('shop_owned')}</span>`
@@ -20627,11 +20951,15 @@ function openLevelIntro(n) {
   let adMoves = 0;
 
   const m = modal(`
-    <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
+    <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + adaptMoves(n, def.moves, (SAVE.tries && SAVE.tries[n]) || 0) + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
     <h2>${T('lvl_goals')}</h2>
     ${def.gate ? `<div class="goalItem gateNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('gate_t')}</b>${T('gate_s')}</span>
+    </div>` : ''}
+    ${isHard(n) && !SAVE.stars[n] ? `<div class="goalItem gateNote">
+      <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
+      <span class="t"><b>${T('hard_t')}</b>${T('hard_s', { n: Math.round((ECON.hardPay - 1) * 100) })}</span>
     </div>` : ''}
     ${n !== DAILY_LEVEL && !SAVE.stars[n] && SAVE.winRun > 0 ? `<div class="goalItem runNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
@@ -21088,7 +21416,9 @@ function commitWin() {
      or a quarter if you actually beat the number you left there. */
   const base = Math.round((ECON.winBase + stars * ECON.winPerStar
     + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
-  const rate = first ? 1 : (newBest ? ECON.replayBestRate : ECON.replayRate);
+  /* a hard level pays half again the first time: warned about and paid
+     for, it is a challenge rather than a wall (isHard) */
+  const rate = first ? (isHard(n) ? ECON.hardPay : 1) : (newBest ? ECON.replayBestRate : ECON.replayRate);
   const coins = tunePay('coin', Math.max(first ? 0 : 1, Math.round(base * rate)));
   let treats = 0;
   if (stars === 3 && prev < 3) treats += tunePay('treat', isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats);

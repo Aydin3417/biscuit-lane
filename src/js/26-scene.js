@@ -1027,38 +1027,84 @@ function drawTileShadow(c, cx, cy, s, lift) {
   c.restore();
 }
 
-/* a hole in the board: you can see down into the dark */
-const holeCache = new Map();
-function holeSprite(px) {
-  const key = Math.round(px) + (PAL.dark ? 'd' : 'l');
-  let cv = holeCache.get(key);
-  if (cv) return cv;
-  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-  const W = Math.round(px) + 4;
-  cv = document.createElement('canvas');
-  cv.width = Math.round(W * dpr); cv.height = Math.round(W * dpr);
-  const c = cv.getContext('2d');
-  c.setTransform(dpr, 0, 0, dpr, 0, 0);
-  c.translate(W / 2, W / 2);
-  const s = px;
-  const g = c.createRadialGradient(0, -s * .08, s * .04, 0, 0, s * .52);
-  g.addColorStop(0, rgba('#000000', PAL.dark ? .62 : .44));
-  g.addColorStop(.72, rgba('#000000', PAL.dark ? .3 : .18));
-  g.addColorStop(1, rgba('#000000', 0));
-  c.fillStyle = g;
-  c.beginPath(); c.arc(0, 0, s * .52, 0, 6.2832); c.fill();
-  /* a glint on the far lip so it reads as an opening, not a stain */
-  c.strokeStyle = rgba('#FFFFFF', PAL.dark ? .08 : .22);
-  c.lineWidth = Math.max(.8, s * .02);
-  c.beginPath(); c.arc(0, s * .02, s * .34, Math.PI * .15, Math.PI * .85);
-  c.stroke();
-  cv._w = W;
-  holeCache.set(key, cv);
-  return cv;
+/* A board with an outline.
+
+   A hole used to be drawn as a pit in the felt — a dark radial blot with
+   a glint on its lip — inside a tray that stayed a rectangle whatever
+   the board was. Ninety-odd levels in three hundred carried a few, and
+   they read as damage. With outlines on most of the run (cutSilhouette,
+   10-data.js) the tray follows the cells instead: the frame is the union
+   of every open cell grown by the pad, the well is the union of the
+   cells themselves, and a hole is simply frame — wood where there is no
+   board, at the edge and in the middle alike. The inner shade falls
+   along whichever edge of a cell has frame above it or to its left, so
+   a notch is lit like the rim it is. */
+function cellsPath(c, B, x, y, cs, grow, rad) {
+  c.beginPath();
+  for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) {
+    if (B.cell[r][k].hole) continue;
+    const L = x + k * cs - grow, T = y + r * cs - grow, S = cs + grow * 2;
+    if (rad > 0) {
+      c.moveTo(L + rad, T);
+      c.arcTo(L + S, T, L + S, T + S, rad); c.arcTo(L + S, T + S, L, T + S, rad);
+      c.arcTo(L, T + S, L, T, rad); c.arcTo(L, T, L + S, T, rad);
+      c.closePath();
+    } else c.rect(L, T, S, S);
+  }
 }
-function drawHole(c, cx, cy, s) {
-  const sp = holeSprite(s);
-  c.drawImage(sp, cx - sp._w / 2, cy - sp._w / 2, sp._w, sp._w);
+function boardHasHoles(B) {
+  if (!B) return false;
+  for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) if (B.cell[r][k].hole) return true;
+  return false;
+}
+function drawShapedTray(c, x, y, cs, B, pad) {
+  const w = cs * B.w, h = cs * B.h, rad = pad * 1.25;
+  c.save();
+  /* drop shadow, then the frame with its grain */
+  c.save(); c.translate(0, pad * .5);
+  cellsPath(c, B, x, y, cs, pad, rad);
+  c.fillStyle = rgba('#2A1E12', PAL.dark ? .55 : .2); c.fill();
+  c.restore();
+  const g = c.createLinearGradient(x - pad, y - pad, x + w * .2, y + h + pad);
+  if (PAL.dark) { g.addColorStop(0, '#3A4A5C'); g.addColorStop(.5, '#2A3746'); g.addColorStop(1, '#1C2836'); }
+  else { g.addColorStop(0, '#E2C9A2'); g.addColorStop(.5, '#CDA97C'); g.addColorStop(1, '#AE8A62'); }
+  cellsPath(c, B, x, y, cs, pad, rad);
+  c.fillStyle = g; c.fill();
+  c.save();
+  cellsPath(c, B, x, y, cs, pad, rad); c.clip();
+  c.strokeStyle = rgba('#3A2614', PAL.dark ? .22 : .16);
+  c.lineWidth = Math.max(.6, pad * .1);
+  for (let i = 0; i < 7; i++) {
+    const yy = y - pad + (i + .5) * (h + pad * 2) / 7;
+    c.beginPath(); c.moveTo(x - pad, yy);
+    c.quadraticCurveTo(x + w * .5, yy + (i % 2 ? pad * .3 : -pad * .3), x + w + pad, yy);
+    c.stroke();
+  }
+  c.restore();
+  /* the well, and its inner shade along every edge that has frame on
+     its upper or left side */
+  cellsPath(c, B, x, y, cs, 0, 0);
+  c.fillStyle = PAL.boardBg; c.fill();
+  c.save();
+  cellsPath(c, B, x, y, cs, 0, 0); c.clip();
+  const open = (r, k) => r >= 0 && k >= 0 && r < B.h && k < B.w && !B.cell[r][k].hole;
+  const depth = pad * 2.6, side = pad * 2;
+  for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) {
+    if (!open(r, k)) continue;
+    const L = x + k * cs, T = y + r * cs;
+    if (!open(r - 1, k)) {
+      const sh = c.createLinearGradient(0, T, 0, T + depth);
+      sh.addColorStop(0, rgba('#000000', PAL.dark ? .45 : .2)); sh.addColorStop(1, rgba('#000000', 0));
+      c.fillStyle = sh; c.fillRect(L, T, cs, depth);
+    }
+    if (!open(r, k - 1)) {
+      const sv = c.createLinearGradient(L, 0, L + side, 0);
+      sv.addColorStop(0, rgba('#000000', PAL.dark ? .3 : .13)); sv.addColorStop(1, rgba('#000000', 0));
+      c.fillStyle = sv; c.fillRect(L, T, side, cs);
+    }
+  }
+  c.restore();
+  c.restore();
 }
 
 /* the frame around the whole board */
