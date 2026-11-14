@@ -56,6 +56,15 @@ const TUNE_MULT_MIN = 0.5, TUNE_MULT_MAX = 2.0;
 const TUNE_NAP_FROM_DEFAULT = 3, TUNE_NAP_FROM_MAX = 60;
 /* a notice is a sentence, not a page */
 const TUNE_NOTICE_MAX = 240;
+/* The between-levels break (ADS.breakAfterWin) and the budget that
+   follows the player (adaptMoves in 12-curve.js), both added on
+   14 Nov 2026 and both the kind of number that should be settled by
+   what players do rather than by a build. Bounded like everything else:
+   no break before level ten, never more often than every second win or
+   every ninety seconds, and the adaptive budget can be switched off or
+   halved, doubled at most, never pushed past its own clamps. */
+const TUNE_ADS_DEFAULT = { on: 1, from: 20, every: 3, gap: 180 };
+const TUNE_ADAPT_DEFAULT = { on: 1, k: 1 };
 
 const TUNE = {
   /* the validated configuration in force, or null for the defaults */
@@ -87,7 +96,8 @@ const TUNE = {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
     if (raw.v !== 1) return null;
     const num = v => typeof v === 'number' && isFinite(v) ? v : NaN;
-    const out = { v: 1, moves: {}, pay: { coin: 1, treat: 1, nap: 1 }, nap: { from: TUNE_NAP_FROM_DEFAULT }, notice: null };
+    const out = { v: 1, moves: {}, pay: { coin: 1, treat: 1, nap: 1 }, nap: { from: TUNE_NAP_FROM_DEFAULT }, notice: null,
+      ads: Object.assign({}, TUNE_ADS_DEFAULT), adapt: Object.assign({}, TUNE_ADAPT_DEFAULT) };
 
     if (raw.moves && typeof raw.moves === 'object' && !Array.isArray(raw.moves)) {
       Object.keys(raw.moves).forEach(k => {
@@ -108,6 +118,19 @@ const TUNE = {
     if (raw.nap && typeof raw.nap === 'object') {
       const f = Math.round(num(raw.nap.from));
       if (!isNaN(f)) out.nap.from = clamp(f, 1, TUNE_NAP_FROM_MAX);
+    }
+    if (raw.ads && typeof raw.ads === 'object' && !Array.isArray(raw.ads)) {
+      const a = raw.ads, o = out.ads;
+      if (a.on === 0 || a.on === false) o.on = 0;
+      const f = Math.round(num(a.from)), e = Math.round(num(a.every)), g = Math.round(num(a.gap));
+      if (!isNaN(f)) o.from = clamp(f, 10, 400);
+      if (!isNaN(e)) o.every = clamp(e, 2, 12);
+      if (!isNaN(g)) o.gap = clamp(g, 90, 1800);
+    }
+    if (raw.adapt && typeof raw.adapt === 'object' && !Array.isArray(raw.adapt)) {
+      if (raw.adapt.on === 0 || raw.adapt.on === false) out.adapt.on = 0;
+      const k = num(raw.adapt.k);
+      if (!isNaN(k)) out.adapt.k = clamp(k, 0.5, 2);
     }
     if (raw.notice && typeof raw.notice === 'object') {
       const n = raw.notice;
@@ -211,6 +234,9 @@ function tunePay(kind, n) {
   if (!m || m === 1) return n;
   return Math.max(1, Math.round(n * m));
 }
+/* the break's rules, and the adaptive budget's switch and strength */
+function tuneAds() { return TUNE.data ? TUNE.data.ads : TUNE_ADS_DEFAULT; }
+function tuneAdapt() { return TUNE.data ? TUNE.data.adapt : TUNE_ADAPT_DEFAULT; }
 /* the level the nap card appears from */
 function tuneNapFrom() {
   return TUNE.data ? TUNE.data.nap.from : TUNE_NAP_FROM_DEFAULT;

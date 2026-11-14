@@ -1617,6 +1617,11 @@ function openLevelIntro(n) {
   /* every fifth level pays treats the first time, and used to do it
      without warning anyone it was going to */
   const firstTreats = (n !== DAILY_LEVEL && n % ECON.milestoneEvery === 0 && !SAVE.stars[n]) ? ECON.milestoneTreats : 0;
+  /* a level not yet cleared and already tried: the second attempt is
+     where being stuck starts, and three moves for a video is the help
+     a stuck player actually wants (ADS.caps.retry) */
+  const retryAd = n !== DAILY_LEVEL && !SAVE.stars[n] && ((SAVE.tries && SAVE.tries[n]) || 0) >= 1 && ADS.offer('retry');
+  let adMoves = 0;
 
   const m = modal(`
     <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
@@ -1651,6 +1656,7 @@ function openLevelIntro(n) {
       <span class="t"><b>${T('boost_moves')}</b>${T('shop_have', { n: SAVE.boosters.moves || 0 })}</span>
       <span class="pill info" id="movesPill">${T('pill_off')}</span>
     </button>
+    ${retryAd ? `<button class="btn wide adLine" id="liAd">${IC.video}${T('ad_retry', { n: ADS.retryMoves })}</button>` : ''}
     <div class="row sheetFoot">
       <button class="btn ghost" id="liCancel">${T('cancel')}</button>
       <button class="btn primary" id="liGo">${IC.heart}${T('lvl_start')}</button>
@@ -1666,6 +1672,15 @@ function openLevelIntro(n) {
     pill.textContent = useMoves ? T('pill_on') : T('pill_off');
     pill.className = 'pill ' + (useMoves ? 'ok' : 'info');
   });
+  const lia = $('#liAd', m.el);
+  if (lia) lia.addEventListener('click', async () => {
+    lia.disabled = true;
+    if (!await ADS.show('retry')) { lia.disabled = false; SFX.bad(); return; }
+    adMoves = ADS.retryMoves;
+    SFX.coin();
+    lia.innerHTML = IC.plusmove + T('ad_retry_on', { n: adMoves });
+    lia.classList.add('got');
+  });
   $('#liCancel', m.el).addEventListener('click', m.close);
   let starting = false;
   $('#liGo', m.el).addEventListener('click', () => {
@@ -1678,7 +1693,7 @@ function openLevelIntro(n) {
     m.close();
     syncPurse();
     setScreen('game');
-    startLevel(n, { perks, extraMoves: useMoves ? 5 : 0 });
+    startLevel(n, { perks, extraMoves: (useMoves ? 5 : 0) + adMoves });
     maybeTutorial(def);
   });
 }
@@ -1869,7 +1884,7 @@ function earnTreatsSheet(why, need, done) {
     ${line(IC.star, T('earn_star'))}
     ${line(IC.gift, T('earn_gift'))}
     ${j.fill ? line(IC.treat, T('earn_jar', { n: j.fill, c: JAR.cap })) : ''}
-    ${ADS.available('treat') ? `<button class="btn wide" id="etAd">${T('ad_daily', { n: ADS.treatReward })}</button>` : ''}
+    ${ADS.offer('treat') ? `<button class="btn wide" id="etAd">${T('ad_daily', { n: ADS.treatReward })}</button>` : ''}
     <button class="btn primary wide" id="etOk">${T('ok')}</button>
   `, { over: true, onClose: done });
   /* Listed under the ways to earn rather than above them, because it is
@@ -1930,7 +1945,7 @@ function noHeartsSheet() {
       <button class="btn ghost" id="nhWait">${T('lvl_wait')}</button>
       <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: ECON.heartRefillTreats })}</button>
     </div>
-    ${ADS.available('heart') ? `<button class="btn wide" id="nhAd">${IC.heart}${T('ad_heart')}</button>` : ''}
+    ${ADS.offer('heart') ? `<button class="btn wide" id="nhAd">${IC.heart}${T('ad_heart')}</button>` : ''}
     ${offer ? `<button class="btn wide" id="nhNotify" style="margin-top:4px">${T('nh_notify')}</button>` : ''}
     <button class="btn wide" id="nhNap" style="margin-top:4px">${IC.moon}${T('nap_hearts')}</button>
   `, { onClose: () => { if (tick) clearInterval(tick); onHeartArrived = () => { }; } });
@@ -2161,7 +2176,7 @@ function showWin() {
       <span class="reward" style="color:var(--sage)">${IC.paw}+${bondXp} ${T('win_bond')}</span>
     </div>
     ${first ? '' : `<p style="color:var(--text-faint);font-size:var(--t-micro);margin-top:-4px">${T('win_replay')}</p>`}
-    ${first && coins > 0 && ADS.available('double') ? `<button class="btn wide" id="wDouble">${IC.coin}${T('ad_double', { n: coins })}</button>` : ''}
+    ${first && coins > 0 && ADS.offer('double') ? `<button class="btn wide" id="wDouble">${IC.coin}${T('ad_double', { n: coins })}</button>` : ''}
     ${wonBadges.length ? `<div class="goalItem winBadges"><span class="rosette fam-${wonBadges[0].fam}">${IC[wonBadges[0].icon] || IC.crown}</span>
       <span class="t"><b>${T('win_badges', { names: wonBadges.map(badgeName).join(', ') })}</b></span>
       <span class="pill warn">${badgeCoins ? '+' + badgeCoins : ''}${badgeTreats ? ' +' + badgeTreats + IC.treat : ''}</span></div>` : ''}
@@ -2227,8 +2242,18 @@ function showWin() {
     const start = () => { if (sheetIsOpen()) setTimeout(start, 140); else setTimeout(() => openLevelIntro(SAVE.reached), 200); };
     setTimeout(start, 120);
   };
-  $('#wMap', m.el).addEventListener('click', () => { m.close(); leaveLevel(); });
-  $('#wNext', m.el).addEventListener('click', () => { m.close(); goOn(); });
+  /* the break, if one is due, falls between this card and wherever the
+     player was going: ADS.breakAfterWin holds every rule */
+  let leaving = false;
+  const off = fn => async () => {
+    if (leaving) return;
+    leaving = true;
+    m.close();
+    if (G.n !== DAILY_LEVEL) await ADS.breakAfterWin(G.n, !!(chest || grew));
+    fn();
+  };
+  $('#wMap', m.el).addEventListener('click', off(leaveLevel));
+  $('#wNext', m.el).addEventListener('click', off(goOn));
   syncPurse();
   /* queued now, not on a timer: a timer that fires after the player has
      already pressed Carry on lands on the wrong screen. Queued as the
@@ -2255,8 +2280,18 @@ function chestModal(ch) {
       <span class="reward" style="color:var(--sage)">${IC[b.icon]}${goodName(b)}</span>
     </div>
     <p style="color:var(--text-dim)">${T('chest_next', { n: ECON.milestoneEvery })}</p>
+    ${ADS.offer('chest') ? `<button class="btn wide" id="chAd">${IC.video}${T('ad_twice')}</button>` : ''}
     <button class="btn primary wide" id="chOk">${T('ok')}</button>
   `);
+  const cha = $('#chAd', m.el);
+  if (cha) cha.addEventListener('click', async () => {
+    cha.disabled = true;
+    if (!await ADS.show('chest')) { cha.disabled = false; SFX.bad(); return; }
+    SAVE.coins += ch.coins; SAVE.treats += ch.treats;
+    persist(true); syncPurse(); SFX.coin();
+    cha.remove();
+    toast(T('ad_twice_done'), 'coin');
+  });
   const cv = $('#chCv', m.el);
   const draw = (open, wob) => {
     const c = fitCanvas(cv, 150, 130);
@@ -2384,8 +2419,8 @@ function showLose() {
         <small id="lExtraSub">${short2 ? T('lose_extra_short', { n: price, have: SAVE.treats }) : T('lose_extra_sub', { n: price })}</small>
       </span>
       <button class="btn primary sm" id="lExtra">${T('lose_extra_go')} ${IC.treat}${price}</button>
-    </div>` + (!(G.extras || 0) && ADS.available('carry') ? `
-    <button class="btn ghost wide adLine" id="lAd">${IC.play}${T('ad_watch', { n: ECON.adMoves })} · ${T('ad_go')}</button>` : '')}
+    </div>` + (!(G.extras || 0) && ADS.offer('carry') ? `
+    <button class="btn ghost wide adLine" id="lAd">${IC.video}${T('ad_watch', { n: ECON.adMoves })} · ${T('ad_go')}</button>` : '')}
     <div class="row">
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn${offered ? '' : ' primary'}" id="lRetry">${T('retry')}</button>
@@ -2696,8 +2731,21 @@ function openDailyGift() {
     ${giftLadder(day)}
     <p class="ladderNote">${tom || T('daily_best_day')}</p>
     <p class="ladderMiss">${T('daily_miss')}</p>
+    ${(reward.coins || reward.treats) && ADS.offer('gift') ? `<button class="btn wide" id="dgAd">${IC.video}${T('ad_twice')}</button>` : ''}
     <button class="btn primary wide" id="dgOk">${T('daily_take')}</button>
   `, { dismissable: false });
+  /* the same gift again for a video: the one moment every player who
+     comes back meets, winning or not */
+  const dga = $('#dgAd', m.el);
+  if (dga) dga.addEventListener('click', async () => {
+    dga.disabled = true;
+    if (!await ADS.show('gift')) { dga.disabled = false; SFX.bad(); return; }
+    SAVE.coins += reward.coins || 0;
+    SAVE.treats += reward.treats || 0;
+    persist(true); syncPurse(); SFX.coin();
+    dga.remove();
+    toast(T('ad_twice_done'), 'coin');
+  });
   /* the rung you have just landed on arrives after the sheet does, so
      the eye is drawn to the week rather than to the coins */
   const nowPip = $('.ladder .d.now', m.el);

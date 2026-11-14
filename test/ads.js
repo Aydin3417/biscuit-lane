@@ -13,6 +13,13 @@
      no fill      no slot is offered, so no button is drawn
      watched      show() answers true, once, and the day's count moves
      closed early show() answers false, promptly, and nothing is counted
+     the funnel   a failed load says AdMob's code, a drawn button says
+                  ad_offer, a slot with no video says ad_miss — the
+                  events v_ads reads (14 Nov 2026)
+     the break    the between-levels interstitial keeps every one of its
+                  rules: no unit no break, never before its level, never
+                  on install day, never for a payer, never twice inside
+                  the gap, never on top of a chest
 */
 const { launch, at, serve } = require('../tools/_pw.js');
 
@@ -29,7 +36,7 @@ const mock = mode => `
     prepareRewardVideoAd: async () => {
       __ad.calls.push('load');
       __ad.prepared++;
-      if (__ad.mode === 'nofill') throw new Error('Loading failed');
+      if (__ad.mode === 'nofill') { const e = new Error('Loading failed'); e.code = 3; throw e; }
       return { adUnitId: 'x' };
     },
     /* NOT async: the native bridge hands the handle back directly, and
@@ -37,6 +44,8 @@ const mock = mode => `
        video on a real phone (19-ads.js, show) */
     addListener: (ev, fn) => { (__ad.listeners[ev] = __ad.listeners[ev] || []).push(fn); return { remove() { __ad.listeners[ev] = __ad.listeners[ev].filter(f => f !== fn); } }; },
     /* as on iOS: resolves when a reward is earned, and never otherwise */
+    prepareInterstitial: async () => { __ad.calls.push('inter'); return { adUnitId: 'i' }; },
+    showInterstitial: async () => { __ad.inter = (__ad.inter || 0) + 1; setTimeout(() => (__ad.listeners.interstitialAdDismissed || []).slice().forEach(f => f()), 50); },
     showRewardVideoAd: () => new Promise(resolve => {
       __ad.shown++;
       const fire = ev => (__ad.listeners[ev] || []).slice().forEach(f => f({}));
@@ -82,6 +91,11 @@ const mock = mode => `
       ok(before.avail === false, 'no video, so no slot is offered', before);
       const r = await page.evaluate(() => BL.ADS.show('carry'));
       ok(r === false, 'and show() answers false', r);
+      const ev = await page.evaluate(() => { BL.ADS.offer('double'); return BL.TRACK.buf.slice(); });
+      const load = ev.find(e => e.e === 'ad_load');
+      const miss = ev.find(e => e.e === 'ad_miss');
+      ok(load && JSON.stringify(load).includes('"code":"3"'), "a failed load is reported with AdMob's code", ev.slice(-4));
+      ok(miss && JSON.stringify(miss).includes('fill'), 'a slot with no video is reported as a miss for want of fill', ev.slice(-4));
     } else {
       ok(before.avail === true, 'a loaded video is offered', before);
       const t0 = Date.now();
@@ -100,6 +114,42 @@ const mock = mode => `
       }
       const again = await page.evaluate(async () => { await new Promise(r => setTimeout(r, 300)); return { avail: BL.ADS.available('carry'), prepared: __ad.prepared }; });
       ok(again.prepared >= 2 && again.avail === true, 'the next video is loaded behind it', again);
+    }
+    if (mode === 'watched') {
+      /* the break, rule by rule */
+      const b = await page.evaluate(async () => {
+        const A = BL.ADS, S = BL.save, out = {};
+        out.noUnit = await A.breakAfterWin(40);
+        A.interUnit = () => 'unit';
+        A.inter.loaded = true; A.lastShown = 0; A.inter.wins = 5;
+        const created = S.created, granted = S.granted;
+        S.created = Date.now();
+        out.installDay = A.breakDue(40);
+        S.created = Date.now() - 3 * 86400000;
+        out.early = A.breakDue(12);
+        S.granted = { tx: 1 };
+        out.payer = A.breakDue(40);
+        S.granted = {};
+        out.due = A.breakDue(40);
+        out.quiet = await A.breakAfterWin(40, true);
+        out.shown = await A.breakAfterWin(40);
+        A.inter.loaded = true; A.inter.wins = 9;
+        out.gap = A.breakDue(40);
+        A.lastShown = 0; A.inter.wins = 1;
+        out.tooSoon = A.breakDue(40);
+        out.count = __ad.inter || 0;
+        S.created = created; S.granted = granted;
+        return out;
+      });
+      ok(b.noUnit === false, 'no interstitial unit, no break', b);
+      ok(b.installDay === false, 'never on the day of install', b);
+      ok(b.early === false, 'never before level 20', b);
+      ok(b.payer === false, 'never for a player who has paid', b);
+      ok(b.due === true, 'due after enough wins, past its level, outside the gap', b);
+      ok(b.quiet === false, 'never on top of a chest or a stage-up', b);
+      ok(b.shown === true && b.count === 1, 'shown once when due', b);
+      ok(b.gap === false, 'never twice inside the gap', b);
+      ok(b.tooSoon === false, 'never before enough wins', b);
     }
     ok(errors.length === 0, 'nothing threw in the page', errors);
     await page.close();

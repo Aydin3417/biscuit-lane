@@ -1257,4 +1257,5 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 /* the video on the lose card: a line, not a second offer box */
 .adLine{ font-size:var(--t-small); padding:9px 12px; color:var(--text-dim); }
 .adLine svg{ width:16px; height:16px; }
+.adLine.got{ color:var(--sage); border-color:color-mix(in srgb,var(--sage) 45%, transparent); pointer-events:none; }
 

@@ -1315,6 +1315,7 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 /* the video on the lose card: a line, not a second offer box */
 .adLine{ font-size:var(--t-small); padding:9px 12px; color:var(--text-dim); }
 .adLine svg{ width:16px; height:16px; }
+.adLine.got{ color:var(--sage); border-color:color-mix(in srgb,var(--sage) 45%, transparent); pointer-events:none; }
 </style>
 
 <div class="stage">
@@ -1749,6 +1750,9 @@ const IC = {
   star: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5-4.7-4.6 6.5-.9z"/></svg>',
   starOut: '<svg viewBox="0 0 24 24" fill="none"><path d="m12 3.6 2.6 5.3 5.8.8-4.2 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>',
   home: '<svg viewBox="0 0 24 24" fill="none"><path d="M3.5 10.4 12 3.6l8.5 6.8V20a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M9.4 21v-5.4a2.6 2.6 0 0 1 5.2 0V21" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/></svg>',
+  /* a video: what every rewarded button is, said by its icon rather than
+     borrowed from the Play tab four-squares the buttons used to wear */
+  video: '<svg viewBox="0 0 24 24" fill="none"><rect x="2.8" y="4.8" width="18.4" height="14.4" rx="3.6" stroke="currentColor" stroke-width="1.9"/><path d="M10 9.2v5.6l4.8-2.8z" fill="currentColor"/></svg>',
   play: '<svg viewBox="0 0 24 24" fill="none"><rect x="2.8" y="2.8" width="8" height="8" rx="2.6" stroke="currentColor" stroke-width="1.9"/><rect x="13.2" y="2.8" width="8" height="8" rx="2.6" fill="currentColor"/><rect x="2.8" y="13.2" width="8" height="8" rx="2.6" fill="currentColor"/><rect x="13.2" y="13.2" width="8" height="8" rx="2.6" stroke="currentColor" stroke-width="1.9"/></svg>',
   shop: '<svg viewBox="0 0 24 24" fill="none"><path d="M3.6 8.4h16.8l-1.2 11a1.6 1.6 0 0 1-1.6 1.4H6.4a1.6 1.6 0 0 1-1.6-1.4z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/><path d="M8.4 10.6V7a3.6 3.6 0 0 1 7.2 0v3.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></svg>',
   paw: '<svg viewBox="0 0 24 24" fill="currentColor"><ellipse cx="7" cy="8.4" rx="2.1" ry="2.7"/><ellipse cx="12" cy="6.6" rx="2.1" ry="2.8"/><ellipse cx="17" cy="8.4" rx="2.1" ry="2.7"/><ellipse cx="19.6" cy="13.4" rx="1.9" ry="2.3"/><path d="M12 11.2c3.4 0 5.8 2.5 5.8 5 0 2-1.6 3.3-3.6 3.3-1 0-1.6-.4-2.2-.4s-1.2.4-2.2.4c-2 0-3.6-1.3-3.6-3.3 0-2.5 2.4-5 5.8-5z"/></svg>',
@@ -2437,6 +2441,8 @@ const STRINGS = {
     pass_late: 'Not enough of the season left for the book to be worth its price — it comes back round with the next one. The free column still pays out.',
     pass_noshop: 'The book cannot be bought in this build — there is no store account behind it yet. The free column pays out either way, as you go.',
     ad_daily: 'A video for {n} treats',
+    ad_twice: 'Watch a video: get it twice', ad_twice_done: 'Doubled!',
+    ad_retry: 'A video for {n} extra moves this try', ad_retry_on: '+{n} moves this try',
     goal_mole: 'Fill in {n} molehills',
     a11y_mole: 'a molehill, {n} moves until it pushes earth up',
     a11y_mole_pushed: 'earth pushed up on {n} squares',
@@ -2812,6 +2818,8 @@ const STRINGS = {
     pass_late: 'Defterin parasını çıkarmasına yetecek kadar sezon kalmadı — bir sonrakinde yine karşına çıkar. Ücretsiz sütun yine de ödemeye devam ediyor.',
     pass_noshop: 'Bu sürümde defter satın alınamıyor — arkasında henüz mağaza hesabı yok. Ücretsiz sütun ilerledikçe zaten ödemeye devam ediyor.',
     ad_daily: '{n} ödül için video',
+    ad_twice: 'Video izle: iki katını al', ad_twice_done: 'İki katı!',
+    ad_retry: 'Video izle, bu denemede {n} hamle fazla', ad_retry_on: 'Bu denemede +{n} hamle',
     goal_mole: '{n} köstebek yuvasını kapat',
     a11y_mole: 'köstebek yuvası, toprak çıkarmasına {n} hamle',
     a11y_mole_pushed: '{n} kareye toprak çıktı',
@@ -5730,6 +5738,15 @@ const TUNE_MULT_MIN = 0.5, TUNE_MULT_MAX = 2.0;
 const TUNE_NAP_FROM_DEFAULT = 3, TUNE_NAP_FROM_MAX = 60;
 /* a notice is a sentence, not a page */
 const TUNE_NOTICE_MAX = 240;
+/* The between-levels break (ADS.breakAfterWin) and the budget that
+   follows the player (adaptMoves in 12-curve.js), both added on
+   14 Nov 2026 and both the kind of number that should be settled by
+   what players do rather than by a build. Bounded like everything else:
+   no break before level ten, never more often than every second win or
+   every ninety seconds, and the adaptive budget can be switched off or
+   halved, doubled at most, never pushed past its own clamps. */
+const TUNE_ADS_DEFAULT = { on: 1, from: 20, every: 3, gap: 180 };
+const TUNE_ADAPT_DEFAULT = { on: 1, k: 1 };
 
 const TUNE = {
   /* the validated configuration in force, or null for the defaults */
@@ -5761,7 +5778,8 @@ const TUNE = {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
     if (raw.v !== 1) return null;
     const num = v => typeof v === 'number' && isFinite(v) ? v : NaN;
-    const out = { v: 1, moves: {}, pay: { coin: 1, treat: 1, nap: 1 }, nap: { from: TUNE_NAP_FROM_DEFAULT }, notice: null };
+    const out = { v: 1, moves: {}, pay: { coin: 1, treat: 1, nap: 1 }, nap: { from: TUNE_NAP_FROM_DEFAULT }, notice: null,
+      ads: Object.assign({}, TUNE_ADS_DEFAULT), adapt: Object.assign({}, TUNE_ADAPT_DEFAULT) };
 
     if (raw.moves && typeof raw.moves === 'object' && !Array.isArray(raw.moves)) {
       Object.keys(raw.moves).forEach(k => {
@@ -5782,6 +5800,19 @@ const TUNE = {
     if (raw.nap && typeof raw.nap === 'object') {
       const f = Math.round(num(raw.nap.from));
       if (!isNaN(f)) out.nap.from = clamp(f, 1, TUNE_NAP_FROM_MAX);
+    }
+    if (raw.ads && typeof raw.ads === 'object' && !Array.isArray(raw.ads)) {
+      const a = raw.ads, o = out.ads;
+      if (a.on === 0 || a.on === false) o.on = 0;
+      const f = Math.round(num(a.from)), e = Math.round(num(a.every)), g = Math.round(num(a.gap));
+      if (!isNaN(f)) o.from = clamp(f, 10, 400);
+      if (!isNaN(e)) o.every = clamp(e, 2, 12);
+      if (!isNaN(g)) o.gap = clamp(g, 90, 1800);
+    }
+    if (raw.adapt && typeof raw.adapt === 'object' && !Array.isArray(raw.adapt)) {
+      if (raw.adapt.on === 0 || raw.adapt.on === false) out.adapt.on = 0;
+      const k = num(raw.adapt.k);
+      if (!isNaN(k)) out.adapt.k = clamp(k, 0.5, 2);
     }
     if (raw.notice && typeof raw.notice === 'object') {
       const n = raw.notice;
@@ -5885,6 +5916,9 @@ function tunePay(kind, n) {
   if (!m || m === 1) return n;
   return Math.max(1, Math.round(n * m));
 }
+/* the break's rules, and the adaptive budget's switch and strength */
+function tuneAds() { return TUNE.data ? TUNE.data.ads : TUNE_ADS_DEFAULT; }
+function tuneAdapt() { return TUNE.data ? TUNE.data.adapt : TUNE_ADAPT_DEFAULT; }
 /* the level the nap card appears from */
 function tuneNapFrom() {
   return TUNE.data ? TUNE.data.nap.from : TUNE_NAP_FROM_DEFAULT;
@@ -8042,7 +8076,16 @@ const AD_UNITS = {
      nothing, which is safe; one shipped with real ids and testing on is
      a policy strike, so testing is on only in a debuggable build. */
   testIos: 'ca-app-pub-3940256099942544/1712485313',
-  testAndroid: 'ca-app-pub-3940256099942544/5224354917'
+  testAndroid: 'ca-app-pub-3940256099942544/5224354917',
+  /* The between-levels break (see ADS.breakAfterWin). Empty, it is off:
+     no unit is ever asked for and the game is the rewarded-only game it
+     shipped as. Filling these in is the owner's decision, made in the
+     AdMob console by creating an Interstitial unit — the code waits for
+     it rather than deciding it. */
+  interIos: '',
+  interAndroid: '',
+  testInterIos: 'ca-app-pub-3940256099942544/4411468910',
+  testInterAndroid: 'ca-app-pub-3940256099942544/1033173712'
 };
 
 const ADS = {
@@ -8055,8 +8098,22 @@ const ADS = {
        carry   three moves on the lose card, once per attempt
        treat   two treats, from the earn-treats sheet
        heart   one heart, from the out-of-hearts sheet
-       double  the coins of a first clear, again, on the win card */
-  caps: { carry: 3, treat: 2, heart: 3, double: 3 },
+       double  the coins of a first clear, again, on the win card
+
+     RAISED, 14 Nov 2026, two weeks into the store. The owner's first
+     complaint was that videos almost never appeared, and the arithmetic
+     agreed: a player who wins — and test/all-levels.js has a player who
+     cannot see a cascade winning 83-93% of the first sixty levels —
+     never meets the carry, the heart or the treat sheet, so the whole
+     day's offer was three "double your coins" buttons. Every cap is
+     higher, and three slots sit at moments a winning player does reach:
+       gift    the daily gift, again
+       chest   a gate chest, again
+       retry   three moves on the level card, from the second attempt
+               at the same level — the moment a player is stuck, which
+               is also the moment the curve below means them to be */
+  caps: { carry: 5, treat: 3, heart: 5, double: 6, gift: 1, chest: 2, retry: 3 },
+  retryMoves: 3,
 
   treatReward: 2,
 
@@ -8116,6 +8173,7 @@ const ADS = {
         if (this.attPending) setTimeout(() => this.resumed(), 1500);
         this.inited = true;
         this.preload();
+        this.preloadInter();
         return true;
       } catch (e) {
         TRACK.fail('ads_init', e && e.message);
@@ -8167,11 +8225,23 @@ const ADS = {
   /* A video loaded ahead, so the button does not sit there for three
      seconds after it is pressed. One at a time; a failed load is simply
      tried again next time. */
+  /* Every load is counted, with how long it took and, when it failed,
+     the code AdMob gave. Until 14 Nov 2026 the only ad event that left
+     the phone was a reward, so "videos almost never appear" could not
+     be told apart from "videos are never offered": the first is fill
+     (code 3, no ad to serve — the state of an app AdMob has not yet
+     approved), the second is the game. v_ads in the server views reads
+     these. */
+  loadFails: 0,
   preload() {
     if (this.loading || !this.inited || this.blocked) return this.loading;
     this.loaded = false;
+    const t0 = Date.now();
     this.loading = this.plugin.prepareRewardVideoAd({ adId: this.unit(), isTesting: this.testing(), npa: !this.personalised })
-      .then(() => { this.loaded = true; return true; }, () => {
+      .then(() => { this.loaded = true; this.loadFails = 0; track('ad_load', { ok: 1, ms: Date.now() - t0 }); return true; }, e => {
+        /* one report per launch for a run of failures, plus the first:
+           a phone with no signal would otherwise send one a minute */
+        if (this.loadFails++ < 3) track('ad_load', { ok: 0, ms: Date.now() - t0, code: adErrCode(e) });
         this.loading = null;
         /* no fill is the ordinary state of a new ad unit, and of a phone
            with no signal; ask again in a while rather than never */
@@ -8204,6 +8274,19 @@ const ADS = {
     if (!this.inited) { this.init(); return false; }
     return !!this.loaded;
   },
+  /* available(), said out loud: what a card asks when it is deciding
+     whether to draw a button. A drawn button is an `ad_offer`; a slot
+     that wanted one and had no video is an `ad_miss` with the reason,
+     which is the number that says whether the network or the game is
+     the reason players see so few. A web build has no plugin and says
+     nothing. */
+  offer(slot) {
+    if (!this.ready()) return false;
+    if (this.left(slot) <= 0) return false;
+    const yes = this.available(slot);
+    track(yes ? 'ad_offer' : 'ad_miss', yes ? { slot } : { slot, why: !this.inited ? 'init' : this.blocked ? 'consent' : 'fill' });
+    return yes;
+  },
 
   /* Show one; resolve true only if it was watched through. A network
      reports "dismissed" and "no fill" as ordinary outcomes rather than
@@ -8213,6 +8296,8 @@ const ADS = {
   async show(slot) {
     if (!this.available(slot)) return false;
     if (!await this.init()) return false;
+    track('ad_tap', { slot });
+    this.lastShown = Date.now();
     const A = this.plugin;
     const handles = [];
     let rewarded = false;
@@ -8249,14 +8334,95 @@ const ADS = {
       handles.forEach(h => { try { h.remove(); } catch (e) { } });
       this.preload();
     }
-    if (!rewarded) return false;
+    if (!rewarded) { track('ad_unpaid', { slot }); return false; }
     const st = this.state();
     st.used[slot] = (st.used[slot] || 0) + 1;
     persist(true);
     track('ad_reward', { slot });
     return true;
+  },
+
+  /* ---------- the between-levels break ----------
+
+     The one ad the player does not ask for, and the header's first
+     paragraph is why it waited this long. It runs only when an
+     Interstitial unit id has been filled in above, and then only:
+       - after a WIN, on the way off the win card, never after a loss
+         (a loss already costs a heart; a video on top is a punishment)
+       - from level 20 (tunable), past the sixty-level lane's teaching
+       - after every third win (tunable), and at least three minutes
+         after any other video, rewarded ones included
+       - never on the day of install, and never for a player who has
+         bought anything: someone who paid has paid
+     Every rule is in breakDue(), so the test can read the rules rather
+     than the plumbing. */
+  inter: { loading: null, loaded: false, wins: 0 },
+  lastShown: 0,
+  interUnit() {
+    const ios = nativePlatform() === 'ios';
+    if (this.testing()) return (ios ? AD_UNITS.interIos : AD_UNITS.interAndroid) ? (ios ? AD_UNITS.testInterIos : AD_UNITS.testInterAndroid) : '';
+    return ios ? AD_UNITS.interIos : AD_UNITS.interAndroid;
+  },
+  preloadInter() {
+    const I = this.inter;
+    if (I.loading || I.loaded || !this.inited || this.blocked || !this.interUnit() || !this.plugin.prepareInterstitial) return;
+    I.loading = this.plugin.prepareInterstitial({ adId: this.interUnit(), isTesting: this.testing(), npa: !this.personalised })
+      .then(() => { I.loaded = true; I.loading = null; }, e => {
+        I.loading = null;
+        track('ad_load', { ok: 0, slot: 'break', code: adErrCode(e) });
+      });
+  },
+  breakDue(n) {
+    const rule = tuneAds();
+    if (!rule.on || !this.interUnit()) return false;
+    if ((n || 0) < rule.from) return false;
+    if (SAVE.granted && Object.keys(SAVE.granted).length) return false;
+    if (SAVE.created && dayNumber(SAVE.created) === dayNumber()) return false;
+    if (this.inter.wins < rule.every) return false;
+    if (Date.now() - this.lastShown < rule.gap * 1000) return false;
+    return true;
+  },
+  /* Called with the level just won, as the player leaves the win card,
+     `quiet` when something else is about to take the screen.
+     Resolves when the video is gone (or was never there); never throws,
+     never waits more than a minute. */
+  async breakAfterWin(n, quiet) {
+    this.inter.wins++;
+    /* a chest or a pet growing up is already queued behind the card;
+       an ad is never stacked on a celebration */
+    if (quiet || !this.ready() || !this.inited) return false;
+    this.preloadInter();
+    if (!this.breakDue(n) || !this.inter.loaded) return false;
+    const A = this.plugin;
+    const handles = [];
+    this.inter.loaded = false;
+    this.inter.wins = 0;
+    this.lastShown = Date.now();
+    try {
+      await Promise.race([
+        new Promise(res => {
+          const on = (ev, fn) => Promise.resolve(A.addListener(ev, fn)).then(h => handles.push(h));
+          Promise.all([on('interstitialAdDismissed', () => res()), on('interstitialAdFailedToShow', () => res())])
+            .then(() => A.showInterstitial().catch(() => res()));
+        }),
+        new Promise(r => setTimeout(r, 60000))
+      ]);
+      track('ad_break', { n: n || 0 });
+    } catch (e) { /* the level after is what matters */ }
+    finally {
+      handles.forEach(h => { try { h.remove(); } catch (e) { } });
+      setTimeout(() => this.preloadInter(), 2000);
+    }
+    return true;
   }
 };
+function adErrCode(e) {
+  if (!e) return 'none';
+  /* telemetry keeps short tokens only (18-telemetry.js), so a message
+     with spaces in it would arrive as nothing at all */
+  const raw = e.code !== undefined ? e.code : (e.message || e);
+  return String(raw).replace(/[^\w.:-]+/g, '_').slice(0, 24) || 'none';
+}
 
 /* ===== 20-audio.js ===== */
 /* ============================================================
@@ -15701,6 +15867,13 @@ function startLevel(n, opts) {
       G.runGifts.push(g);
     });
   }
+  /* The board is dealt with a move on it, and then baskets are dropped
+     onto it. A basket takes a tile's place, and on one seed of level 85
+     in ten the tile it took was half of the only move there was: the
+     level opened dead, with thirty-four moves and nothing to spend one
+     on, and the dead-board shuffle runs after a move, so it never came.
+     Found by test/all-levels.js, the same seed under both players. */
+  if (!res) ensureMove(G.B);
   /* said on the board too: the opening levels skip the card that says it */
   if (G.runGifts.length) {
     const ep = G.epoch;
@@ -20447,6 +20620,11 @@ function openLevelIntro(n) {
   /* every fifth level pays treats the first time, and used to do it
      without warning anyone it was going to */
   const firstTreats = (n !== DAILY_LEVEL && n % ECON.milestoneEvery === 0 && !SAVE.stars[n]) ? ECON.milestoneTreats : 0;
+  /* a level not yet cleared and already tried: the second attempt is
+     where being stuck starts, and three moves for a video is the help
+     a stuck player actually wants (ADS.caps.retry) */
+  const retryAd = n !== DAILY_LEVEL && !SAVE.stars[n] && ((SAVE.tries && SAVE.tries[n]) || 0) >= 1 && ADS.offer('retry');
+  let adMoves = 0;
 
   const m = modal(`
     <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
@@ -20481,6 +20659,7 @@ function openLevelIntro(n) {
       <span class="t"><b>${T('boost_moves')}</b>${T('shop_have', { n: SAVE.boosters.moves || 0 })}</span>
       <span class="pill info" id="movesPill">${T('pill_off')}</span>
     </button>
+    ${retryAd ? `<button class="btn wide adLine" id="liAd">${IC.video}${T('ad_retry', { n: ADS.retryMoves })}</button>` : ''}
     <div class="row sheetFoot">
       <button class="btn ghost" id="liCancel">${T('cancel')}</button>
       <button class="btn primary" id="liGo">${IC.heart}${T('lvl_start')}</button>
@@ -20496,6 +20675,15 @@ function openLevelIntro(n) {
     pill.textContent = useMoves ? T('pill_on') : T('pill_off');
     pill.className = 'pill ' + (useMoves ? 'ok' : 'info');
   });
+  const lia = $('#liAd', m.el);
+  if (lia) lia.addEventListener('click', async () => {
+    lia.disabled = true;
+    if (!await ADS.show('retry')) { lia.disabled = false; SFX.bad(); return; }
+    adMoves = ADS.retryMoves;
+    SFX.coin();
+    lia.innerHTML = IC.plusmove + T('ad_retry_on', { n: adMoves });
+    lia.classList.add('got');
+  });
   $('#liCancel', m.el).addEventListener('click', m.close);
   let starting = false;
   $('#liGo', m.el).addEventListener('click', () => {
@@ -20508,7 +20696,7 @@ function openLevelIntro(n) {
     m.close();
     syncPurse();
     setScreen('game');
-    startLevel(n, { perks, extraMoves: useMoves ? 5 : 0 });
+    startLevel(n, { perks, extraMoves: (useMoves ? 5 : 0) + adMoves });
     maybeTutorial(def);
   });
 }
@@ -20699,7 +20887,7 @@ function earnTreatsSheet(why, need, done) {
     ${line(IC.star, T('earn_star'))}
     ${line(IC.gift, T('earn_gift'))}
     ${j.fill ? line(IC.treat, T('earn_jar', { n: j.fill, c: JAR.cap })) : ''}
-    ${ADS.available('treat') ? `<button class="btn wide" id="etAd">${T('ad_daily', { n: ADS.treatReward })}</button>` : ''}
+    ${ADS.offer('treat') ? `<button class="btn wide" id="etAd">${T('ad_daily', { n: ADS.treatReward })}</button>` : ''}
     <button class="btn primary wide" id="etOk">${T('ok')}</button>
   `, { over: true, onClose: done });
   /* Listed under the ways to earn rather than above them, because it is
@@ -20760,7 +20948,7 @@ function noHeartsSheet() {
       <button class="btn ghost" id="nhWait">${T('lvl_wait')}</button>
       <button class="btn primary" id="nhBuy">${T('lvl_buy_hearts', { n: ECON.heartRefillTreats })}</button>
     </div>
-    ${ADS.available('heart') ? `<button class="btn wide" id="nhAd">${IC.heart}${T('ad_heart')}</button>` : ''}
+    ${ADS.offer('heart') ? `<button class="btn wide" id="nhAd">${IC.heart}${T('ad_heart')}</button>` : ''}
     ${offer ? `<button class="btn wide" id="nhNotify" style="margin-top:4px">${T('nh_notify')}</button>` : ''}
     <button class="btn wide" id="nhNap" style="margin-top:4px">${IC.moon}${T('nap_hearts')}</button>
   `, { onClose: () => { if (tick) clearInterval(tick); onHeartArrived = () => { }; } });
@@ -20991,7 +21179,7 @@ function showWin() {
       <span class="reward" style="color:var(--sage)">${IC.paw}+${bondXp} ${T('win_bond')}</span>
     </div>
     ${first ? '' : `<p style="color:var(--text-faint);font-size:var(--t-micro);margin-top:-4px">${T('win_replay')}</p>`}
-    ${first && coins > 0 && ADS.available('double') ? `<button class="btn wide" id="wDouble">${IC.coin}${T('ad_double', { n: coins })}</button>` : ''}
+    ${first && coins > 0 && ADS.offer('double') ? `<button class="btn wide" id="wDouble">${IC.coin}${T('ad_double', { n: coins })}</button>` : ''}
     ${wonBadges.length ? `<div class="goalItem winBadges"><span class="rosette fam-${wonBadges[0].fam}">${IC[wonBadges[0].icon] || IC.crown}</span>
       <span class="t"><b>${T('win_badges', { names: wonBadges.map(badgeName).join(', ') })}</b></span>
       <span class="pill warn">${badgeCoins ? '+' + badgeCoins : ''}${badgeTreats ? ' +' + badgeTreats + IC.treat : ''}</span></div>` : ''}
@@ -21057,8 +21245,18 @@ function showWin() {
     const start = () => { if (sheetIsOpen()) setTimeout(start, 140); else setTimeout(() => openLevelIntro(SAVE.reached), 200); };
     setTimeout(start, 120);
   };
-  $('#wMap', m.el).addEventListener('click', () => { m.close(); leaveLevel(); });
-  $('#wNext', m.el).addEventListener('click', () => { m.close(); goOn(); });
+  /* the break, if one is due, falls between this card and wherever the
+     player was going: ADS.breakAfterWin holds every rule */
+  let leaving = false;
+  const off = fn => async () => {
+    if (leaving) return;
+    leaving = true;
+    m.close();
+    if (G.n !== DAILY_LEVEL) await ADS.breakAfterWin(G.n, !!(chest || grew));
+    fn();
+  };
+  $('#wMap', m.el).addEventListener('click', off(leaveLevel));
+  $('#wNext', m.el).addEventListener('click', off(goOn));
   syncPurse();
   /* queued now, not on a timer: a timer that fires after the player has
      already pressed Carry on lands on the wrong screen. Queued as the
@@ -21085,8 +21283,18 @@ function chestModal(ch) {
       <span class="reward" style="color:var(--sage)">${IC[b.icon]}${goodName(b)}</span>
     </div>
     <p style="color:var(--text-dim)">${T('chest_next', { n: ECON.milestoneEvery })}</p>
+    ${ADS.offer('chest') ? `<button class="btn wide" id="chAd">${IC.video}${T('ad_twice')}</button>` : ''}
     <button class="btn primary wide" id="chOk">${T('ok')}</button>
   `);
+  const cha = $('#chAd', m.el);
+  if (cha) cha.addEventListener('click', async () => {
+    cha.disabled = true;
+    if (!await ADS.show('chest')) { cha.disabled = false; SFX.bad(); return; }
+    SAVE.coins += ch.coins; SAVE.treats += ch.treats;
+    persist(true); syncPurse(); SFX.coin();
+    cha.remove();
+    toast(T('ad_twice_done'), 'coin');
+  });
   const cv = $('#chCv', m.el);
   const draw = (open, wob) => {
     const c = fitCanvas(cv, 150, 130);
@@ -21214,8 +21422,8 @@ function showLose() {
         <small id="lExtraSub">${short2 ? T('lose_extra_short', { n: price, have: SAVE.treats }) : T('lose_extra_sub', { n: price })}</small>
       </span>
       <button class="btn primary sm" id="lExtra">${T('lose_extra_go')} ${IC.treat}${price}</button>
-    </div>` + (!(G.extras || 0) && ADS.available('carry') ? `
-    <button class="btn ghost wide adLine" id="lAd">${IC.play}${T('ad_watch', { n: ECON.adMoves })} · ${T('ad_go')}</button>` : '')}
+    </div>` + (!(G.extras || 0) && ADS.offer('carry') ? `
+    <button class="btn ghost wide adLine" id="lAd">${IC.video}${T('ad_watch', { n: ECON.adMoves })} · ${T('ad_go')}</button>` : '')}
     <div class="row">
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn${offered ? '' : ' primary'}" id="lRetry">${T('retry')}</button>
@@ -21526,8 +21734,21 @@ function openDailyGift() {
     ${giftLadder(day)}
     <p class="ladderNote">${tom || T('daily_best_day')}</p>
     <p class="ladderMiss">${T('daily_miss')}</p>
+    ${(reward.coins || reward.treats) && ADS.offer('gift') ? `<button class="btn wide" id="dgAd">${IC.video}${T('ad_twice')}</button>` : ''}
     <button class="btn primary wide" id="dgOk">${T('daily_take')}</button>
   `, { dismissable: false });
+  /* the same gift again for a video: the one moment every player who
+     comes back meets, winning or not */
+  const dga = $('#dgAd', m.el);
+  if (dga) dga.addEventListener('click', async () => {
+    dga.disabled = true;
+    if (!await ADS.show('gift')) { dga.disabled = false; SFX.bad(); return; }
+    SAVE.coins += reward.coins || 0;
+    SAVE.treats += reward.treats || 0;
+    persist(true); syncPurse(); SFX.coin();
+    dga.remove();
+    toast(T('ad_twice_done'), 'coin');
+  });
   /* the rung you have just landed on arrives after the sheet does, so
      the eye is drawn to the week rather than to the coins */
   const nowPip = $('.ladder .d.now', m.el);
