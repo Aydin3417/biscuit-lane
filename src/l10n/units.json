@@ -1,0 +1,52 @@
+{
+ "es": {
+  "tile": "ficha",
+  "tiles": "fichas",
+  "blocker": "obstáculo",
+  "blockers": "obstáculos",
+  "rocket": "cohete",
+  "rockets": "cohetes",
+  "cross": "cruz",
+  "crosses": "cruces"
+ },
+ "de": {
+  "tile": "Kachel",
+  "tiles": "Kacheln",
+  "blocker": "Hindernis",
+  "blockers": "Hindernisse",
+  "rocket": "Rakete",
+  "rockets": "Raketen",
+  "cross": "Kreuz",
+  "crosses": "Kreuze"
+ },
+ "fr": {
+  "tile": "tuile",
+  "tiles": "tuiles",
+  "blocker": "obstacle",
+  "blockers": "obstacles",
+  "rocket": "fusée",
+  "rockets": "fusées",
+  "cross": "croix",
+  "crosses": "croix"
+ },
+ "pt": {
+  "tile": "peça",
+  "tiles": "peças",
+  "blocker": "obstáculo",
+  "blockers": "obstáculos",
+  "rocket": "foguete",
+  "rockets": "foguetes",
+  "cross": "cruz",
+  "crosses": "cruzes"
+ },
+ "it": {
+  "tile": "tessera",
+  "tiles": "tessere",
+  "blocker": "ostacolo",
+  "blockers": "ostacoli",
+  "rocket": "razzo",
+  "rockets": "razzi",
+  "cross": "croce",
+  "crosses": "croci"
+ }
+}

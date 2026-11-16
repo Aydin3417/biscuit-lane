@@ -192,8 +192,14 @@ function boot() {
     store: t => { SAVE.tune = t; persist(); },
   });
   castRebuild();          /* who stands in each board slot, before anything draws */
-  if (SAVE.settings.lang) LANG = SAVE.settings.lang;
-  else { LANG = (navigator.language || 'en').toLowerCase().indexOf('tr') === 0 ? 'tr' : 'en'; SAVE.settings.lang = LANG; }
+  /* the saved choice, or the phone's own language where the game speaks
+     it, or English */
+  if (SAVE.settings.lang && LANGS.some(l => l[0] === SAVE.settings.lang)) LANG = SAVE.settings.lang;
+  else {
+    const want = (navigator.language || 'en').toLowerCase().slice(0, 2);
+    LANG = LANGS.some(l => l[0] === want) ? want : 'en';
+    SAVE.settings.lang = LANG;
+  }
   numLocale(LANG);
   document.documentElement.lang = LANG;
 

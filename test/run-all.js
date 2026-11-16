@@ -17,6 +17,7 @@ const steps = [
      typo in a bucket reaching every phone at once */
   ['the live-tuning file, clamped', 'live-tune.js', []],
   ['the budget that follows the player', 'adapt.js', []],
+  ['five more languages, held to the English', 'l10n.js', []],
   /* cheapest first: a missing translation is found by reading two
      tables, and it is the fault most likely to reach a player */
   ['every string, in both languages', 'strings.js', []],

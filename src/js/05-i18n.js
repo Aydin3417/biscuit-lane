@@ -408,7 +408,9 @@ const STRINGS = {
     set_played: 'Played', set_cleared: 'Cleared', set_bestcombo: 'Best combo',
     save_broken: 'Your save could not be read. A copy was kept and the game starts fresh.',
     tut_rescue: 'Walk the little ones down to the bottom row and they are home.',
-    perk_move: '+{n} move', perk_moves: '+{n} moves'
+    perk_move: '+{n} move', perk_moves: '+{n} moves',
+    perk_trait_move: '+{n} move ({trait})', perk_trait_coins: '+{n}% coins ({trait})',
+    perk_trait_charge: 'Charges {n}% faster ({trait})', perk_trait_dozy: 'Slower to go hungry ({trait})'
   },
 
   tr: {
@@ -799,7 +801,9 @@ const STRINGS = {
     set_played: 'Oynanan', set_cleared: 'Geçilen', set_bestcombo: 'En iyi kombo',
     save_broken: 'Kayıt okunamadı. Bir kopyası saklandı, oyun sıfırdan başlıyor.',
     tut_rescue: 'Sepetteki minikleri en alt sıraya indir; kapıdan çıkıp eve girerler.',
-    perk_move: '+{n} hamle', perk_moves: '+{n} hamle'
+    perk_move: '+{n} hamle', perk_moves: '+{n} hamle',
+    perk_trait_move: '+{n} hamle ({trait})', perk_trait_coins: '+%{n} altın ({trait})',
+    perk_trait_charge: '%{n} daha hızlı dolar ({trait})', perk_trait_dozy: 'Daha geç acıkır ({trait})'
   }
 };
 
@@ -851,8 +855,6 @@ const ONE = {
     perk_moves: '+{n} move', nap_hint_n: '{n} hint'
   }
 };
-/* a sentence the data carries itself, as { en, tr }: the stray tales */
-function locText(o) { return (o && (o[LANG] || o.en)) || ''; }
 function T(key, vars) {
   const single = vars && (vars.n === 1 || vars.stars === 1) && ONE[LANG] && ONE[LANG][key];
   let s = single || (STRINGS[LANG] && STRINGS[LANG][key]) || STRINGS.en[key] || key;

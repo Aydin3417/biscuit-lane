@@ -1281,3 +1281,9 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .stray.waiting{ border-style:dashed; background:transparent; box-shadow:none; color:var(--text-faint); font-weight:600; justify-content:center; }
 .stray.waiting span{ white-space:normal; text-align:center; line-height:1.25; }
 .stray.waiting .q{ font-family:"Grandstander",sans-serif; font-size:var(--t-h2); color:var(--text-faint); line-height:1.4; }
+
+/* seven languages do not fit a two-button switch */
+.langGrid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:6px; padding:2px 13px 11px; }
+.langGrid button{ padding:8px 6px; border-radius:var(--r-full); border:1px solid var(--line-soft); background:var(--surface-2);
+  font-size:var(--t-small); font-weight:700; color:var(--text-dim); }
+.langGrid button.on{ background:var(--accent); border-color:var(--accent-strong); color:var(--on-accent, #2B1D10); }

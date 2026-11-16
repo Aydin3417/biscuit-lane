@@ -552,8 +552,10 @@ const HAP = {
    player read 12,345 as twelve and a bit and 1.6k as a sixteenth of
    something. The locale follows the language; see setLang and boot. */
 let NUM_LOCALE = 'en-US';
-function numLocale(lang) { NUM_LOCALE = lang === 'tr' ? 'tr-TR' : 'en-US'; }
-const decimalMark = () => NUM_LOCALE === 'tr-TR' ? ',' : '.';
+const NUM_LOCALES = { en: 'en-US', tr: 'tr-TR', es: 'es-ES', de: 'de-DE', fr: 'fr-FR', pt: 'pt-BR', it: 'it-IT' };
+function numLocale(lang) { NUM_LOCALE = NUM_LOCALES[lang] || 'en-US'; }
+/* English is the only one of the seven that writes a decimal point */
+const decimalMark = () => NUM_LOCALE === 'en-US' ? '.' : ',';
 function fmt(n) {
   n = Math.round(n);
   return n >= 10000 ? n.toLocaleString(NUM_LOCALE) : String(n);
@@ -590,3 +592,35 @@ function fmtTime(ms) {
   const m = Math.floor(s / 60);
   return m + ':' + String(s % 60).padStart(2, '0');
 }
+
+/* MORE THAN TWO LANGUAGES.
+
+   English and Turkish were written side by side, and half the game's
+   words never reached this table: a breed's name, a badge's line, a
+   coat's colour sit beside the thing they describe as `en` and `tr`,
+   read by twenty-one `LANG === 'tr' ?` scattered through four files.
+   A third language written the same way would have been a third field
+   on two hundred and seventy objects.
+
+   So the other languages are added without touching one of them. Their
+   table rows arrive from src/l10n/<lang>.json (tools/l10n-build.js
+   writes 06-l10n.js), and a sentence the data carries inline is looked
+   up by its English in XLATE. loc() is the one place that knows the
+   three cases: English is the field, Turkish is its sibling, anything
+   else is the English looked up — and falls back to the English, so a
+   sentence added tomorrow and not yet translated shows in English
+   rather than as nothing. */
+const LANGS = [['en', 'English'], ['tr', 'Türkçe'], ['es', 'Español'], ['de', 'Deutsch'],
+  ['fr', 'Français'], ['pt', 'Português'], ['it', 'Italiano']];
+const XLATE = {};
+function xl(en) { return (LANG !== 'en' && XLATE[LANG] && XLATE[LANG][en]) || en || ''; }
+/* o.en / o.tr, or o.enDesc / o.trDesc with field 'Desc', and so on */
+function loc(o, field) {
+  if (!o) return '';
+  const f = field || '';
+  const en = o['en' + f];
+  if (LANG === 'tr') return o['tr' + f] || en || '';
+  return xl(en);
+}
+/* a sentence the data carries itself, as { en, tr }: the stray tales */
+function locText(o) { return (o && (o[LANG] || xl(o.en))) || ''; }

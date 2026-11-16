@@ -591,7 +591,7 @@ function makePet(breedIdx, coatIdx, eyeIdx, name) {
        — and a pet called "<3" is a perfectly ordinary thing to want.
        One line here is cheaper than nineteen escapes that have to be
        remembered every time somebody adds a twentieth. */
-    name: cleanName(name) || b[LANG] || b.en,
+    name: cleanName(name) || loc(b),
     born: now(),
     food: 78, joy: 82, clean: 88, energy: 74,
     bond: 0, bondXp: 0,
@@ -724,12 +724,12 @@ function petStageIdx(p) {
 function stageName(p) {
   const st = STAGES[petStageIdx(p)];
   if (LANG === 'tr') return st.tr;
-  return petBreed(p).species === 'dog' ? st.enDog : st.en;
+  return xl(petBreed(p).species === 'dog' ? st.enDog : st.en);
 }
 function stagePhrase(p) {
   const st = STAGES[petStageIdx(p)];
   if (LANG === 'tr') return st.phTr;
-  return petBreed(p).species === 'dog' ? st.phDog : st.ph;
+  return xl(petBreed(p).species === 'dog' ? st.phDog : st.ph);
 }
 /* The player's own words are the only strings in the game that end up
    in markup without having been written by us, so they are cleaned once,
@@ -747,11 +747,11 @@ function cleanName(v) {
   }
   return out.trim().slice(0, 14);
 }
-function breedName(i) { const b = BREEDS[i]; return LANG === 'tr' ? b.tr : b.en; }
-function breedDesc(i) { const b = BREEDS[i]; return LANG === 'tr' ? b.trDesc : b.enDesc; }
+function breedName(i) { return loc(BREEDS[i]); }
+function breedDesc(i) { return loc(BREEDS[i], 'Desc'); }
 function abilityOf(p) { return ABILITIES[petBreed(p).ability]; }
-function abilityName(p) { const a = abilityOf(p); return LANG === 'tr' ? a.tr : a.en; }
-function abilityDesc(p) { const a = abilityOf(p); return LANG === 'tr' ? a.trDesc : a.enDesc; }
+function abilityName(p) { return loc(abilityOf(p)); }
+function abilityDesc(p) { return loc(abilityOf(p), 'Desc'); }
 /* how far the ability reaches at a given stage, and how to say it */
 function abilityStep(kind, stage) {
   const a = ABILITIES[kind];
@@ -763,14 +763,14 @@ function abilityPowerText(kind, stage) {
   const n = abilityStep(kind, stage);
   if (!a || !n) return '';
   if (LANG === 'tr') return n + ' ' + a.trUnit;
-  return n + ' ' + a.enUnit[n === 1 ? 0 : 1];
+  return n + ' ' + xl(a.enUnit[n === 1 ? 0 : 1]);
 }
 function abilityPower(p) {
   if (!p) return '';
   return abilityPowerText(petBreed(p).ability, petStageIdx(p));
 }
-function goodName(g) { return LANG === 'tr' ? (g.tr || g.en) : g.en; }
-function goodDesc(g) { return LANG === 'tr' ? (g.trDesc || g.enDesc || '') : (g.enDesc || ''); }
+function goodName(g) { return loc(g); }
+function goodDesc(g) { return loc(g, 'Desc'); }
 
 /* bond levels needed: 4, 6, 8, 10 ... */
 function bondNeed(level) { return 4 + level * 2; }
@@ -934,24 +934,28 @@ function perksFor(p) {
   if (p.clean >= 70) out.push({ id: 'score', en: '+12% score', tr: '+%12 puan', v: .12 });
   if (p.energy >= 70) out.push({ id: 'gift', en: 'A rocket on the board', tr: 'Tahtada bir roket', v: 1 });
   const tidy = traitMoveBonus(p);
-  if (tidy) out.push({ id: 'trait', en: '+' + tidy + ' move (' + traitName(p.trait) + ')', tr: '+' + tidy + ' hamle (' + traitName(p.trait) + ')', v: tidy });
+  if (tidy) out.push({ id: 'trait', en: '+' + tidy + ' move (' + traitName(p.trait) + ')', tr: '+' + tidy + ' hamle (' + traitName(p.trait) + ')', v: tidy,
+    key: 'perk_trait_move', vars: { n: tidy, trait: traitName(p.trait) } });
   /* the other three do just as much and used to say nothing. These are
      read out, not applied: each one is already applied where it belongs. */
   const nm = traitOf(p) ? traitName(p.trait) : '';
   if (traitOf(p) === 'greedy') {
     out.push({ id: 'traitnote', v: 0,
       en: '+' + Math.round((traitCoinScale(p) - 1) * 100) + '% coins (' + nm + ')',
-      tr: '+%' + Math.round((traitCoinScale(p) - 1) * 100) + ' altın (' + nm + ')' });
+      tr: '+%' + Math.round((traitCoinScale(p) - 1) * 100) + ' altın (' + nm + ')',
+      key: 'perk_trait_coins', vars: { n: Math.round((traitCoinScale(p) - 1) * 100), trait: nm } });
   }
   if (traitOf(p) === 'playful') {
     out.push({ id: 'traitnote', v: 0,
       en: 'Charges ' + Math.round((traitChargeScale(p) - 1) * 100) + '% faster (' + nm + ')',
-      tr: '%' + Math.round((traitChargeScale(p) - 1) * 100) + ' daha hızlı dolar (' + nm + ')' });
+      tr: '%' + Math.round((traitChargeScale(p) - 1) * 100) + ' daha hızlı dolar (' + nm + ')',
+      key: 'perk_trait_charge', vars: { n: Math.round((traitChargeScale(p) - 1) * 100), trait: nm } });
   }
   if (traitOf(p) === 'dozy') {
     out.push({ id: 'traitnote', v: 0,
       en: 'Slower to go hungry (' + nm + ')',
-      tr: 'Daha geç acıkır (' + nm + ')' });
+      tr: 'Daha geç acıkır (' + nm + ')',
+      key: 'perk_trait_dozy', vars: { trait: nm } });
   }
   /* Tied to the stages, and capped there. Bond itself has no ceiling,
      and an uncapped move bonus quietly retunes every level in the game
@@ -968,7 +972,13 @@ function perksFor(p) {
   }
   return out;
 }
-function perkLabel(perk) { return LANG === 'tr' ? perk.tr : perk.en; }
+/* A perk made of a number and a trait's name is put together in the
+   source for English and Turkish, and cannot be looked up by its
+   English in any other language: those take it whole from the table. */
+function perkLabel(perk) {
+  if (perk.key && LANG !== 'en' && LANG !== 'tr') return T(perk.key, perk.vars);
+  return loc(perk);
+}
 /* The card used to print every perk end to end, which read as a run-on
    sentence and said "+2 moves" twice — once for a full belly and once
    for the pet's stage — as though they were separate things. Move

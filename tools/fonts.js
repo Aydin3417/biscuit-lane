@@ -69,6 +69,9 @@ function charset() {
      that happen to appear in the shipped copy */
   add('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ');
   add('çğıöşüÇĞİÖŞÜâîû');
+  /* and the alphabets of the five languages added on 15 Nov 2026, whole,
+     for the same reason: a pet called Señor Müller has to be drawable */
+  add('áàâäãåçéèêëíìîïñóòôöõúùûüýÿœæßÁÀÂÄÃÅÇÉÈÊËÍÌÎÏÑÓÒÔÖÕÚÙÛÜÝŒÆ¿¡«»„‚ºª');
   add('0123456789');
   add(' !"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~');
   add('·×—–…’‘“”€₺');
@@ -103,6 +106,8 @@ async function fetchFace(fam, weight) {
   return Buffer.from(await res.arrayBuffer());
 }
 
+let PY = 'python3';
+try { execFileSync(PY, ['--version'], { stdio: 'pipe' }); } catch (e) { PY = 'python'; }
 function subset(buf, chars) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'bl-font-'));
   const inFile = path.join(tmp, 'in.woff2');
@@ -110,7 +115,8 @@ function subset(buf, chars) {
   const txtFile = path.join(tmp, 'chars.txt');
   fs.writeFileSync(inFile, buf);
   fs.writeFileSync(txtFile, chars, 'utf8');
-  execFileSync('python3', ['-m', 'fontTools.subset', inFile,
+  /* python3 where there is one; Windows installs it as python */
+  execFileSync(PY, ['-m', 'fontTools.subset', inFile,
     '--text-file=' + txtFile,
     '--flavor=woff2',
     '--layout-features=kern,liga',

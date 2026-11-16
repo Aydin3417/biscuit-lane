@@ -1289,7 +1289,7 @@ function customiseSheet(breedIdx, done) {
   $('#csCoats', m.el).innerHTML = BREEDS[breedIdx].coats.map((co, i) => `
     <button class="choice ${i === coat ? 'on' : ''}" data-coat="${i}" style="padding:9px 4px">
       <canvas data-face="${breedIdx}" data-coat="${i}" width="46" height="46"></canvas>
-      <span class="nm" style="font-size:var(--t-micro)">${LANG === 'tr' ? co.tr : co.en}</span>
+      <span class="nm" style="font-size:var(--t-micro)">${loc(co)}</span>
     </button>`).join('');
   $('#csEyes', m.el).innerHTML = EYE_COLORS.map((e, i) =>
     `<button class="sw ${i === eye ? 'on' : ''}" data-eye="${i}" aria-label="${T('eye_' + e.id)}" title="${T('eye_' + e.id)}" style="background:${e.hex}"></button>`).join('');
@@ -1488,7 +1488,7 @@ function groomSheet(id) {
         const own = coatOwned(p.breed, i);
         return `<button class="choice ${i === coat ? 'on' : ''}" data-coat="${i}" style="padding:9px 4px">
           <canvas data-face="${p.breed}" data-coat="${i}" width="46" height="46"></canvas>
-          <span class="nm" style="font-size:var(--t-micro)">${LANG === 'tr' ? co.tr : co.en}</span>
+          <span class="nm" style="font-size:var(--t-micro)">${loc(co)}</span>
           ${own ? '' : `<span class="pill warn" style="margin-top:3px">${T('fam_cost', { n: GROOM.coat })}</span>`}
         </button>`;
       }).join('')}
@@ -1769,7 +1769,7 @@ function coinPurse(need) {
     <p style="color:var(--text-dim)">${T('purse_s')}</p>
     ${COIN_PURSES.map(p => `
       <div class="offer">
-        <span class="ot"><b><span class="reward" style="color:var(--accent-strong)">${IC.coin}${fmt(p.coins)}</span>${p.best ? ' ★' : ''}</b><small>${p[LANG] || p.en}</small></span>
+        <span class="ot"><b><span class="reward" style="color:var(--accent-strong)">${IC.coin}${fmt(p.coins)}</span>${p.best ? ' ★' : ''}</b><small>${locText(p)}</small></span>
         <button class="btn sm" data-purse="${p.id}">${IC.treat}${p.treats}</button>
       </div>`).join('')}
     <button class="btn primary wide" id="puOk">${T('ok')}</button>
@@ -1852,7 +1852,7 @@ function treatStore(why, need, done) {
 
     ${TREAT_PACKS.filter(p => BILLING.prices[p.sku]).map(p => row(p.id, 'pack',
       T('store_pack', { n: p.treats }) + (p.best ? ' ★' : ''),
-      (p[LANG] || p.en) + (p.infinite ? ' · ' + T('inf_for', { t: durText(p.infinite) }) : ''), tag(p.sku, p.usd))).join('')}
+      (locText(p)) + (p.infinite ? ' · ' + T('inf_for', { t: durText(p.infinite) }) : ''), tag(p.sku, p.usd))).join('')}
 
     ${live ? `<button class="btn ghost wide" id="stRestore"
       style="font-size:var(--t-micro)">${T('store_restore')}</button>` : ''}
@@ -2846,7 +2846,7 @@ function openDailyGift() {
    writing SAVE.settings.lang alone does nothing — which is how the
    layout test came to measure English twice. */
 function setLang(code) {
-  LANG = (code === 'tr') ? 'tr' : 'en';
+  LANG = LANGS.some(l => l[0] === code) ? code : 'en';
   numLocale(LANG);
   document.documentElement.lang = LANG;
   SAVE.settings.lang = LANG;
@@ -2906,10 +2906,9 @@ function openSettings() {
       <div class="divide"></div>
       <div class="switchRow">
         <span class="lb">${T('set_lang')}</span>
-        <span class="seg" id="segLang">
-          <button data-lang="en" class="${LANG === 'en' ? 'on' : ''}">English</button>
-          <button data-lang="tr" class="${'tr' === LANG ? 'on' : ''}">Türkçe</button>
-        </span>
+      </div>
+      <div class="langGrid" id="segLang">
+        ${LANGS.map(l => `<button data-lang="${l[0]}" lang="${l[0]}" class="${LANG === l[0] ? 'on' : ''}">${l[1]}</button>`).join('')}
       </div>
     </div>
     <div class="eyebrow setEyebrow">${T('set_sec_data')}</div>
@@ -3174,7 +3173,7 @@ function runOnboarding() {
           ${BREEDS[breedIdx].coats.map((co, i) => `
             <button class="choice ${i === coat ? 'on' : ''}" data-c="${i}" style="padding:10px 5px">
               <canvas data-face="${breedIdx}" data-coat="${i}" width="66" height="66"></canvas>
-              <span class="nm" style="font-size:var(--t-small)">${LANG === 'tr' ? co.tr : co.en}</span>
+              <span class="nm" style="font-size:var(--t-small)">${loc(co)}</span>
             </button>`).join('')}
         </div>
         <div class="eyebrow">${T('onb_eyes')}</div>

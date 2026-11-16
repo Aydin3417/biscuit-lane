@@ -172,7 +172,7 @@ function chapterLap(n) { return Math.floor(chapterIdx(n) / CHAPTERS.length); }
 function chapterName(n) {
   const ch = chapterOf(n);
   const lap = chapterLap(n);
-  const base = LANG === 'tr' ? ch.tr : ch.en;
+  const base = loc(ch);
   return lap ? base + ' ' + (lap + 1) : base;
 }
 /* the first level of the stretch this one is in, and the last */
@@ -1237,11 +1237,11 @@ const BADGES = [
     of: 30, at: s => s.streak, coins: 50, treats: 3
   }
 ];
-function badgeName(b) { return LANG === 'tr' ? b.tr : b.en; }
-function badgeDesc(b) { return LANG === 'tr' ? b.trDesc : b.enDesc; }
-function traitName(id) { const t = TRAITS[id]; return t ? (LANG === 'tr' ? t.tr : t.en) : ''; }
-function traitDesc(id) { const t = TRAITS[id]; return t ? (LANG === 'tr' ? t.trDesc : t.enDesc) : ''; }
-function traitHow(id) { const t = TRAITS[id]; return t ? (LANG === 'tr' ? t.trHow : t.enHow) : ''; }
+function badgeName(b) { return loc(b); }
+function badgeDesc(b) { return loc(b, 'Desc'); }
+function traitName(id) { return loc(TRAITS[id]); }
+function traitDesc(id) { return loc(TRAITS[id], 'Desc'); }
+function traitHow(id) { return loc(TRAITS[id], 'How'); }
 
 /* ---------- the pet's favourite tile ---------- */
 /* The one thing joining the two halves of this game is that matching

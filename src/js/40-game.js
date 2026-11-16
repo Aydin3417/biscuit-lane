@@ -2446,13 +2446,18 @@ function hintScore(a, b) {
            know are weighted as test/_solver.js's human policy weighs
            them, since that is the player every budget was fitted to. */
         if (want.bramble && cell.bram > 0) wanted += 4;
+        /* and the four the run holds back, by the same weights */
+        if (cell.bone && cell.mud > 0) wanted += 5;
+        if (cell.mouse) wanted += 9;
+        if (cell.tile && cell.tile.hungry > 0) wanted += cell.tile.hungry <= 3 ? 14 : 7;
+        const runType = cell.tile ? cell.tile.type : -1;
         [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(d => {
           const nb = G.B.cell[r2 + d[0]] && G.B.cell[r2 + d[0]][c2 + d[1]];
           if (!nb || nb.hole) return;
           /* a match beside a crate is what breaks the crate. This read
              openCell, which answers null for a crate cell, so the bonus
              had never once fired. */
-          if (nb.crate) wanted += 2;
+          if (nb.crate && crateOpens(nb, runType)) wanted += 2;
           if (want.mole && nb.mole > 0) wanted += 4;
           /* a basket rides down on whatever is cleared beneath it */
           if (want.rescue && d[0] === -1 && nb.tile && nb.tile.type === PUP) wanted += 6;
