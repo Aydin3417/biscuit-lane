@@ -1566,6 +1566,8 @@ function goalLine(g) {
   if (g.kind === GK.BRAMBLE) return T('goal_bramble', { n });
   if (g.kind === GK.MOLE) return T('goal_mole', { n });
   if (g.kind === GK.RESCUE) return T('goal_rescue', { n });
+  if (g.kind === GK.BONE) return T('goal_bone', { n });
+  if (g.kind === GK.MOUSE) return T('goal_mouse', { n });
   return '';
 }
 function goalIconHtml(kind, arg) {
@@ -1585,6 +1587,8 @@ function paintGoalIcons(root) {
     /* without this a molehill goal fell through to the star, and the lose
        card for level 76 read "★ 0 / 3" */
     else if (k === GK.MOLE) paintMole(c, px * .9, 2);
+    else if (k === GK.BONE) paintBone(c, px * 1.25);
+    else if (k === GK.MOUSE) paintMouse(c, px * 1.2);
     else { c.fillStyle = PAL.accent; c.save(); c.scale(px / 24, px / 24); c.translate(-12, -12); c.fill(new Path2D('m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5-4.7-4.6 6.5-.9z')); c.restore(); }
   });
 }
@@ -3015,6 +3019,12 @@ function maybeTutorial(def) {
   if (def.goals.some(g => g[0] === GK.MOLE) && !SAVE.seen.mole) {
     steps.push({ k: 'mole', text: T('tut_mole'), art: 'mole' });
   }
+  /* the four the run holds back (30-engine.js): one card each, the
+     first time a board carries it */
+  if (def.goals.some(g => g[0] === GK.BONE) && !SAVE.seen.bone) steps.push({ k: 'bone', text: T('tut_bone'), art: 'bone' });
+  if (def.goals.some(g => g[0] === GK.MOUSE) && !SAVE.seen.mouse) steps.push({ k: 'mouse', text: T('tut_mouse'), art: 'mouse' });
+  if (def.hungry && !SAVE.seen.hungry) steps.push({ k: 'hungry', text: T('tut_hungry', { n: HUNGRY_COST }), art: 'hungry' });
+  if (def.toy && !SAVE.seen.toy) steps.push({ k: 'toy', text: T('tut_toy'), art: 'toy' });
   if (def.goals.some(g => g[0] === GK.RESCUE) && !SAVE.seen.rescue) {
     steps.push({ k: 'rescue', text: T('tut_rescue') });
   }
@@ -3050,6 +3060,10 @@ function maybeTutorial(def) {
       if (s.art === 'crate') paintCrate(c, 82, 2);
       else if (s.art === 'mud') paintMud(c, 82, 2);
       else if (s.art === 'mole') paintMole(c, 82, 2);
+      else if (s.art === 'bone') { paintMud(c, 82, 1); paintBone(c, 96); }
+      else if (s.art === 'mouse') paintMouse(c, 104);
+      else if (s.art === 'hungry') { paintTile(c, 0, SP.NONE, 78, SAVE.settings.marks); c.translate(-20, 24); paintBowl(c, 56); }
+      else if (s.art === 'toy') { paintCrate(c, 82, 1); c.scale(.5, .5); paintTile(c, 0, SP.NONE, 78, SAVE.settings.marks); }
       else { paintTile(c, 1, SP.NONE, 78, SAVE.settings.marks); paintIce(c, 82); }
     } else {
       c.translate(60, 18);

@@ -2291,3 +2291,68 @@ function drawLogoPaw(c, s) {
   c.restore();
 }
 
+
+/* ---------- the run's later things (see 30-engine.js) ----------
+   Drawn in the animals' own line: a flat fill, the ink outline at
+   LINE of the box, one highlight. Each is centred on the origin in a
+   box of side s, like every other paint* here. */
+function paintBone(c, s) {
+  c.save();
+  c.rotate(-.5);
+  c.lineJoin = 'round';
+  const L = s * .30, R = s * .125, W = s * .085;
+  const shape = () => {
+    c.beginPath();
+    c.rect(-L, -W, L * 2, W * 2);
+    [[-L, -R * .8], [-L, R * .8], [L, -R * .8], [L, R * .8]].forEach(p => { c.moveTo(p[0] + R, p[1]); c.arc(p[0], p[1], R, 0, 6.2832); });
+  };
+  shape(); c.lineWidth = s * LINE * 2.6; c.strokeStyle = INK; c.stroke();
+  shape(); c.fillStyle = '#FFF4DC'; c.fill();
+  c.fillStyle = rgba('#C9A66B', .45);
+  c.fillRect(-L * .8, W * .2, L * 1.6, W * .6);
+  c.restore();
+}
+function paintMouse(c, s) {
+  c.save();
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  const lw = s * LINE * 1.5;
+  /* tail */
+  c.strokeStyle = '#E7A9A0'; c.lineWidth = s * .05;
+  c.beginPath(); c.moveTo(s * .16, s * .16); c.quadraticCurveTo(s * .44, s * .26, s * .36, -s * .04); c.stroke();
+  /* ears */
+  [[-s * .17, -s * .19], [s * .15, -s * .19]].forEach(p => {
+    c.beginPath(); c.arc(p[0], p[1], s * .135, 0, 6.2832);
+    c.fillStyle = '#A9A29A'; c.fill(); c.lineWidth = lw; c.strokeStyle = INK; c.stroke();
+    c.beginPath(); c.arc(p[0], p[1], s * .07, 0, 6.2832); c.fillStyle = '#F2B8B0'; c.fill();
+  });
+  /* head and body in one */
+  c.beginPath(); c.ellipse(0, s * .05, s * .26, s * .22, 0, 0, 6.2832);
+  c.fillStyle = '#C2BBB2'; c.fill(); c.lineWidth = lw; c.strokeStyle = INK; c.stroke();
+  c.beginPath(); c.ellipse(0, s * .13, s * .15, s * .10, 0, 0, 6.2832); c.fillStyle = '#EDE8E0'; c.fill();
+  /* eyes, nose, whiskers */
+  c.fillStyle = INK;
+  c.beginPath(); c.arc(-s * .09, -s * .01, s * .032, 0, 6.2832); c.arc(s * .09, -s * .01, s * .032, 0, 6.2832); c.fill();
+  c.fillStyle = '#E58C8C';
+  c.beginPath(); c.arc(0, s * .09, s * .034, 0, 6.2832); c.fill();
+  c.strokeStyle = rgba(INK, .55); c.lineWidth = s * .014;
+  [[-1, .07], [-1, .12], [1, .07], [1, .12]].forEach(w => {
+    c.beginPath(); c.moveTo(w[0] * s * .06, s * .10); c.lineTo(w[0] * s * .24, s * w[1]); c.stroke();
+  });
+  c.restore();
+}
+/* the bowl a hungry face carries; the number is drawn by the board,
+   because it changes every move */
+function paintBowl(c, s) {
+  c.save();
+  c.lineJoin = 'round';
+  const w = s * .30, h = s * .17;
+  c.beginPath();
+  c.moveTo(-w, -h * .5); c.lineTo(w, -h * .5); c.lineTo(w * .72, h); c.lineTo(-w * .72, h); c.closePath();
+  c.lineWidth = s * LINE * 2.2; c.strokeStyle = INK; c.stroke();
+  c.fillStyle = '#D9534F'; c.fill();
+  c.beginPath(); c.ellipse(0, -h * .5, w, h * .42, 0, 0, 6.2832);
+  c.fillStyle = '#8A5A2B'; c.fill(); c.lineWidth = s * LINE * 1.4; c.stroke();
+  c.fillStyle = rgba('#FFFFFF', .35);
+  c.fillRect(-w * .55, h * .1, w * .5, h * .28);
+  c.restore();
+}

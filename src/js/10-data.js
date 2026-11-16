@@ -1216,7 +1216,7 @@ function favTypeFor(breed, types) {
 const CHARGE_FAV = 4.2, CHARGE_OTHER = .55;
 
 /* ---------- goal kinds ---------- */
-const GK = { SCORE: 'score', COLLECT: 'collect', CRATE: 'crate', MUD: 'mud', RESCUE: 'rescue', BRAMBLE: 'bramble', MOLE: 'mole' };
+const GK = { SCORE: 'score', COLLECT: 'collect', CRATE: 'crate', MUD: 'mud', RESCUE: 'rescue', BRAMBLE: 'bramble', MOLE: 'mole', BONE: 'bone', MOUSE: 'mouse' };
 /* how many cells a bramble patch may ever cover, as a share of the
    open board — without this a bad run could strangle the level */
 const BRAMBLE_CAP = 0.42;
@@ -1527,7 +1527,7 @@ function mapStock(def) {
     for (const ch of row) {
       if (ch === 'm') mud += 1;
       else if (ch === 'M') mud += 2;
-      else if (ch === 'c' || ch === 'C') crate += 1;
+      else if (ch === 'c' || ch === 'C' || ch === 't' || ch === 'T' || ch === 'u' || ch === 'U') crate += 1;
       else if (ch === 'v') bram += 1;
     }
   });
@@ -1603,8 +1603,61 @@ const GEN = {
   collect: { base: 10500, moves: 30 },
   rescue:  { base: 10000, moves: 32 },
   score:   { base: 13400, moves: 30 },
-  mole:    { base: 9800,  moves: 13 }
+  mole:    { base: 9800,  moves: 13 },
+  /* the two goals the run holds back (30-engine.js). Their budgets are
+     not modelled — there is no response curve for either — so these are
+     only where the real-game fit starts from (test/real-fit.js) */
+  bone:    { base: 8600,  moves: 22 },
+  mouse:   { base: 9800,  moves: 22 }
 };
+
+/* WHERE THE LATER THINGS ARRIVE, AND HOW OFTEN THEY COME BACK.
+
+   Each on the level after a gate, fifty levels apart: bones under the
+   mud at 101, hungry faces at 151, mice at 201, toy boxes at 251.
+
+   They are not cards in the deck (runDeck). A new card would reshuffle
+   every hand dealt after it, and every one of those levels has a budget
+   that was measured for the level it was. Instead a level here and
+   there is taken out of the deck's hands by a die of its own: about one
+   level in eight becomes a dig, and from 201 about one in eight a mouse
+   hunt; a little over one in five of the rest carries hungry faces from
+   151; and from 251 half the crate levels are toy boxes. Only the
+   levels taken change, and only those are refitted. */
+const BONE_FROM = 101, HUNGRY_FROM = 151, MOUSE_FROM = 201, TOY_FROM = 251;
+function lateKind(n, dealt) {
+  if (n < BONE_FROM) return dealt;
+  if (n === BONE_FROM) return GK.BONE;
+  if (n === MOUSE_FROM) return GK.MOUSE;
+  if (n === TOY_FROM) return GK.CRATE;
+  if (n === HUNGRY_FROM) return dealt === GK.RESCUE ? GK.COLLECT : dealt;
+  /* the second roll, not the first: on consecutive seeds this generator's
+     first number is not even — one level in five came up a mouse hunt
+     where one in eight was asked for */
+  const roll = mulberry((n * 2654435761) >>> 0); roll();
+  const d = roll();
+  if (n > MOUSE_FROM && d < .12) return GK.MOUSE;
+  if (d >= .12 && d < .25) return GK.BONE;
+  return dealt;
+}
+function lateHungry(n, kind) {
+  if (n < HUNGRY_FROM || kind === GK.MOUSE) return null;
+  if (n === TOY_FROM) return null;      /* one new thing to a level */
+  const roll = mulberry((n * 2246822519) >>> 0); roll();
+  if (n !== HUNGRY_FROM && roll() >= .22) return null;
+  /* two on the board to begin with, nine and eleven moves of patience,
+     and another every seventh move */
+  return { n: 2, t: 9, every: 7 };
+}
+function lateToy(n, kind, types) {
+  if (n < TOY_FROM || kind !== GK.CRATE) return null;
+  const d = mulberry((n * 3266489917) >>> 0); d();
+  if (n !== TOY_FROM && d() >= .5) return null;
+  const a = Math.floor(d() * types);
+  let b = Math.floor(d() * types);
+  if (b === a) b = (b + 1) % types;
+  return [a, b];
+}
 
 /* The sizes a generated board comes in. Every generated level was 8x9,
    against ten of the lane's sixty that are not; a smaller board cascades
@@ -1891,7 +1944,7 @@ function levelDef(n, ref, forceKind) {
   /* a kind may be forced: test/calibrate.js measures how each kind answers
      its budget, and has to be able to build a mud level even while the
      curve it is about to replace says mud never fits */
-  const kind = forceKind || dealt;
+  const kind = forceKind || lateKind(n, dealt);
   r();                                  /* the roll the old pick spent, so the maps below keep their dice */
   const tier = Math.min(4, Math.floor((n - 40) / 12));
   const size = RUN_SIZES[Math.floor(mulberry(n * 3571)() * RUN_SIZES.length)];
@@ -1908,7 +1961,7 @@ function levelDef(n, ref, forceKind) {
      colours measured 100% at eight moves and twice its work, which is no
      level at all — mud, crates and hills are cleared by what falls, and
      five colours make everything fall. */
-  const relief = n % BLOCK === 1 && [GK.MUD, GK.CRATE, GK.MOLE].indexOf(kind) < 0;
+  const relief = n % BLOCK === 1 && [GK.MUD, GK.CRATE, GK.MOLE, GK.BONE].indexOf(kind) < 0;
   const types = tier <= 1 || relief ? 5 : 6;
   const key = kind === GK.BRAMBLE ? 'bramble' : kind;
 
@@ -1976,7 +2029,7 @@ function levelDef(n, ref, forceKind) {
   }
 
   /* mud and crates take an arrangement rather than a sprinkle */
-  const shaped = (kind === GK.MUD || kind === GK.CRATE)
+  const shaped = (kind === GK.MUD || kind === GK.CRATE || kind === GK.BONE)
     ? shapeMask(SHAPES[Math.floor(r() * SHAPES.length)], w, h, r)
     : null;
 
@@ -2044,6 +2097,8 @@ function levelDef(n, ref, forceKind) {
          only lever, or the budget cannot steer. */
       if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += 'o'; continue; }
       if (kind === GK.MUD && shaped.has(y + ':' + x)) { row += r() < GEN.mud.deep ? 'M' : 'm'; continue; }
+      /* a dig is shallower than a mud level: the bones are the work */
+      if (kind === GK.BONE && shaped.has(y + ':' + x)) { row += r() < .3 ? 'M' : 'm'; continue; }
       if (kind === GK.CRATE && shaped.has(y + ':' + x) && y > 0 && y < h - 1) {
         /* a goal counts crates, not hits, so a second layer is the only
            way to make one of them cost a move */
@@ -2083,6 +2138,31 @@ function levelDef(n, ref, forceKind) {
   /* the outline last, over plain cells only, so the goal below is sized
      to exactly the stock it would have had */
   cutSilhouette(map, runOutline(n, kind), w, h);
+
+  /* Where the bones lie: pairs of muddy cells side by side or one above
+     the other, none sharing a cell, three on the early digs and up to
+     five later. Taken from every pair the map offers by the level's own
+     dice, so the same level always buries them in the same place. */
+  const bones = [];
+  if (kind === GK.BONE) {
+    const muddy = (y, x) => map[y] && (map[y][x] === 'm' || map[y][x] === 'M');
+    const pairs = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!muddy(y, x)) continue;
+      if (muddy(y, x + 1)) pairs.push([[y, x], [y, x + 1]]);
+      if (muddy(y + 1, x)) pairs.push([[y, x], [y + 1, x]]);
+    }
+    for (let i = pairs.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = pairs[i]; pairs[i] = pairs[j]; pairs[j] = t; }
+    const used = new Set();
+    const wantBones = 3 + Math.min(2, Math.floor(tier / 2));
+    for (const p of pairs) {
+      if (bones.length >= wantBones) break;
+      const k0 = p[0].join(':'), k1 = p[1].join(':');
+      if (used.has(k0) || used.has(k1)) continue;
+      used.add(k0); used.add(k1);
+      bones.push(p);
+    }
+  }
 
   const stock = mapStock({ map });
 
@@ -2167,6 +2247,14 @@ function levelDef(n, ref, forceKind) {
        mechanic teaches nobody what it is for. */
     goals.push([GK.MOLE, 0, hills.size]);
     base = GEN.mole.base + tier * 400;
+  } else if (kind === GK.BONE) {
+    /* every bone buried: a dig that leaves one in the ground is a dig
+       nobody finished */
+    goals.push([GK.BONE, 0, Math.max(1, bones.length)]);
+    base = GEN.bone.base + tier * 400;
+  } else if (kind === GK.MOUSE) {
+    goals.push([GK.MOUSE, 0, 8 + tier]);
+    base = GEN.mouse.base + tier * 400;
   } else {
     goals.push([GK.BRAMBLE, 0, Math.round(GEN.bramble.goal(tier) * workMult)]);
     base = GEN.bramble.base + tier * 400;
@@ -2197,7 +2285,23 @@ function levelDef(n, ref, forceKind) {
 
   /* the live correction last, after the goals were sized to the budget:
      it is a change to how much room the player has, not to the level */
-  return normaliseGoals({ n, w, h, types, moves: tuneMoves(n, moves), goals, base, map, gate: isGate(n) });
+  const def = { n, w, h, types, moves: tuneMoves(n, moves), goals, base, map, gate: isGate(n) };
+  if (bones.length) def.bones = bones;
+  const hungry = ref ? null : lateHungry(n, kind);
+  if (hungry) def.hungry = hungry;
+  /* toy boxes: the same crates, each given to one of two animals by the
+     level's own dice. Done last, so the goal above was sized to the
+     crates as crates. */
+  const toy = ref ? null : lateToy(n, kind, types);
+  if (toy) {
+    const d = mulberry(n * 7103 + 3);
+    def.toy = toy;
+    def.map = map.map(row => row.replace(/[cC]/g, ch => {
+      const second = d() < .5;
+      return ch === 'c' ? (second ? 'u' : 't') : (second ? 'U' : 'T');
+    }));
+  }
+  return normaliseGoals(def);
 }
 /* ---------- the daily walk ----------
    Seeded from the date so everyone on a given day gets the same board,

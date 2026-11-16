@@ -46,6 +46,7 @@ const stubs = {
   breedName: "() => ''", castName: "() => ''", petDative: "() => ''", T: '(k) => k',
   paintTile: '() => {}', paintCrate: '() => {}', paintMud: '() => {}', paintBramble: '() => {}',
   paintBrambleOver: '() => {}', paintPup: '() => {}', paintMole: '() => {}', Path2D: 'function () {}',
+  paintBone: '() => {}', paintMouse: '() => {}', paintBowl: '() => {}',
   goodName: "() => ''", specOfPet: '() => ({})', drawFace: '() => {}', DAILY_LEVEL: '-7', petStageIdx: '() => 0'
 };
 

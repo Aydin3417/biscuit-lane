@@ -62,12 +62,14 @@ const X = vm.runInContext(
   '   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,' +
   '   commonType, shuffleTypes, ensureMove, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,' +
   '   moleCount, moleTick, moleHit, MOLE_EVERY,' +
+  '   crateOpens, boneDug, mouseTick, mousePlace, mouseCount, MICE_IN_PLAY, hungryTick, hungryPlace, hungryCount, HUNGRY_COST,' +
 '   targetClear, isGate, budgetFor, budgetRange, LEVELS, winRunGifts })', ctx);
 const {
   makeBoard, findMatches, specialFor, specialCell, settle, hasMove, allMoves, canSwap,
   swapTiles, eachCell, openCell, levelDef, starTargets, tilesOfType,
   commonType, shuffleTypes, ensureMove, spreadBramble, brambleCount, BRAMBLE_EVERY, mulberry, GK, PUP, SP, PUPS_IN_PLAY,
-  moleCount, moleTick, moleHit
+  moleCount, moleTick, moleHit,
+  crateOpens, boneDug, mouseTick, mousePlace, mouseCount, MICE_IN_PLAY, hungryTick, hungryPlace, hungryCount, HUNGRY_COST
 } = X;
 
 /* ---------------- board copy ---------------- */
@@ -104,7 +106,7 @@ function cloneBoard(B) {
         if (typeof v === 'number' || typeof v === 'boolean' || v === null) cell[k] = v;
       }
       cell.tile = s.tile
-        ? { id: s.tile.id, type: s.tile.type, sp: s.tile.sp, x: 0, y: 0, dying: 0 }
+        ? { id: s.tile.id, type: s.tile.type, sp: s.tile.sp, x: 0, y: 0, dying: 0, hungry: s.tile.hungry || 0 }
         : null;
       row.push(cell);
     }
@@ -130,11 +132,12 @@ function hitCell(B, r, c, out, touched) {
   cell.tile = null;
   out.count++;
   out.collect[t.type] = (out.collect[t.type] || 0) + 1;
-  if (cell.mud > 0) { cell.mud--; out.mud++; }
+  if (cell.mouse) { cell.mouse = 0; out.mouse++; }
+  if (cell.mud > 0) { cell.mud--; out.mud++; if (cell.mud === 0 && cell.bone && boneDug(B, cell)) out.bone++; }
   if (cell.bram > 0) { cell.bram--; out.bram++; }
   [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].forEach(([r2, c2]) => {
     const n = B.cell[r2] && B.cell[r2][c2];
-    if (n && n.crate > 0) { n.crate--; if (n.crate === 0) out.crate++; }
+    if (n && n.crate > 0 && crateOpens(n, t.type)) { n.crate--; if (n.crate === 0) out.crate++; }
     if (n && n.mole > 0 && moleHit(B, n)) { out.moleHit++; if (n.mole === 0) out.mole++; }
   });
 }
@@ -152,11 +155,12 @@ function specialKeys(B, r, c, sp, type) {
 function blast(B, keys, tally) {
   let wave = Array.from(keys), guard = 0;
   while (wave.length && guard++ < 24) {
-    const out = { chain: [], collect: {}, mud: 0, crate: 0, bram: 0, mole: 0, moleHit: 0, count: 0 };
+    const out = { chain: [], collect: {}, mud: 0, crate: 0, bram: 0, mole: 0, moleHit: 0, bone: 0, mouse: 0, count: 0 };
     const touched = new Set();
     wave.forEach(k => { const [r, c] = k.split(':').map(Number); hitCell(B, r, c, out, touched); });
     tally.mud += out.mud; tally.crate += out.crate; tally.bram += out.bram;
     tally.mole += out.mole || 0; tally.moleHit += out.moleHit || 0; tally.count += out.count;
+    tally.bone += out.bone || 0; tally.mouse += out.mouse || 0;
     for (const k in out.collect) tally.collect[k] = (tally.collect[k] || 0) + out.collect[k];
     const next = [];
     out.chain.forEach(s => specialKeys(B, s.r, s.c, s.sp, s.type).forEach(k => next.push(k)));
@@ -207,12 +211,12 @@ function resolve(B, swapCells, tally) {
       g.cells.forEach(([r, c]) => { if (!(at && r === at[0] && c === at[1])) keys.add(r + ':' + c); });
     });
     blast(B, keys, tally);
-    specials.forEach(s => { const cell = B.cell[s.r][s.c]; if (cell.tile) cell.tile.sp = s.sp; });
+    specials.forEach(s => { const cell = B.cell[s.r][s.c]; if (cell.tile) { cell.tile.sp = s.sp; cell.tile.hungry = 0; } });
     swapCells = null;
     settleFully(B, tally);
   }
 }
-const blankTally = () => ({ collect: {}, mud: 0, crate: 0, bram: 0, mole: 0, moleHit: 0, count: 0, rescued: 0, made: 0 });
+const blankTally = () => ({ collect: {}, mud: 0, crate: 0, bram: 0, mole: 0, moleHit: 0, bone: 0, mouse: 0, count: 0, rescued: 0, made: 0 });
 
 /* ---------------- goal bookkeeping ---------------- */
 function mkGoals(def) { return def.goals.map(g => ({ kind: g[0], arg: g[1], need: g[2], have: 0 })); }
@@ -222,6 +226,8 @@ function applyTally(goals, tally, score, B) {
     else if (g.kind === GK.MUD) g.have += tally.mud;
     else if (g.kind === GK.CRATE) g.have += tally.crate;
     else if (g.kind === GK.MOLE) g.have += tally.mole;
+    else if (g.kind === GK.BONE) g.have += tally.bone;
+    else if (g.kind === GK.MOUSE) g.have += tally.mouse;
     else if (g.kind === GK.BRAMBLE) g.have = Math.max(0, g.need - brambleCount(B));
     else if (g.kind === GK.RESCUE) g.have += tally.rescued;
     else if (g.kind === GK.SCORE) g.have = score;
@@ -334,7 +340,7 @@ function humanMove(B, goals) {
       swapTiles(B, a, b);
       const groups = findMatches(B);
       const seen = new Set();
-      const got = { count: 0, mud: 0, crate: 0, bram: 0, mole: 0, rescue: 0, made: 0, collect: {} };
+      const got = { count: 0, mud: 0, crate: 0, bram: 0, mole: 0, rescue: 0, made: 0, collect: {}, bone: 0, mouse: 0, fed: 0 };
       const hit = (r, c) => {
         const key = r + ':' + c;
         if (seen.has(key)) return;
@@ -348,11 +354,18 @@ function humanMove(B, goals) {
         got.count++;
         got.collect[t.type] = (got.collect[t.type] || 0) + 1;
         if (cell.mud > 0) got.mud++;
+        /* the mud over a bone is the mud worth cleaning, and the last
+           layer over it worth more than the first */
+        if (cell.bone && cell.mud > 0) got.bone += cell.mud === 1 ? 1.5 : 1;
+        if (cell.mouse) got.mouse++;
+        /* a hungry face with little patience left is worth going for
+           whatever the level wants */
+        if (t.hungry > 0) got.fed += t.hungry <= 3 ? 2 : 1;
         if (cell.bram > 0) got.bram++;
         [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].forEach(([r2, c2]) => {
           const nb = B.cell[r2] && B.cell[r2][c2];
           if (!nb) return;
-          if (nb.crate === 1) got.crate++;
+          if (nb.crate === 1 && crateOpens(nb, t.type)) got.crate++;
           if (nb.mole > 0) got.mole++;
           /* a basket sits on what is under it; clearing that is the only
              visible way of walking it home */
@@ -377,6 +390,8 @@ function humanMove(B, goals) {
         else if (g.kind === GK.CRATE) d = got.crate;
         else if (g.kind === GK.BRAMBLE) d = got.bram * 2;
         else if (g.kind === GK.MOLE) d = got.mole * 2;
+        else if (g.kind === GK.BONE) d = got.bone * 1.5;
+        else if (g.kind === GK.MOUSE) d = got.mouse * 3;
         else if (g.kind === GK.RESCUE) d = got.rescue * 3;
         else if (g.kind === GK.SCORE) d = got.count * 62 / 260;
         v += Math.min(d, l) * 10;
@@ -394,7 +409,7 @@ function humanMove(B, goals) {
          got a say and the policy sat back at 30%. */
       let rows = 0, cells = 0, longest = 0;
       groups.forEach(g => { longest = Math.max(longest, g.maxH || 0, g.maxV || 0); g.cells.forEach(([r]) => { rows += r; cells++; }); });
-      v += got.made * 6 + (longest >= 4 ? 2 : 0) + got.count * .1;
+      v += got.made * 6 + (longest >= 4 ? 2 : 0) + got.count * .1 + got.fed * 7;
       if (cells) v += 1.5 * (rows / cells) / Math.max(1, B.h - 1);
     }
     if (v > bestV) { bestV = v; best = m; }
@@ -421,6 +436,10 @@ function playLevel(n, seed, defOverride) {
       if (spots.length) spots[(Math.random() * spots.length) | 0].tile.type = PUP;
     }
   }
+  const mouseGoal = goals.find(g => g.kind === GK.MOUSE);
+  if (mouseGoal) for (let i = 0; i < Math.min(MICE_IN_PLAY, mouseGoal.need); i++) mousePlace(B);
+  let hungryN = 0;
+  if (def.hungry) for (let i = 0; i < def.hungry.n; i++) hungryPlace(B, def.hungry.t + i * 2);
   creepTick = 0;
   /* PERKS models the pet the player actually brings to a level. The room
      is not decoration: a well-kept pet hands the board +2 moves for
@@ -487,6 +506,17 @@ function playLevel(n, seed, defOverride) {
     applyTally(goals, t, score, B);
     creep(B, goals, t);
     moles(B);
+    if (mouseGoal) {
+      mouseTick(B);
+      const wantOut = Math.min(MICE_IN_PLAY, mouseGoal.need - mouseGoal.have);
+      let guard = 0;
+      while (mouseCount(B) < wantOut && guard++ < MICE_IN_PLAY) { if (!mousePlace(B)) break; }
+    }
+    if (def.hungry) {
+      moves = Math.max(0, moves - HUNGRY_COST * hungryTick(B).length);
+      hungryN++;
+      if (hungryN % def.hungry.every === 0 && hungryCount(B) < def.hungry.n + 1) hungryPlace(B, def.hungry.t);
+    }
   }
   const stars = starTargets(def);
   let s = 0;

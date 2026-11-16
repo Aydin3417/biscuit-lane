@@ -2239,6 +2239,14 @@ const STRINGS = {
     lose_tip_bramble: 'Cut from the edge of the patch inward, before it grows back over what you cleared.',
     lose_tip_score: 'Four in a row makes a rocket and five makes a star; specials are where the points are.',
     lose_tip_mole: 'Fill the hills in from beside them, and keep hitting the one nearest to closing.',
+    lose_tip_bone: 'A bone needs both of its squares clean. Finish one before starting on the next.',
+    lose_tip_mouse: 'A mouse runs after every move. Match the tile it is sitting on now, or send a rocket down its row.',
+    goal_bone: 'Dig up {n} bones', goal_mouse: 'Catch {n} mice',
+    tut_bone: 'Bones lie under the mud. Clean both squares over one to dig it up.',
+    tut_mouse: 'Mice! Clear the tile a mouse is sitting on to catch it. They run to a new square after every move.',
+    tut_hungry: 'A face with a bowl is hungry. Match it before its number runs out, or it eats {n} of your moves.',
+    tut_toy: 'A toy box opens only to the animal painted on it. Match that animal beside the box, or blast it open.',
+    a11y_hungry_ate: 'A hungry face ate {n} moves.',
 
     /* the till */
     store_t: 'Treats',
@@ -2625,6 +2633,14 @@ const STRINGS = {
     lose_tip_bramble: 'Kümenin kenarından içeri doğru kes, temizlediğin yere yeniden yayılmadan.',
     lose_tip_score: 'Dörtlü roket, beşli yıldız yapar; puan özel taşlarda.',
     lose_tip_mole: 'Tepecikleri yanından doldur; kapanmaya en yakın olana vurmaya devam et.',
+    lose_tip_bone: 'Bir kemiğin iki karesi de temiz olmalı. Yenisine başlamadan birini bitir.',
+    lose_tip_mouse: 'Fare her hamleden sonra kaçar. Şu an üstünde durduğu taşı eşle ya da sırasına bir roket yolla.',
+    goal_bone: '{n} kemik çıkar', goal_mouse: '{n} fare yakala',
+    tut_bone: 'Kemikler çamurun altında. Birini çıkarmak için üstündeki iki kareyi de temizle.',
+    tut_mouse: 'Fareler! Yakalamak için farenin üstünde durduğu taşı temizle. Her hamleden sonra başka kareye kaçarlar.',
+    tut_hungry: 'Mama kaplı yüz aç. Sayısı bitmeden onu eşle, yoksa {n} hamleni yer.',
+    tut_toy: 'Oyuncak kutusu yalnızca üstündeki hayvana açılır. O hayvanı kutunun yanında eşle ya da patlatarak aç.',
+    a11y_hungry_ate: 'Aç bir yüz {n} hamle yedi.',
 
     /* kasa */
     store_t: 'Ödüller',
@@ -4172,7 +4188,7 @@ function favTypeFor(breed, types) {
 const CHARGE_FAV = 4.2, CHARGE_OTHER = .55;
 
 /* ---------- goal kinds ---------- */
-const GK = { SCORE: 'score', COLLECT: 'collect', CRATE: 'crate', MUD: 'mud', RESCUE: 'rescue', BRAMBLE: 'bramble', MOLE: 'mole' };
+const GK = { SCORE: 'score', COLLECT: 'collect', CRATE: 'crate', MUD: 'mud', RESCUE: 'rescue', BRAMBLE: 'bramble', MOLE: 'mole', BONE: 'bone', MOUSE: 'mouse' };
 /* how many cells a bramble patch may ever cover, as a share of the
    open board — without this a bad run could strangle the level */
 const BRAMBLE_CAP = 0.42;
@@ -4483,7 +4499,7 @@ function mapStock(def) {
     for (const ch of row) {
       if (ch === 'm') mud += 1;
       else if (ch === 'M') mud += 2;
-      else if (ch === 'c' || ch === 'C') crate += 1;
+      else if (ch === 'c' || ch === 'C' || ch === 't' || ch === 'T' || ch === 'u' || ch === 'U') crate += 1;
       else if (ch === 'v') bram += 1;
     }
   });
@@ -4559,8 +4575,61 @@ const GEN = {
   collect: { base: 10500, moves: 30 },
   rescue:  { base: 10000, moves: 32 },
   score:   { base: 13400, moves: 30 },
-  mole:    { base: 9800,  moves: 13 }
+  mole:    { base: 9800,  moves: 13 },
+  /* the two goals the run holds back (30-engine.js). Their budgets are
+     not modelled — there is no response curve for either — so these are
+     only where the real-game fit starts from (test/real-fit.js) */
+  bone:    { base: 8600,  moves: 22 },
+  mouse:   { base: 9800,  moves: 22 }
 };
+
+/* WHERE THE LATER THINGS ARRIVE, AND HOW OFTEN THEY COME BACK.
+
+   Each on the level after a gate, fifty levels apart: bones under the
+   mud at 101, hungry faces at 151, mice at 201, toy boxes at 251.
+
+   They are not cards in the deck (runDeck). A new card would reshuffle
+   every hand dealt after it, and every one of those levels has a budget
+   that was measured for the level it was. Instead a level here and
+   there is taken out of the deck's hands by a die of its own: about one
+   level in eight becomes a dig, and from 201 about one in eight a mouse
+   hunt; a little over one in five of the rest carries hungry faces from
+   151; and from 251 half the crate levels are toy boxes. Only the
+   levels taken change, and only those are refitted. */
+const BONE_FROM = 101, HUNGRY_FROM = 151, MOUSE_FROM = 201, TOY_FROM = 251;
+function lateKind(n, dealt) {
+  if (n < BONE_FROM) return dealt;
+  if (n === BONE_FROM) return GK.BONE;
+  if (n === MOUSE_FROM) return GK.MOUSE;
+  if (n === TOY_FROM) return GK.CRATE;
+  if (n === HUNGRY_FROM) return dealt === GK.RESCUE ? GK.COLLECT : dealt;
+  /* the second roll, not the first: on consecutive seeds this generator's
+     first number is not even — one level in five came up a mouse hunt
+     where one in eight was asked for */
+  const roll = mulberry((n * 2654435761) >>> 0); roll();
+  const d = roll();
+  if (n > MOUSE_FROM && d < .12) return GK.MOUSE;
+  if (d >= .12 && d < .25) return GK.BONE;
+  return dealt;
+}
+function lateHungry(n, kind) {
+  if (n < HUNGRY_FROM || kind === GK.MOUSE) return null;
+  if (n === TOY_FROM) return null;      /* one new thing to a level */
+  const roll = mulberry((n * 2246822519) >>> 0); roll();
+  if (n !== HUNGRY_FROM && roll() >= .22) return null;
+  /* two on the board to begin with, nine and eleven moves of patience,
+     and another every seventh move */
+  return { n: 2, t: 9, every: 7 };
+}
+function lateToy(n, kind, types) {
+  if (n < TOY_FROM || kind !== GK.CRATE) return null;
+  const d = mulberry((n * 3266489917) >>> 0); d();
+  if (n !== TOY_FROM && d() >= .5) return null;
+  const a = Math.floor(d() * types);
+  let b = Math.floor(d() * types);
+  if (b === a) b = (b + 1) % types;
+  return [a, b];
+}
 
 /* The sizes a generated board comes in. Every generated level was 8x9,
    against ten of the lane's sixty that are not; a smaller board cascades
@@ -4847,7 +4916,7 @@ function levelDef(n, ref, forceKind) {
   /* a kind may be forced: test/calibrate.js measures how each kind answers
      its budget, and has to be able to build a mud level even while the
      curve it is about to replace says mud never fits */
-  const kind = forceKind || dealt;
+  const kind = forceKind || lateKind(n, dealt);
   r();                                  /* the roll the old pick spent, so the maps below keep their dice */
   const tier = Math.min(4, Math.floor((n - 40) / 12));
   const size = RUN_SIZES[Math.floor(mulberry(n * 3571)() * RUN_SIZES.length)];
@@ -4864,7 +4933,7 @@ function levelDef(n, ref, forceKind) {
      colours measured 100% at eight moves and twice its work, which is no
      level at all — mud, crates and hills are cleared by what falls, and
      five colours make everything fall. */
-  const relief = n % BLOCK === 1 && [GK.MUD, GK.CRATE, GK.MOLE].indexOf(kind) < 0;
+  const relief = n % BLOCK === 1 && [GK.MUD, GK.CRATE, GK.MOLE, GK.BONE].indexOf(kind) < 0;
   const types = tier <= 1 || relief ? 5 : 6;
   const key = kind === GK.BRAMBLE ? 'bramble' : kind;
 
@@ -4932,7 +5001,7 @@ function levelDef(n, ref, forceKind) {
   }
 
   /* mud and crates take an arrangement rather than a sprinkle */
-  const shaped = (kind === GK.MUD || kind === GK.CRATE)
+  const shaped = (kind === GK.MUD || kind === GK.CRATE || kind === GK.BONE)
     ? shapeMask(SHAPES[Math.floor(r() * SHAPES.length)], w, h, r)
     : null;
 
@@ -5000,6 +5069,8 @@ function levelDef(n, ref, forceKind) {
          only lever, or the budget cannot steer. */
       if (kind === GK.MOLE && hills.has(y + ':' + x)) { row += 'o'; continue; }
       if (kind === GK.MUD && shaped.has(y + ':' + x)) { row += r() < GEN.mud.deep ? 'M' : 'm'; continue; }
+      /* a dig is shallower than a mud level: the bones are the work */
+      if (kind === GK.BONE && shaped.has(y + ':' + x)) { row += r() < .3 ? 'M' : 'm'; continue; }
       if (kind === GK.CRATE && shaped.has(y + ':' + x) && y > 0 && y < h - 1) {
         /* a goal counts crates, not hits, so a second layer is the only
            way to make one of them cost a move */
@@ -5039,6 +5110,31 @@ function levelDef(n, ref, forceKind) {
   /* the outline last, over plain cells only, so the goal below is sized
      to exactly the stock it would have had */
   cutSilhouette(map, runOutline(n, kind), w, h);
+
+  /* Where the bones lie: pairs of muddy cells side by side or one above
+     the other, none sharing a cell, three on the early digs and up to
+     five later. Taken from every pair the map offers by the level's own
+     dice, so the same level always buries them in the same place. */
+  const bones = [];
+  if (kind === GK.BONE) {
+    const muddy = (y, x) => map[y] && (map[y][x] === 'm' || map[y][x] === 'M');
+    const pairs = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (!muddy(y, x)) continue;
+      if (muddy(y, x + 1)) pairs.push([[y, x], [y, x + 1]]);
+      if (muddy(y + 1, x)) pairs.push([[y, x], [y + 1, x]]);
+    }
+    for (let i = pairs.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = pairs[i]; pairs[i] = pairs[j]; pairs[j] = t; }
+    const used = new Set();
+    const wantBones = 3 + Math.min(2, Math.floor(tier / 2));
+    for (const p of pairs) {
+      if (bones.length >= wantBones) break;
+      const k0 = p[0].join(':'), k1 = p[1].join(':');
+      if (used.has(k0) || used.has(k1)) continue;
+      used.add(k0); used.add(k1);
+      bones.push(p);
+    }
+  }
 
   const stock = mapStock({ map });
 
@@ -5123,6 +5219,14 @@ function levelDef(n, ref, forceKind) {
        mechanic teaches nobody what it is for. */
     goals.push([GK.MOLE, 0, hills.size]);
     base = GEN.mole.base + tier * 400;
+  } else if (kind === GK.BONE) {
+    /* every bone buried: a dig that leaves one in the ground is a dig
+       nobody finished */
+    goals.push([GK.BONE, 0, Math.max(1, bones.length)]);
+    base = GEN.bone.base + tier * 400;
+  } else if (kind === GK.MOUSE) {
+    goals.push([GK.MOUSE, 0, 8 + tier]);
+    base = GEN.mouse.base + tier * 400;
   } else {
     goals.push([GK.BRAMBLE, 0, Math.round(GEN.bramble.goal(tier) * workMult)]);
     base = GEN.bramble.base + tier * 400;
@@ -5153,7 +5257,23 @@ function levelDef(n, ref, forceKind) {
 
   /* the live correction last, after the goals were sized to the budget:
      it is a change to how much room the player has, not to the level */
-  return normaliseGoals({ n, w, h, types, moves: tuneMoves(n, moves), goals, base, map, gate: isGate(n) });
+  const def = { n, w, h, types, moves: tuneMoves(n, moves), goals, base, map, gate: isGate(n) };
+  if (bones.length) def.bones = bones;
+  const hungry = ref ? null : lateHungry(n, kind);
+  if (hungry) def.hungry = hungry;
+  /* toy boxes: the same crates, each given to one of two animals by the
+     level's own dice. Done last, so the goal above was sized to the
+     crates as crates. */
+  const toy = ref ? null : lateToy(n, kind, types);
+  if (toy) {
+    const d = mulberry(n * 7103 + 3);
+    def.toy = toy;
+    def.map = map.map(row => row.replace(/[cC]/g, ch => {
+      const second = d() < .5;
+      return ch === 'c' ? (second ? 'u' : 't') : (second ? 'U' : 'T');
+    }));
+  }
+  return normaliseGoals(def);
 }
 /* ---------- the daily walk ----------
    Seeded from the date so everyone on a given day gets the same board,
@@ -11701,6 +11821,72 @@ function drawLogoPaw(c, s) {
   c.restore();
 }
 
+
+/* ---------- the run's later things (see 30-engine.js) ----------
+   Drawn in the animals' own line: a flat fill, the ink outline at
+   LINE of the box, one highlight. Each is centred on the origin in a
+   box of side s, like every other paint* here. */
+function paintBone(c, s) {
+  c.save();
+  c.rotate(-.5);
+  c.lineJoin = 'round';
+  const L = s * .30, R = s * .125, W = s * .085;
+  const shape = () => {
+    c.beginPath();
+    c.rect(-L, -W, L * 2, W * 2);
+    [[-L, -R * .8], [-L, R * .8], [L, -R * .8], [L, R * .8]].forEach(p => { c.moveTo(p[0] + R, p[1]); c.arc(p[0], p[1], R, 0, 6.2832); });
+  };
+  shape(); c.lineWidth = s * LINE * 2.6; c.strokeStyle = INK; c.stroke();
+  shape(); c.fillStyle = '#FFF4DC'; c.fill();
+  c.fillStyle = rgba('#C9A66B', .45);
+  c.fillRect(-L * .8, W * .2, L * 1.6, W * .6);
+  c.restore();
+}
+function paintMouse(c, s) {
+  c.save();
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  const lw = s * LINE * 1.5;
+  /* tail */
+  c.strokeStyle = '#E7A9A0'; c.lineWidth = s * .05;
+  c.beginPath(); c.moveTo(s * .16, s * .16); c.quadraticCurveTo(s * .44, s * .26, s * .36, -s * .04); c.stroke();
+  /* ears */
+  [[-s * .17, -s * .19], [s * .15, -s * .19]].forEach(p => {
+    c.beginPath(); c.arc(p[0], p[1], s * .135, 0, 6.2832);
+    c.fillStyle = '#A9A29A'; c.fill(); c.lineWidth = lw; c.strokeStyle = INK; c.stroke();
+    c.beginPath(); c.arc(p[0], p[1], s * .07, 0, 6.2832); c.fillStyle = '#F2B8B0'; c.fill();
+  });
+  /* head and body in one */
+  c.beginPath(); c.ellipse(0, s * .05, s * .26, s * .22, 0, 0, 6.2832);
+  c.fillStyle = '#C2BBB2'; c.fill(); c.lineWidth = lw; c.strokeStyle = INK; c.stroke();
+  c.beginPath(); c.ellipse(0, s * .13, s * .15, s * .10, 0, 0, 6.2832); c.fillStyle = '#EDE8E0'; c.fill();
+  /* eyes, nose, whiskers */
+  c.fillStyle = INK;
+  c.beginPath(); c.arc(-s * .09, -s * .01, s * .032, 0, 6.2832); c.arc(s * .09, -s * .01, s * .032, 0, 6.2832); c.fill();
+  c.fillStyle = '#E58C8C';
+  c.beginPath(); c.arc(0, s * .09, s * .034, 0, 6.2832); c.fill();
+  c.strokeStyle = rgba(INK, .55); c.lineWidth = s * .014;
+  [[-1, .07], [-1, .12], [1, .07], [1, .12]].forEach(w => {
+    c.beginPath(); c.moveTo(w[0] * s * .06, s * .10); c.lineTo(w[0] * s * .24, s * w[1]); c.stroke();
+  });
+  c.restore();
+}
+/* the bowl a hungry face carries; the number is drawn by the board,
+   because it changes every move */
+function paintBowl(c, s) {
+  c.save();
+  c.lineJoin = 'round';
+  const w = s * .30, h = s * .17;
+  c.beginPath();
+  c.moveTo(-w, -h * .5); c.lineTo(w, -h * .5); c.lineTo(w * .72, h); c.lineTo(-w * .72, h); c.closePath();
+  c.lineWidth = s * LINE * 2.2; c.strokeStyle = INK; c.stroke();
+  c.fillStyle = '#D9534F'; c.fill();
+  c.beginPath(); c.ellipse(0, -h * .5, w, h * .42, 0, 0, 6.2832);
+  c.fillStyle = '#8A5A2B'; c.fill(); c.lineWidth = s * LINE * 1.4; c.stroke();
+  c.fillStyle = rgba('#FFFFFF', .35);
+  c.fillRect(-w * .55, h * .1, w * .5, h * .28);
+  c.restore();
+}
+
 /* ===== 26-scene.js ===== */
 /* ============================================================
    26 — scenes. The room the pet lives in, the lane you walk up,
@@ -12743,10 +12929,35 @@ function drawTileShadow(c, cx, cy, s, lift) {
    board, at the edge and in the middle alike. The inner shade falls
    along whichever edge of a cell has frame above it or to its left, so
    a notch is lit like the rim it is. */
+/* Which holes are inside the board. A hole that can be walked to from
+   the edge through other holes is part of the outline and shows the
+   grass; one that cannot is a gap in the middle of the tray, and the
+   frame's own margin only reaches a pad's width into it — level 251
+   had a square of lawn showing through the middle of the board. Those
+   are filled with frame. */
+function innerHoles(B) {
+  const out = new Set(), seen = new Set(), stack = [];
+  const hole = (r, k) => r >= 0 && k >= 0 && r < B.h && k < B.w && B.cell[r][k].hole;
+  for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) {
+    if (hole(r, k) && (r === 0 || k === 0 || r === B.h - 1 || k === B.w - 1)) { stack.push([r, k]); seen.add(r + ':' + k); }
+  }
+  while (stack.length) {
+    const [r, k] = stack.pop();
+    [[r - 1, k], [r + 1, k], [r, k - 1], [r, k + 1]].forEach(([r2, k2]) => {
+      if (hole(r2, k2) && !seen.has(r2 + ':' + k2)) { seen.add(r2 + ':' + k2); stack.push([r2, k2]); }
+    });
+  }
+  for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) if (hole(r, k) && !seen.has(r + ':' + k)) out.add(r + ':' + k);
+  return out;
+}
 function cellsPath(c, B, x, y, cs, grow, rad) {
   c.beginPath();
+  const inner = grow > 0 ? innerHoles(B) : null;
   for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) {
-    if (B.cell[r][k].hole) continue;
+    if (B.cell[r][k].hole) {
+      if (inner && inner.has(r + ':' + k)) c.rect(x + k * cs - 1, y + r * cs - 1, cs + 2, cs + 2);
+      continue;
+    }
     const L = x + k * cs - grow, T = y + r * cs - grow, S = cs + grow * 2;
     if (rad > 0) {
       c.moveTo(L + rad, T);
@@ -14883,7 +15094,10 @@ function mkTile(type, sp) {
     x: 0, y: 0, tx: 0, ty: 0,
     scale: 1, alpha: 1, rot: 0,
     dying: 0, born: 0, vy: 0, fallFrom: null,
-    jiggle: 0
+    jiggle: 0,
+    /* moves left before a hungry face eats two of the player's (see
+       hungryTick); 0 on every ordinary tile */
+    hungry: 0
   };
 }
 
@@ -14896,7 +15110,7 @@ function makeBoard(def, seed) {
   for (let r = 0; r < def.h; r++) {
     const row = [];
     for (let c = 0; c < def.w; c++) {
-      row.push({ hole: false, crate: 0, mud: 0, ice: 0, bram: 0, mole: 0, moleT: 0, tile: null, r, c });
+      row.push({ hole: false, crate: 0, mud: 0, ice: 0, bram: 0, mole: 0, moleT: 0, bone: 0, mouse: 0, crateT: 0, tile: null, r, c });
     }
     B.cell.push(row);
   }
@@ -14915,9 +15129,24 @@ function makeBoard(def, seed) {
         /* a molehill: o is one layer of earth over it, O is two */
         else if (ch === 'o') { cell.mole = 2; cell.moleT = MOLE_EVERY; }
         else if (ch === 'O') { cell.mole = 3; cell.moleT = MOLE_EVERY; }
+        /* a toy box: a crate that opens only to its own animal's matches.
+           t/T belong to the level's first toy colour, u/U to its second */
+        else if (ch === 't' || ch === 'T' || ch === 'u' || ch === 'U') {
+          cell.crate = (ch === 'T' || ch === 'U') ? 2 : 1;
+          const toy = def.toy || [0, 1];
+          cell.crateT = ((ch === 't' || ch === 'T') ? toy[0] : toy[1]) + 1;
+        }
       }
     }
   }
+  /* bones lie under the mud: each is a list of cells, and every one of
+     them has to be clean before it can be lifted out */
+  (def.bones || []).forEach((cells, i) => cells.forEach(rc => {
+    const cell = B.cell[rc[0]] && B.cell[rc[0]][rc[1]];
+    if (!cell || cell.hole) return;
+    cell.bone = i + 1;
+    if (cell.mud < 1) cell.mud = 1;
+  }));
   /* bottom exit of each column, for walking pups home */
   for (let c = 0; c < B.w; c++) {
     let e = -1;
@@ -15430,6 +15659,117 @@ function tilesOfType(B, type) {
   return out;
 }
 
+/* ============================================================
+   Four things the run holds back until the player has been
+   through a hundred levels, added 15 Nov 2026.
+
+   The first fourteen levels teach every mechanic the game had, the
+   seventy-sixth adds molehills, and then nine hundred levels were
+   made of the same seven things. Each of these arrives on the level
+   after a gate — 101, 151, 201, 251 — which is the softest level in
+   its block, so the new thing is met where it can be looked at.
+
+   The rules live here rather than in 40-game.js because two things
+   play this board: the game, and the harness every budget is fitted
+   with (test/_solver.js). A rule written once cannot be written
+   differently the second time — the molehill goal shipped unwinnable
+   exactly that way.
+   ============================================================ */
+
+/* ---- toy boxes (from 251) ----
+   A crate with an animal's colour on it opens only to a match of that
+   animal beside it. A blast opens any box: that is what makes a rocket
+   worth setting up on a board of them. */
+function crateOpens(cell, type) {
+  return !cell.crateT || cell.crateT - 1 === type;
+}
+
+/* ---- buried bones (from 101) ----
+   A bone lies under two cells of mud and comes out when both are
+   clean. Called for a cell whose mud has just gone; answers whether
+   that finished a bone, and lifts it if so. */
+function boneDug(B, cell) {
+  const id = cell.bone;
+  if (!id) return false;
+  let buried = false;
+  eachCell(B, x => { if (x.bone === id && x.mud > 0) buried = true; });
+  if (buried) return false;
+  eachCell(B, x => { if (x.bone === id) x.bone = 0; });
+  return true;
+}
+
+/* ---- mice (from 201) ----
+   A mouse sits in a cell, on top of whatever tile is there, and is
+   caught when that tile is cleared. After every move each one still
+   loose runs to a cell beside it. MICE_IN_PLAY at a time; another
+   comes out when one is caught and the goal still wants more. */
+const MICE_IN_PLAY = 3;
+function mouseSpot(cell) {
+  return cell && !cell.hole && cell.crate === 0 && cell.mole === 0 && cell.ice === 0 && !cell.mouse &&
+    cell.tile && cell.tile.type >= 0;
+}
+function mouseCount(B) {
+  let n = 0;
+  eachCell(B, x => { if (x.mouse) n++; });
+  return n;
+}
+function mousePlace(B) {
+  const spots = [];
+  eachCell(B, x => { if (mouseSpot(x)) spots.push(x); });
+  if (!spots.length) return null;
+  const cell = spots[Math.floor(B.rng() * spots.length)];
+  cell.mouse = 1;
+  return cell;
+}
+/* every mouse one step; returns [[fromR, fromC, toR, toC], ...] */
+function mouseTick(B) {
+  const mice = [];
+  eachCell(B, x => { if (x.mouse) mice.push(x); });
+  const moved = [];
+  mice.forEach(m => {
+    const around = [[m.r - 1, m.c], [m.r + 1, m.c], [m.r, m.c - 1], [m.r, m.c + 1]]
+      .map(rc => B.cell[rc[0]] && B.cell[rc[0]][rc[1]]).filter(mouseSpot);
+    if (!around.length) return;
+    const to = around[Math.floor(B.rng() * around.length)];
+    m.mouse = 0; to.mouse = 1;
+    moved.push([m.r, m.c, to.r, to.c]);
+  });
+  return moved;
+}
+
+/* ---- hungry faces (from 151) ----
+   A tile with a bowl and a number on it. The number comes down by one
+   with every move; match the tile before it reaches nought, or it
+   eats HUNGRY_COST of the player's moves and goes back to being an
+   ordinary tile. Not a goal: a clock laid over whatever the level is. */
+const HUNGRY_COST = 2;
+function hungryPlace(B, t) {
+  const spots = [];
+  eachCell(B, x => {
+    if (x.hole || x.crate > 0 || x.mole > 0 || x.ice > 0 || x.mouse) return;
+    if (x.tile && x.tile.type >= 0 && x.tile.sp === SP.NONE && !x.tile.hungry) spots.push(x);
+  });
+  if (!spots.length) return null;
+  const cell = spots[Math.floor(B.rng() * spots.length)];
+  cell.tile.hungry = t;
+  return cell;
+}
+function hungryCount(B) {
+  let n = 0;
+  eachCell(B, x => { if (x.tile && x.tile.hungry > 0) n++; });
+  return n;
+}
+/* one move has passed; returns the cells whose face has run out */
+function hungryTick(B) {
+  const out = [];
+  eachCell(B, x => {
+    const t = x.tile;
+    if (!t || !(t.hungry > 0) || t.dying) return;
+    if (--t.hungry === 0) out.push([x.r, x.c]);
+  });
+  return out;
+}
+
 /* ===== 32-nap.js ===== */
 /* ============================================================
    32 — nap time: the logic puzzle beside the match-3
@@ -15920,11 +16260,14 @@ function snapshotLevel() {
   return {
     n: G.n, day: G.n === DAILY_LEVEL ? dayNumber() : 0, reached: SAVE.reached,
     moves: G.moves, made: G.made, targets: G.starTargets, score: G.score, charge: G.charge, scoreMul: G.scoreMul,
-    extras: G.extras || 0, rescued: G.rescued, creepTick: G.creepTick,
+    extras: G.extras || 0, rescued: G.rescued, creepTick: G.creepTick, hungryN: G.hungryN || 0,
     pupQueue: B.pupQueue || 0, startedAt: G.startedAt, bestChain: G.bestChain,
     goals: G.goals.map(g => g.have),
     cells: B.cell.map(row => row.map(c => [c.hole ? 1 : 0, c.crate, c.mud, c.ice, c.bram, c.mole, c.moleT || 0,
-      c.tile ? c.tile.type : null, c.tile ? c.tile.sp : 0]))
+      c.tile ? c.tile.type : null, c.tile ? c.tile.sp : 0,
+      /* 9-12, added with the bones, mice, toy boxes and hungry faces;
+         a level kept by an older build has none and reads as nought */
+      c.bone || 0, c.mouse || 0, c.crateT || 0, c.tile ? (c.tile.hungry || 0) : 0]))
   };
 }
 function keepLevel() { SAVE.inLevel = snapshotLevel(); persist(); }
@@ -15944,6 +16287,8 @@ function restoreBoard(B, s) {
     cell.hole = !!v[0]; cell.crate = v[1] || 0; cell.mud = v[2] || 0; cell.ice = v[3] || 0;
     cell.bram = v[4] || 0; cell.mole = v[5] || 0; cell.moleT = v[6] || 0;
     cell.tile = (v[7] === null || v[7] === undefined) ? null : mkTile(v[7], v[8] || 0);
+    cell.bone = v[9] || 0; cell.mouse = v[10] || 0; cell.crateT = v[11] || 0;
+    if (cell.tile) cell.tile.hungry = v[12] || 0;
   }
   B.pupQueue = s.pupQueue || 0;
 }
@@ -16248,6 +16593,18 @@ function startLevel(n, opts) {
     const onBoard = Math.min(PUPS_IN_PLAY, G.pupsWanted + 2);
     for (let i = 0; i < onBoard; i++) placePup(G.B);
   }
+  /* the mice the goal is after, and the hungry faces the level lays
+     over whatever else it asks (30-engine.js); a resumed board has
+     both where they were */
+  const mouseGoal = G.goals.find(g => g.kind === GK.MOUSE);
+  if (mouseGoal && !res) {
+    for (let i = 0; i < Math.min(MICE_IN_PLAY, mouseGoal.need); i++) mousePlace(G.B);
+  }
+  G.hungryN = res ? (res.hungryN || 0) : 0;
+  G.mouseHops = {};
+  if (G.def.hungry && !res) {
+    for (let i = 0; i < G.def.hungry.n; i++) hungryPlace(G.B, G.def.hungry.t + i * 2);
+  }
   /* an energetic pet leaves a rocket lying about */
   if (!res && perks.some(p => p.id === 'gift')) {
     const spots = [];
@@ -16408,6 +16765,8 @@ function paintGoalIcon(g) {
   /* the hill as the board draws it at two layers, which is how an 'o'
      starts; with no branch here the chip was blank */
   else if (g.kind === GK.MOLE) paintMole(c, px * .9, 2);
+  else if (g.kind === GK.BONE) paintBone(c, px * 1.25);
+  else if (g.kind === GK.MOUSE) paintMouse(c, px * 1.2);
   else if (g.kind === GK.SCORE) {
     c.fillStyle = PAL.accent;
     c.save(); c.scale(px / 24, px / 24); c.translate(-12, -12);
@@ -16674,11 +17033,29 @@ function hitCell(B, r, c, ctx, direct) {
   ctx.removed.push({ r, c, t });
   ctx.count++;
   if (t.type >= 0) ctx.collect[t.type] = (ctx.collect[t.type] || 0) + 1;
+  /* a mouse on the tile goes with it */
+  if (cell.mouse) {
+    cell.mouse = 0; ctx.mouse++;
+    ring(r, c, '#C2BBB2');
+    burst(r, c, '#EDE8E0', 12, 1.2);
+    cellFloat(r, c, '+1', PAL.accent, 18);
+    SFX.coin();
+    const cat = activePet();
+    if (cat) petVoice(cat, 1.25);
+  }
   if (cell.mud > 0) {
     cell.mud--; ctx.mud++;
     const [mx, my, mpan] = cellFX(r, c);
     SFX.mud(mpan);
     FX.splat(mx, my, G.cell, boardFloor());
+    /* the last of the mud over a bone lifts it out */
+    if (cell.mud === 0 && cell.bone && boneDug(B, cell)) {
+      ctx.bone++;
+      ring(r, c, '#FFF4DC');
+      burst(r, c, '#FFF4DC', 14, 1.3);
+      cellFloat(r, c, '+1', PAL.accent, 18);
+      SFX.coin();
+    }
   }
   if (cell.bram > 0) {
     cell.bram--; ctx.bram++;
@@ -16690,7 +17067,8 @@ function hitCell(B, r, c, ctx, direct) {
   if (direct !== 'noCrate') {
     [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].forEach(([r2, c2]) => {
       const n = B.cell[r2] && B.cell[r2][c2];
-      if (n && n.crate > 0) {
+      /* a toy box answers only its own animal (crateOpens) */
+      if (n && n.crate > 0 && crateOpens(n, t.type)) {
         n.crate--;
         if (n.crate === 0) { ctx.crate++; ring(r2, c2, '#C79A62'); }
         const [nx, ny, npan] = cellFX(r2, c2);
@@ -16756,7 +17134,7 @@ async function blastWaves(startKeys, chain, silent) {
        applyCounts read NaN as nothing, and every molehill level from 76
        on could not be won — while the solver, which had the field,
        measured them as fine. Every counter hitCell bumps lives here. */
-    const ctx = { touched: new Set(), removed: [], chain: [], collect: {}, mud: 0, crate: 0, ice: 0, bram: 0, mole: 0, count: 0, delay: 0 };
+    const ctx = { touched: new Set(), removed: [], chain: [], collect: {}, mud: 0, crate: 0, ice: 0, bram: 0, mole: 0, bone: 0, mouse: 0, count: 0, delay: 0 };
     wave.forEach(k => {
       const [r, c] = k.split(':').map(Number);
       hitCell(G.B, r, c, ctx);
@@ -16841,6 +17219,8 @@ function applyCounts(ctx) {
     if (g.kind === GK.MUD && ctx.mud) { g.have += ctx.mud; bumped = i; }
     if (g.kind === GK.CRATE && ctx.crate) { g.have += ctx.crate; bumped = i; }
     if (g.kind === GK.MOLE && ctx.mole) { g.have += ctx.mole; bumped = i; }
+    if (g.kind === GK.BONE && ctx.bone) { g.have += ctx.bone; bumped = i; }
+    if (g.kind === GK.MOUSE && ctx.mouse) { g.have += ctx.mouse; bumped = i; }
     if (g.kind === GK.BRAMBLE) {
       const left = brambleCount(G.B);
       const was = g.have;
@@ -16944,6 +17324,7 @@ async function clearGroups(groups, swapCells) {
     const cell = G.B.cell[s.r][s.c];
     if (cell && cell.tile) {
       cell.tile.sp = s.sp;
+      cell.tile.hungry = 0;          /* matched, so fed */
       cell.tile.scale = .4;
       cell.tile.jiggle = 1;
       ring(s.r, s.c, s.type >= 0 ? slotGem(s.type) : PAL.accent);
@@ -17337,6 +17718,55 @@ async function creepBrambles() {
   if (stale(_ep)) return;
 }
 
+/* The mice run. Every one still loose takes a step, and if the goal
+   wants more than are on the board another comes out. */
+async function workMice() {
+  const _ep = levelEpoch();
+  if (G.over || !G.B) return;
+  const goal = G.goals.find(g => g.kind === GK.MOUSE);
+  if (!goal) return;
+  const t0 = performance.now();
+  G.mouseHops = {};
+  mouseTick(G.B).forEach(m => { G.mouseHops[m[2] + ':' + m[3]] = { r: m[0], c: m[1], t0: t0 }; });
+  const wantOut = Math.min(MICE_IN_PLAY, goal.need - goal.have);
+  let guard = 0;
+  while (mouseCount(G.B) < wantOut && guard++ < MICE_IN_PLAY) {
+    const cell = mousePlace(G.B);
+    if (!cell) break;
+    ring(cell.r, cell.c, '#C2BBB2');
+  }
+  if (Object.keys(G.mouseHops).length) await wait(reduceMotion() ? 20 : pace(130));
+  if (stale(_ep)) return;
+}
+/* The hungry faces count down. One that reaches nought eats
+   HUNGRY_COST moves and is an ordinary tile again; and every so many
+   moves another face gets hungry, so the clock never leaves the board. */
+async function workHungry() {
+  const _ep = levelEpoch();
+  const rule = G.def && G.def.hungry;
+  if (G.over || !G.B || !rule) return;
+  const starved = hungryTick(G.B);
+  if (starved.length) {
+    starved.forEach(rc => {
+      ring(rc[0], rc[1], PAL.rose);
+      burst(rc[0], rc[1], PAL.rose, 10, 1);
+      cellFloat(rc[0], rc[1], '-' + HUNGRY_COST, PAL.rose, 22);
+    });
+    G.moves = Math.max(0, G.moves - HUNGRY_COST * starved.length);
+    G.shake = Math.max(G.shake, 6);
+    SFX.bad();
+    buzz(HAP.no);
+    say(T('a11y_hungry_ate', { n: HUNGRY_COST * starved.length }));
+    syncHud();
+  }
+  G.hungryN = (G.hungryN || 0) + 1;
+  if (G.hungryN % rule.every === 0 && hungryCount(G.B) < rule.n + 1) {
+    const cell = hungryPlace(G.B, rule.t);
+    if (cell) ring(cell.r, cell.c, PAL.accent);
+  }
+  if (starved.length) { await wait(reduceMotion() ? 30 : pace(220)); if (stale(_ep)) return; }
+}
+
 function spendMove() {
   G.moves = Math.max(0, G.moves - 1);
   G.made = (G.made || 0) + 1;
@@ -17410,6 +17840,8 @@ async function tryMove(a, b) {
   if (stale(_ep)) return;
   await creepBrambles();
   await workMoles();
+  await workMice();
+  await workHungry();
   paintWalk();
   if (stale(_ep)) return;
   G.busy = false;
@@ -17915,6 +18347,22 @@ function renderGame(dt) {
       } else if (t.sp !== SP.NONE) {
         drawTileFx(c, t.type, t.sp, G.cell * .90, tsec, t.id);
       }
+      /* a hungry face: its bowl, and the moves it will wait, which is
+         the whole of the mechanic and so is never cached */
+      if (t.hungry > 0 && !t.dying) {
+        const soon = t.hungry <= 2;
+        c.save(); c.translate(-G.cell * .24, G.cell * .27); paintBowl(c, G.cell * .62); c.restore();
+        const hr = G.cell * .18, hx = G.cell * .27, hy = -G.cell * .27;
+        c.beginPath(); c.arc(hx, hy, hr * (soon ? 1 + Math.sin(tsec * 9) * .08 : 1), 0, Math.PI * 2);
+        c.fillStyle = soon ? PAL.rose : rgba('#F6EADA', .96);
+        c.fill();
+        c.lineWidth = Math.max(1, G.cell * .024);
+        c.strokeStyle = rgba('#3A2A18', .45); c.stroke();
+        c.fillStyle = soon ? '#FFFFFF' : '#3A2A18';
+        c.font = '800 ' + Math.round(G.cell * .25) + 'px Grandstander, sans-serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(String(t.hungry), hx, hy + G.cell * .015);
+      }
     }
     c.restore();
     /* ice on top */
@@ -17937,10 +18385,55 @@ function renderGame(dt) {
     }
   });
 
+  /* a bone shows through the mud it lies under: a thing to dig for has
+     to be seen to be there */
+  eachCell(B, (cell, r, c2) => {
+    if (cell.bone && cell.mud > 0) {
+      c.save();
+      c.translate(cellX(c2) + G.cell * .30, cellY(r) + G.cell * .72);
+      paintBone(c, G.cell * .62);
+      c.restore();
+    }
+  });
+
   /* crates sit above everything in their cell */
   eachCell(B, (cell, r, c2) => {
     if (cell.crate > 0) {
       drawBlocker(c, 'crate', cellX(c2) + G.cell / 2, cellY(r) + G.cell / 2, G.cell * .96, cell.crate);
+      /* a toy box wears the face it opens to */
+      if (cell.crateT) {
+        const x = cellX(c2) + G.cell / 2, y = cellY(r) + G.cell / 2;
+        c.save();
+        c.beginPath(); c.arc(x, y, G.cell * .32, 0, Math.PI * 2);
+        c.fillStyle = rgba('#FFF8EC', .94); c.fill();
+        c.lineWidth = Math.max(1, G.cell * .03); c.strokeStyle = rgba('#3A2416', .55); c.stroke();
+        const sp = tileSprite(cell.crateT - 1, SP.NONE, G.cell * .58, SAVE.settings.marks, false, false);
+        c.drawImage(sp, x - sp._w / 2, y - sp._w / 2, sp._w, sp._w);
+        c.restore();
+      }
+    }
+    /* a mouse, on the corner of its tile so the tile can still be read;
+       it hops from where it was for a fifth of a second after a move */
+    if (cell.mouse) {
+      let mx = cellX(c2) + G.cell * .70, my = cellY(r) + G.cell * .30;
+      const hop = G.mouseHops && G.mouseHops[r + ':' + c2];
+      if (hop) {
+        const k = clamp((performance.now() - hop.t0) / 200, 0, 1);
+        if (k < 1) {
+          const e2 = 1 - (1 - k) * (1 - k);
+          mx += (hop.c - c2) * G.cell * (1 - e2);
+          my += (hop.r - r) * G.cell * (1 - e2) - Math.sin(k * Math.PI) * G.cell * .22;
+        }
+      }
+      c.save();
+      c.translate(mx, my + Math.sin(tsec * 5 + r * 1.7 + c2) * G.cell * .015);
+      /* a pale disc behind it: grey on a purple tile at forty pixels was
+         a smudge, seen on the first screenshot of level 201 */
+      c.beginPath(); c.arc(0, G.cell * .02, G.cell * .27, 0, Math.PI * 2);
+      c.fillStyle = rgba('#FFF8EC', .9); c.fill();
+      c.lineWidth = Math.max(1, G.cell * .028); c.strokeStyle = rgba('#3A2416', .5); c.stroke();
+      paintMouse(c, G.cell * .84);
+      c.restore();
     }
     /* Molehills, and the number that makes them worth caring about.
 
@@ -21027,6 +21520,8 @@ function goalLine(g) {
   if (g.kind === GK.BRAMBLE) return T('goal_bramble', { n });
   if (g.kind === GK.MOLE) return T('goal_mole', { n });
   if (g.kind === GK.RESCUE) return T('goal_rescue', { n });
+  if (g.kind === GK.BONE) return T('goal_bone', { n });
+  if (g.kind === GK.MOUSE) return T('goal_mouse', { n });
   return '';
 }
 function goalIconHtml(kind, arg) {
@@ -21046,6 +21541,8 @@ function paintGoalIcons(root) {
     /* without this a molehill goal fell through to the star, and the lose
        card for level 76 read "★ 0 / 3" */
     else if (k === GK.MOLE) paintMole(c, px * .9, 2);
+    else if (k === GK.BONE) paintBone(c, px * 1.25);
+    else if (k === GK.MOUSE) paintMouse(c, px * 1.2);
     else { c.fillStyle = PAL.accent; c.save(); c.scale(px / 24, px / 24); c.translate(-12, -12); c.fill(new Path2D('m12 2.6 2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5-4.7-4.6 6.5-.9z')); c.restore(); }
   });
 }
@@ -22476,6 +22973,12 @@ function maybeTutorial(def) {
   if (def.goals.some(g => g[0] === GK.MOLE) && !SAVE.seen.mole) {
     steps.push({ k: 'mole', text: T('tut_mole'), art: 'mole' });
   }
+  /* the four the run holds back (30-engine.js): one card each, the
+     first time a board carries it */
+  if (def.goals.some(g => g[0] === GK.BONE) && !SAVE.seen.bone) steps.push({ k: 'bone', text: T('tut_bone'), art: 'bone' });
+  if (def.goals.some(g => g[0] === GK.MOUSE) && !SAVE.seen.mouse) steps.push({ k: 'mouse', text: T('tut_mouse'), art: 'mouse' });
+  if (def.hungry && !SAVE.seen.hungry) steps.push({ k: 'hungry', text: T('tut_hungry', { n: HUNGRY_COST }), art: 'hungry' });
+  if (def.toy && !SAVE.seen.toy) steps.push({ k: 'toy', text: T('tut_toy'), art: 'toy' });
   if (def.goals.some(g => g[0] === GK.RESCUE) && !SAVE.seen.rescue) {
     steps.push({ k: 'rescue', text: T('tut_rescue') });
   }
@@ -22511,6 +23014,10 @@ function maybeTutorial(def) {
       if (s.art === 'crate') paintCrate(c, 82, 2);
       else if (s.art === 'mud') paintMud(c, 82, 2);
       else if (s.art === 'mole') paintMole(c, 82, 2);
+      else if (s.art === 'bone') { paintMud(c, 82, 1); paintBone(c, 96); }
+      else if (s.art === 'mouse') paintMouse(c, 104);
+      else if (s.art === 'hungry') { paintTile(c, 0, SP.NONE, 78, SAVE.settings.marks); c.translate(-20, 24); paintBowl(c, 56); }
+      else if (s.art === 'toy') { paintCrate(c, 82, 1); c.scale(.5, .5); paintTile(c, 0, SP.NONE, 78, SAVE.settings.marks); }
       else { paintTile(c, 1, SP.NONE, 78, SAVE.settings.marks); paintIce(c, 82); }
     } else {
       c.translate(60, 18);

@@ -1039,10 +1039,35 @@ function drawTileShadow(c, cx, cy, s, lift) {
    board, at the edge and in the middle alike. The inner shade falls
    along whichever edge of a cell has frame above it or to its left, so
    a notch is lit like the rim it is. */
+/* Which holes are inside the board. A hole that can be walked to from
+   the edge through other holes is part of the outline and shows the
+   grass; one that cannot is a gap in the middle of the tray, and the
+   frame's own margin only reaches a pad's width into it — level 251
+   had a square of lawn showing through the middle of the board. Those
+   are filled with frame. */
+function innerHoles(B) {
+  const out = new Set(), seen = new Set(), stack = [];
+  const hole = (r, k) => r >= 0 && k >= 0 && r < B.h && k < B.w && B.cell[r][k].hole;
+  for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) {
+    if (hole(r, k) && (r === 0 || k === 0 || r === B.h - 1 || k === B.w - 1)) { stack.push([r, k]); seen.add(r + ':' + k); }
+  }
+  while (stack.length) {
+    const [r, k] = stack.pop();
+    [[r - 1, k], [r + 1, k], [r, k - 1], [r, k + 1]].forEach(([r2, k2]) => {
+      if (hole(r2, k2) && !seen.has(r2 + ':' + k2)) { seen.add(r2 + ':' + k2); stack.push([r2, k2]); }
+    });
+  }
+  for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) if (hole(r, k) && !seen.has(r + ':' + k)) out.add(r + ':' + k);
+  return out;
+}
 function cellsPath(c, B, x, y, cs, grow, rad) {
   c.beginPath();
+  const inner = grow > 0 ? innerHoles(B) : null;
   for (let r = 0; r < B.h; r++) for (let k = 0; k < B.w; k++) {
-    if (B.cell[r][k].hole) continue;
+    if (B.cell[r][k].hole) {
+      if (inner && inner.has(r + ':' + k)) c.rect(x + k * cs - 1, y + r * cs - 1, cs + 2, cs + 2);
+      continue;
+    }
     const L = x + k * cs - grow, T = y + r * cs - grow, S = cs + grow * 2;
     if (rad > 0) {
       c.moveTo(L + rad, T);

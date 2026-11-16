@@ -162,6 +162,86 @@ const check = (cond, good, bad) => (cond ? ok : problems).push(cond ? good : bad
     'every bramble goal in 1-400 asks for the whole patch (' + bram.levels + ' levels)',
     bram.wrong.length + ' of ' + bram.levels + ' bramble goals differ from the patch: ' + bram.wrong.slice(0, 5).join('; '));
 
+  /* ---- the four things the run holds back (30-engine.js) ---- */
+
+  /* a bone under two cells of mud, one of them two layers deep: it
+     comes out when both are clean and not before */
+  const bone = await run(`
+    __events.length = 0;
+    __level({ n: 9101, w: 6, h: 6, types: 5, moves: 20, base: 1000, goals: [[GK.BONE, 0, 1]],
+      map: ['......', '......', '......', '.Mm...', '......', '......'], bones: [[[3, 1], [3, 2]]] });
+    let m = __three(3, 1); await tryMove(m[0], m[1]);
+    const have1 = G.goals[0].have, left1 = G.B.cell[3][1].bone;
+    m = __three(3, 1); await tryMove(m[0], m[1]);
+    return { have1, left1, have2: G.goals[0].have, left2: G.B.cell[3][1].bone, won: __events.includes('goal') };
+  `);
+  check(bone.have1 === 0 && bone.left1 === 1,
+    'a bone with mud still over half of it stays buried',
+    'after one move the bone goal read ' + bone.have1 + ' and the cell held bone ' + bone.left1);
+  check(bone.have2 === 1 && bone.left2 === 0 && bone.won,
+    'both cells clean digs it up, moves the goal and wins the level',
+    'after two moves: goal ' + bone.have2 + ', bone ' + bone.left2 + ', won ' + bone.won);
+
+  /* a mouse is caught by clearing the tile it sits on; one left loose
+     runs to a cell beside it, and another comes out while the goal
+     still wants more */
+  const mouse = await run(`
+    __events.length = 0;
+    __level({ n: 9102, w: 6, h: 6, types: 5, moves: 20, base: 1000, goals: [[GK.MOUSE, 0, 3]] });
+    const start = mouseCount(G.B);
+    eachCell(G.B, x => { x.mouse = 0; });
+    G.B.cell[3][2].mouse = 1; G.B.cell[0][0].mouse = 1;
+    let m = __three(3, 1); await tryMove(m[0], m[1]);
+    return { start, have: G.goals[0].have, stayed: G.B.cell[0][0].mouse, beside: (G.B.cell[0][1].mouse || 0) + (G.B.cell[1][0].mouse || 0),
+      out: mouseCount(G.B) };
+  `);
+  check(mouse.start === 3, 'a mouse hunt opens with three mice out', 'opened with ' + mouse.start);
+  check(mouse.have === 1, 'clearing the tile under a mouse catches it', 'goal read ' + mouse.have + ' after clearing its tile');
+  check(mouse.stayed === 0 && mouse.beside === 1, 'a loose mouse runs to a cell beside it after the move',
+    'the mouse at 0,0: stayed=' + mouse.stayed + ' beside=' + mouse.beside);
+  check(mouse.out === 2, 'and one more comes out while two are still wanted', mouse.out + ' out, expected 2');
+
+  /* a toy box opens to its own animal's match beside it and to no other */
+  const toy = await run(`
+    const box = toyOf => {
+      __level({ n: 9103, w: 6, h: 6, types: 5, moves: 20, base: 1000, goals: [[GK.CRATE, 0, 1]], toy: toyOf,
+        map: ['......', '......', '..t...', '......', '......', '......'] });
+      return G.B.cell[2][2];
+    };
+    let cell = box([2, 1]);
+    let m = __three(3, 1); await tryMove(m[0], m[1]);
+    const wrong = { crate: cell.crate, have: G.goals[0].have };
+    cell = box([0, 1]);
+    m = __three(3, 1); await tryMove(m[0], m[1]);
+    return { wrong, right: { crate: cell.crate, have: G.goals[0].have } };
+  `);
+  check(toy.wrong.crate === 1 && toy.wrong.have === 0, 'a toy box stays shut to another animal\'s match beside it',
+    'the wrong animal left crate=' + toy.wrong.crate + ' goal=' + toy.wrong.have);
+  check(toy.right.crate === 0 && toy.right.have === 1, 'and opens to its own', 'its own animal left crate=' + toy.right.crate + ' goal=' + toy.right.have);
+
+  /* a hungry face counts down a move at a time, eats two moves at
+     nought, and costs nothing if it is matched first */
+  const hungry = await run(`
+    __level({ n: 9104, w: 6, h: 6, types: 5, moves: 20, base: 999999, goals: [[GK.SCORE, 0, 999999]], hungry: { n: 1, t: 2, every: 99 } });
+    const placed = hungryCount(G.B);
+    eachCell(G.B, x => { if (x.tile) x.tile.hungry = 0; });
+    G.B.cell[0][0].tile.hungry = 2;
+    let m = __three(4, 1); await tryMove(m[0], m[1]);
+    const after1 = { moves: G.moves, left: G.B.cell[0][0].tile.hungry };
+    m = __three(4, 1); await tryMove(m[0], m[1]);
+    const after2 = { moves: G.moves, left: G.B.cell[0][0].tile.hungry };
+    __paint();
+    G.B.cell[3][1].tile.hungry = 1;
+    m = __three(3, 1); await tryMove(m[0], m[1]);
+    return { placed, after1, after2, fed: G.moves, still: hungryCount(G.B) };
+  `);
+  check(hungry.placed === 1, 'a level with hungry faces opens with them on the board', 'opened with ' + hungry.placed);
+  check(hungry.after1.moves === 19 && hungry.after1.left === 1, 'a hungry face waits one move fewer each move',
+    'after one move: ' + JSON.stringify(hungry.after1));
+  check(hungry.after2.moves === 16 && hungry.after2.left === 0, 'at nought it eats two moves and is an ordinary tile again',
+    'after two moves: ' + JSON.stringify(hungry.after2));
+  check(hungry.fed === 15 && hungry.still === 0, 'matched in time, it costs nothing', 'moves ' + hungry.fed + ', still hungry ' + hungry.still);
+
   console.log('the rules, through the real game:');
   ok.forEach(s => console.log('  ok   ' + s));
   problems.forEach(s => console.log('  BAD  ' + s));

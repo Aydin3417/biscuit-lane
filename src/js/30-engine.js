@@ -10,7 +10,10 @@ function mkTile(type, sp) {
     x: 0, y: 0, tx: 0, ty: 0,
     scale: 1, alpha: 1, rot: 0,
     dying: 0, born: 0, vy: 0, fallFrom: null,
-    jiggle: 0
+    jiggle: 0,
+    /* moves left before a hungry face eats two of the player's (see
+       hungryTick); 0 on every ordinary tile */
+    hungry: 0
   };
 }
 
@@ -23,7 +26,7 @@ function makeBoard(def, seed) {
   for (let r = 0; r < def.h; r++) {
     const row = [];
     for (let c = 0; c < def.w; c++) {
-      row.push({ hole: false, crate: 0, mud: 0, ice: 0, bram: 0, mole: 0, moleT: 0, tile: null, r, c });
+      row.push({ hole: false, crate: 0, mud: 0, ice: 0, bram: 0, mole: 0, moleT: 0, bone: 0, mouse: 0, crateT: 0, tile: null, r, c });
     }
     B.cell.push(row);
   }
@@ -42,9 +45,24 @@ function makeBoard(def, seed) {
         /* a molehill: o is one layer of earth over it, O is two */
         else if (ch === 'o') { cell.mole = 2; cell.moleT = MOLE_EVERY; }
         else if (ch === 'O') { cell.mole = 3; cell.moleT = MOLE_EVERY; }
+        /* a toy box: a crate that opens only to its own animal's matches.
+           t/T belong to the level's first toy colour, u/U to its second */
+        else if (ch === 't' || ch === 'T' || ch === 'u' || ch === 'U') {
+          cell.crate = (ch === 'T' || ch === 'U') ? 2 : 1;
+          const toy = def.toy || [0, 1];
+          cell.crateT = ((ch === 't' || ch === 'T') ? toy[0] : toy[1]) + 1;
+        }
       }
     }
   }
+  /* bones lie under the mud: each is a list of cells, and every one of
+     them has to be clean before it can be lifted out */
+  (def.bones || []).forEach((cells, i) => cells.forEach(rc => {
+    const cell = B.cell[rc[0]] && B.cell[rc[0]][rc[1]];
+    if (!cell || cell.hole) return;
+    cell.bone = i + 1;
+    if (cell.mud < 1) cell.mud = 1;
+  }));
   /* bottom exit of each column, for walking pups home */
   for (let c = 0; c < B.w; c++) {
     let e = -1;
@@ -554,5 +572,116 @@ function commonType(B) {
 function tilesOfType(B, type) {
   const out = [];
   eachCell(B, (cell, r, c) => { if (cell.tile && cell.tile.type === type) out.push([r, c]); });
+  return out;
+}
+
+/* ============================================================
+   Four things the run holds back until the player has been
+   through a hundred levels, added 15 Nov 2026.
+
+   The first fourteen levels teach every mechanic the game had, the
+   seventy-sixth adds molehills, and then nine hundred levels were
+   made of the same seven things. Each of these arrives on the level
+   after a gate — 101, 151, 201, 251 — which is the softest level in
+   its block, so the new thing is met where it can be looked at.
+
+   The rules live here rather than in 40-game.js because two things
+   play this board: the game, and the harness every budget is fitted
+   with (test/_solver.js). A rule written once cannot be written
+   differently the second time — the molehill goal shipped unwinnable
+   exactly that way.
+   ============================================================ */
+
+/* ---- toy boxes (from 251) ----
+   A crate with an animal's colour on it opens only to a match of that
+   animal beside it. A blast opens any box: that is what makes a rocket
+   worth setting up on a board of them. */
+function crateOpens(cell, type) {
+  return !cell.crateT || cell.crateT - 1 === type;
+}
+
+/* ---- buried bones (from 101) ----
+   A bone lies under two cells of mud and comes out when both are
+   clean. Called for a cell whose mud has just gone; answers whether
+   that finished a bone, and lifts it if so. */
+function boneDug(B, cell) {
+  const id = cell.bone;
+  if (!id) return false;
+  let buried = false;
+  eachCell(B, x => { if (x.bone === id && x.mud > 0) buried = true; });
+  if (buried) return false;
+  eachCell(B, x => { if (x.bone === id) x.bone = 0; });
+  return true;
+}
+
+/* ---- mice (from 201) ----
+   A mouse sits in a cell, on top of whatever tile is there, and is
+   caught when that tile is cleared. After every move each one still
+   loose runs to a cell beside it. MICE_IN_PLAY at a time; another
+   comes out when one is caught and the goal still wants more. */
+const MICE_IN_PLAY = 3;
+function mouseSpot(cell) {
+  return cell && !cell.hole && cell.crate === 0 && cell.mole === 0 && cell.ice === 0 && !cell.mouse &&
+    cell.tile && cell.tile.type >= 0;
+}
+function mouseCount(B) {
+  let n = 0;
+  eachCell(B, x => { if (x.mouse) n++; });
+  return n;
+}
+function mousePlace(B) {
+  const spots = [];
+  eachCell(B, x => { if (mouseSpot(x)) spots.push(x); });
+  if (!spots.length) return null;
+  const cell = spots[Math.floor(B.rng() * spots.length)];
+  cell.mouse = 1;
+  return cell;
+}
+/* every mouse one step; returns [[fromR, fromC, toR, toC], ...] */
+function mouseTick(B) {
+  const mice = [];
+  eachCell(B, x => { if (x.mouse) mice.push(x); });
+  const moved = [];
+  mice.forEach(m => {
+    const around = [[m.r - 1, m.c], [m.r + 1, m.c], [m.r, m.c - 1], [m.r, m.c + 1]]
+      .map(rc => B.cell[rc[0]] && B.cell[rc[0]][rc[1]]).filter(mouseSpot);
+    if (!around.length) return;
+    const to = around[Math.floor(B.rng() * around.length)];
+    m.mouse = 0; to.mouse = 1;
+    moved.push([m.r, m.c, to.r, to.c]);
+  });
+  return moved;
+}
+
+/* ---- hungry faces (from 151) ----
+   A tile with a bowl and a number on it. The number comes down by one
+   with every move; match the tile before it reaches nought, or it
+   eats HUNGRY_COST of the player's moves and goes back to being an
+   ordinary tile. Not a goal: a clock laid over whatever the level is. */
+const HUNGRY_COST = 2;
+function hungryPlace(B, t) {
+  const spots = [];
+  eachCell(B, x => {
+    if (x.hole || x.crate > 0 || x.mole > 0 || x.ice > 0 || x.mouse) return;
+    if (x.tile && x.tile.type >= 0 && x.tile.sp === SP.NONE && !x.tile.hungry) spots.push(x);
+  });
+  if (!spots.length) return null;
+  const cell = spots[Math.floor(B.rng() * spots.length)];
+  cell.tile.hungry = t;
+  return cell;
+}
+function hungryCount(B) {
+  let n = 0;
+  eachCell(B, x => { if (x.tile && x.tile.hungry > 0) n++; });
+  return n;
+}
+/* one move has passed; returns the cells whose face has run out */
+function hungryTick(B) {
+  const out = [];
+  eachCell(B, x => {
+    const t = x.tile;
+    if (!t || !(t.hungry > 0) || t.dying) return;
+    if (--t.hungry === 0) out.push([x.r, x.c]);
+  });
   return out;
 }

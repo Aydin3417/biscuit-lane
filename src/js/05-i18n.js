@@ -118,6 +118,14 @@ const STRINGS = {
     lose_tip_bramble: 'Cut from the edge of the patch inward, before it grows back over what you cleared.',
     lose_tip_score: 'Four in a row makes a rocket and five makes a star; specials are where the points are.',
     lose_tip_mole: 'Fill the hills in from beside them, and keep hitting the one nearest to closing.',
+    lose_tip_bone: 'A bone needs both of its squares clean. Finish one before starting on the next.',
+    lose_tip_mouse: 'A mouse runs after every move. Match the tile it is sitting on now, or send a rocket down its row.',
+    goal_bone: 'Dig up {n} bones', goal_mouse: 'Catch {n} mice',
+    tut_bone: 'Bones lie under the mud. Clean both squares over one to dig it up.',
+    tut_mouse: 'Mice! Clear the tile a mouse is sitting on to catch it. They run to a new square after every move.',
+    tut_hungry: 'A face with a bowl is hungry. Match it before its number runs out, or it eats {n} of your moves.',
+    tut_toy: 'A toy box opens only to the animal painted on it. Match that animal beside the box, or blast it open.',
+    a11y_hungry_ate: 'A hungry face ate {n} moves.',
 
     /* the till */
     store_t: 'Treats',
@@ -504,6 +512,14 @@ const STRINGS = {
     lose_tip_bramble: 'Kümenin kenarından içeri doğru kes, temizlediğin yere yeniden yayılmadan.',
     lose_tip_score: 'Dörtlü roket, beşli yıldız yapar; puan özel taşlarda.',
     lose_tip_mole: 'Tepecikleri yanından doldur; kapanmaya en yakın olana vurmaya devam et.',
+    lose_tip_bone: 'Bir kemiğin iki karesi de temiz olmalı. Yenisine başlamadan birini bitir.',
+    lose_tip_mouse: 'Fare her hamleden sonra kaçar. Şu an üstünde durduğu taşı eşle ya da sırasına bir roket yolla.',
+    goal_bone: '{n} kemik çıkar', goal_mouse: '{n} fare yakala',
+    tut_bone: 'Kemikler çamurun altında. Birini çıkarmak için üstündeki iki kareyi de temizle.',
+    tut_mouse: 'Fareler! Yakalamak için farenin üstünde durduğu taşı temizle. Her hamleden sonra başka kareye kaçarlar.',
+    tut_hungry: 'Mama kaplı yüz aç. Sayısı bitmeden onu eşle, yoksa {n} hamleni yer.',
+    tut_toy: 'Oyuncak kutusu yalnızca üstündeki hayvana açılır. O hayvanı kutunun yanında eşle ya da patlatarak aç.',
+    a11y_hungry_ate: 'Aç bir yüz {n} hamle yedi.',
 
     /* kasa */
     store_t: 'Ödüller',

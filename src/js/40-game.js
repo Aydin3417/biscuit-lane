@@ -60,11 +60,14 @@ function snapshotLevel() {
   return {
     n: G.n, day: G.n === DAILY_LEVEL ? dayNumber() : 0, reached: SAVE.reached,
     moves: G.moves, made: G.made, targets: G.starTargets, score: G.score, charge: G.charge, scoreMul: G.scoreMul,
-    extras: G.extras || 0, rescued: G.rescued, creepTick: G.creepTick,
+    extras: G.extras || 0, rescued: G.rescued, creepTick: G.creepTick, hungryN: G.hungryN || 0,
     pupQueue: B.pupQueue || 0, startedAt: G.startedAt, bestChain: G.bestChain,
     goals: G.goals.map(g => g.have),
     cells: B.cell.map(row => row.map(c => [c.hole ? 1 : 0, c.crate, c.mud, c.ice, c.bram, c.mole, c.moleT || 0,
-      c.tile ? c.tile.type : null, c.tile ? c.tile.sp : 0]))
+      c.tile ? c.tile.type : null, c.tile ? c.tile.sp : 0,
+      /* 9-12, added with the bones, mice, toy boxes and hungry faces;
+         a level kept by an older build has none and reads as nought */
+      c.bone || 0, c.mouse || 0, c.crateT || 0, c.tile ? (c.tile.hungry || 0) : 0]))
   };
 }
 function keepLevel() { SAVE.inLevel = snapshotLevel(); persist(); }
@@ -84,6 +87,8 @@ function restoreBoard(B, s) {
     cell.hole = !!v[0]; cell.crate = v[1] || 0; cell.mud = v[2] || 0; cell.ice = v[3] || 0;
     cell.bram = v[4] || 0; cell.mole = v[5] || 0; cell.moleT = v[6] || 0;
     cell.tile = (v[7] === null || v[7] === undefined) ? null : mkTile(v[7], v[8] || 0);
+    cell.bone = v[9] || 0; cell.mouse = v[10] || 0; cell.crateT = v[11] || 0;
+    if (cell.tile) cell.tile.hungry = v[12] || 0;
   }
   B.pupQueue = s.pupQueue || 0;
 }
@@ -388,6 +393,18 @@ function startLevel(n, opts) {
     const onBoard = Math.min(PUPS_IN_PLAY, G.pupsWanted + 2);
     for (let i = 0; i < onBoard; i++) placePup(G.B);
   }
+  /* the mice the goal is after, and the hungry faces the level lays
+     over whatever else it asks (30-engine.js); a resumed board has
+     both where they were */
+  const mouseGoal = G.goals.find(g => g.kind === GK.MOUSE);
+  if (mouseGoal && !res) {
+    for (let i = 0; i < Math.min(MICE_IN_PLAY, mouseGoal.need); i++) mousePlace(G.B);
+  }
+  G.hungryN = res ? (res.hungryN || 0) : 0;
+  G.mouseHops = {};
+  if (G.def.hungry && !res) {
+    for (let i = 0; i < G.def.hungry.n; i++) hungryPlace(G.B, G.def.hungry.t + i * 2);
+  }
   /* an energetic pet leaves a rocket lying about */
   if (!res && perks.some(p => p.id === 'gift')) {
     const spots = [];
@@ -548,6 +565,8 @@ function paintGoalIcon(g) {
   /* the hill as the board draws it at two layers, which is how an 'o'
      starts; with no branch here the chip was blank */
   else if (g.kind === GK.MOLE) paintMole(c, px * .9, 2);
+  else if (g.kind === GK.BONE) paintBone(c, px * 1.25);
+  else if (g.kind === GK.MOUSE) paintMouse(c, px * 1.2);
   else if (g.kind === GK.SCORE) {
     c.fillStyle = PAL.accent;
     c.save(); c.scale(px / 24, px / 24); c.translate(-12, -12);
@@ -814,11 +833,29 @@ function hitCell(B, r, c, ctx, direct) {
   ctx.removed.push({ r, c, t });
   ctx.count++;
   if (t.type >= 0) ctx.collect[t.type] = (ctx.collect[t.type] || 0) + 1;
+  /* a mouse on the tile goes with it */
+  if (cell.mouse) {
+    cell.mouse = 0; ctx.mouse++;
+    ring(r, c, '#C2BBB2');
+    burst(r, c, '#EDE8E0', 12, 1.2);
+    cellFloat(r, c, '+1', PAL.accent, 18);
+    SFX.coin();
+    const cat = activePet();
+    if (cat) petVoice(cat, 1.25);
+  }
   if (cell.mud > 0) {
     cell.mud--; ctx.mud++;
     const [mx, my, mpan] = cellFX(r, c);
     SFX.mud(mpan);
     FX.splat(mx, my, G.cell, boardFloor());
+    /* the last of the mud over a bone lifts it out */
+    if (cell.mud === 0 && cell.bone && boneDug(B, cell)) {
+      ctx.bone++;
+      ring(r, c, '#FFF4DC');
+      burst(r, c, '#FFF4DC', 14, 1.3);
+      cellFloat(r, c, '+1', PAL.accent, 18);
+      SFX.coin();
+    }
   }
   if (cell.bram > 0) {
     cell.bram--; ctx.bram++;
@@ -830,7 +867,8 @@ function hitCell(B, r, c, ctx, direct) {
   if (direct !== 'noCrate') {
     [[r - 1, c], [r + 1, c], [r, c - 1], [r, c + 1]].forEach(([r2, c2]) => {
       const n = B.cell[r2] && B.cell[r2][c2];
-      if (n && n.crate > 0) {
+      /* a toy box answers only its own animal (crateOpens) */
+      if (n && n.crate > 0 && crateOpens(n, t.type)) {
         n.crate--;
         if (n.crate === 0) { ctx.crate++; ring(r2, c2, '#C79A62'); }
         const [nx, ny, npan] = cellFX(r2, c2);
@@ -896,7 +934,7 @@ async function blastWaves(startKeys, chain, silent) {
        applyCounts read NaN as nothing, and every molehill level from 76
        on could not be won — while the solver, which had the field,
        measured them as fine. Every counter hitCell bumps lives here. */
-    const ctx = { touched: new Set(), removed: [], chain: [], collect: {}, mud: 0, crate: 0, ice: 0, bram: 0, mole: 0, count: 0, delay: 0 };
+    const ctx = { touched: new Set(), removed: [], chain: [], collect: {}, mud: 0, crate: 0, ice: 0, bram: 0, mole: 0, bone: 0, mouse: 0, count: 0, delay: 0 };
     wave.forEach(k => {
       const [r, c] = k.split(':').map(Number);
       hitCell(G.B, r, c, ctx);
@@ -981,6 +1019,8 @@ function applyCounts(ctx) {
     if (g.kind === GK.MUD && ctx.mud) { g.have += ctx.mud; bumped = i; }
     if (g.kind === GK.CRATE && ctx.crate) { g.have += ctx.crate; bumped = i; }
     if (g.kind === GK.MOLE && ctx.mole) { g.have += ctx.mole; bumped = i; }
+    if (g.kind === GK.BONE && ctx.bone) { g.have += ctx.bone; bumped = i; }
+    if (g.kind === GK.MOUSE && ctx.mouse) { g.have += ctx.mouse; bumped = i; }
     if (g.kind === GK.BRAMBLE) {
       const left = brambleCount(G.B);
       const was = g.have;
@@ -1084,6 +1124,7 @@ async function clearGroups(groups, swapCells) {
     const cell = G.B.cell[s.r][s.c];
     if (cell && cell.tile) {
       cell.tile.sp = s.sp;
+      cell.tile.hungry = 0;          /* matched, so fed */
       cell.tile.scale = .4;
       cell.tile.jiggle = 1;
       ring(s.r, s.c, s.type >= 0 ? slotGem(s.type) : PAL.accent);
@@ -1477,6 +1518,55 @@ async function creepBrambles() {
   if (stale(_ep)) return;
 }
 
+/* The mice run. Every one still loose takes a step, and if the goal
+   wants more than are on the board another comes out. */
+async function workMice() {
+  const _ep = levelEpoch();
+  if (G.over || !G.B) return;
+  const goal = G.goals.find(g => g.kind === GK.MOUSE);
+  if (!goal) return;
+  const t0 = performance.now();
+  G.mouseHops = {};
+  mouseTick(G.B).forEach(m => { G.mouseHops[m[2] + ':' + m[3]] = { r: m[0], c: m[1], t0: t0 }; });
+  const wantOut = Math.min(MICE_IN_PLAY, goal.need - goal.have);
+  let guard = 0;
+  while (mouseCount(G.B) < wantOut && guard++ < MICE_IN_PLAY) {
+    const cell = mousePlace(G.B);
+    if (!cell) break;
+    ring(cell.r, cell.c, '#C2BBB2');
+  }
+  if (Object.keys(G.mouseHops).length) await wait(reduceMotion() ? 20 : pace(130));
+  if (stale(_ep)) return;
+}
+/* The hungry faces count down. One that reaches nought eats
+   HUNGRY_COST moves and is an ordinary tile again; and every so many
+   moves another face gets hungry, so the clock never leaves the board. */
+async function workHungry() {
+  const _ep = levelEpoch();
+  const rule = G.def && G.def.hungry;
+  if (G.over || !G.B || !rule) return;
+  const starved = hungryTick(G.B);
+  if (starved.length) {
+    starved.forEach(rc => {
+      ring(rc[0], rc[1], PAL.rose);
+      burst(rc[0], rc[1], PAL.rose, 10, 1);
+      cellFloat(rc[0], rc[1], '-' + HUNGRY_COST, PAL.rose, 22);
+    });
+    G.moves = Math.max(0, G.moves - HUNGRY_COST * starved.length);
+    G.shake = Math.max(G.shake, 6);
+    SFX.bad();
+    buzz(HAP.no);
+    say(T('a11y_hungry_ate', { n: HUNGRY_COST * starved.length }));
+    syncHud();
+  }
+  G.hungryN = (G.hungryN || 0) + 1;
+  if (G.hungryN % rule.every === 0 && hungryCount(G.B) < rule.n + 1) {
+    const cell = hungryPlace(G.B, rule.t);
+    if (cell) ring(cell.r, cell.c, PAL.accent);
+  }
+  if (starved.length) { await wait(reduceMotion() ? 30 : pace(220)); if (stale(_ep)) return; }
+}
+
 function spendMove() {
   G.moves = Math.max(0, G.moves - 1);
   G.made = (G.made || 0) + 1;
@@ -1550,6 +1640,8 @@ async function tryMove(a, b) {
   if (stale(_ep)) return;
   await creepBrambles();
   await workMoles();
+  await workMice();
+  await workHungry();
   paintWalk();
   if (stale(_ep)) return;
   G.busy = false;
@@ -2055,6 +2147,22 @@ function renderGame(dt) {
       } else if (t.sp !== SP.NONE) {
         drawTileFx(c, t.type, t.sp, G.cell * .90, tsec, t.id);
       }
+      /* a hungry face: its bowl, and the moves it will wait, which is
+         the whole of the mechanic and so is never cached */
+      if (t.hungry > 0 && !t.dying) {
+        const soon = t.hungry <= 2;
+        c.save(); c.translate(-G.cell * .24, G.cell * .27); paintBowl(c, G.cell * .62); c.restore();
+        const hr = G.cell * .18, hx = G.cell * .27, hy = -G.cell * .27;
+        c.beginPath(); c.arc(hx, hy, hr * (soon ? 1 + Math.sin(tsec * 9) * .08 : 1), 0, Math.PI * 2);
+        c.fillStyle = soon ? PAL.rose : rgba('#F6EADA', .96);
+        c.fill();
+        c.lineWidth = Math.max(1, G.cell * .024);
+        c.strokeStyle = rgba('#3A2A18', .45); c.stroke();
+        c.fillStyle = soon ? '#FFFFFF' : '#3A2A18';
+        c.font = '800 ' + Math.round(G.cell * .25) + 'px Grandstander, sans-serif';
+        c.textAlign = 'center'; c.textBaseline = 'middle';
+        c.fillText(String(t.hungry), hx, hy + G.cell * .015);
+      }
     }
     c.restore();
     /* ice on top */
@@ -2077,10 +2185,55 @@ function renderGame(dt) {
     }
   });
 
+  /* a bone shows through the mud it lies under: a thing to dig for has
+     to be seen to be there */
+  eachCell(B, (cell, r, c2) => {
+    if (cell.bone && cell.mud > 0) {
+      c.save();
+      c.translate(cellX(c2) + G.cell * .30, cellY(r) + G.cell * .72);
+      paintBone(c, G.cell * .62);
+      c.restore();
+    }
+  });
+
   /* crates sit above everything in their cell */
   eachCell(B, (cell, r, c2) => {
     if (cell.crate > 0) {
       drawBlocker(c, 'crate', cellX(c2) + G.cell / 2, cellY(r) + G.cell / 2, G.cell * .96, cell.crate);
+      /* a toy box wears the face it opens to */
+      if (cell.crateT) {
+        const x = cellX(c2) + G.cell / 2, y = cellY(r) + G.cell / 2;
+        c.save();
+        c.beginPath(); c.arc(x, y, G.cell * .32, 0, Math.PI * 2);
+        c.fillStyle = rgba('#FFF8EC', .94); c.fill();
+        c.lineWidth = Math.max(1, G.cell * .03); c.strokeStyle = rgba('#3A2416', .55); c.stroke();
+        const sp = tileSprite(cell.crateT - 1, SP.NONE, G.cell * .58, SAVE.settings.marks, false, false);
+        c.drawImage(sp, x - sp._w / 2, y - sp._w / 2, sp._w, sp._w);
+        c.restore();
+      }
+    }
+    /* a mouse, on the corner of its tile so the tile can still be read;
+       it hops from where it was for a fifth of a second after a move */
+    if (cell.mouse) {
+      let mx = cellX(c2) + G.cell * .70, my = cellY(r) + G.cell * .30;
+      const hop = G.mouseHops && G.mouseHops[r + ':' + c2];
+      if (hop) {
+        const k = clamp((performance.now() - hop.t0) / 200, 0, 1);
+        if (k < 1) {
+          const e2 = 1 - (1 - k) * (1 - k);
+          mx += (hop.c - c2) * G.cell * (1 - e2);
+          my += (hop.r - r) * G.cell * (1 - e2) - Math.sin(k * Math.PI) * G.cell * .22;
+        }
+      }
+      c.save();
+      c.translate(mx, my + Math.sin(tsec * 5 + r * 1.7 + c2) * G.cell * .015);
+      /* a pale disc behind it: grey on a purple tile at forty pixels was
+         a smudge, seen on the first screenshot of level 201 */
+      c.beginPath(); c.arc(0, G.cell * .02, G.cell * .27, 0, Math.PI * 2);
+      c.fillStyle = rgba('#FFF8EC', .9); c.fill();
+      c.lineWidth = Math.max(1, G.cell * .028); c.strokeStyle = rgba('#3A2416', .5); c.stroke();
+      paintMouse(c, G.cell * .84);
+      c.restore();
     }
     /* Molehills, and the number that makes them worth caring about.
 
