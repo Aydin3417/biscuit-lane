@@ -2834,6 +2834,7 @@ function openSettings() {
     <div class="eyebrow setEyebrow">${T('set_sec_game')}</div>
     <div class="card setCard">
       ${row('sound', T('set_sound'), T('set_sound_s'), SAVE.settings.sound)}
+      ${row('music', T('set_music'), T('set_music_s'), SAVE.settings.music !== false)}
       ${row('haptics', T('set_haptics'), T('set_haptics_s'), SAVE.settings.haptics)}
       ${row('marks', T('set_marks'), T('set_marks_s'), SAVE.settings.marks)}
       ${NOTIFY.ready() ? row('notify', T('set_notify'), T('set_notify_s'), SAVE.settings.notify) : ''}
@@ -2878,11 +2879,15 @@ function openSettings() {
   `);
   $$('[data-toggle]', m.el).forEach(b => b.addEventListener('click', () => {
     const k = b.dataset.toggle;
+    /* music is on for a save that has never said: it was added after
+       those saves were made (20-audio.js) */
+    if (k === 'music' && SAVE.settings.music === undefined) SAVE.settings.music = true;
     SAVE.settings[k] = !SAVE.settings[k];
     $('.sw2', b).classList.toggle('on', SAVE.settings[k]);
     persist(true);
     if (k === 'marks') { clearSprites(); G.goals && G.goals.forEach(paintGoalIcon); }
     if (k === 'sound' && SAVE.settings.sound) { audioResume(); SFX.select(); }
+    if (k === 'music') { audioResume(); musicSync(); }
     if (k === 'haptics') buzz(14);
     /* Turning it on here is not the same as having permission: a player
        who declined the system dialog and then finds this switch would

@@ -2316,6 +2316,7 @@ const STRINGS = {
     /* settings */
     set_t: 'Settings',
     set_sound: 'Sound effects', set_sound_s: 'Pops, blasts and small victories.',
+    set_music: 'Music', set_music_s: 'A quiet lullaby on a music box.',
     set_notify: 'Reminders',
     set_notify_s: 'Two only: when your hearts have come back, and when the daily walk has gone untaken. Nothing else, ever.',
     note_hearts_t: 'Your hearts are back',
@@ -2698,6 +2699,7 @@ const STRINGS = {
 
     set_t: 'Ayarlar',
     set_sound: 'Ses efektleri', set_sound_s: 'Patlamalar, çıtırtılar, küçük zaferler.',
+    set_music: 'Müzik', set_music_s: 'Müzik kutusunda sakin bir ninni.',
     set_notify: 'Hatırlatmalar',
     set_notify_s: 'Yalnız iki tane: canların geri geldiğinde, ve günlük yürüyüş yapılmadan geçtiğinde. Başka hiçbir şey.',
     note_hearts_t: 'Canların geri geldi',
@@ -6121,7 +6123,7 @@ function freshSave() {
        the system's own dialog — see 16-notify.js. Defaulting it true
        would have the settings screen showing a switch that is on while
        nothing can actually be delivered. */
-    settings: { sound: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true, notify: false },
+    settings: { sound: true, music: true, haptics: true, lang: 'en', theme: 'auto', marks: false, telemetry: true, notify: false },
     badges: {},
     daily: { day: 0, done: false, best: 0, streak: 0 },
     jar: { fill: 0, opened: 0 },   // the treat jar, filled by playing
@@ -8637,12 +8639,18 @@ function adErrCode(e) {
      voice ─┬─► sfxBus ─► sfxComp ─► master ─► out
             └─► verbSend ─► convolver ─► verbGain ─┘
 
-   There is no music. There was a generated loop, six of them by the
-   end, and on 3 Oct 2026 the owner listened to it and had it taken out:
-   a pad, a bass and a bell that wanders are a hum, not a tune, and a
-   hum behind every level is worse than the board's own sounds with
-   nothing behind them. If music comes back it should be written, not
-   generated.
+   There was a generated loop, six of them by the end, and on 3 Oct
+   2026 the owner listened to it and had it taken out: a pad, a bass and
+   a bell that wanders are a hum, not a tune, and a hum behind every
+   level is worse than the board's own sounds with nothing behind them.
+   "If music comes back it should be written, not generated."
+
+   It came back on 15 Nov 2026, written: one sixteen-bar lullaby in
+   three-four, note by note (LULLABY, at the foot of this file), on a
+   music box with a soft bass under it. Nothing in it is rolled. It has
+   its own switch in Settings, apart from the effects, and sits a long
+   way under them.
+     music ──► musBus ─► master
 
    The compressor is what makes a ten-tile cascade sound like one
    happy noise instead of ten fighting ones, and the little room
@@ -8678,6 +8686,11 @@ function buildAudioGraph() {
   AU.master = c.createGain();
   AU.master.gain.value = .9;
   AU.master.connect(c.destination);
+  /* the tune's own fader, straight to the master: it must not pump
+     with the effects' compressor */
+  AU.musBus = c.createGain();
+  AU.musBus.gain.value = 0;
+  AU.musBus.connect(AU.master);
 
   /* glue compressor: soft, slow-ish, just enough to hold it together */
   AU.comp = c.createDynamicsCompressor();
@@ -9279,6 +9292,120 @@ function petVoice(p, pitch) {
   const k = (pitch || 1) * (v.pitch || 1) * (st === 0 ? 1.28 : st === 1 ? 1.1 : .95);
   if (breed.species === 'cat') SFX.meow(k, v); else SFX.bark(k, v);
 }
+
+/* ============================================================
+   The tune. Written, not generated.
+
+   A lullaby in D, three beats to the bar, sixteen bars: eight that
+   ask and eight that answer, ending on the note it began under. Each
+   bar is its melody as [midi note, beats] pairs and the chord beneath
+   it as [bass, two inner voices]. The second time round the melody is
+   an octave lower and softer, so the loop is a minute long before a
+   bar is heard twice the same way.
+
+   Scheduled against the audio clock, a little ahead, so it does not
+   drift when the tab is busy drawing a cascade. Every voice is a few
+   sines with an envelope; a bar costs about fourteen oscillators and
+   they are gone when it ends.
+   ============================================================ */
+const MUS_BED = .11;
+const MUS_BEAT = .64;                 /* seconds: about 94 to the minute */
+const LULLABY = [
+  { m: [[78, 1], [81, 1], [86, 1]],             ch: [50, 66, 69] },   /* D   */
+  { m: [[83, 2], [81, 1]],                      ch: [50, 66, 69] },   /* D   */
+  { m: [[79, 1], [83, 1], [86, 1]],             ch: [43, 67, 71] },   /* G   */
+  { m: [[88, 2], [85, 1]],                      ch: [45, 64, 69] },   /* A   */
+  { m: [[86, 1], [85, .5], [83, .5], [81, 1]],  ch: [47, 66, 71] },   /* Bm  */
+  { m: [[83, 1], [79, 1], [83, 1]],             ch: [43, 67, 71] },   /* G   */
+  { m: [[81, 1], [79, .5], [78, .5], [76, 1]],  ch: [45, 64, 67] },   /* A7  */
+  { m: [[74, 3]],                               ch: [50, 66, 69] },   /* D   */
+  { m: [[83, 1.5], [85, .5], [86, 1]],          ch: [43, 67, 71] },   /* G   */
+  { m: [[81, 2], [78, 1]],                      ch: [50, 66, 69] },   /* D   */
+  { m: [[79, 1], [78, 1], [76, 1]],             ch: [52, 67, 71] },   /* Em  */
+  { m: [[76, 1], [81, 2]],                      ch: [45, 64, 69] },   /* A   */
+  { m: [[83, 1], [86, 1], [83, 1]],             ch: [43, 67, 71] },   /* G   */
+  { m: [[81, 1], [78, 1], [74, 1]],             ch: [50, 66, 69] },   /* D   */
+  { m: [[76, 1], [79, 1], [73, 1]],             ch: [45, 64, 67] },   /* A7  */
+  { m: [[74, 3]],                               ch: [50, 66, 69] }    /* D   */
+];
+const MUS = { on: false, timer: null, bar: 0, next: 0, look: .18 };
+const midiHz = m => 440 * Math.pow(2, (m - 69) / 12);
+
+/* a music-box tine: the note, a quiet octave, and a bright partial that
+   is gone in a tenth of a second, which is the pluck */
+function boxNote(m, t, len, gain) {
+  const c = AU.ctx, f = midiHz(m);
+  [[1, 1, len], [2, .22, len * .6], [5.4, .10, .12]].forEach(p => {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine';
+    o.frequency.value = Math.min(f * p[0], 9000);
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain * p[1], t + .008);
+    g.gain.exponentialRampToValueAtTime(.0001, t + p[2]);
+    o.connect(g); g.connect(AU.musBus);
+    o.start(t); o.stop(t + p[2] + .05);
+  });
+}
+function softNote(m, t, len, gain) {
+  const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
+  o.type = 'sine';
+  o.frequency.value = midiHz(m);
+  g.gain.setValueAtTime(.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + .03);
+  g.gain.exponentialRampToValueAtTime(.0001, t + len);
+  o.connect(g); g.connect(AU.musBus);
+  o.start(t); o.stop(t + len + .05);
+}
+function musicBar(t) {
+  const lap = Math.floor(MUS.bar / LULLABY.length) % 2;
+  const bar = LULLABY[MUS.bar % LULLABY.length];
+  const B = MUS_BEAT;
+  /* the bass on one, the two inner voices on two and three */
+  softNote(bar.ch[0], t, B * 2.6, .5);
+  softNote(bar.ch[1], t + B, B * 1.1, .12);
+  softNote(bar.ch[2], t + B, B * 1.1, .10);
+  softNote(bar.ch[1], t + B * 2, B * 1.0, .10);
+  softNote(bar.ch[2], t + B * 2, B * 1.0, .09);
+  let at = 0;
+  bar.m.forEach(n => {
+    boxNote(n[0] - (lap ? 12 : 0), t + at * B, Math.max(.7, n[1] * B * 1.5), lap ? .30 : .36);
+    at += n[1];
+  });
+}
+function musicWanted() {
+  return typeof SAVE !== 'undefined' && SAVE && SAVE.settings && SAVE.settings.music !== false;
+}
+function musicStart() {
+  audioInit();
+  if (!AU.ready || !AU.musBus || MUS.on || !musicWanted()) return;
+  MUS.on = true;
+  const g = AU.musBus.gain, t0 = AU.ctx.currentTime;
+  g.cancelScheduledValues(t0);
+  g.setValueAtTime(g.value, t0);
+  g.linearRampToValueAtTime(MUS_BED, t0 + 1.6);
+  MUS.next = t0 + .25;
+  const tick = () => {
+    if (!MUS.on) return;
+    while (MUS.next < AU.ctx.currentTime + MUS.look) {
+      musicBar(MUS.next);
+      MUS.next += MUS_BEAT * 3;
+      MUS.bar++;
+    }
+    MUS.timer = setTimeout(tick, 60);
+  };
+  tick();
+}
+function musicStop() {
+  MUS.on = false;
+  if (MUS.timer) { clearTimeout(MUS.timer); MUS.timer = null; }
+  if (AU.ready && AU.musBus) {
+    const g = AU.musBus.gain, t = AU.ctx.currentTime;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(0, t + .5);
+  }
+}
+function musicSync() { if (musicWanted()) musicStart(); else musicStop(); }
 
 /* ===== 25-art.js ===== */
 /* ============================================================
@@ -15838,9 +15965,28 @@ function tempo() {
   if (!G.finale) return 1;
   return G.finaleSkip ? .12 : .36;
 }
+/* HOW FAST A MOVE LANDS.
+
+   A plain three took the board about 620ms from the finger lifting to
+   the next move being accepted — 180 for the swap, 145 for the clear,
+   up to 460 for the fall and forty of slack — and every further link
+   of a cascade another 450. The audit of 30 Sep 2026 measured 0.9 to
+   2.1 seconds a move on a phone and called it the thing that broke the
+   game's rhythm; two weeks in the store the owner called the same
+   thing cheapness. The games this one is shelved beside settle a
+   three in under half a second.
+
+   SNAP scales every wait and every tween between a move and the board
+   coming to rest. At .72 a plain three is about 450ms and a cascade
+   link about 320, which is as quick as the swell of a dying tile (now
+   6.4 a second, from 4.6) can still be read. It does not touch the
+   staged whole-board clear, the pet's leap or the finale, which are
+   long on purpose. And a move tried while the last one is still
+   settling is no longer thrown away: see G.queued in tryMove. */
+const SNAP = .72;
 function pace(ms) {
   const k = tempo();
-  return k === 1 ? ms : Math.max(16, Math.round(ms * k));
+  return Math.max(16, Math.round(ms * k * SNAP));
 }
 
 /* ---------------- geometry ---------------- */
@@ -15974,7 +16120,7 @@ function stepTile(t, dt) {
     if (t.blinkAt <= 0) { t.blinkT = .12; t.blinkAt = rnd(5, 18); }
   }
   if (t.jiggle > 0) t.jiggle = Math.max(0, t.jiggle - dt * 3.4);
-  if (t.dying > 0) t.dying = Math.min(1, t.dying + dt * 4.6);
+  if (t.dying > 0) t.dying = Math.min(1, t.dying + dt * 6.4);
   if (t.scale < 1 && !t.dying) t.scale = Math.min(1, t.scale + dt * 5);
 }
 
@@ -16670,7 +16816,7 @@ async function blastWaves(startKeys, chain, silent) {
     /* the ripple above takes .9 of a tile's own swell on top of the
        swell itself, which the tile runs at 4.6 a second: 420ms sees the
        last tile out, and it is time a whole-board clear has earned */
-    if (ctx.removed.length) await wait(pace(reduceMotion() ? 40 : (big ? 420 : 145)));
+    if (ctx.removed.length) await wait(reduceMotion() ? 30 : (big ? Math.round(420 * tempo()) : pace(145)));
     if (stale(_ep)) return;
     ctx.removed.forEach(it => {
       const cell = G.B.cell[it.r][it.c];
@@ -16827,7 +16973,7 @@ async function settleBoard(depth) {
     if (m.materialise) { t.x = m.toC; t.y = m.toR; t.scale = 0; return; }
     if (m.spawn) { t.x = m.fromC; t.y = m.fromR; }
     const dist = Math.max(Math.abs(m.toR - t.y), Math.abs(m.toC - t.x));
-    const dur = clamp(.10 + dist * .050, .12, .46) * k;
+    const dur = clamp(.10 + dist * .050, .12, .46) * k * SNAP;
     maxDur = Math.max(maxDur, dur);
     setTarget(t, m.toC, m.toR, dur, E.drop);
     t.tw.land = true;
@@ -17167,7 +17313,7 @@ async function workMoles() {
   /* the render loop redraws every frame, so there is nothing to repaint
      here — only a beat, so the earth is seen arriving rather than being
      found already there */
-  await wait(reduceMotion() ? 30 : 160);
+  await wait(reduceMotion() ? 30 : pace(160));
   if (stale(_ep)) return;
 }
 
@@ -17187,7 +17333,7 @@ async function creepBrambles() {
   burst(at[0], at[1], '#2E4A2A', 6, .7);
   SFX.creak(G.B ? (at[1] / Math.max(1, G.B.w - 1)) * 1.6 - .8 : 0);
   say(T('a11y_bramble_grew'));
-  await wait(reduceMotion() ? 30 : 160);
+  await wait(reduceMotion() ? 30 : pace(160));
   if (stale(_ep)) return;
 }
 
@@ -17207,9 +17353,18 @@ async function tryMove(a, b) {
      last move already paid for (see the snapshot below) took that move
      again on the old board and a fresh refill, every relaunch — spendMove
      clamps at nought and the level never ended. */
+  /* A swap made while the board is still settling is kept, once, and
+     played the moment it comes to rest — if it is still a swap by then.
+     It used to be dropped without a sound, so a player moving at the
+     speed of their own eyes had every second move ignored and learned
+     to wait for the game. Only the latest is kept, and only for the
+     length of one settle: a queue of three would be the game playing
+     moves the player had stopped meaning. */
+  if (G.busy && !G.over && !G.finale && G.moves > 0) { G.queued = { a: a, b: b, at: performance.now() }; return; }
   if (G.busy || G.over || G.moves <= 0) return;
   if (!canSwap(G.B, a, b)) { SFX.bad(); return; }
   G.busy = true; moleFresh(G.B);
+  G.queued = null;
   G.sel = null;
   const ca = G.B.cell[a[0]][a[1]], cb = G.B.cell[b[0]][b[1]];
   const ta = ca.tile, tb = cb.tile;
@@ -17220,14 +17375,14 @@ async function tryMove(a, b) {
   const before = legal ? snapshotLevel() : null;
 
   swapTiles(G.B, a, b);
-  setTarget(ta, b[1], b[0], .17);
-  setTarget(tb, a[1], a[0], .17);
+  setTarget(ta, b[1], b[0], .17 * SNAP);
+  setTarget(tb, a[1], a[0], .17 * SNAP);
   SFX.swap();
   /* Not yet. This fired before the board had said whether the swap was
      legal, so a move it refused felt in the hand exactly like one it
      took — the one moment the player most needs telling apart. */
   buzz(legal ? HAP.swap : HAP.no);
-  await wait(180);
+  await wait(pace(180));
   if (stale(_ep)) return;
 
   if (!legal) {
@@ -17259,6 +17414,13 @@ async function tryMove(a, b) {
   if (stale(_ep)) return;
   G.busy = false;
   checkEnd();
+  /* the move the player made while this one was landing */
+  const q = G.queued;
+  G.queued = null;
+  if (q && !G.over && G.moves > 0 && performance.now() - q.at < 1400 &&
+      canSwap(G.B, q.a, q.b) && (comboOf(G.B.cell[q.a[0]][q.a[1]].tile, G.B.cell[q.b[0]][q.b[1]].tile) || swapMakesMatch(G.B, q.a, q.b))) {
+    tryMove(q.a, q.b);
+  }
 }
 
 /* ---------------- pet ability ---------------- */
@@ -22133,6 +22295,7 @@ function openSettings() {
     <div class="eyebrow setEyebrow">${T('set_sec_game')}</div>
     <div class="card setCard">
       ${row('sound', T('set_sound'), T('set_sound_s'), SAVE.settings.sound)}
+      ${row('music', T('set_music'), T('set_music_s'), SAVE.settings.music !== false)}
       ${row('haptics', T('set_haptics'), T('set_haptics_s'), SAVE.settings.haptics)}
       ${row('marks', T('set_marks'), T('set_marks_s'), SAVE.settings.marks)}
       ${NOTIFY.ready() ? row('notify', T('set_notify'), T('set_notify_s'), SAVE.settings.notify) : ''}
@@ -22177,11 +22340,15 @@ function openSettings() {
   `);
   $$('[data-toggle]', m.el).forEach(b => b.addEventListener('click', () => {
     const k = b.dataset.toggle;
+    /* music is on for a save that has never said: it was added after
+       those saves were made (20-audio.js) */
+    if (k === 'music' && SAVE.settings.music === undefined) SAVE.settings.music = true;
     SAVE.settings[k] = !SAVE.settings[k];
     $('.sw2', b).classList.toggle('on', SAVE.settings[k]);
     persist(true);
     if (k === 'marks') { clearSprites(); G.goals && G.goals.forEach(paintGoalIcon); }
     if (k === 'sound' && SAVE.settings.sound) { audioResume(); SFX.select(); }
+    if (k === 'music') { audioResume(); musicSync(); }
     if (k === 'haptics') buzz(14);
     /* Turning it on here is not the same as having permission: a player
        who declined the system dialog and then finds this switch would
@@ -23586,6 +23753,9 @@ function boot() {
       /* the context itself: a running
          AudioContext keeps an audio session open on some phones, and a
          cascade in flight would go on playing into the pocket */
+      /* the tune first: its timer would go on scheduling bars into a
+         suspended context and play them all at once on the way back */
+      musicStop();
       try { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend(); } catch (e) { }
       /* The moment the queue can still be made right: the player has put
          the game down, and everything the two notifications are about —
@@ -23600,7 +23770,8 @@ function boot() {
          canvas repainted for nobody, in a pocket, on a battery */
       if (AMB.raf) { cancelAnimationFrame(AMB.raf); AMB.raf = null; }
     } else {
-      try { if (AU.ctx && AU.ctx.state === 'suspended' && SAVE.settings.sound) AU.ctx.resume(); } catch (e) { }
+      try { if (AU.ctx && AU.ctx.state === 'suspended' && (SAVE.settings.sound || musicWanted())) AU.ctx.resume(); } catch (e) { }
+      if (AU.ctx) musicSync();
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
       ADS.resumed();
       if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
@@ -23634,7 +23805,7 @@ function boot() {
   if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
 
   /* first gesture starts the audio engine */
-  const kick = () => { audioResume(); document.removeEventListener('pointerdown', kick); };
+  const kick = () => { audioResume(); musicSync(); document.removeEventListener('pointerdown', kick); };
   document.addEventListener('pointerdown', kick);
 
   if (!had) {
@@ -23703,7 +23874,8 @@ if (BL_OPEN) window.BL = {
     init: audioInit,
     reset() {
       try { if (AU.ctx && AU.ctx.close) AU.ctx.close(); } catch (e) { }
-      AU.ctx = null; AU.master = null; AU.sfxBus = null;
+      try { musicStop(); } catch (e) { }
+      AU.ctx = null; AU.master = null; AU.sfxBus = null; AU.musBus = null;
       AU.verb = null; AU.verbGain = null; AU.comp = null; AU.noise = null;
       AU.ready = false; AU.voices = 0;
       audioBroken = false;

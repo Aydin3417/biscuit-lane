@@ -5,12 +5,18 @@
      voice ─┬─► sfxBus ─► sfxComp ─► master ─► out
             └─► verbSend ─► convolver ─► verbGain ─┘
 
-   There is no music. There was a generated loop, six of them by the
-   end, and on 3 Oct 2026 the owner listened to it and had it taken out:
-   a pad, a bass and a bell that wanders are a hum, not a tune, and a
-   hum behind every level is worse than the board's own sounds with
-   nothing behind them. If music comes back it should be written, not
-   generated.
+   There was a generated loop, six of them by the end, and on 3 Oct
+   2026 the owner listened to it and had it taken out: a pad, a bass and
+   a bell that wanders are a hum, not a tune, and a hum behind every
+   level is worse than the board's own sounds with nothing behind them.
+   "If music comes back it should be written, not generated."
+
+   It came back on 15 Nov 2026, written: one sixteen-bar lullaby in
+   three-four, note by note (LULLABY, at the foot of this file), on a
+   music box with a soft bass under it. Nothing in it is rolled. It has
+   its own switch in Settings, apart from the effects, and sits a long
+   way under them.
+     music ──► musBus ─► master
 
    The compressor is what makes a ten-tile cascade sound like one
    happy noise instead of ten fighting ones, and the little room
@@ -46,6 +52,11 @@ function buildAudioGraph() {
   AU.master = c.createGain();
   AU.master.gain.value = .9;
   AU.master.connect(c.destination);
+  /* the tune's own fader, straight to the master: it must not pump
+     with the effects' compressor */
+  AU.musBus = c.createGain();
+  AU.musBus.gain.value = 0;
+  AU.musBus.connect(AU.master);
 
   /* glue compressor: soft, slow-ish, just enough to hold it together */
   AU.comp = c.createDynamicsCompressor();
@@ -647,3 +658,117 @@ function petVoice(p, pitch) {
   const k = (pitch || 1) * (v.pitch || 1) * (st === 0 ? 1.28 : st === 1 ? 1.1 : .95);
   if (breed.species === 'cat') SFX.meow(k, v); else SFX.bark(k, v);
 }
+
+/* ============================================================
+   The tune. Written, not generated.
+
+   A lullaby in D, three beats to the bar, sixteen bars: eight that
+   ask and eight that answer, ending on the note it began under. Each
+   bar is its melody as [midi note, beats] pairs and the chord beneath
+   it as [bass, two inner voices]. The second time round the melody is
+   an octave lower and softer, so the loop is a minute long before a
+   bar is heard twice the same way.
+
+   Scheduled against the audio clock, a little ahead, so it does not
+   drift when the tab is busy drawing a cascade. Every voice is a few
+   sines with an envelope; a bar costs about fourteen oscillators and
+   they are gone when it ends.
+   ============================================================ */
+const MUS_BED = .11;
+const MUS_BEAT = .64;                 /* seconds: about 94 to the minute */
+const LULLABY = [
+  { m: [[78, 1], [81, 1], [86, 1]],             ch: [50, 66, 69] },   /* D   */
+  { m: [[83, 2], [81, 1]],                      ch: [50, 66, 69] },   /* D   */
+  { m: [[79, 1], [83, 1], [86, 1]],             ch: [43, 67, 71] },   /* G   */
+  { m: [[88, 2], [85, 1]],                      ch: [45, 64, 69] },   /* A   */
+  { m: [[86, 1], [85, .5], [83, .5], [81, 1]],  ch: [47, 66, 71] },   /* Bm  */
+  { m: [[83, 1], [79, 1], [83, 1]],             ch: [43, 67, 71] },   /* G   */
+  { m: [[81, 1], [79, .5], [78, .5], [76, 1]],  ch: [45, 64, 67] },   /* A7  */
+  { m: [[74, 3]],                               ch: [50, 66, 69] },   /* D   */
+  { m: [[83, 1.5], [85, .5], [86, 1]],          ch: [43, 67, 71] },   /* G   */
+  { m: [[81, 2], [78, 1]],                      ch: [50, 66, 69] },   /* D   */
+  { m: [[79, 1], [78, 1], [76, 1]],             ch: [52, 67, 71] },   /* Em  */
+  { m: [[76, 1], [81, 2]],                      ch: [45, 64, 69] },   /* A   */
+  { m: [[83, 1], [86, 1], [83, 1]],             ch: [43, 67, 71] },   /* G   */
+  { m: [[81, 1], [78, 1], [74, 1]],             ch: [50, 66, 69] },   /* D   */
+  { m: [[76, 1], [79, 1], [73, 1]],             ch: [45, 64, 67] },   /* A7  */
+  { m: [[74, 3]],                               ch: [50, 66, 69] }    /* D   */
+];
+const MUS = { on: false, timer: null, bar: 0, next: 0, look: .18 };
+const midiHz = m => 440 * Math.pow(2, (m - 69) / 12);
+
+/* a music-box tine: the note, a quiet octave, and a bright partial that
+   is gone in a tenth of a second, which is the pluck */
+function boxNote(m, t, len, gain) {
+  const c = AU.ctx, f = midiHz(m);
+  [[1, 1, len], [2, .22, len * .6], [5.4, .10, .12]].forEach(p => {
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine';
+    o.frequency.value = Math.min(f * p[0], 9000);
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(gain * p[1], t + .008);
+    g.gain.exponentialRampToValueAtTime(.0001, t + p[2]);
+    o.connect(g); g.connect(AU.musBus);
+    o.start(t); o.stop(t + p[2] + .05);
+  });
+}
+function softNote(m, t, len, gain) {
+  const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
+  o.type = 'sine';
+  o.frequency.value = midiHz(m);
+  g.gain.setValueAtTime(.0001, t);
+  g.gain.exponentialRampToValueAtTime(gain, t + .03);
+  g.gain.exponentialRampToValueAtTime(.0001, t + len);
+  o.connect(g); g.connect(AU.musBus);
+  o.start(t); o.stop(t + len + .05);
+}
+function musicBar(t) {
+  const lap = Math.floor(MUS.bar / LULLABY.length) % 2;
+  const bar = LULLABY[MUS.bar % LULLABY.length];
+  const B = MUS_BEAT;
+  /* the bass on one, the two inner voices on two and three */
+  softNote(bar.ch[0], t, B * 2.6, .5);
+  softNote(bar.ch[1], t + B, B * 1.1, .12);
+  softNote(bar.ch[2], t + B, B * 1.1, .10);
+  softNote(bar.ch[1], t + B * 2, B * 1.0, .10);
+  softNote(bar.ch[2], t + B * 2, B * 1.0, .09);
+  let at = 0;
+  bar.m.forEach(n => {
+    boxNote(n[0] - (lap ? 12 : 0), t + at * B, Math.max(.7, n[1] * B * 1.5), lap ? .30 : .36);
+    at += n[1];
+  });
+}
+function musicWanted() {
+  return typeof SAVE !== 'undefined' && SAVE && SAVE.settings && SAVE.settings.music !== false;
+}
+function musicStart() {
+  audioInit();
+  if (!AU.ready || !AU.musBus || MUS.on || !musicWanted()) return;
+  MUS.on = true;
+  const g = AU.musBus.gain, t0 = AU.ctx.currentTime;
+  g.cancelScheduledValues(t0);
+  g.setValueAtTime(g.value, t0);
+  g.linearRampToValueAtTime(MUS_BED, t0 + 1.6);
+  MUS.next = t0 + .25;
+  const tick = () => {
+    if (!MUS.on) return;
+    while (MUS.next < AU.ctx.currentTime + MUS.look) {
+      musicBar(MUS.next);
+      MUS.next += MUS_BEAT * 3;
+      MUS.bar++;
+    }
+    MUS.timer = setTimeout(tick, 60);
+  };
+  tick();
+}
+function musicStop() {
+  MUS.on = false;
+  if (MUS.timer) { clearTimeout(MUS.timer); MUS.timer = null; }
+  if (AU.ready && AU.musBus) {
+    const g = AU.musBus.gain, t = AU.ctx.currentTime;
+    g.cancelScheduledValues(t);
+    g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(0, t + .5);
+  }
+}
+function musicSync() { if (musicWanted()) musicStart(); else musicStop(); }

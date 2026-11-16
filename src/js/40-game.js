@@ -105,9 +105,28 @@ function tempo() {
   if (!G.finale) return 1;
   return G.finaleSkip ? .12 : .36;
 }
+/* HOW FAST A MOVE LANDS.
+
+   A plain three took the board about 620ms from the finger lifting to
+   the next move being accepted — 180 for the swap, 145 for the clear,
+   up to 460 for the fall and forty of slack — and every further link
+   of a cascade another 450. The audit of 30 Sep 2026 measured 0.9 to
+   2.1 seconds a move on a phone and called it the thing that broke the
+   game's rhythm; two weeks in the store the owner called the same
+   thing cheapness. The games this one is shelved beside settle a
+   three in under half a second.
+
+   SNAP scales every wait and every tween between a move and the board
+   coming to rest. At .72 a plain three is about 450ms and a cascade
+   link about 320, which is as quick as the swell of a dying tile (now
+   6.4 a second, from 4.6) can still be read. It does not touch the
+   staged whole-board clear, the pet's leap or the finale, which are
+   long on purpose. And a move tried while the last one is still
+   settling is no longer thrown away: see G.queued in tryMove. */
+const SNAP = .72;
 function pace(ms) {
   const k = tempo();
-  return k === 1 ? ms : Math.max(16, Math.round(ms * k));
+  return Math.max(16, Math.round(ms * k * SNAP));
 }
 
 /* ---------------- geometry ---------------- */
@@ -241,7 +260,7 @@ function stepTile(t, dt) {
     if (t.blinkAt <= 0) { t.blinkT = .12; t.blinkAt = rnd(5, 18); }
   }
   if (t.jiggle > 0) t.jiggle = Math.max(0, t.jiggle - dt * 3.4);
-  if (t.dying > 0) t.dying = Math.min(1, t.dying + dt * 4.6);
+  if (t.dying > 0) t.dying = Math.min(1, t.dying + dt * 6.4);
   if (t.scale < 1 && !t.dying) t.scale = Math.min(1, t.scale + dt * 5);
 }
 
@@ -937,7 +956,7 @@ async function blastWaves(startKeys, chain, silent) {
     /* the ripple above takes .9 of a tile's own swell on top of the
        swell itself, which the tile runs at 4.6 a second: 420ms sees the
        last tile out, and it is time a whole-board clear has earned */
-    if (ctx.removed.length) await wait(pace(reduceMotion() ? 40 : (big ? 420 : 145)));
+    if (ctx.removed.length) await wait(reduceMotion() ? 30 : (big ? Math.round(420 * tempo()) : pace(145)));
     if (stale(_ep)) return;
     ctx.removed.forEach(it => {
       const cell = G.B.cell[it.r][it.c];
@@ -1094,7 +1113,7 @@ async function settleBoard(depth) {
     if (m.materialise) { t.x = m.toC; t.y = m.toR; t.scale = 0; return; }
     if (m.spawn) { t.x = m.fromC; t.y = m.fromR; }
     const dist = Math.max(Math.abs(m.toR - t.y), Math.abs(m.toC - t.x));
-    const dur = clamp(.10 + dist * .050, .12, .46) * k;
+    const dur = clamp(.10 + dist * .050, .12, .46) * k * SNAP;
     maxDur = Math.max(maxDur, dur);
     setTarget(t, m.toC, m.toR, dur, E.drop);
     t.tw.land = true;
@@ -1434,7 +1453,7 @@ async function workMoles() {
   /* the render loop redraws every frame, so there is nothing to repaint
      here — only a beat, so the earth is seen arriving rather than being
      found already there */
-  await wait(reduceMotion() ? 30 : 160);
+  await wait(reduceMotion() ? 30 : pace(160));
   if (stale(_ep)) return;
 }
 
@@ -1454,7 +1473,7 @@ async function creepBrambles() {
   burst(at[0], at[1], '#2E4A2A', 6, .7);
   SFX.creak(G.B ? (at[1] / Math.max(1, G.B.w - 1)) * 1.6 - .8 : 0);
   say(T('a11y_bramble_grew'));
-  await wait(reduceMotion() ? 30 : 160);
+  await wait(reduceMotion() ? 30 : pace(160));
   if (stale(_ep)) return;
 }
 
@@ -1474,9 +1493,18 @@ async function tryMove(a, b) {
      last move already paid for (see the snapshot below) took that move
      again on the old board and a fresh refill, every relaunch — spendMove
      clamps at nought and the level never ended. */
+  /* A swap made while the board is still settling is kept, once, and
+     played the moment it comes to rest — if it is still a swap by then.
+     It used to be dropped without a sound, so a player moving at the
+     speed of their own eyes had every second move ignored and learned
+     to wait for the game. Only the latest is kept, and only for the
+     length of one settle: a queue of three would be the game playing
+     moves the player had stopped meaning. */
+  if (G.busy && !G.over && !G.finale && G.moves > 0) { G.queued = { a: a, b: b, at: performance.now() }; return; }
   if (G.busy || G.over || G.moves <= 0) return;
   if (!canSwap(G.B, a, b)) { SFX.bad(); return; }
   G.busy = true; moleFresh(G.B);
+  G.queued = null;
   G.sel = null;
   const ca = G.B.cell[a[0]][a[1]], cb = G.B.cell[b[0]][b[1]];
   const ta = ca.tile, tb = cb.tile;
@@ -1487,14 +1515,14 @@ async function tryMove(a, b) {
   const before = legal ? snapshotLevel() : null;
 
   swapTiles(G.B, a, b);
-  setTarget(ta, b[1], b[0], .17);
-  setTarget(tb, a[1], a[0], .17);
+  setTarget(ta, b[1], b[0], .17 * SNAP);
+  setTarget(tb, a[1], a[0], .17 * SNAP);
   SFX.swap();
   /* Not yet. This fired before the board had said whether the swap was
      legal, so a move it refused felt in the hand exactly like one it
      took — the one moment the player most needs telling apart. */
   buzz(legal ? HAP.swap : HAP.no);
-  await wait(180);
+  await wait(pace(180));
   if (stale(_ep)) return;
 
   if (!legal) {
@@ -1526,6 +1554,13 @@ async function tryMove(a, b) {
   if (stale(_ep)) return;
   G.busy = false;
   checkEnd();
+  /* the move the player made while this one was landing */
+  const q = G.queued;
+  G.queued = null;
+  if (q && !G.over && G.moves > 0 && performance.now() - q.at < 1400 &&
+      canSwap(G.B, q.a, q.b) && (comboOf(G.B.cell[q.a[0]][q.a[1]].tile, G.B.cell[q.b[0]][q.b[1]].tile) || swapMakesMatch(G.B, q.a, q.b))) {
+    tryMove(q.a, q.b);
+  }
 }
 
 /* ---------------- pet ability ---------------- */

@@ -305,6 +305,9 @@ function boot() {
       /* the context itself: a running
          AudioContext keeps an audio session open on some phones, and a
          cascade in flight would go on playing into the pocket */
+      /* the tune first: its timer would go on scheduling bars into a
+         suspended context and play them all at once on the way back */
+      musicStop();
       try { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend(); } catch (e) { }
       /* The moment the queue can still be made right: the player has put
          the game down, and everything the two notifications are about —
@@ -319,7 +322,8 @@ function boot() {
          canvas repainted for nobody, in a pocket, on a battery */
       if (AMB.raf) { cancelAnimationFrame(AMB.raf); AMB.raf = null; }
     } else {
-      try { if (AU.ctx && AU.ctx.state === 'suspended' && SAVE.settings.sound) AU.ctx.resume(); } catch (e) { }
+      try { if (AU.ctx && AU.ctx.state === 'suspended' && (SAVE.settings.sound || musicWanted())) AU.ctx.resume(); } catch (e) { }
+      if (AU.ctx) musicSync();
       catchUpPets(); heartTick(); syncPurse(); syncTabs();
       ADS.resumed();
       if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
@@ -353,7 +357,7 @@ function boot() {
   if (SAVE.hearts < HEART_MAX || heartsInfinite()) heartClockStart();
 
   /* first gesture starts the audio engine */
-  const kick = () => { audioResume(); document.removeEventListener('pointerdown', kick); };
+  const kick = () => { audioResume(); musicSync(); document.removeEventListener('pointerdown', kick); };
   document.addEventListener('pointerdown', kick);
 
   if (!had) {
@@ -422,7 +426,8 @@ if (BL_OPEN) window.BL = {
     init: audioInit,
     reset() {
       try { if (AU.ctx && AU.ctx.close) AU.ctx.close(); } catch (e) { }
-      AU.ctx = null; AU.master = null; AU.sfxBus = null;
+      try { musicStop(); } catch (e) { }
+      AU.ctx = null; AU.master = null; AU.sfxBus = null; AU.musBus = null;
       AU.verb = null; AU.verbGain = null; AU.comp = null; AU.noise = null;
       AU.ready = false; AU.voices = 0;
       audioBroken = false;

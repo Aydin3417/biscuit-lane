@@ -195,6 +195,7 @@ const STRINGS = {
     /* settings */
     set_t: 'Settings',
     set_sound: 'Sound effects', set_sound_s: 'Pops, blasts and small victories.',
+    set_music: 'Music', set_music_s: 'A quiet lullaby on a music box.',
     set_notify: 'Reminders',
     set_notify_s: 'Two only: when your hearts have come back, and when the daily walk has gone untaken. Nothing else, ever.',
     note_hearts_t: 'Your hearts are back',
@@ -577,6 +578,7 @@ const STRINGS = {
 
     set_t: 'Ayarlar',
     set_sound: 'Ses efektleri', set_sound_s: 'Patlamalar, çıtırtılar, küçük zaferler.',
+    set_music: 'Müzik', set_music_s: 'Müzik kutusunda sakin bir ninni.',
     set_notify: 'Hatırlatmalar',
     set_notify_s: 'Yalnız iki tane: canların geri geldiğinde, ve günlük yürüyüş yapılmadan geçtiğinde. Başka hiçbir şey.',
     note_hearts_t: 'Canların geri geldi',
