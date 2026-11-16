@@ -83,7 +83,7 @@ const SHOTS = [
   {
     id: 'board',
     go: async page => {
-      await page.evaluate(() => { BL.startLevel(12, { perks: [] }); BL.setScreen('game'); BL.layoutBoard(); });
+      await page.evaluate(() => { BL.startLevel(8, { perks: [] }); BL.setScreen('game'); BL.layoutBoard(); });
       await page.waitForTimeout(900);
       await clear(page);
       await settle(page);
@@ -112,8 +112,10 @@ const SHOTS = [
       await page.evaluate(() => {
         BL.setScreen('map');
         const w = document.getElementById('mapWrap');
-        const n = BL.map.nodes.find(x => x.n === 31);
-        if (n && w) w.scrollTop = Math.max(0, n.y - w.clientHeight * 0.5);
+        /* 39 near the top, so the two hard levels (37, 39) are in frame and
+           the lane's far-end label above them is not, under the chip */
+        const n = BL.map.nodes.find(x => x.n === 39);
+        if (n && w) w.scrollTop = Math.max(0, n.y - w.clientHeight * 0.24);
       });
     }
   },

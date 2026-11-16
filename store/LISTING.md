@@ -250,6 +250,43 @@ Use the Play full description above, unchanged. It is within Apple's
 
 ---
 
+## What's new — 1.3.0
+
+Each line is a change a player can see in the build; the curve and the
+adaptive budget are said as "harder for those who want it" rather than
+as mechanisms, and nothing promises what is not yet on (the
+between-levels video is in the build and off).
+
+**English** (4000 max)
+
+```
+• Boards come in shapes now: hearts, towers, crowns, stairs and more.
+• Hard levels, marked on the map with a flame, pay 50% more coins the first time you clear them.
+• The puzzle lane asks a little more of you, and gives a few moves back if you get stuck on one level.
+• Watch a video to double your daily gift or a chest, or for 3 extra moves on a level you are retrying.
+• Shop items fit their cards, and a rare board that could start with no move is fixed.
+```
+
+**Türkçe**
+
+```
+• Tahtalar artık şekilli: kalp, kule, taç, merdiven ve dahası.
+• Haritada alevle işaretlenen zor bölümler, ilk geçişte %50 fazla altın veriyor.
+• Bulmaca yolu biraz daha zorlu; bir bölümde takılırsan sana birkaç hamle geri veriyor.
+• Video izleyerek günlük hediyeni ya da sandığını ikiye katla, tekrar denediğin bölümde 3 hamle kazan.
+• Mağaza görselleri kartlarına sığıyor; nadiren hamlesiz başlayan bir tahta düzeltildi.
+```
+
+**Screenshots for 1.3.0.** Remade from this build (store/slides): the
+first now shows level 8's heart-shaped board, the third the map with
+the hard levels' flames and a caption that says so. Replace all eight in
+both iPhone slots, English (U.S.) and Turkish; English (U.K.) inherits.
+
+**Marketing URL** in all three localisations: `https://www.hellocotidie.com/`
+(see the AdMob note under "App Store Connect, as entered").
+
+---
+
 ## App Store — Türkçe
 
 **Ad** (30 max)

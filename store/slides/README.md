@@ -19,9 +19,9 @@ python store/slides/render.py
 
 | # | Headline (EN) | Headline (TR) | Screen shown |
 |---|---|---|---|
-| 1 | Match 3 with **your own pets** | **Kendi hayvanlarınla** üçlü eşleştirme | A level in play: rockets and a bomb on the board, the goal half done, the pet half charged |
+| 1 | Match 3 with **your own pets** | **Kendi hayvanlarınla** üçlü eşleştirme | A level in play on a heart-shaped board (level 8): rockets and a bomb on it, the goal half done, the pet half charged |
 | 2 | Adopt cats and dogs, **watch them grow** | Kedi, köpek sahiplen, **büyümelerini izle** | The room: the pet, the next level, the daily walk, the season book |
-| 3 | A puzzle lane that **keeps on going** | Hiç bitmeyen bir **bulmaca yolu** | The map around level 31 |
+| 3 | A puzzle lane that **keeps on going** | Hiç bitmeyen bir **bulmaca yolu** | The map around level 34, where the next hard levels show their flame |
 | 4 | Pick who comes **home with you** | Eve kim gelecek, **sen seç** | The breed picker from the first launch |
 | 5 | Decorate a **cozy** room for them | Onlara **sıcacık** bir oda döşe | The shop's furniture shelf |
 | 6 | A cosy logic puzzle, **a new one daily** | Sakin bir mantık bulmacası, **her gün yenisi** | Nap time, a board two-thirds put to bed |
@@ -39,7 +39,9 @@ Guideline 2.3 asks that screenshots show the app as it is. Each screen is a phot
 | "The cats and dogs on the board are the ones you adopt and raise" | The board's tile faces are the player's own animals (`castOf`, 15-save.js) |
 | "A happy pet brings extra moves" | `perksFor`: a fed pet adds moves at the start of a level |
 | "Hundreds of levels" / "keeps on going" | Sixty hand-built levels, then a generated run that does not end |
-| "Mud, crates, brambles and baskets to walk home" | Four of the seven goal kinds, all met in the first fourteen levels |
+| "Mud, crates, brambles and baskets" | Four of the seven goal kinds, all met in the first fourteen levels |
+| "Boards of every shape" | Eight outlines (`silhouette`, 10-data.js): 22 lane levels cut by hand and seven run boards in ten, since 1.3.0 |
+| "Hard levels that pay extra" | `isHard` levels are marked on the map and the card and pay `ECON.hardPay` (1.5x) on the first clear, since 1.3.0 |
 | "Three cats, three dogs … its own special move" | `BREEDS` and `ABILITIES`, six of each |
 | "Rugs, armchairs, cat towers, hats and collars, all earned by playing" | All priced in coins, and coins are only earned (or converted from treats) |
 | "A daily basket that grows for seven days, and a fresh level every morning" | The gift ladder and the daily walk |
