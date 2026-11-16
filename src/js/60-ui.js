@@ -305,6 +305,7 @@ function renderHome() {
         ${nextBest ? `<span class="pill info ph-best">${IC.star}${T('map_best', { n: fmt(nextBest) })}</span>` : ''}
         ${SAVE.winRun > 0 && !SAVE.stars[nextN] ? `<span class="pill warn ph-best">${IC.flame}${T('run_on', { n: SAVE.winRun })}</span>` : ''}
         ${(() => { const k = nextChest(nextN) - nextN; return `<span class="pill info ph-best">${IC.gift}${k === 0 ? T('chest_here') : T(k === 1 ? 'chest_in1' : 'chest_in', { n: k })}</span>`; })()}
+        ${(() => { const s = strayAt(nextN); return strayHome(s.k) ? '' : `<span class="ph-stray"><canvas data-face="${s.breed}" data-coat="${s.coat}" width="30" height="30"></canvas><span>${locText(s.tale.where)}</span></span>`; })()}
       </span>
       <span class="btn primary ph-go">${IC.play}${T('tab_play')}</span>
     </button>`;
@@ -421,6 +422,9 @@ function renderHome() {
 
   `;
 
+  /* the face of whoever is lost on this stretch, on the card that says so */
+  const ps = $('.ph-stray', pad);
+  if (ps) paintArtCanvases(ps);
   if (napOn) napHomeBind(pad);
   const gc = $('#giftCard'); if (gc) gc.addEventListener('click', openDailyGift);
   const dc = $('#dailyCard'); if (dc) dc.addEventListener('click', startDailyWalk);
@@ -1142,6 +1146,8 @@ function renderFamily() {
       </div>
     </div>` : ''}
 
+    ${strayWallHtml()}
+
     ${shelfHtml()}
 
     ${storeLink() ? `<button class="btn ghost wide" id="famShare">${T('share_btn')}</button>` : ''}
@@ -1149,6 +1155,7 @@ function renderFamily() {
   paintArtCanvases(pad);
   $$('[data-pet]', pad).forEach(b => b.addEventListener('click', () => openPetSheet(b.dataset.pet)));
   $$('[data-adopt]', pad).forEach(b => b.addEventListener('click', () => tryAdopt(+b.dataset.adopt, cost, need)));
+  $$('[data-stray]', pad).forEach(b => b.addEventListener('click', () => { SFX.tap(); strayModal(strayOf(+b.dataset.stray), true); }));
   /* On the family page rather than in settings: what somebody wants to
      show a friend is the animals, and this is the page they are on when
      they are looking at them. Absent entirely until there is a listing
@@ -1656,12 +1663,16 @@ function openLevelIntro(n) {
   let adMoves = 0;
 
   const m = modal(`
-    <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + adaptMoves(n, def.moves, (SAVE.tries && SAVE.tries[n]) || 0) + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
+    <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + adaptMoves(n, def.moves, (SAVE.tries && SAVE.tries[n]) || 0) + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}${def.sig ? ' · ' + T('lvl_sig') : ''}</div>
     <h2>${T('lvl_goals')}</h2>
     ${def.gate ? `<div class="goalItem gateNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('gate_t')}</b>${T('gate_s')}</span>
     </div>` : ''}
+    ${n !== DAILY_LEVEL && def.gate && !SAVE.stars[n] ? (() => { const s = strayAt(n); return `<div class="goalItem strayNote">
+      <canvas data-face="${s.breed}" data-coat="${s.coat}" width="44" height="44"></canvas>
+      <span class="t"><b>${T('stray_gate_t')}</b>${T('stray_gate_s', { name: s.name })}</span>
+    </div>`; })() : ''}
     ${isHard(n) && !SAVE.stars[n] ? `<div class="goalItem gateNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('hard_t')}</b>${T('hard_s', { n: Math.round((ECON.hardPay - 1) * 100) })}</span>
@@ -2303,10 +2314,49 @@ function showWin() {
      closes next */
   const later = fn => modalQueue.push(() => { if (closedByHand) fn(); });
   if (chest) later(() => chestModal(chest));
+  if (first && isGate(n)) later(() => { track('stray', { k: chapterIdx(n) }); strayModal(strayAt(n)); });
   if (grew) later(() => stageUpModal(pet));
 }
 /* The chest, opened. Shut for a beat and shaking, then open with what
    was in it: the half second of not knowing is most of what a chest is. */
+/* Who has been brought home (see STRAY_TALES, 10-data.js). Read from
+   the gates themselves rather than kept as a list: a gate cleared is an
+   animal home, on this save and on one made before there were any. */
+function strayHome(k) { return SAVE.stars[(k + 1) * BLOCK] > 0; }
+function straysHome() {
+  const out = [];
+  const last = Math.floor(Math.max(0, SAVE.reached - 1) / BLOCK);
+  for (let k = 0; k <= last; k++) if (strayHome(k)) out.push(k);
+  return out;
+}
+function strayWallHtml() {
+  const home = straysHome();
+  const nextK = home.length ? home[home.length - 1] + 1 : 0;
+  const next = strayOf(strayHome(nextK) ? nextK + 1 : nextK);
+  return `
+    <div class="sectitle"><h3>${T('fam_friends')}</h3><span class="hint">${home.length}</span></div>
+    <div class="strayWall">
+      ${home.map(k => { const s = strayOf(k); return `<button class="stray" data-stray="${k}">
+        <canvas data-face="${s.breed}" data-coat="${s.coat}" width="54" height="54"></canvas><span>${s.name}</span></button>`; }).join('')}
+      <div class="stray waiting"><span class="q">?</span><span>${T('fam_friends_next', { n: next.gate })}</span></div>
+    </div>`;
+}
+/* The card for an animal come home: who, from where, and what it did
+   next. Opened after a gate's chest, and again from the wall. */
+function strayModal(s, again) {
+  if (!again) { SFX.levelup(); buzz(HAP.win); }
+  const m = modal(`
+    <div class="winPet"><canvas data-body="${s.breed}" data-coat="${s.coat}" data-stage="0" data-scale="1.55"
+      data-mouth="open" data-mood="happy" width="116" height="116"></canvas></div>
+    <div class="eyebrow">${chapterName(s.gate)}</div>
+    <h2>${T('stray_home_t', { name: s.name })}</h2>
+    <p>${locText(s.tale.home).split('{name}').join(s.name)}</p>
+    <p style="color:var(--text-faint);font-size:var(--t-small)">${T('stray_wall', { n: straysHome().length })}</p>
+    <button class="btn primary wide" id="stOk">${again ? T('close') : T('stray_ok')}</button>
+  `);
+  paintArtCanvases(m.el);
+  $('#stOk', m.el).addEventListener('click', m.close);
+}
 function chestModal(ch) {
   const b = BOOSTERS.find(x => x.id === ch.booster);
   const m = modal(`

@@ -5,7 +5,12 @@ const STRINGS = {
   en: {
     brandSub: 'Pet Home',
     gate_t: 'The end of the block',
-    g_hard: 'Hard', g_gate: 'Super hard',
+    g_hard: 'Hard', g_gate: 'Super hard', lvl_sig: 'A drawn board',
+    stray_gate_t: 'Behind this gate',
+    stray_gate_s: '{name} is waiting to be brought home.',
+    stray_home_t: '{name} came home', stray_ok: 'Welcome home',
+    stray_wall: 'Brought home from the lane: {n}',
+    fam_friends: 'Brought home from the lane', fam_friends_next: 'Next: the gate at level {n}',
     hard_t: 'A hard level', hard_s: 'Fewer moves than it looks. Pays {n}% more the first time.',
     gate_s: 'Harder than the nine before it. Take your time.',
     rot_t: 'Turn your phone back',
@@ -409,7 +414,12 @@ const STRINGS = {
   tr: {
     brandSub: 'Pati Evi',
     gate_t: 'Bölümün kapısı',
-    g_hard: 'Zor', g_gate: 'Çok zor',
+    g_hard: 'Zor', g_gate: 'Çok zor', lvl_sig: 'Elle çizilmiş tahta',
+    stray_gate_t: 'Bu kapının ardında',
+    stray_gate_s: '{name} eve götürülmeyi bekliyor.',
+    stray_home_t: '{name} eve geldi', stray_ok: 'Hoş geldin',
+    stray_wall: 'Yoldan eve gelenler: {n}',
+    fam_friends: 'Yoldan eve gelenler', fam_friends_next: 'Sıradaki: {n}. bölümdeki kapı',
     hard_t: 'Zor seviye', hard_s: 'Hamleler göründüğünden az. İlk geçişte %{n} fazla öder.',
     gate_s: 'Öncesindeki dokuzdan zor. Acele etme.',
     rot_t: 'Telefonu geri çevir',
@@ -841,6 +851,8 @@ const ONE = {
     perk_moves: '+{n} move', nap_hint_n: '{n} hint'
   }
 };
+/* a sentence the data carries itself, as { en, tr }: the stray tales */
+function locText(o) { return (o && (o[LANG] || o.en)) || ''; }
 function T(key, vars) {
   const single = vars && (vars.n === 1 || vars.stars === 1) && ONE[LANG] && ONE[LANG][key];
   let s = single || (STRINGS[LANG] && STRINGS[LANG][key]) || STRINGS.en[key] || key;

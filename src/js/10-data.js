@@ -184,6 +184,84 @@ function chapterLast(n) { return chapterFirst(n) + BLOCK - 1; }
    theme exists, only that each of its stretches has two grounds. */
 function chapterGround(n, dusk) { const ch = chapterOf(n); return dusk ? ch.dusk : ch.day; }
 
+/* ---------- somebody to bring home ----------
+
+   The lane had places and no reason to walk it. Ten levels were a
+   stretch with a name and a gate at the end, and what waited behind the
+   gate was a chest. The games this one sits beside give every block of
+   levels something that is restored, opened or rescued by it; here the
+   whole premise is animals that come home with you, and the lane had
+   none on it.
+
+   So every stretch has one. A line on the home card says where it has
+   been seen, the gate's own card says who is behind it, and clearing
+   the gate brings it home: a card with its portrait and what it did
+   next, and a place on the family page's wall. It is not a seventh
+   breed to raise — the six you adopt are the game, and a hundred pets
+   to feed would be a chore — it is the reason the gate was worth it.
+
+   Two tales for each of the six places, taken in turn as the lane comes
+   round again, and fifty names, so a hundred stretches each have a
+   different animal even where they share a tale. Who was brought home
+   is read from the gates already cleared, so a save from before this
+   has its wall filled in. */
+const STRAY_NAMES = ['Pamuk', 'Biscuit', 'Zeytin', 'Mango', 'Fındık', 'Pepper', 'Boncuk', 'Olive', 'Tarçın', 'Mochi',
+  'Duman', 'Peanut', 'Karamel', 'Juniper', 'Lokum', 'Clover', 'Badem', 'Pickle', 'Şeker', 'Maple',
+  'Köfte', 'Nutmeg', 'Paşa', 'Tofu', 'Minnoş', 'Sprout', 'Çakıl', 'Waffle', 'Limon', 'Button',
+  'Fıstık', 'Truffle', 'Bulut', 'Ginger', 'Kestane', 'Noodle', 'Tüy', 'Pumpkin', 'Gece', 'Marble',
+  'Susam', 'Fig', 'Çıtır', 'Dumpling', 'Yumak', 'Basil', 'Kömür', 'Toffee', 'Ponçik', 'Acorn'];
+const STRAY_TALES = {
+  doorstep: [
+    { where: { en: 'Somebody small has been sleeping in the flowerpot by the gate.', tr: 'Kapının yanındaki saksıda minik biri uyuyup duruyor.' },
+      home:  { en: '{name} came out of the flowerpot for the last biscuit and has not left since.', tr: '{name} son bisküvi için saksıdan çıktı, bir daha da gitmedi.' } },
+    { where: { en: 'A pair of eyes watches the step from under the neighbour\'s car.', tr: 'Komşunun arabasının altından bir çift göz kapıyı izliyor.' },
+      home:  { en: '{name} decided the step was warmer than the car.', tr: '{name} kapı önünün arabadan daha sıcak olduğuna karar verdi.' } }
+  ],
+  allot: [
+    { where: { en: 'Something has been stealing beans from the allotments. It has a tail.', tr: 'Bostandan biri fasulye aşırıyor. Kuyruğu var.' },
+      home:  { en: '{name} traded the bean rows for a bowl with a name on it.', tr: '{name} fasulye sıralarını üstünde adı yazan bir mama kabına değişti.' } },
+    { where: { en: 'There are paw prints in the wet cement by the shed.', tr: 'Kulübenin yanındaki ıslak betonda pati izleri var.' },
+      home:  { en: '{name} left prints all the way to your door.', tr: '{name} senin kapına kadar iz bıraktı.' } }
+  ],
+  common: [
+    { where: { en: 'A little one keeps chasing the sheep on the common, and losing.', tr: 'Çayırda bir ufaklık koyunları kovalayıp duruyor; hep kaybediyor.' },
+      home:  { en: '{name} gave up on sheep. You are easier to herd.', tr: '{name} koyunlardan vazgeçti. Seni gütmek daha kolay.' } },
+    { where: { en: 'The scarecrow has a lodger this week.', tr: 'Korkuluğun bu hafta bir kiracısı var.' },
+      home:  { en: '{name} moved out of the scarecrow\'s coat and into the warm.', tr: '{name} korkuluğun ceketinden çıkıp sıcak eve taşındı.' } }
+  ],
+  canal: [
+    { where: { en: 'Something is shivering under the footbridge on the canal path.', tr: 'Kanal yolundaki köprünün altında biri titriyor.' },
+      home:  { en: '{name} crossed the bridge at last, to your side of it.', tr: '{name} sonunda köprüyü geçti; senin tarafına.' } },
+    { where: { en: 'Somebody rides the coal barge up and down and never gets off.', tr: 'Biri kömür mavnasıyla bir aşağı bir yukarı gidiyor, hiç inmiyor.' },
+      home:  { en: '{name} got off at your stop.', tr: '{name} senin durağında indi.' } }
+  ],
+  orchard: [
+    { where: { en: 'Someone is stuck up the oldest apple tree, pretending not to be.', tr: 'En yaşlı elma ağacında biri mahsur kalmış, ama belli etmiyor.' },
+      home:  { en: '{name} came down for you, and only for you.', tr: '{name} ağaçtan senin için indi; sadece senin için.' } },
+    { where: { en: 'The windfalls keep being rolled into a pile by somebody unseen.', tr: 'Yere düşen elmaları görünmeyen biri bir yere yığıyor.' },
+      home:  { en: '{name} brought you the best apple. It has tooth marks.', tr: '{name} sana en güzel elmayı getirdi. Üstünde diş izi var.' } }
+  ],
+  home: [
+    { where: { en: 'A wet nose has been pressed to the bakery window all morning.', tr: 'Sabahtan beri fırının camına ıslak bir burun yapışmış.' },
+      home:  { en: '{name} followed the smell of biscuits all the way home.', tr: '{name} bisküvi kokusunu eve kadar takip etti.' } },
+    { where: { en: 'Someone has been following you since the corner, three steps behind.', tr: 'Köşeden beri biri üç adım arkandan geliyor.' },
+      home:  { en: '{name} stopped pretending not to follow you.', tr: '{name} seni takip etmiyormuş gibi yapmayı bıraktı.' } }
+  ]
+};
+/* the stray of the stretch level n is on; k counts stretches from 0 */
+function strayOf(k) {
+  const first = k * BLOCK + 1;
+  const ch = chapterOf(first), lap = chapterLap(first);
+  const breed = (k * 5 + 2) % BREEDS.length;
+  return {
+    k: k, gate: (k + 1) * BLOCK, breed: breed,
+    coat: (1 + Math.floor(k / BREEDS.length)) % BREEDS[breed].coats.length,
+    name: STRAY_NAMES[k % STRAY_NAMES.length],
+    tale: STRAY_TALES[ch.id][lap % 2]
+  };
+}
+function strayAt(n) { return strayOf(chapterIdx(n)); }
+
 /* ---------- abilities ---------- */
 const ABILITIES = {
   pounce: {
@@ -1625,6 +1703,60 @@ const GEN = {
    151; and from 251 half the crate levels are toy boxes. Only the
    levels taken change, and only those are refitted. */
 const BONE_FROM = 101, HUNGRY_FROM = 151, MOUSE_FROM = 201, TOY_FROM = 251;
+
+/* ---------- boards somebody drew ----------
+
+   The lane's sixty levels were laid out by hand and everything after
+   them is dealt: a shape picked by a die, filled by another. A dealt
+   board is fair and it is nobody's — nine hundred levels with no board
+   in them a player would describe to somebody else. So the fifth level
+   of every block, the breather the rhythm already puts there, is one of
+   these: fourteen boards drawn as pictures, a paw print in mud, a heart
+   of crates, a cat's head to play on. They come round again every
+   hundred and forty levels, which is further apart than anybody
+   remembers a board.
+
+   A row is a map row in the engine's own letters. The kind says what
+   the picture is made of; its goal is sized from the picture by the
+   same arithmetic as any dealt level, and its budget is fitted the same
+   way. A dig drawn for before the bones arrive (101) is a mud level on
+   the same picture. */
+const SIGNATURES = [
+  { id: 'paw', kind: 'mud', map: [
+    '........', '.m.mm.m.', '.m.mm.m.', '........', '..mmmm..', '.MMMMMM.', '.MMMMMM.', '..MMMM..', '........'] },
+  { id: 'heart', kind: 'crate', map: [
+    '#......#', '.cc..cc.', 'cCCccCCc', 'cCCCCCCc', '.cCCCCc.', '..cCCc..', '...cc...', '........', '#......#'] },
+  { id: 'bone', kind: 'bone', map: [
+    '........', 'mm....mm', 'mmmmmmmm', 'mmmmmmmm', 'mm....mm', '........', '.mmmmmm.', '.mmmmmm.', '........'] },
+  { id: 'fish', kind: 'bramble', map: [
+    '........', '........', '..vvv..v', '.vvvvvvv', '.vvvvvvv', '..vvv..v', '........', '........', '........'] },
+  { id: 'diamond', kind: 'collect', map: [
+    '###..###', '##....##', '#......#', '........', '........', '........', '#......#', '##....##', '###..###'] },
+  { id: 'hourglass', kind: 'score', map: [
+    '........', '........', '#......#', '##....##', '##....##', '#......#', '........', '........', '........'] },
+  { id: 'frame', kind: 'crate', map: [
+    '........', '.cccccc.', '.c....c.', '.c.CC.c.', '.c.CC.c.', '.c....c.', '.cccccc.', '........', '........'] },
+  { id: 'butterfly', kind: 'mud', map: [
+    '........', 'mm....mm', 'mmm..mmm', 'mmmMMmmm', '.mmMMmm.', 'mmmMMmmm', 'mmm..mmm', 'mm....mm', '........'] },
+  { id: 'cat', kind: 'collect', map: [
+    '..####..', '...##...', '........', '........', '........', '........', '........', '#......#', '##....##'] },
+  { id: 'cross', kind: 'bramble', map: [
+    '........', '...vv...', '...vv...', '.vvvvvv.', '.vvvvvv.', '...vv...', '...vv...', '........', '........'] },
+  { id: 'stairs', kind: 'mud', map: [
+    'm.......', 'mm......', 'mmm.....', 'mmmm....', '.mmmm...', '..mmmm..', '...mmmm.', '....mmmm', '.....mmm'] },
+  { id: 'spiral', kind: 'crate', map: [
+    '........', '.cccccc.', '......c.', '.cccc.c.', '.c..c.c.', '.c....c.', '.cccccc.', '........', '........'] },
+  { id: 'islands', kind: 'collect', map: [
+    '...##...', '...##...', '...##...', '........', '........', '........', '...##...', '...##...', '...##...'] },
+  { id: 'plots', kind: 'bone', map: [
+    '........', '.mm.mm..', '.mm.mm..', '........', '..mm.mm.', '..mm.mm.', '........', '.mm.mm..', '.mm.mm..'] }
+];
+function signatureFor(n) {
+  if (n < RUN_START || (n - 1) % BLOCK !== 4) return null;
+  const sig = SIGNATURES[Math.floor((n - RUN_START) / BLOCK) % SIGNATURES.length];
+  /* a dig before the bones have arrived is a mud level on the same board */
+  return sig.kind === GK.BONE && n < BONE_FROM ? { id: sig.id, kind: GK.MUD, map: sig.map } : sig;
+}
 function lateKind(n, dealt) {
   if (n < BONE_FROM) return dealt;
   if (n === BONE_FROM) return GK.BONE;
@@ -1944,10 +2076,13 @@ function levelDef(n, ref, forceKind) {
   /* a kind may be forced: test/calibrate.js measures how each kind answers
      its budget, and has to be able to build a mud level even while the
      curve it is about to replace says mud never fits */
-  const kind = forceKind || lateKind(n, dealt);
+  /* a drawn board says what it is made of; calibration and the reference
+     build measure the generator, so they never see one */
+  const sig = (ref || forceKind) ? null : signatureFor(n);
+  const kind = forceKind || (sig ? sig.kind : lateKind(n, dealt));
   r();                                  /* the roll the old pick spent, so the maps below keep their dice */
   const tier = Math.min(4, Math.floor((n - 40) / 12));
-  const size = RUN_SIZES[Math.floor(mulberry(n * 3571)() * RUN_SIZES.length)];
+  const size = sig ? [sig.map[0].length, sig.map.length] : RUN_SIZES[Math.floor(mulberry(n * 3571)() * RUN_SIZES.length)];
   const w = size[0], h = size[1];
   /* The early tiers deal one colour fewer, which is how the handcrafted
      lane eases a player in — not by asking for less. Past them, so does
@@ -2137,7 +2272,9 @@ function levelDef(n, ref, forceKind) {
      turns the end of a level into a search */
   /* the outline last, over plain cells only, so the goal below is sized
      to exactly the stock it would have had */
-  cutSilhouette(map, runOutline(n, kind), w, h);
+  /* a drawn board replaces everything dealt above it, frost included */
+  if (sig) { map.length = 0; sig.map.forEach(row => map.push(row)); }
+  else cutSilhouette(map, runOutline(n, kind), w, h);
 
   /* Where the bones lie: pairs of muddy cells side by side or one above
      the other, none sharing a cell, three on the early digs and up to
@@ -2286,13 +2423,14 @@ function levelDef(n, ref, forceKind) {
   /* the live correction last, after the goals were sized to the budget:
      it is a change to how much room the player has, not to the level */
   const def = { n, w, h, types, moves: tuneMoves(n, moves), goals, base, map, gate: isGate(n) };
+  if (sig) def.sig = sig.id;
   if (bones.length) def.bones = bones;
-  const hungry = ref ? null : lateHungry(n, kind);
+  const hungry = (ref || sig) ? null : lateHungry(n, kind);
   if (hungry) def.hungry = hungry;
   /* toy boxes: the same crates, each given to one of two animals by the
      level's own dice. Done last, so the goal above was sized to the
      crates as crates. */
-  const toy = ref ? null : lateToy(n, kind, types);
+  const toy = (ref || sig) ? null : lateToy(n, kind, types);
   if (toy) {
     const d = mulberry(n * 7103 + 3);
     def.toy = toy;

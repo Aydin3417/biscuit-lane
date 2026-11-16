@@ -1323,6 +1323,22 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .adLine{ font-size:var(--t-small); padding:9px 12px; color:var(--text-dim); }
 .adLine svg{ width:16px; height:16px; }
 .adLine.got{ color:var(--sage); border-color:color-mix(in srgb,var(--sage) 45%, transparent); pointer-events:none; }
+
+
+/* ---------- somebody to bring home (STRAY_TALES) ---------- */
+.ph-stray{ display:flex; align-items:center; gap:7px; margin-top:7px; font-size:var(--t-micro); color:var(--text-dim); line-height:1.3; text-align:left; }
+.ph-stray canvas{ flex:0 0 auto; width:30px; height:30px; }
+.strayNote{ background:color-mix(in srgb,var(--sage) 14%, var(--surface-2)); }
+.strayNote canvas{ flex:0 0 auto; width:44px; height:44px; }
+.strayWall{ display:grid; grid-template-columns:repeat(auto-fill,minmax(74px,1fr)); gap:9px; }
+.stray{ display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 4px 7px; border-radius:16px;
+  background:var(--surface); border:1px solid var(--line-soft); box-shadow:var(--shadow-0);
+  font-size:var(--t-micro); font-weight:700; color:var(--text); min-width:0; }
+.stray span{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.stray canvas{ width:54px; height:54px; }
+.stray.waiting{ border-style:dashed; background:transparent; box-shadow:none; color:var(--text-faint); font-weight:600; justify-content:center; }
+.stray.waiting span{ white-space:normal; text-align:center; line-height:1.25; }
+.stray.waiting .q{ font-family:"Grandstander",sans-serif; font-size:var(--t-h2); color:var(--text-faint); line-height:1.4; }
 </style>
 
 <div class="stage">
@@ -2126,7 +2142,12 @@ const STRINGS = {
   en: {
     brandSub: 'Pet Home',
     gate_t: 'The end of the block',
-    g_hard: 'Hard', g_gate: 'Super hard',
+    g_hard: 'Hard', g_gate: 'Super hard', lvl_sig: 'A drawn board',
+    stray_gate_t: 'Behind this gate',
+    stray_gate_s: '{name} is waiting to be brought home.',
+    stray_home_t: '{name} came home', stray_ok: 'Welcome home',
+    stray_wall: 'Brought home from the lane: {n}',
+    fam_friends: 'Brought home from the lane', fam_friends_next: 'Next: the gate at level {n}',
     hard_t: 'A hard level', hard_s: 'Fewer moves than it looks. Pays {n}% more the first time.',
     gate_s: 'Harder than the nine before it. Take your time.',
     rot_t: 'Turn your phone back',
@@ -2530,7 +2551,12 @@ const STRINGS = {
   tr: {
     brandSub: 'Pati Evi',
     gate_t: 'Bölümün kapısı',
-    g_hard: 'Zor', g_gate: 'Çok zor',
+    g_hard: 'Zor', g_gate: 'Çok zor', lvl_sig: 'Elle çizilmiş tahta',
+    stray_gate_t: 'Bu kapının ardında',
+    stray_gate_s: '{name} eve götürülmeyi bekliyor.',
+    stray_home_t: '{name} eve geldi', stray_ok: 'Hoş geldin',
+    stray_wall: 'Yoldan eve gelenler: {n}',
+    fam_friends: 'Yoldan eve gelenler', fam_friends_next: 'Sıradaki: {n}. bölümdeki kapı',
     hard_t: 'Zor seviye', hard_s: 'Hamleler göründüğünden az. İlk geçişte %{n} fazla öder.',
     gate_s: 'Öncesindeki dokuzdan zor. Acele etme.',
     rot_t: 'Telefonu geri çevir',
@@ -2962,6 +2988,8 @@ const ONE = {
     perk_moves: '+{n} move', nap_hint_n: '{n} hint'
   }
 };
+/* a sentence the data carries itself, as { en, tr }: the stray tales */
+function locText(o) { return (o && (o[LANG] || o.en)) || ''; }
 function T(key, vars) {
   const single = vars && (vars.n === 1 || vars.stars === 1) && ONE[LANG] && ONE[LANG][key];
   let s = single || (STRINGS[LANG] && STRINGS[LANG][key]) || STRINGS.en[key] || key;
@@ -3155,6 +3183,84 @@ function chapterLast(n) { return chapterFirst(n) + BLOCK - 1; }
    into the palette: a list of chapters should not know that a dusk
    theme exists, only that each of its stretches has two grounds. */
 function chapterGround(n, dusk) { const ch = chapterOf(n); return dusk ? ch.dusk : ch.day; }
+
+/* ---------- somebody to bring home ----------
+
+   The lane had places and no reason to walk it. Ten levels were a
+   stretch with a name and a gate at the end, and what waited behind the
+   gate was a chest. The games this one sits beside give every block of
+   levels something that is restored, opened or rescued by it; here the
+   whole premise is animals that come home with you, and the lane had
+   none on it.
+
+   So every stretch has one. A line on the home card says where it has
+   been seen, the gate's own card says who is behind it, and clearing
+   the gate brings it home: a card with its portrait and what it did
+   next, and a place on the family page's wall. It is not a seventh
+   breed to raise — the six you adopt are the game, and a hundred pets
+   to feed would be a chore — it is the reason the gate was worth it.
+
+   Two tales for each of the six places, taken in turn as the lane comes
+   round again, and fifty names, so a hundred stretches each have a
+   different animal even where they share a tale. Who was brought home
+   is read from the gates already cleared, so a save from before this
+   has its wall filled in. */
+const STRAY_NAMES = ['Pamuk', 'Biscuit', 'Zeytin', 'Mango', 'Fındık', 'Pepper', 'Boncuk', 'Olive', 'Tarçın', 'Mochi',
+  'Duman', 'Peanut', 'Karamel', 'Juniper', 'Lokum', 'Clover', 'Badem', 'Pickle', 'Şeker', 'Maple',
+  'Köfte', 'Nutmeg', 'Paşa', 'Tofu', 'Minnoş', 'Sprout', 'Çakıl', 'Waffle', 'Limon', 'Button',
+  'Fıstık', 'Truffle', 'Bulut', 'Ginger', 'Kestane', 'Noodle', 'Tüy', 'Pumpkin', 'Gece', 'Marble',
+  'Susam', 'Fig', 'Çıtır', 'Dumpling', 'Yumak', 'Basil', 'Kömür', 'Toffee', 'Ponçik', 'Acorn'];
+const STRAY_TALES = {
+  doorstep: [
+    { where: { en: 'Somebody small has been sleeping in the flowerpot by the gate.', tr: 'Kapının yanındaki saksıda minik biri uyuyup duruyor.' },
+      home:  { en: '{name} came out of the flowerpot for the last biscuit and has not left since.', tr: '{name} son bisküvi için saksıdan çıktı, bir daha da gitmedi.' } },
+    { where: { en: 'A pair of eyes watches the step from under the neighbour\'s car.', tr: 'Komşunun arabasının altından bir çift göz kapıyı izliyor.' },
+      home:  { en: '{name} decided the step was warmer than the car.', tr: '{name} kapı önünün arabadan daha sıcak olduğuna karar verdi.' } }
+  ],
+  allot: [
+    { where: { en: 'Something has been stealing beans from the allotments. It has a tail.', tr: 'Bostandan biri fasulye aşırıyor. Kuyruğu var.' },
+      home:  { en: '{name} traded the bean rows for a bowl with a name on it.', tr: '{name} fasulye sıralarını üstünde adı yazan bir mama kabına değişti.' } },
+    { where: { en: 'There are paw prints in the wet cement by the shed.', tr: 'Kulübenin yanındaki ıslak betonda pati izleri var.' },
+      home:  { en: '{name} left prints all the way to your door.', tr: '{name} senin kapına kadar iz bıraktı.' } }
+  ],
+  common: [
+    { where: { en: 'A little one keeps chasing the sheep on the common, and losing.', tr: 'Çayırda bir ufaklık koyunları kovalayıp duruyor; hep kaybediyor.' },
+      home:  { en: '{name} gave up on sheep. You are easier to herd.', tr: '{name} koyunlardan vazgeçti. Seni gütmek daha kolay.' } },
+    { where: { en: 'The scarecrow has a lodger this week.', tr: 'Korkuluğun bu hafta bir kiracısı var.' },
+      home:  { en: '{name} moved out of the scarecrow\'s coat and into the warm.', tr: '{name} korkuluğun ceketinden çıkıp sıcak eve taşındı.' } }
+  ],
+  canal: [
+    { where: { en: 'Something is shivering under the footbridge on the canal path.', tr: 'Kanal yolundaki köprünün altında biri titriyor.' },
+      home:  { en: '{name} crossed the bridge at last, to your side of it.', tr: '{name} sonunda köprüyü geçti; senin tarafına.' } },
+    { where: { en: 'Somebody rides the coal barge up and down and never gets off.', tr: 'Biri kömür mavnasıyla bir aşağı bir yukarı gidiyor, hiç inmiyor.' },
+      home:  { en: '{name} got off at your stop.', tr: '{name} senin durağında indi.' } }
+  ],
+  orchard: [
+    { where: { en: 'Someone is stuck up the oldest apple tree, pretending not to be.', tr: 'En yaşlı elma ağacında biri mahsur kalmış, ama belli etmiyor.' },
+      home:  { en: '{name} came down for you, and only for you.', tr: '{name} ağaçtan senin için indi; sadece senin için.' } },
+    { where: { en: 'The windfalls keep being rolled into a pile by somebody unseen.', tr: 'Yere düşen elmaları görünmeyen biri bir yere yığıyor.' },
+      home:  { en: '{name} brought you the best apple. It has tooth marks.', tr: '{name} sana en güzel elmayı getirdi. Üstünde diş izi var.' } }
+  ],
+  home: [
+    { where: { en: 'A wet nose has been pressed to the bakery window all morning.', tr: 'Sabahtan beri fırının camına ıslak bir burun yapışmış.' },
+      home:  { en: '{name} followed the smell of biscuits all the way home.', tr: '{name} bisküvi kokusunu eve kadar takip etti.' } },
+    { where: { en: 'Someone has been following you since the corner, three steps behind.', tr: 'Köşeden beri biri üç adım arkandan geliyor.' },
+      home:  { en: '{name} stopped pretending not to follow you.', tr: '{name} seni takip etmiyormuş gibi yapmayı bıraktı.' } }
+  ]
+};
+/* the stray of the stretch level n is on; k counts stretches from 0 */
+function strayOf(k) {
+  const first = k * BLOCK + 1;
+  const ch = chapterOf(first), lap = chapterLap(first);
+  const breed = (k * 5 + 2) % BREEDS.length;
+  return {
+    k: k, gate: (k + 1) * BLOCK, breed: breed,
+    coat: (1 + Math.floor(k / BREEDS.length)) % BREEDS[breed].coats.length,
+    name: STRAY_NAMES[k % STRAY_NAMES.length],
+    tale: STRAY_TALES[ch.id][lap % 2]
+  };
+}
+function strayAt(n) { return strayOf(chapterIdx(n)); }
 
 /* ---------- abilities ---------- */
 const ABILITIES = {
@@ -4597,6 +4703,60 @@ const GEN = {
    151; and from 251 half the crate levels are toy boxes. Only the
    levels taken change, and only those are refitted. */
 const BONE_FROM = 101, HUNGRY_FROM = 151, MOUSE_FROM = 201, TOY_FROM = 251;
+
+/* ---------- boards somebody drew ----------
+
+   The lane's sixty levels were laid out by hand and everything after
+   them is dealt: a shape picked by a die, filled by another. A dealt
+   board is fair and it is nobody's — nine hundred levels with no board
+   in them a player would describe to somebody else. So the fifth level
+   of every block, the breather the rhythm already puts there, is one of
+   these: fourteen boards drawn as pictures, a paw print in mud, a heart
+   of crates, a cat's head to play on. They come round again every
+   hundred and forty levels, which is further apart than anybody
+   remembers a board.
+
+   A row is a map row in the engine's own letters. The kind says what
+   the picture is made of; its goal is sized from the picture by the
+   same arithmetic as any dealt level, and its budget is fitted the same
+   way. A dig drawn for before the bones arrive (101) is a mud level on
+   the same picture. */
+const SIGNATURES = [
+  { id: 'paw', kind: 'mud', map: [
+    '........', '.m.mm.m.', '.m.mm.m.', '........', '..mmmm..', '.MMMMMM.', '.MMMMMM.', '..MMMM..', '........'] },
+  { id: 'heart', kind: 'crate', map: [
+    '#......#', '.cc..cc.', 'cCCccCCc', 'cCCCCCCc', '.cCCCCc.', '..cCCc..', '...cc...', '........', '#......#'] },
+  { id: 'bone', kind: 'bone', map: [
+    '........', 'mm....mm', 'mmmmmmmm', 'mmmmmmmm', 'mm....mm', '........', '.mmmmmm.', '.mmmmmm.', '........'] },
+  { id: 'fish', kind: 'bramble', map: [
+    '........', '........', '..vvv..v', '.vvvvvvv', '.vvvvvvv', '..vvv..v', '........', '........', '........'] },
+  { id: 'diamond', kind: 'collect', map: [
+    '###..###', '##....##', '#......#', '........', '........', '........', '#......#', '##....##', '###..###'] },
+  { id: 'hourglass', kind: 'score', map: [
+    '........', '........', '#......#', '##....##', '##....##', '#......#', '........', '........', '........'] },
+  { id: 'frame', kind: 'crate', map: [
+    '........', '.cccccc.', '.c....c.', '.c.CC.c.', '.c.CC.c.', '.c....c.', '.cccccc.', '........', '........'] },
+  { id: 'butterfly', kind: 'mud', map: [
+    '........', 'mm....mm', 'mmm..mmm', 'mmmMMmmm', '.mmMMmm.', 'mmmMMmmm', 'mmm..mmm', 'mm....mm', '........'] },
+  { id: 'cat', kind: 'collect', map: [
+    '..####..', '...##...', '........', '........', '........', '........', '........', '#......#', '##....##'] },
+  { id: 'cross', kind: 'bramble', map: [
+    '........', '...vv...', '...vv...', '.vvvvvv.', '.vvvvvv.', '...vv...', '...vv...', '........', '........'] },
+  { id: 'stairs', kind: 'mud', map: [
+    'm.......', 'mm......', 'mmm.....', 'mmmm....', '.mmmm...', '..mmmm..', '...mmmm.', '....mmmm', '.....mmm'] },
+  { id: 'spiral', kind: 'crate', map: [
+    '........', '.cccccc.', '......c.', '.cccc.c.', '.c..c.c.', '.c....c.', '.cccccc.', '........', '........'] },
+  { id: 'islands', kind: 'collect', map: [
+    '...##...', '...##...', '...##...', '........', '........', '........', '...##...', '...##...', '...##...'] },
+  { id: 'plots', kind: 'bone', map: [
+    '........', '.mm.mm..', '.mm.mm..', '........', '..mm.mm.', '..mm.mm.', '........', '.mm.mm..', '.mm.mm..'] }
+];
+function signatureFor(n) {
+  if (n < RUN_START || (n - 1) % BLOCK !== 4) return null;
+  const sig = SIGNATURES[Math.floor((n - RUN_START) / BLOCK) % SIGNATURES.length];
+  /* a dig before the bones have arrived is a mud level on the same board */
+  return sig.kind === GK.BONE && n < BONE_FROM ? { id: sig.id, kind: GK.MUD, map: sig.map } : sig;
+}
 function lateKind(n, dealt) {
   if (n < BONE_FROM) return dealt;
   if (n === BONE_FROM) return GK.BONE;
@@ -4916,10 +5076,13 @@ function levelDef(n, ref, forceKind) {
   /* a kind may be forced: test/calibrate.js measures how each kind answers
      its budget, and has to be able to build a mud level even while the
      curve it is about to replace says mud never fits */
-  const kind = forceKind || lateKind(n, dealt);
+  /* a drawn board says what it is made of; calibration and the reference
+     build measure the generator, so they never see one */
+  const sig = (ref || forceKind) ? null : signatureFor(n);
+  const kind = forceKind || (sig ? sig.kind : lateKind(n, dealt));
   r();                                  /* the roll the old pick spent, so the maps below keep their dice */
   const tier = Math.min(4, Math.floor((n - 40) / 12));
-  const size = RUN_SIZES[Math.floor(mulberry(n * 3571)() * RUN_SIZES.length)];
+  const size = sig ? [sig.map[0].length, sig.map.length] : RUN_SIZES[Math.floor(mulberry(n * 3571)() * RUN_SIZES.length)];
   const w = size[0], h = size[1];
   /* The early tiers deal one colour fewer, which is how the handcrafted
      lane eases a player in — not by asking for less. Past them, so does
@@ -5109,7 +5272,9 @@ function levelDef(n, ref, forceKind) {
      turns the end of a level into a search */
   /* the outline last, over plain cells only, so the goal below is sized
      to exactly the stock it would have had */
-  cutSilhouette(map, runOutline(n, kind), w, h);
+  /* a drawn board replaces everything dealt above it, frost included */
+  if (sig) { map.length = 0; sig.map.forEach(row => map.push(row)); }
+  else cutSilhouette(map, runOutline(n, kind), w, h);
 
   /* Where the bones lie: pairs of muddy cells side by side or one above
      the other, none sharing a cell, three on the early digs and up to
@@ -5258,13 +5423,14 @@ function levelDef(n, ref, forceKind) {
   /* the live correction last, after the goals were sized to the budget:
      it is a change to how much room the player has, not to the level */
   const def = { n, w, h, types, moves: tuneMoves(n, moves), goals, base, map, gate: isGate(n) };
+  if (sig) def.sig = sig.id;
   if (bones.length) def.bones = bones;
-  const hungry = ref ? null : lateHungry(n, kind);
+  const hungry = (ref || sig) ? null : lateHungry(n, kind);
   if (hungry) def.hungry = hungry;
   /* toy boxes: the same crates, each given to one of two animals by the
      level's own dice. Done last, so the goal above was sized to the
      crates as crates. */
-  const toy = ref ? null : lateToy(n, kind, types);
+  const toy = (ref || sig) ? null : lateToy(n, kind, types);
   if (toy) {
     const d = mulberry(n * 7103 + 3);
     def.toy = toy;
@@ -20259,6 +20425,7 @@ function renderHome() {
         ${nextBest ? `<span class="pill info ph-best">${IC.star}${T('map_best', { n: fmt(nextBest) })}</span>` : ''}
         ${SAVE.winRun > 0 && !SAVE.stars[nextN] ? `<span class="pill warn ph-best">${IC.flame}${T('run_on', { n: SAVE.winRun })}</span>` : ''}
         ${(() => { const k = nextChest(nextN) - nextN; return `<span class="pill info ph-best">${IC.gift}${k === 0 ? T('chest_here') : T(k === 1 ? 'chest_in1' : 'chest_in', { n: k })}</span>`; })()}
+        ${(() => { const s = strayAt(nextN); return strayHome(s.k) ? '' : `<span class="ph-stray"><canvas data-face="${s.breed}" data-coat="${s.coat}" width="30" height="30"></canvas><span>${locText(s.tale.where)}</span></span>`; })()}
       </span>
       <span class="btn primary ph-go">${IC.play}${T('tab_play')}</span>
     </button>`;
@@ -20375,6 +20542,9 @@ function renderHome() {
 
   `;
 
+  /* the face of whoever is lost on this stretch, on the card that says so */
+  const ps = $('.ph-stray', pad);
+  if (ps) paintArtCanvases(ps);
   if (napOn) napHomeBind(pad);
   const gc = $('#giftCard'); if (gc) gc.addEventListener('click', openDailyGift);
   const dc = $('#dailyCard'); if (dc) dc.addEventListener('click', startDailyWalk);
@@ -21096,6 +21266,8 @@ function renderFamily() {
       </div>
     </div>` : ''}
 
+    ${strayWallHtml()}
+
     ${shelfHtml()}
 
     ${storeLink() ? `<button class="btn ghost wide" id="famShare">${T('share_btn')}</button>` : ''}
@@ -21103,6 +21275,7 @@ function renderFamily() {
   paintArtCanvases(pad);
   $$('[data-pet]', pad).forEach(b => b.addEventListener('click', () => openPetSheet(b.dataset.pet)));
   $$('[data-adopt]', pad).forEach(b => b.addEventListener('click', () => tryAdopt(+b.dataset.adopt, cost, need)));
+  $$('[data-stray]', pad).forEach(b => b.addEventListener('click', () => { SFX.tap(); strayModal(strayOf(+b.dataset.stray), true); }));
   /* On the family page rather than in settings: what somebody wants to
      show a friend is the animals, and this is the page they are on when
      they are looking at them. Absent entirely until there is a listing
@@ -21610,12 +21783,16 @@ function openLevelIntro(n) {
   let adMoves = 0;
 
   const m = modal(`
-    <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + adaptMoves(n, def.moves, (SAVE.tries && SAVE.tries[n]) || 0) + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}</div>
+    <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + adaptMoves(n, def.moves, (SAVE.tries && SAVE.tries[n]) || 0) + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}${def.sig ? ' · ' + T('lvl_sig') : ''}</div>
     <h2>${T('lvl_goals')}</h2>
     ${def.gate ? `<div class="goalItem gateNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('gate_t')}</b>${T('gate_s')}</span>
     </div>` : ''}
+    ${n !== DAILY_LEVEL && def.gate && !SAVE.stars[n] ? (() => { const s = strayAt(n); return `<div class="goalItem strayNote">
+      <canvas data-face="${s.breed}" data-coat="${s.coat}" width="44" height="44"></canvas>
+      <span class="t"><b>${T('stray_gate_t')}</b>${T('stray_gate_s', { name: s.name })}</span>
+    </div>`; })() : ''}
     ${isHard(n) && !SAVE.stars[n] ? `<div class="goalItem gateNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
       <span class="t"><b>${T('hard_t')}</b>${T('hard_s', { n: Math.round((ECON.hardPay - 1) * 100) })}</span>
@@ -22257,10 +22434,49 @@ function showWin() {
      closes next */
   const later = fn => modalQueue.push(() => { if (closedByHand) fn(); });
   if (chest) later(() => chestModal(chest));
+  if (first && isGate(n)) later(() => { track('stray', { k: chapterIdx(n) }); strayModal(strayAt(n)); });
   if (grew) later(() => stageUpModal(pet));
 }
 /* The chest, opened. Shut for a beat and shaking, then open with what
    was in it: the half second of not knowing is most of what a chest is. */
+/* Who has been brought home (see STRAY_TALES, 10-data.js). Read from
+   the gates themselves rather than kept as a list: a gate cleared is an
+   animal home, on this save and on one made before there were any. */
+function strayHome(k) { return SAVE.stars[(k + 1) * BLOCK] > 0; }
+function straysHome() {
+  const out = [];
+  const last = Math.floor(Math.max(0, SAVE.reached - 1) / BLOCK);
+  for (let k = 0; k <= last; k++) if (strayHome(k)) out.push(k);
+  return out;
+}
+function strayWallHtml() {
+  const home = straysHome();
+  const nextK = home.length ? home[home.length - 1] + 1 : 0;
+  const next = strayOf(strayHome(nextK) ? nextK + 1 : nextK);
+  return `
+    <div class="sectitle"><h3>${T('fam_friends')}</h3><span class="hint">${home.length}</span></div>
+    <div class="strayWall">
+      ${home.map(k => { const s = strayOf(k); return `<button class="stray" data-stray="${k}">
+        <canvas data-face="${s.breed}" data-coat="${s.coat}" width="54" height="54"></canvas><span>${s.name}</span></button>`; }).join('')}
+      <div class="stray waiting"><span class="q">?</span><span>${T('fam_friends_next', { n: next.gate })}</span></div>
+    </div>`;
+}
+/* The card for an animal come home: who, from where, and what it did
+   next. Opened after a gate's chest, and again from the wall. */
+function strayModal(s, again) {
+  if (!again) { SFX.levelup(); buzz(HAP.win); }
+  const m = modal(`
+    <div class="winPet"><canvas data-body="${s.breed}" data-coat="${s.coat}" data-stage="0" data-scale="1.55"
+      data-mouth="open" data-mood="happy" width="116" height="116"></canvas></div>
+    <div class="eyebrow">${chapterName(s.gate)}</div>
+    <h2>${T('stray_home_t', { name: s.name })}</h2>
+    <p>${locText(s.tale.home).split('{name}').join(s.name)}</p>
+    <p style="color:var(--text-faint);font-size:var(--t-small)">${T('stray_wall', { n: straysHome().length })}</p>
+    <button class="btn primary wide" id="stOk">${again ? T('close') : T('stray_ok')}</button>
+  `);
+  paintArtCanvases(m.el);
+  $('#stOk', m.el).addEventListener('click', m.close);
+}
 function chestModal(ch) {
   const b = BOOSTERS.find(x => x.id === ch.booster);
   const m = modal(`
