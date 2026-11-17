@@ -39,10 +39,50 @@ vm.runInContext(util.match(/function mulberry[\s\S]*?\n}/)[0], design);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'src', 'js', '11-design.js'), 'utf8'), design);
 const { targetClear, isGate } = vm.runInContext('({ targetClear, isGate })', design);
 
+/* WHICH ENGINE.
+
+   The lane is fitted in the solver's copy of the cascade and corrected
+   on the game; the run, since 17 Nov 2026, is fitted on the game alone
+   (test/real-run.js), because the copy read it eleven points harder
+   than 40-game.js plays. Held to the copy, a run fitted on the game
+   failed this file by exactly that eleven. A level is measured here in
+   the engine its budget was fitted in: the copy below RUN_START, the
+   real game from it on. */
+const RUN_FROM = 61;
+let REAL = null;
+function realGame() {
+  if (REAL) return REAL;
+  const { loadGame } = require('./_game.js');
+  const { humanMove } = require('./_solver.js');
+  const g = loadGame();
+  const GX = g.vm.runInContext('({ G, startLevel, tryMove, mulberry })', g.ctx);
+  REAL = { ctx: g.ctx, GX, humanMove, events: g.vm.runInContext('__events', g.ctx) };
+  return REAL;
+}
+async function playOne(n, seed) {
+  if (n < RUN_FROM) return playLevel(n, seed).won;
+  const R = realGame();
+  R.ctx.Math.random = R.GX.mulberry(seed >>> 0);
+  R.events.length = 0;
+  R.GX.startLevel(n, { reseed: seed >>> 0 });
+  const G = R.GX.G;
+  G.busy = false;
+  let turns = 0;
+  const lim = G.moves + 20;
+  while (!G.over && turns++ < lim) {
+    const m = R.humanMove(G.B, G.goals);
+    if (!m) break;
+    await R.GX.tryMove(m[0], m[1]);
+  }
+  await new Promise(r => setImmediate(r));
+  return R.events.includes('goal');
+}
+
+(async () => {
 const rows = [];
 for (let n = FIRST; n <= LAST; n++) {
   let won = 0;
-  for (let g = 0; g < GAMES; g++) if (playLevel(n, n * 7919 + g * 104729).won) won++;
+  for (let g = 0; g < GAMES; g++) if (await playOne(n, n * 7919 + g * 104729)) won++;
   const actual = won / GAMES;
   const want = targetClear(n);
   rows.push({ n, want, actual, gate: isGate(n), err: actual - want, moves: levelDef(n).moves });
@@ -98,16 +138,17 @@ console.log('bias              ' + (bias >= 0 ? '+' : '') + Math.round(bias * 10
    the error under ten points, which is where the threshold lives. */
 const RHYTHM_GAMES = Math.max(GAMES, 40);
 const extra = RHYTHM_GAMES - GAMES;
-const deepen = row => {
+const deepen = async row => {
   if (!extra) return row.actual;
   let won = Math.round(row.actual * GAMES);
   for (let g = 0; g < extra; g++) {
-    if (playLevel(row.n, row.n * 31337 + g * 15485863).won) won++;
+    if (await playOne(row.n, row.n * 31337 + g * 15485863)) won++;
   }
   return won / RHYTHM_GAMES;
 };
-const gateDeep = gates.map(deepen);
-const reliefDeep = reliefs.map(deepen);
+const gateDeep = [], reliefDeep = [];
+for (const r of gates) gateDeep.push(await deepen(r));
+for (const r of reliefs) reliefDeep.push(await deepen(r));
 const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
 const gateMeanD = mean(gateDeep), reliefMeanD = mean(reliefDeep);
 
@@ -143,3 +184,4 @@ rows.forEach(r => {
 console.log('');
 if (problems.length) { [...new Set(problems)].forEach(p => console.log('  PROBLEM  ' + p)); process.exitCode = 1; }
 else console.log('the run has the shape it was designed to have');
+})().catch(e => { console.error(e); process.exit(1); });

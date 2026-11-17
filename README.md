@@ -4812,3 +4812,92 @@ on the only move; `ensureMove` now runs after the baskets), the shop's
 drawings are measured and fitted to their boxes instead of scaled by a
 third whether they fit or not, and every video button wears a video
 icon rather than the Play tab's four squares.
+
+
+## What the game was missing, asked before the build
+
+Before 1.3.0 was built the owner asked the question a store asks: will
+this hold, what do the games beside it do well, what is missing. The
+honest answers were mostly not about levels, and "do all of it before
+the update" is what this section is.
+
+**A reason to walk the lane.** Ten levels were a stretch with a name and
+a chest at the end. Every stretch has somebody lost on it now
+(`STRAY_TALES`, 10-data.js): a line on the home card says where it has
+been seen, the gate's card says who is behind it, and clearing the gate
+brings it home — a card with its portrait and what it did next, and a
+place on the family page's wall. It is read from the gates already
+cleared, so a save from before has its wall filled in. It is not a
+seventh pet to feed.
+
+**Speed.** A plain three took about 620ms from the finger lifting to the
+next move being accepted; the audit of 30 Sep had measured 0.9–2.1s a
+move and called it the thing that broke the rhythm. `SNAP` (40-game.js)
+scales every wait and tween between a move and the board at rest to .72,
+a dying tile swells at 6.4 a second instead of 4.6, and a swap made
+while the board is still settling is kept and played when it lands
+instead of being dropped without a sound.
+
+**Music, written.** The generated loop was taken out on 3 Oct because it
+was a hum and not a tune, with the note that if music came back it
+should be written. It is: sixteen bars of lullaby in D, three-four, on a
+music box, note by note (`LULLABY`, 20-audio.js), an octave lower the
+second time round. It has its own switch and sits well under the
+effects. Nobody has listened to it but the person who will — the
+harness checks that every bar is three beats and every note is in key,
+which is not the same as its being good.
+
+**Four things held back.** Every mechanic was taught by level fourteen,
+the molehill came at seventy-six, and nine hundred levels were then made
+of the same seven things. Four arrive fifty levels apart, each on the
+level after a gate (30-engine.js): bones under two cells of mud at 101;
+hungry faces that count down and eat two moves at 151; mice that run
+after every move at 201; toy boxes that open only to their own animal
+at 251. The rules live in the engine because two things play the board
+— the game, and the harness that fits it — and twelve checks in
+test/game-rules.js hold them through the real 40-game.js. They are not
+cards in the deck: a level here and there is taken by a die of its own,
+so only those levels changed.
+
+**Boards somebody drew.** The fifth level of every block is one of
+fourteen boards laid out as pictures (`SIGNATURES`) — a paw print in
+mud, a heart of crates, a cat's head to play on — coming round every
+hundred and forty levels.
+
+**Five more languages.** Spanish, German, French, Portuguese and
+Italian. Half the game's words never reached the string table: they sit
+beside the things they name as `en`/`tr` pairs, read by twenty-one
+`LANG === 'tr' ?`. Rather than a third field on 270 objects, the new
+languages look an inline sentence up by its English (`loc`, `XLATE`,
+00-util.js) and fall back to the English when there is none.
+`tools/l10n-source.js` writes what a translator needs,
+`tools/l10n-check.js` holds a file to it (every key, every placeholder,
+labels not twice as long), `tools/l10n-build.js` writes the one module
+the game reads, and `test/l10n.js` holds all three in step. The
+translations were made by a model and not yet read by a native speaker
+of any of the five; that is the next thing to buy.
+
+**The whole run fitted on the game.** `test/real-run.js` replaces the
+copy-engine fit for the run: every level from 61 to 1000 played through
+40-game.js, the budget moved until the clear rate brackets the target
+and the bracket halved three times, the work changed where the budget
+could not steer. Sixteen games a point, 940 levels, a little over an hour and a half
+on twelve workers at low priority (the first run died at level 676 and
+`--skip` finished it). Mean miss 5%: 61–100 drawn at 60% and measured
+60%, 101–200 56/57, 201–400 50/53, 401–700 47/49, 701–1000 46/47; 75
+levels sit at the eight-move floor and are easier than drawn. Levels
+415–1000, which the last section left on their old budgets, are fitted
+now. Played afterwards through the real game, six games a level, levels
+1–400 ended without one fault.
+
+**The store, in seven languages.** `store/l10n/<lang>.json` holds the
+whole product page for each of the five, `tools/store-check.js` holds
+it to Apple's limits, and the eight slides are made for all seven with
+Nap time second.
+
+What a build cannot say: nobody has heard the lullaby, no native
+speaker has read the five languages, and the hungry faces, mice and
+toy boxes have been played by a harness and by nobody's thumbs. The
+tuning file can still move any level six moves and switch the adaptive
+budget off; `v_first_try` is where the first real answers will be.
+

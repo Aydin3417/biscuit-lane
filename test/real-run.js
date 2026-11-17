@@ -119,9 +119,21 @@ function worker() {
   return { fit, touched };
 }
 
+/* --skip=<prefix> leaves out every level an earlier run already wrote to
+   its shard files, so a run that died can be finished rather than redone */
+const SKIP = opt('skip', '');
+function done() {
+  const have = new Set();
+  if (!SKIP) return have;
+  for (let i = 0; i < 64; i++) {
+    const f = SKIP + '.' + i + '.json';
+    if (fs.existsSync(f)) JSON.parse(fs.readFileSync(f, 'utf8')).forEach(r => have.add(r.n));
+  }
+  return have;
+}
 function levels(W) {
-  const out = [];
-  for (let n = FROM; n <= TO; n++) if (!CHANGED || W.touched(n)) out.push(n);
+  const out = [], have = done();
+  for (let n = FROM; n <= TO; n++) if ((!CHANGED || W.touched(n)) && !have.has(n)) out.push(n);
   return out;
 }
 
@@ -172,7 +184,7 @@ if (SHARD) {
 } else {
   (async () => {
     const t0 = Date.now();
-    const pass = ['--from=' + FROM, '--to=' + TO].concat(CHANGED ? ['--changed'] : [], OUT ? ['--out=' + OUT] : []);
+    const pass = ['--from=' + FROM, '--to=' + TO].concat(CHANGED ? ['--changed'] : [], OUT ? ['--out=' + OUT] : [], SKIP ? ['--skip=' + SKIP] : []);
     const parts = await Promise.all(Array.from({ length: JOBS }, (_, i) => new Promise((res, rej) =>
       execFile(process.execPath, [__filename, String(GAMES)].concat(pass, ['--shard=' + i + '/' + JOBS]),
         { maxBuffer: 1 << 26 }, (e, so, se) => e ? rej(new Error(se || e.message)) : res(JSON.parse(so))))));
