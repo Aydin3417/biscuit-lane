@@ -14,12 +14,21 @@
    — hills and mud, mostly, which the cascade clears whatever the budget
    — and 87 had their work changed as well (RUN_WORK). This replaces
    the fit of 1 Nov and its correction of 14 Nov, both made before the
-   board outlines, the drawn boards and the four later mechanics. */
+   board outlines, the drawn boards and the four later mechanics.
+
+   Two rows by hand. 301 was fitted to twelve moves for a 14,900 score
+   goal, which is 1,242 a move against the 1,150 test/sim.js allows as
+   the most anybody gets; thirteen is the fewest that fits. And 89, a
+   19,400 score level, was fitted to 26 moves at 44% on the fit's own
+   seeds and then cleared 83% on test/curve.js's and 71% on a third
+   family — a score level swings more between deals than any other
+   kind. Over all three, sixteen games each, 21 moves clear 42% and 23
+   clear 56% against a target of 48%: twenty-two. */
 const RUN_MOVES = {
   61: 10, 62: 25, 63: 20, 64: 22, 65: 9, 66: 22, 67: 20, 68: 27,
   69: 9, 70: 21, 71: 27, 72: 31, 73: 25, 74: 10, 75: 21, 76: 12,
   77: 20, 78: 39, 79: 29, 80: 17, 81: 16, 82: 20, 83: 13, 84: 29,
-  85: 16, 86: 8, 87: 24, 88: 37, 89: 26, 90: 28, 91: 12, 92: 26,
+  85: 16, 86: 8, 87: 24, 88: 37, 89: 22, 90: 28, 91: 12, 92: 26,
   93: 37, 94: 17, 95: 33, 96: 17, 97: 8, 98: 23, 99: 11, 100: 26,
   101: 18, 102: 13, 103: 25, 104: 21, 105: 33, 106: 27, 107: 21, 108: 10,
   109: 26, 110: 19, 111: 9, 112: 13, 113: 32, 114: 25, 115: 16, 116: 22,
