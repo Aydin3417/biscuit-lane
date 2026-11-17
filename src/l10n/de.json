@@ -455,7 +455,10 @@
   "perk_trait_move": "+{n} Zug ({trait})",
   "perk_trait_coins": "+{n} % Münzen ({trait})",
   "perk_trait_charge": "Lädt {n} % schneller ({trait})",
-  "perk_trait_dozy": "Wird langsamer hungrig ({trait})"
+  "perk_trait_dozy": "Wird langsamer hungrig ({trait})",
+  "super_t": "Ein superschweres Level",
+  "hard_splash": "Weniger Züge, als es aussieht",
+  "hard_splash_super": "Lass dir hier Zeit"
  },
  "one": {
   "lvl_moves": "{n} Zug",

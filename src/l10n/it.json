@@ -455,7 +455,10 @@
   "perk_trait_move": "+{n} mossa ({trait})",
   "perk_trait_coins": "+{n}% di monete ({trait})",
   "perk_trait_charge": "Si carica il {n}% più in fretta ({trait})",
-  "perk_trait_dozy": "Ha fame più lentamente ({trait})"
+  "perk_trait_dozy": "Ha fame più lentamente ({trait})",
+  "super_t": "Un livello difficilissimo",
+  "hard_splash": "Meno mosse di quanto sembri",
+  "hard_splash_super": "Prenditi il tuo tempo"
  },
  "one": {
   "lvl_moves": "{n} mossa",

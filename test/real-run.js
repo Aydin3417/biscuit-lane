@@ -24,6 +24,8 @@
 
    --changed  only the levels the later mechanics or a drawn board
               touched, for refitting those without replaying the rest
+   --only     a list (1,2,3) or @file.json of levels; lane levels (under
+              61) are fitted too and written into LEVELS by apply-lane
    Seeds are n * 50021 + g * 7331, the family test/real-fit.js uses.
    About 0.8 CPU-seconds a game here; 940 levels at sixteen games a
    point is roughly an hour on fifteen workers, which run at low
@@ -50,7 +52,7 @@ function worker() {
   const { loadGame } = require('./_game.js');
   const { humanMove } = require('./_solver.js');
   const { ctx, vm } = loadGame();
-  const X = vm.runInContext('({ G, startLevel, tryMove, TUNE, mulberry, levelDef, targetClear, RUN_MOVES, RUN_WORK, GK })', ctx);
+  const X = vm.runInContext('({ G, startLevel, tryMove, TUNE, mulberry, levelDef, targetClear, RUN_MOVES, RUN_WORK, GK, LEVELS })', ctx);
   const events = vm.runInContext('__events', ctx);
   const tick = () => new Promise(r => setImmediate(r));
   async function play(n, g) {
@@ -77,17 +79,21 @@ function worker() {
        the multiplier it carried was fitted for the level it used to be */
     let work = touched(n) ? 1 : (X.RUN_WORK[n] || 1);
     let memo, best;
+    const lane = n < 61;
+    const setMoves = m => { if (lane) X.LEVELS[n - 1].moves = m; else X.RUN_MOVES[n] = m; };
     const rate = async m => {
       if (memo[m] !== undefined) return memo[m];
-      X.RUN_MOVES[n] = m;
+      setMoves(m);
       let won = 0;
       for (let g = 0; g < GAMES; g++) if (await play(n, g)) won++;
       return (memo[m] = won / GAMES);
     };
     const m0 = Math.max(FLOOR, Math.min(CAP, X.levelDef(n).moves));
-    for (let pass = 0; pass < 3; pass++) {
+    /* five passes, and work up to 2.6: a mud or hill level still free at
+       eight moves needs more than the old 1.9 to stop being free */
+    for (let pass = 0; pass < 5; pass++) {
       memo = {};
-      if (work === 1) delete X.RUN_WORK[n]; else X.RUN_WORK[n] = work;
+      if (!lane) { if (work === 1) delete X.RUN_WORK[n]; else X.RUN_WORK[n] = work; }
       let lo = m0, hi = m0;
       const step = Math.max(2, Math.round(m0 * .25));
       if (await rate(m0) < want) {
@@ -105,12 +111,12 @@ function worker() {
       }
       best = +Object.keys(memo).sort((a, b) => Math.abs(memo[a] - want) - Math.abs(memo[b] - want) || a - b)[0];
       const p = memo[best];
-      if (best === FLOOR && p > want + .15 && work < 1.9) { work = Math.round(work * 1.25 * 100) / 100; continue; }
-      if (best === CAP && p < want - .15 && work > .55) { work = Math.round(work * .8 * 100) / 100; continue; }
+      if (!lane && best === FLOOR && p > want + .12 && work < 2.6) { work = Math.round(work * 1.25 * 100) / 100; continue; }
+      if (!lane && best === CAP && p < want - .15 && work > .55) { work = Math.round(work * .8 * 100) / 100; continue; }
       break;
     }
-    X.RUN_MOVES[n] = best;
-    return { n, moves: best, p: memo[best], want, work, kind: X.levelDef(n).goals[0][0] };
+    setMoves(best);
+    return { n, moves: best, p: memo[best], want, work: lane ? 1 : work, kind: X.levelDef(n).goals[0][0] };
   }
   const touched = n => {
     const d = X.levelDef(n);
@@ -131,14 +137,23 @@ function done() {
   }
   return have;
 }
+const ONLY_ARG = opt('only', '');
+const ONLY = !ONLY_ARG ? null : new Set(ONLY_ARG[0] === '@' ? JSON.parse(fs.readFileSync(ONLY_ARG.slice(1), 'utf8')) : ONLY_ARG.split(',').map(Number));
 function levels(W) {
   const out = [], have = done();
-  for (let n = FROM; n <= TO; n++) if ((!CHANGED || W.touched(n)) && !have.has(n)) out.push(n);
+  for (let n = FROM; n <= TO; n++) if ((!CHANGED || W.touched(n)) && (!ONLY || ONLY.has(n)) && !have.has(n)) out.push(n);
   return out;
 }
 
 /* both tables rewritten from what the module holds plus what was fitted */
-function writeModule(rows) {
+function writeModule(all) {
+  const laneRows = all.filter(r => r.n < 61), rows = all.filter(r => r.n >= 61);
+  if (laneRows.length) {
+    const patch = {};
+    laneRows.forEach(r => { patch[r.n] = { n: r.n, moves: r.moves }; });
+    require('./apply-lane.js')(patch);
+  }
+  if (!rows.length) return;
   const src = fs.readFileSync(MODULE, 'utf8');
   const grab = name => {
     const start = src.indexOf('const ' + name + ' = {');
@@ -184,7 +199,7 @@ if (SHARD) {
 } else {
   (async () => {
     const t0 = Date.now();
-    const pass = ['--from=' + FROM, '--to=' + TO].concat(CHANGED ? ['--changed'] : [], OUT ? ['--out=' + OUT] : [], SKIP ? ['--skip=' + SKIP] : []);
+    const pass = ['--from=' + FROM, '--to=' + TO].concat(CHANGED ? ['--changed'] : [], OUT ? ['--out=' + OUT] : [], SKIP ? ['--skip=' + SKIP] : [], ONLY_ARG ? ['--only=' + ONLY_ARG] : []);
     const parts = await Promise.all(Array.from({ length: JOBS }, (_, i) => new Promise((res, rej) =>
       execFile(process.execPath, [__filename, String(GAMES)].concat(pass, ['--shard=' + i + '/' + JOBS]),
         { maxBuffer: 1 << 26 }, (e, so, se) => e ? rej(new Error(se || e.message)) : res(JSON.parse(so))))));

@@ -1673,9 +1673,9 @@ function openLevelIntro(n) {
       <canvas data-face="${s.breed}" data-coat="${s.coat}" width="44" height="44"></canvas>
       <span class="t"><b>${T('stray_gate_t')}</b>${T('stray_gate_s', { name: s.name })}</span>
     </div>`; })() : ''}
-    ${isHard(n) && !SAVE.stars[n] ? `<div class="goalItem gateNote">
-      <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
-      <span class="t"><b>${T('hard_t')}</b>${T('hard_s', { n: Math.round((ECON.hardPay - 1) * 100) })}</span>
+    ${tierOf(n) && !SAVE.stars[n] ? `<div class="goalItem gateNote${isSuperHard(n) ? ' superNote' : ''}">
+      <span style="width:32px;display:grid;place-items:center;color:var(${isSuperHard(n) ? '--plum' : '--rose'})">${IC.flame}</span>
+      <span class="t"><b>${T(isSuperHard(n) ? 'super_t' : 'hard_t')}</b>${T('hard_s', { n: Math.round(((isSuperHard(n) ? ECON.superPay : ECON.hardPay) - 1) * 100) })}</span>
     </div>` : ''}
     ${n !== DAILY_LEVEL && !SAVE.stars[n] && SAVE.winRun > 0 ? `<div class="goalItem runNote">
       <span style="width:32px;display:grid;place-items:center;color:var(--rose)">${IC.flame}</span>
@@ -2134,7 +2134,7 @@ function commitWin() {
     + Math.floor(G.score / ECON.winPerScore)) * traitCoinScale(activePet()));
   /* a hard level pays half again the first time: warned about and paid
      for, it is a challenge rather than a wall (isHard) */
-  const rate = first ? (isHard(n) ? ECON.hardPay : 1) : (newBest ? ECON.replayBestRate : ECON.replayRate);
+  const rate = first ? (isSuperHard(n) ? ECON.superPay : isHard(n) ? ECON.hardPay : 1) : (newBest ? ECON.replayBestRate : ECON.replayRate);
   const coins = tunePay('coin', Math.max(first ? 0 : 1, Math.round(base * rate)));
   let treats = 0;
   if (stars === 3 && prev < 3) treats += tunePay('treat', isGate(n) ? ECON.threeStarTreatsGate : ECON.threeStarTreats);

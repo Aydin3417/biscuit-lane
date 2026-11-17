@@ -455,7 +455,10 @@
   "perk_trait_move": "+{n} jogada ({trait})",
   "perk_trait_coins": "+{n}% de moedas ({trait})",
   "perk_trait_charge": "Carrega {n}% mais rápido ({trait})",
-  "perk_trait_dozy": "Demora mais para ter fome ({trait})"
+  "perk_trait_dozy": "Demora mais para ter fome ({trait})",
+  "super_t": "Uma fase superdifícil",
+  "hard_splash": "Menos jogadas do que parece",
+  "hard_splash_super": "Vá com calma nesta"
  },
  "one": {
   "lvl_moves": "{n} jogada",

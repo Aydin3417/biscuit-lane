@@ -428,8 +428,10 @@ const ECON = {
      buy five. The video is the free way through, and it should be the
      smaller one, or nobody would ever pay for the other. */
   adMoves: 3,
-  /* the first clear of a hard level (isHard, 11-design.js) */
-  hardPay: 1.5
+  /* the first clear of a hard level, and of a super-hard one (tierOf,
+     11-design.js): paid for being warned about */
+  hardPay: 1.5,
+  superPay: 2
 };
 
 /* ---------- where this game lives, once it lives anywhere ----------

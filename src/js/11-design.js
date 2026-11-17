@@ -109,8 +109,9 @@ const LANE_FROM = .93, LANE_BEND = 1.15;
 /* Never certain, never impossible. The lane is allowed to be gentler at
    both ends than the run: nobody should fail level one, and nobody
    should meet a 45% wall before they have met every mechanic. */
-const CLEAR_FLOOR = .35, CLEAR_CEIL = .88;
-const LANE_FLOOR = .50, LANE_CEIL = .97;
+/* CLEAR_CEIL was .88; .80 since 17 Nov 2026 (see tierOf) */
+const CLEAR_FLOOR = .35, CLEAR_CEIL = .80;
+const LANE_FLOOR = .50, LANE_CEIL = .97, LANE_LATE_CEIL = .82;
 
 /* A level that teaches a mechanic for the first time is not a test of
    it. The lift is big enough to be felt and small enough that the level
@@ -167,10 +168,51 @@ const DAILY_CLEAR = .85;
    than assigned by position — see test/fit-lane.js. A lane level with
    no `want` has never been fitted, and falls back to the curve so that
    a newly written level still has an intent before anybody measures it. */
+/* HARD AND SUPER HARD, BY POSITION, AND NOTHING FREE.
+
+   17 Nov 2026, the owner: some levels should be hard enough that people
+   get stuck on them once or twice, and not every level should be a
+   pushover. The games this one is shelved beside do it the same way: a
+   level or two in every ten marked hard before it starts, the end of
+   the block marked super hard, and after the first hour no level that
+   simply plays itself.
+
+   The hard and super-hard beats used to be offsets from the ease, so
+   they drifted with it — a "hard" level at 61 was drawn at 54%, which
+   nobody gets stuck on. They are absolute now, for the player every
+   budget is fitted to (test/_solver.js's human policy, a little below
+   an average person):
+
+     hard        the 7th and 9th of every block from level 17
+                 40%, falling to 30% by the end of the run
+     super hard  the 10th of every block from level 20
+                 28%, falling to 20%
+     the rest    the rhythm as before, but never above 80% after
+                 level 20 (82% in the lane, which still teaches)
+
+   A person a little better than that player clears a hard level at
+   about half, which is "stuck once"; a super-hard level a third of the
+   time, "stuck twice". The adaptive budget (15-save.js) gives a move
+   back from the third failure, so nobody is stuck for good. */
+const HARD_FROM = 17, SUPER_FROM = 20;
+function tierOf(n) {
+  if (!(n > 0) || n === DAILY_LEVEL) return '';
+  if (n >= SUPER_FROM && isGate(n)) return 'super';
+  if (n >= HARD_FROM && (n % BLOCK === 7 || n % BLOCK === 9)) return 'hard';
+  return '';
+}
+function tierWant(n, tier) {
+  /* 0 at level 61, 1 by the end of the descent */
+  const late = n < RUN_START ? 0 : 1 - Math.exp(-(n - RUN_START) / EASE_OVER);
+  if (tier === 'super') return .28 - .08 * late;
+  return .40 - .10 * late;
+}
 function targetClear(n) {
   const lane = n < RUN_START;
+  const tier = tierOf(n);
+  if (tier) return tierWant(n, tier);
   if (lane && typeof LEVELS !== 'undefined' && LEVELS[n - 1] && LEVELS[n - 1].want !== undefined) {
-    return LEVELS[n - 1].want;
+    return Math.min(LEVELS[n - 1].want, n > 20 ? LANE_LATE_CEIL : 1);
   }
   const ease = easeAt(n);
   const beat = RHYTHM[(n - 1) % BLOCK] * beatScale(n);
@@ -201,8 +243,7 @@ function isGate(n) {
    can carry (test/fit-lane.js), so its hard levels are not always the
    seventh and the ninth. Never in the first dozen levels, and never a
    gate, which is already its own thing. */
-const HARD_BELOW = .065;
-function isHard(n) {
-  if (n < 12 || isGate(n) || n === DAILY_LEVEL) return false;
-  return easeAt(n) - targetClear(n) >= HARD_BELOW * Math.min(1, beatScale(n) + .2);
-}
+/* by position now (tierOf, above); a super-hard level is hard as well,
+   for everything that only asks whether a level is one to be warned of */
+function isHard(n) { return tierOf(n) === 'hard'; }
+function isSuperHard(n) { return tierOf(n) === 'super'; }

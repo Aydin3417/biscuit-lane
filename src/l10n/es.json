@@ -455,7 +455,10 @@
   "perk_trait_move": "+{n} movimiento ({trait})",
   "perk_trait_coins": "+{n}% de monedas ({trait})",
   "perk_trait_charge": "Se carga {n}% más rápido ({trait})",
-  "perk_trait_dozy": "Tarda más en tener hambre ({trait})"
+  "perk_trait_dozy": "Tarda más en tener hambre ({trait})",
+  "super_t": "Un nivel superdifícil",
+  "hard_splash": "Menos movimientos de lo que parece",
+  "hard_splash_super": "Tómatelo con calma"
  },
  "one": {
   "lvl_moves": "{n} movimiento",

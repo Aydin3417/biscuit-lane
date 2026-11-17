@@ -440,6 +440,11 @@ function startLevel(n, opts) {
      on, and the dead-board shuffle runs after a move, so it never came.
      Found by test/all-levels.js, the same seed under both players. */
   if (!res) ensureMove(G.B);
+  /* The warning the genre gives before a hard level, as a banner across
+     the board while it deals in. A card the player tapped through is
+     not a warning; a word the size of the board is. Not on a level
+     already beaten, and not on a resumed one. */
+  if (!res && n > 0 && !SAVE.stars[n] && tierOf(n)) hardSplash(isSuperHard(n));
   /* said on the board too: the opening levels skip the card that says it */
   if (G.runGifts.length) {
     const ep = G.epoch;
@@ -627,8 +632,9 @@ function syncHud() {
   $('#movesBox').classList.toggle('low', G.moves <= 5);
   /* a hard level or a gate says so on the board as well as on the card:
      the card is gone by the time it matters */
-  const tag = G.n > 0 && !SAVE.stars[G.n] ? (isGate(G.n) ? T('g_gate') : isHard(G.n) ? T('g_hard') : '') : '';
+  const tag = G.n > 0 && !SAVE.stars[G.n] ? (isSuperHard(G.n) ? T('g_gate') : isHard(G.n) ? T('g_hard') : '') : '';
   $('#movesBox').classList.toggle('hard', !!tag);
+  $('#movesBox').classList.toggle('super', isSuperHard(G.n) && !!tag);
   $('#movesBox').dataset.tag = tag;
   $('#scoreN').textContent = fmt(G.score);
   const pct = clamp(G.score / G.starTargets[2], 0, 1) * 100;
@@ -1904,6 +1910,23 @@ function checkEnd() {
   keepLevel();
 }
 
+function hardSplash(superHard) {
+  if (typeof document === 'undefined') return;
+  const wrap = $('#boardWrap');
+  if (!wrap) return;
+  const old = $('.hardSplash', wrap);
+  if (old) old.remove();
+  const el = document.createElement('div');
+  el.className = 'hardSplash' + (superHard ? ' super' : '');
+  el.setAttribute('aria-hidden', 'true');
+  el.innerHTML = '<span class="hs-ic">' + IC.flame + (superHard ? IC.flame : '') + '</span><b>' +
+    (superHard ? T('g_gate') : T('g_hard')) + '</b><small>' + T(superHard ? 'hard_splash_super' : 'hard_splash') + '</small>';
+  wrap.appendChild(el);
+  say((superHard ? T('g_gate') : T('g_hard')) + '. ' + T(superHard ? 'hard_splash_super' : 'hard_splash'));
+  SFX.tension(superHard ? 1 : .6);
+  buzz(HAP.no);
+  setTimeout(() => el.remove(), reduceMotion() ? 1400 : 2100);
+}
 /* one entry in the player's form per first attempt (adaptMoves) */
 function closeForm(won) {
   if (!G.formOpen) return;

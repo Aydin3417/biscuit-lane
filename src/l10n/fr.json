@@ -455,7 +455,10 @@
   "perk_trait_move": "+{n} coup ({trait})",
   "perk_trait_coins": "+{n} % de pièces ({trait})",
   "perk_trait_charge": "Se charge {n} % plus vite ({trait})",
-  "perk_trait_dozy": "A faim moins vite ({trait})"
+  "perk_trait_dozy": "A faim moins vite ({trait})",
+  "super_t": "Un niveau super difficile",
+  "hard_splash": "Moins de coups qu'il n'y paraît",
+  "hard_splash_super": "Prends ton temps sur celui-ci"
  },
  "one": {
   "lvl_moves": "{n} coup",
