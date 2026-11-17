@@ -73,7 +73,14 @@ Sixty handmade levels along a country road, and then a lane that keeps
 going. Collect faces, break crates, clear mud, cut back brambles, walk
 the little ones home in their baskets. Every tenth level is a gate: a
 wooden gate in the hedge that stands open once you have come through it,
-so you can see how far you have walked.
+so you can see how far you have walked. Somebody is lost on every
+stretch — asleep in a flowerpot, stuck up the old apple tree — and
+coming through the gate is how you bring them home.
+
+Boards come in shapes, and some were drawn by hand: a paw print in mud,
+a heart of crates. Further down the lane there are bones to dig up,
+mice to catch, toy boxes that open only to their own animal, and
+hungry faces that will not wait for ever.
 
 NAP TIME
 A logic puzzle beside the lane, and a new one every day. Every cushion
@@ -115,7 +122,8 @@ No accounts, and no ad ever breaks into a level or a menu. When you
 want three more moves, a heart or double coins, you can choose to watch
 a short video. Your animals and your progress live on your phone.
 
-Day and Dusk, English and Turkish, and a symbol on every tile for anybody
+Day and Dusk, seven languages, a quiet music-box lullaby you can switch
+off, and a symbol on every tile for anybody
 who would rather not tell them apart by colour.
 ```
 
@@ -134,7 +142,14 @@ Kır yolu boyunca altmış el yapımı bölüm, sonra devam eden bir sokak.
 Yüzleri topla, kasaları kır, çamuru temizle, böğürtlenleri buda,
 minikleri sepetleriyle eve yürüt. Her onuncu bölüm bir kapı: çitteki
 tahta kapı, bir kez geçtikten sonra açık kalır — nereye kadar
-yürüdüğünü görürsün.
+yürüdüğünü görürsün. Yolun her bölümünde kaybolmuş biri var — saksıda
+uyuyan, yaşlı elma ağacında mahsur kalan — ve onu eve getirmenin yolu
+o kapıdan geçmek.
+
+Tahtalar şekilli, bazıları elle çizildi: çamurdan bir pati izi,
+kasalardan bir kalp. Yolun ilerisinde çıkarılacak kemikler, yakalanacak
+fareler, yalnızca kendi hayvanına açılan oyuncak kutuları ve sonsuza
+kadar beklemeyecek aç yüzler var.
 
 ŞEKERLEME
 Sokağın yanında bir mantık bulmacası, her gün yenisi. Her mindere bir
@@ -175,7 +190,8 @@ Hesap yok, hiçbir reklam bir bölümü ya da menüyü bölmez. Üç hamle, bir
 kalp ya da iki kat altın istediğinde, istersen kısa bir video izlersin.
 Hayvanların ve ilerlemen telefonunda duruyor.
 
-Gündüz ve Akşam, İngilizce ve Türkçe, ve renkten ayırt etmek istemeyenler
+Gündüz ve Akşam, yedi dil, kapatabileceğin sakin bir müzik kutusu
+ninnisi, ve renkten ayırt etmek istemeyenler
 için her taşta bir sembol.
 ```
 
@@ -260,21 +276,25 @@ between-levels video is in the build and off).
 **English** (4000 max)
 
 ```
-• Boards come in shapes now: hearts, towers, crowns, stairs and more.
-• Hard levels, marked on the map with a flame, pay 50% more coins the first time you clear them.
-• The puzzle lane asks a little more of you, and gives a few moves back if you get stuck on one level.
+• Somebody to bring home: every stretch of the lane has a lost animal waiting behind its gate.
+• Boards come in shapes now — hearts, towers, crowns — and fourteen of them were drawn by hand.
+• New things further down the lane: buried bones, hungry faces, mice to catch and toy boxes.
+• Hard levels are marked with a flame and pay 50% more coins the first time you clear them.
+• Moves land faster, and there is a quiet music-box lullaby you can switch off.
+• Now in Spanish, German, French, Portuguese and Italian.
 • Watch a video to double your daily gift or a chest, or for 3 extra moves on a level you are retrying.
-• Shop items fit their cards, and a rare board that could start with no move is fixed.
 ```
 
 **Türkçe**
 
 ```
-• Tahtalar artık şekilli: kalp, kule, taç, merdiven ve dahası.
-• Haritada alevle işaretlenen zor bölümler, ilk geçişte %50 fazla altın veriyor.
-• Bulmaca yolu biraz daha zorlu; bir bölümde takılırsan sana birkaç hamle geri veriyor.
+• Eve götürecek biri var: yolun her bölümünde, kapının ardında seni bekleyen kayıp bir dost.
+• Tahtalar artık şekilli: kalp, kule, taç… On dördü de elle çizildi.
+• Yolun ilerisinde yeni şeyler: gömülü kemikler, aç yüzler, yakalanacak fareler ve oyuncak kutuları.
+• Alevle işaretli zor bölümler, ilk geçişte %50 fazla altın veriyor.
+• Hamleler daha hızlı; kapatabileceğin sakin bir müzik kutusu ninnisi de var.
+• Artık İspanyolca, Almanca, Fransızca, Portekizce ve İtalyanca.
 • Video izleyerek günlük hediyeni ya da sandığını ikiye katla, tekrar denediğin bölümde 3 hamle kazan.
-• Mağaza görselleri kartlarına sığıyor; nadiren hamlesiz başlayan bir tahta düzeltildi.
 ```
 
 **Screenshots for 1.3.0.** Remade from this build (store/slides): the
@@ -282,7 +302,16 @@ first now shows level 8's heart-shaped board, the third the map with
 the hard levels' flames and a caption that says so. Replace all eight in
 both iPhone slots, English (U.S.) and Turkish; English (U.K.) inherits.
 
-**Marketing URL** in all three localisations: `https://www.hellocotidie.com/`
+**Five more localisations, from 1.3.0.** Spanish (Mexico — also read by the
+U.S. storefront), German, French, Portuguese (Brazil) and Italian: each
+is one file, `store/l10n/<lang>.json`, with the name, subtitle,
+promotional text, keywords, description, what is new and the slides'
+copy, checked against Apple's limits by `node tools/store-check.js`.
+Their screenshots are `store/slides/screenshots/<lang>/`. The game
+itself is in the same five (src/l10n). All of it was written by a model
+and has not been read by a native speaker.
+
+**Marketing URL** in every localisations: `https://www.hellocotidie.com/`
 (see the AdMob note under "App Store Connect, as entered").
 
 ---

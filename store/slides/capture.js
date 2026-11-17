@@ -79,6 +79,21 @@ async function settle(page) {
   await page.waitForTimeout(250);
 }
 
+/* English and Turkish are written in slides.html; the other five come
+   from store/l10n/<lang>.json, and their slide copy is handed to the
+   page as raw/copy.js so that slides.html stays a file one can open.
+   A language named on the command line limits the run to it. */
+const L10N = path.join(__dirname, '..', 'l10n');
+const EXTRA = fs.existsSync(L10N) ? fs.readdirSync(L10N).filter(f => /^[a-z]{2}\.json$/.test(f)).map(f => f.slice(0, 2)) : [];
+const ASKED = process.argv.slice(2).filter(a => /^[a-z]{2}$/.test(a));
+const LANGS = ASKED.length ? ASKED : ['en', 'tr'].concat(EXTRA);
+{
+  const copy = {};
+  EXTRA.forEach(l => { copy[l] = JSON.parse(fs.readFileSync(path.join(L10N, l + '.json'), 'utf8')).slides; });
+  fs.mkdirSync(OUT, { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'copy.js'), 'window.SLIDE_COPY = ' + JSON.stringify(copy) + ';\n');
+}
+
 const SHOTS = [
   {
     id: 'board',
@@ -128,7 +143,11 @@ const SHOTS = [
       await page.waitForTimeout(500);
       /* down to the furniture: that is the shelf with pictures on it */
       await page.evaluate(() => {
-        const things = [...document.querySelectorAll('.sectitle h3')].find(h => /^(Things|Eşya)/.test((h.innerText || '').trim()));
+        /* found by what is under it, not by its name: the heading whose
+           shelf holds the furniture pictures, in whichever language is up */
+        const shelf = document.querySelector('canvas[data-room]');
+        const grid = shelf && shelf.closest('.grid2');
+        const things = grid && grid.previousElementSibling;
         if (!things) return;
         let sc = things.parentElement;
         while (sc && !(sc.scrollHeight > sc.clientHeight + 20 && /auto|scroll/.test(getComputedStyle(sc).overflowY))) sc = sc.parentElement;
@@ -217,10 +236,10 @@ async function pets(page) {
   const browser = await launch();
   /* the phone unless asked: the app ships for iPhone only (see README.md
      here), and the iPad captures are kept for the day that changes */
-  const only = process.argv[2] || 'phone';
+  const only = process.argv.slice(2).find(a => a === 'all' || a === 'pad' || a === 'phone') || 'phone';
   for (const dev of DEVICES) {
     if (only !== 'all' && only !== dev.id) continue;
-    for (const lang of ['en', 'tr']) {
+    for (const lang of LANGS) {
       const ctx = await browser.newContext({
         viewport: { width: dev.width, height: dev.height },
         deviceScaleFactor: dev.scale, isMobile: true, hasTouch: true

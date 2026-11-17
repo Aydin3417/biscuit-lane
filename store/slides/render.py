@@ -118,7 +118,10 @@ def render(lang, dev):
 
 
 if __name__ == "__main__":
-    langs = [a for a in sys.argv[1:] if a in ("en", "tr")] or ["en", "tr"]
+    # every language with captures: English and Turkish, and whichever of
+    # the others store/l10n holds
+    known = ["en", "tr"] + sorted(f[:2] for f in os.listdir(os.path.join(HERE, "..", "l10n")) if len(f) == 7 and f.endswith(".json"))
+    langs = [a for a in sys.argv[1:] if a in known] or known
     # the phone unless asked: the app ships for iPhone only
     devs = [a for a in sys.argv[1:] if a in DEVICES] or ["phone"]
     have = prepare()

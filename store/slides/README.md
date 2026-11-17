@@ -1,6 +1,8 @@
 # App Store screenshots
 
-Eight slides, in English and Turkish, at the one size the App Store asks an iPhone app for: **1320 × 2868** (iPhone 6.9"). Upload `screenshots/en/phone63/01.png … 08.png` (1206 × 2622, from `resize63.py`) to the required "medium display" slot and `screenshots/en/phone/…` (1320 × 2868) to the optional "large display" slot, for English (U.S.); the same from `tr/` for Turkish, in that order. English (U.K.) inherits the U.S. set.
+Eight slides, in seven languages, at the one size the App Store asks an iPhone app for: **1320 × 2868** (iPhone 6.9"). Upload `screenshots/en/phone63/01.png … 08.png` (1206 × 2622, from `resize63.py`) to the required "medium display" slot and `screenshots/en/phone/…` (1320 × 2868) to the optional "large display" slot, for English (U.S.); the same from `tr/`, `es/`, `de/`, `fr/`, `pt/` and `it/` for each of those localisations, in that order. English (U.K.) inherits the U.S. set.
+
+English and Turkish copy is written in `slides.html`. The other five come from `store/l10n/<lang>.json` — the whole product page for that language (name, subtitle, promotional text, keywords, description, what is new, and the eight slides' copy), written from `tools/store-source.js`'s gathering of the English and held to App Store Connect's limits by `tools/store-check.js`. `capture.js` hands their slide copy to the page as `raw/copy.js`; `node store/slides/capture.js de` captures one language.
 
 | File | What it is |
 |---|---|
@@ -20,15 +22,15 @@ python store/slides/render.py
 | # | Headline (EN) | Headline (TR) | Screen shown |
 |---|---|---|---|
 | 1 | Match 3 with **your own pets** | **Kendi hayvanlarınla** üçlü eşleştirme | A level in play on a heart-shaped board (level 8): rockets and a bomb on it, the goal half done, the pet half charged |
-| 2 | Adopt cats and dogs, **watch them grow** | Kedi, köpek sahiplen, **büyümelerini izle** | The room: the pet, the next level, the daily walk, the season book |
-| 3 | A puzzle lane that **keeps on going** | Hiç bitmeyen bir **bulmaca yolu** | The map around level 34, where the next hard levels show their flame |
-| 4 | Pick who comes **home with you** | Eve kim gelecek, **sen seç** | The breed picker from the first launch |
-| 5 | Decorate a **cozy** room for them | Onlara **sıcacık** bir oda döşe | The shop's furniture shelf |
-| 6 | A cosy logic puzzle, **a new one daily** | Sakin bir mantık bulmacası, **her gün yenisi** | Nap time, a board two-thirds put to bed |
+| 2 | A cosy logic puzzle, **a new one daily** | Sakin bir mantık bulmacası, **her gün yenisi** | Nap time, a board two-thirds put to bed |
+| 3 | Adopt cats and dogs, **watch them grow** | Kedi, köpek sahiplen, **büyümelerini izle** | The room: the pet, the next level, the daily walk, the season book |
+| 4 | A puzzle lane that **keeps on going** | Hiç bitmeyen bir **bulmaca yolu** | The map around level 34, where the next hard levels show their flame |
+| 5 | Pick who comes **home with you** | Eve kim gelecek, **sen seç** | The breed picker from the first launch |
+| 6 | Decorate a **cozy** room for them | Onlara **sıcacık** bir oda döşe | The shop's furniture shelf |
 | 7 | **A gift on the step,** a walk to take | **Kapıda bir hediye,** günün yürüyüşü | The daily basket and its seven-day ladder |
 | 8 | Three stars and **one happy cat** | Üç yıldız ve **mutlu bir kedi** | The win card |
 
-The first three carry the words of the store name and subtitle (match 3, pets, adopt, cats, dogs, puzzle), because those are the three the search results show and the App Store reads the text in them.
+Nap time is second since 1.3.0: the cat logic puzzle is what the chart's top free game was being found by, and the second picture is the last one most people see. The first, third and fourth carry the words of the store name and subtitle (match 3, pets, adopt, cats, dogs, puzzle), because those are the three the search results show and the App Store reads the text in them.
 
 ## Every claim, against the build
 

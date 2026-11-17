@@ -13,7 +13,7 @@ import glob, os
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-for lang in ("en", "tr"):
+for lang in sorted(d for d in os.listdir(os.path.join(HERE, "screenshots")) if os.path.isdir(os.path.join(HERE, "screenshots", d))):
     src = sorted(glob.glob(os.path.join(HERE, "screenshots", lang, "phone", "0*.png")))
     out = os.path.join(HERE, "screenshots", lang, "phone63")
     os.makedirs(out, exist_ok=True)
