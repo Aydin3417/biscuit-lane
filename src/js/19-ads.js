@@ -56,8 +56,14 @@ const AD_UNITS = {
      no unit is ever asked for and the game is the rewarded-only game it
      shipped as. Filling these in is the owner's decision, made in the
      AdMob console by creating an Interstitial unit — the code waits for
-     it rather than deciding it. */
-  interIos: '',
+     it rather than deciding it.
+
+     Made on 17 Nov 2026: "Pawtika Interstitial iOS", in the same account
+     as the rewarded unit, at the owner's word ("bölüm arası reklamı da
+     kapalıdan açığa getir"). Android stays empty: there is no Play
+     release. The store copy that promised no forced ads was rewritten
+     with it, in all seven languages (store/LISTING.md, store/l10n). */
+  interIos: 'ca-app-pub-3062307440336080/6525947026',
   interAndroid: '',
   testInterIos: 'ca-app-pub-3940256099942544/4411468910',
   testInterAndroid: 'ca-app-pub-3940256099942544/1033173712'

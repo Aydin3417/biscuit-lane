@@ -117,10 +117,12 @@ lane and the furniture are hand-finished pictures inside the app itself,
 so nothing is ever downloaded: it is small, it opens instantly, and it
 works with the phone in flight mode from the very first launch.
 
-NOTHING INTERRUPTS YOU
-No accounts, and no ad ever breaks into a level or a menu. When you
-want three more moves, a heart or double coins, you can choose to watch
-a short video. Your animals and your progress live on your phone.
+NO ACCOUNT, NO CONNECTION
+No accounts, and no ad ever breaks into the middle of a level. Now and
+then, after a win, a short ad plays between levels — never on your
+first day, and never once you have bought anything. When you want three
+more moves, a heart or double coins, you can choose to watch a short
+video. Your animals and your progress live on your phone.
 
 Day and Dusk, seven languages, a quiet music-box lullaby you can switch
 off, and a symbol on every tile for anybody
@@ -185,10 +187,12 @@ eşyalar uygulamanın içinde duran, elle bitirilmiş resimler; hiçbir şey
 indirilmiyor: küçük, anında açılıyor ve daha ilk açılıştan itibaren
 telefon uçak modundayken çalışıyor.
 
-HİÇBİR ŞEY SENİ KESMEZ
-Hesap yok, hiçbir reklam bir bölümü ya da menüyü bölmez. Üç hamle, bir
-kalp ya da iki kat altın istediğinde, istersen kısa bir video izlersin.
-Hayvanların ve ilerlemen telefonunda duruyor.
+HESAP YOK, İNTERNET GEREKMEZ
+Hesap yok ve hiçbir reklam bir bölümün ortasına girmez. Arada bir, bir
+galibiyetten sonra bölümler arasında kısa bir reklam çıkar — ilk gününde
+asla, bir şey satın aldıysan hiç. Üç hamle, bir kalp ya da iki kat altın
+istediğinde, istersen kısa bir video izlersin. Hayvanların ve ilerlemen
+telefonunda duruyor.
 
 Gündüz ve Akşam, yedi dil, kapatabileceğin sakin bir müzik kutusu
 ninnisi, ve renkten ayırt etmek istemeyenler
@@ -227,9 +231,9 @@ people type, and Apple joins words across the fields to make them.
 **Promotional text** (170 max, changeable without review)
 
 ```
-Match-3 with your own pets, plus Nap time: a new cat & dog logic puzzle every day, no hearts needed. No forced ads, and it plays entirely offline.
+Match-3 with your own pets, plus Nap time: a new cat & dog logic puzzle every day, no hearts needed. Plays offline, no account needed.
 ```
-[146]
+[134]
 
 **Keywords** (100 max, comma-separated, no spaces)
 
@@ -337,9 +341,9 @@ the searches, so those forms are the ones written out.
 **Tanıtım metni** (170 max)
 
 ```
-Kendi hayvanlarınla eşleştirme, bir de Şekerleme: her gün yeni bir kedi köpek mantık bulmacası, kalp gerekmez. Zorla reklam yok, çevrimdışı oynanır.
+Kendi hayvanlarınla eşleştirme, bir de Şekerleme: her gün yeni bir kedi köpek mantık bulmacası, kalp gerekmez. Çevrimdışı oynanır, hesap gerekmez.
 ```
-[148]
+[146]
 
 **Anahtar kelimeler** (100 max)
 

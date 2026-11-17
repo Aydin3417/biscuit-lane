@@ -48,7 +48,7 @@ Guideline 2.3 asks that screenshots show the app as it is. Each screen is a phot
 | "Rugs, armchairs, cat towers, hats and collars, all earned by playing" | All priced in coins, and coins are only earned (or converted from treats) |
 | "A daily basket that grows for seven days, and a fresh level every morning" | The gift ladder and the daily walk |
 | "Plays offline" | Nothing is fetched to play; videos, anonymous play data and purchase checks need a connection and the game runs without them |
-| "No ad ever breaks into a level: a video only when you ask" | Rewarded video only (19-ads.js); there is no interstitial format in the build |
+| "No ad ever breaks into the middle of a level" | Rewarded videos are asked for; the one interstitial (since 1.3.0) plays only between levels, after a win, never on install day and never for a payer (ADS.breakDue, 19-ads.js) |
 
 Nothing shown is behind a purchase.
 
