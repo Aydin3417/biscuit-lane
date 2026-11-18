@@ -317,6 +317,8 @@ const STRINGS = {
     a11y_help: 'Arrow keys move around the board. Enter or Space picks a tile up; press an arrow to swap it with its neighbour. Escape puts it back. H asks for a hint, P uses your pet’s move, S reads out the score and goals.',
     shelf_t: 'The shelf',
     shelf_sub: '{have} of {all}',
+    shelf_next: 'Nearly there',
+    shelf_rest: 'The other {n}',
     shelf_won: 'Something for the shelf',
     trait_t: 'Turned out {trait}',
     trait_sub: '{name} was {how}, and it shows. {what}',
@@ -399,7 +401,6 @@ const STRINGS = {
     /* the ones that were written straight into the code beside their
        Turkish, found by the audit and brought into the table */
     ui_bond: 'Bond', ui_bond_l: 'bond',
-    prof_who: 'Who they are',
     shop_toys_hint: 'The best one gets used',
     shop_hats: 'Hats', shop_collars: 'Collars', shop_things: 'Things', shop_walls: 'Walls',
     shop_keeps: 'Keepsakes', shop_keeps_hint: 'made from your own animal',
@@ -713,6 +714,8 @@ const STRINGS = {
     a11y_help: 'Ok tuşları tahtada gezdirir. Enter ya da boşluk bir taşı alır; sonra bir ok tuşu onu komşusuyla değiştirir. Escape geri bırakır. H ipucu ister, P hayvanının hamlesini kullanır, S puanı ve hedefleri okur.',
     shelf_t: 'Raf',
     shelf_sub: '{all} taneden {have}',
+    shelf_next: 'Az kaldı',
+    shelf_rest: 'Diğer {n} tanesi',
     shelf_won: 'Rafa bir şey daha',
     trait_t: '{trait} çıktı',
     trait_sub: '{name} {how} ve belli oluyor. {what}',
@@ -793,7 +796,6 @@ const STRINGS = {
     how_open: 'Nasıl oynanır',
     tut_got: 'Anlaşıldı',
     ui_bond: 'Bağ', ui_bond_l: 'bağ',
-    prof_who: 'Karakter',
     shop_toys_hint: 'En iyisi kullanılır',
     shop_hats: 'Şapkalar', shop_collars: 'Tasmalar', shop_things: 'Eşya', shop_walls: 'Duvar',
     shop_keeps: 'Hatıra', shop_keeps_hint: 'senin hayvanından yapılmış',

@@ -1417,6 +1417,31 @@ function drawGateway(c, x, y, s, open) {
   c.restore();
 }
 
+/* The animal behind a gate, drawn.
+
+   Every stretch of the lane has somebody waiting at the end of it
+   (STRAY_TALES, 10-data.js), and until now they existed as one line of
+   text on the home card and a card that opened after the gate. The
+   games this one sits beside show what the levels are for — the room
+   being restored, the garden coming back — and here what they are for
+   is an animal brought home, which the screen never once showed. So it
+   is drawn: sitting at the next gate on the map with a heart over its
+   head, and in the room upstairs once it has come home. Feet at (x, y). */
+function strayLook(s) {
+  return Object.assign(specOf(s.breed, BREEDS[s.breed].coats[s.coat]), { stage: 0 });
+}
+function drawStrayAt(c, s, x, y, size, o) {
+  o = o || {};
+  c.save();
+  c.translate(x, y - size * .94);
+  if (o.face) c.scale(o.face, 1);
+  drawBody(c, strayLook(s), size, {
+    mood: o.mood || 'content', mouth: o.mouth || 'smile', blink: o.blink || 0,
+    breath: o.breath || 0, tail: o.tail || 0, headTilt: o.tilt || 0, eyeDir: o.eyeDir
+  });
+  c.restore();
+}
+
 function drawFence(c, x, y, s) {
   c.save(); c.translate(x, y);
   c.strokeStyle = PAL.dark ? '#6A5B48' : '#EDE0C6';

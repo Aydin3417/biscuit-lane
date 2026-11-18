@@ -39,10 +39,13 @@ DEVICES = {
     "phone": {"css": (440, 956), "scale": 3, "px": (1320, 2868)},
     "pad": {"css": (1032, 1376), "scale": 2, "px": (2064, 2752)},
 }
+# Chrome first: on 18 Nov 2026 headless Edge on this machine exited
+# without writing a screenshot or a word of error, every slide, while
+# Chrome with the same flags wrote all of them.
 BROWSERS = [
+    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
     r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
-    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
     "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "/usr/bin/chromium", "/usr/bin/google-chrome",
 ]

@@ -16,7 +16,11 @@ function roomLayout() {
   const cv = $('#room');
   const w = cv.parentElement.clientWidth;
   if (!w) return;
-  const h = Math.round(clamp(w * .62, 180, 270));
+  /* .70 of the width, from .62: the room is the one picture on the
+     screen the app opens on, and since the animals brought home off
+     the lane live in it as well it was being asked to hold three of
+     them in a strip 232px tall on a 375px phone. */
+  const h = Math.round(clamp(w * .70, 190, 300));
   ROOM.w = w; ROOM.h = h;
   ROOM.ctx = fitCanvas(cv, w, h);
 }
@@ -114,6 +118,26 @@ function renderRoom(dt) {
   /* the bowl */
   const bowlX = W * .18, bowlY = floorY + (H - floorY) * .48;
   drawBowl(c, bowlX, bowlY, W * .075, ROOM.state === 'eat');
+
+  /* Who has come home off the lane. The newest sits up by the right
+     wall and watches the room; the one before it is asleep further
+     back. Two and no more: a room with nine animals in it is a shelter,
+     and the family page's wall has all of them. Drawn before the pet, so
+     it walks in front of them. */
+  const lodgers = typeof straysHome === 'function' ? straysHome().slice(-2).reverse() : [];
+  lodgers.forEach((k, i) => {
+    const s = strayOf(k);
+    const size = H * (i ? .19 : .22);
+    const x = W * (i ? .66 : .88);
+    const y = floorY + (H - floorY) * (i ? .22 : .50);
+    /* a blink every few seconds, each on its own clock, and the newest
+       turns its head to follow the pet about the room */
+    const blinkAt = (ROOM.t + k * 1.7) % 4.6;
+    drawStrayAt(c, s, x, y, size, i
+      ? { mood: 'content', blink: 1, breath: Math.sin(ROOM.t * 1.2 + k), tilt: .22, face: -1 }
+      : { mood: 'happy', blink: blinkAt < .14 ? 1 : 0, breath: Math.sin(ROOM.t * 1.6 + k), tail: Math.sin(ROOM.t * 1.3 + k) * .6,
+          face: -1, eyeDir: [clamp((ROOM.px - .88) * 3, -1, 0) * -1, 0] });
+  });
 
   /* the pet */
   if (pet) {
@@ -602,7 +626,17 @@ function drawMap() {
        and nothing in the world. It stands open once the level behind it
        is cleared. */
     if (typeof isGate === 'function' && isGate(n.n)) {
-      drawGateway(c, at(KERB + 52, 34), y + 8, 64, SAVE.stars[n.n] > 0);
+      const open = SAVE.stars[n.n] > 0;
+      drawGateway(c, at(KERB + 52, 34), y + 8, 64, open);
+      /* Whoever is behind the next gate sits in front of it, looking at
+         the road you are coming up, with a heart for the home it wants.
+         Only the next one: an animal at every gate up the lane would be
+         a queue, and the ones already through it are upstairs. */
+      if (!open && n.n === Math.ceil(Math.max(1, SAVE.reached) / BLOCK) * BLOCK) {
+        const sx = at(KERB + 21, 16), size = 28;
+        drawStrayAt(c, strayAt(n.n), sx, y + 10, size, { face: -side, mood: 'lonely', eyeDir: [.6, -.1] });
+        drawThought(c, sx + side * size * .62, y + 10 - size * 1.55, size * .36, 'heart');
+      }
       if (r() > .45) drawBush(c, clamp(n.x - side * (KERB + 20 + r() * 40), 24, W - 24), y + 22, 9 + r() * 6);
       return;
     }

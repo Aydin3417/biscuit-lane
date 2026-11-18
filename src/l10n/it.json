@@ -431,7 +431,6 @@
   "tut_got": "Capito",
   "ui_bond": "Legame",
   "ui_bond_l": "legame",
-  "prof_who": "Chi sono",
   "shop_toys_hint": "Si usa il migliore",
   "shop_hats": "Cappelli",
   "shop_collars": "Collari",
@@ -458,7 +457,9 @@
   "perk_trait_dozy": "Ha fame più lentamente ({trait})",
   "super_t": "Un livello difficilissimo",
   "hard_splash": "Meno mosse di quanto sembri",
-  "hard_splash_super": "Prenditi il tuo tempo"
+  "hard_splash_super": "Prenditi il tuo tempo",
+  "shelf_next": "Quasi fatto",
+  "shelf_rest": "Gli altri {n}"
  },
  "one": {
   "lvl_moves": "{n} mossa",

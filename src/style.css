@@ -917,6 +917,22 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .trophy .bn{ font-family:"Grandstander",sans-serif; font-weight:700; font-size:var(--t-micro); line-height:1.2; }
 .trophy .bp{ font-size:var(--t-nano); color:var(--text-faint); line-height:1.3; font-variant-numeric:tabular-nums; }
 .trophy.got .bp{ color:var(--text-dim); }
+.trophy .bp.num{ font-weight:700; color:var(--text-dim); }
+.trophy:not(.got) .bi svg{ opacity:.75; }
+/* the three nearest to done: what each asks, and how far along it is */
+.shelfNext{ margin:4px 2px -2px; }
+.nearList{ padding:4px 14px; display:flex; flex-direction:column; }
+.nearRow{ display:flex; align-items:center; gap:12px; padding:10px 0; }
+.nearRow + .nearRow{ border-top:1px solid var(--line-soft); }
+.nearRow .rosette.dim{ filter:saturate(.55); opacity:.85; }
+.nearRow .t{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; font-size:var(--t-small); color:var(--text-dim); line-height:1.3; }
+.nearRow .t b{ font-family:"Grandstander",sans-serif; color:var(--text); font-size:var(--t-body); }
+.nearRow .bar{ display:block; height:6px; border-radius:var(--r-full); background:var(--surface-3); overflow:hidden; margin-top:5px; }
+.nearRow .bar i{ display:block; height:100%; min-width:6px; border-radius:inherit; background:var(--accent); }
+.nearRow .n{ font-weight:800; font-size:var(--t-small); color:var(--text-dim); font-variant-numeric:tabular-nums; }
+.shelfRest > summary{ list-style:none; cursor:pointer; }
+.shelfRest > summary::-webkit-details-marker{ display:none; }
+.shelfRest[open] > summary{ margin-bottom:10px; }
 
 /* the three care figures on a pet row: they must wrap rather than push
    past the frame on a 320px screen */

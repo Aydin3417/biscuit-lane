@@ -431,7 +431,6 @@
   "tut_got": "Verstanden",
   "ui_bond": "Band",
   "ui_bond_l": "Band",
-  "prof_who": "Wer sie sind",
   "shop_toys_hint": "Das beste wird benutzt",
   "shop_hats": "Hüte",
   "shop_collars": "Halsbänder",
@@ -458,7 +457,9 @@
   "perk_trait_dozy": "Wird langsamer hungrig ({trait})",
   "super_t": "Ein superschweres Level",
   "hard_splash": "Weniger Züge, als es aussieht",
-  "hard_splash_super": "Lass dir hier Zeit"
+  "hard_splash_super": "Lass dir hier Zeit",
+  "shelf_next": "Fast geschafft",
+  "shelf_rest": "Die anderen {n}"
  },
  "one": {
   "lvl_moves": "{n} Zug",

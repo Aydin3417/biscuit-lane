@@ -295,6 +295,10 @@ function boot() {
     const h = () => { if (SAVE.settings.theme === 'auto') applyTheme(); };
     mq.addEventListener ? mq.addEventListener('change', h) : mq.addListener(h);
   }
+  /* auto turns over at eight in the evening and six in the morning */
+  setInterval(() => {
+    if (SAVE.settings.theme === 'auto' && (laneEvening() ? 'dark' : 'light') !== THEME_NOW) applyTheme();
+  }, 60000);
   /* A phone in a pocket should not be running a game loop. The browser
      throttles rAF for a hidden tab anyway, but "throttled" is not
      "stopped", and an installed app spends a lot of its life in the

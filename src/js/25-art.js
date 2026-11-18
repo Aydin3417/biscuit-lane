@@ -1199,6 +1199,18 @@ function paintTile(c, type, sp, px, marks, blink, cheer) {
      edge, and a shadow under the rim. Four moves, no fuss.        */
   const ink = mix(gem2, '#160D06', .62);
 
+  /* It sits on the board rather than being printed on it. Beside the
+     pieces in the games this one is measured against, these read as
+     stickers on a tray: lit, but flat to the well. A soft shadow a few
+     per cent under the outline lifts every piece off the cell, and the
+     sprite pad (.16) already has the room for it. */
+  c.save();
+  c.fillStyle = rgba('#140A10', PAL.dark ? .42 : .30);
+  c.translate(0, s * .055);
+  tilePath(c, breed, -s * .46, -s * .45, s * .92, s * .92);
+  c.fill();
+  c.restore();
+
   /* the body, domed towards the light */
   const eg = c.createRadialGradient(-s * .17, -s * .21, s * .02, 0, s * .06, s * .66);
   eg.addColorStop(0, shade(gem, .46));
@@ -1259,6 +1271,16 @@ function paintTile(c, type, sp, px, marks, blink, cheer) {
   c.quadraticCurveTo(-s * .14, -s * .04, -s * .55, s * .24);
   c.closePath();
   c.fill();
+  /* and the hot spot the key light leaves on a glazed thing: small,
+     hard-edged, up on the shoulder away from the face */
+  c.save();
+  c.translate(-s * .25, -s * .29);
+  c.rotate(-.62);
+  c.fillStyle = rgba('#FFFFFF', .78);
+  ellipse(c, 0, 0, s * .085, s * .042); c.fill();
+  c.fillStyle = rgba('#FFFFFF', .9);
+  ellipse(c, s * .13, s * .005, s * .022, s * .02); c.fill();
+  c.restore();
   c.restore();
 
   /* the line that cuts it out of the board */

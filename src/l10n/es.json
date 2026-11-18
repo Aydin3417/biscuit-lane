@@ -431,7 +431,6 @@
   "tut_got": "Entendido",
   "ui_bond": "Vínculo",
   "ui_bond_l": "vínculo",
-  "prof_who": "Quién es",
   "shop_toys_hint": "Se usa el mejor",
   "shop_hats": "Sombreros",
   "shop_collars": "Collares",
@@ -458,7 +457,9 @@
   "perk_trait_dozy": "Tarda más en tener hambre ({trait})",
   "super_t": "Un nivel superdifícil",
   "hard_splash": "Menos movimientos de lo que parece",
-  "hard_splash_super": "Tómatelo con calma"
+  "hard_splash_super": "Tómatelo con calma",
+  "shelf_next": "Casi lo tienes",
+  "shelf_rest": "Los otros {n}"
  },
  "one": {
   "lvl_moves": "{n} movimiento",

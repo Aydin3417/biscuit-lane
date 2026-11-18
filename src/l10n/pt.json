@@ -431,7 +431,6 @@
   "tut_got": "Entendi",
   "ui_bond": "Laço",
   "ui_bond_l": "laço",
-  "prof_who": "Quem é",
   "shop_toys_hint": "Sempre se usa o melhor",
   "shop_hats": "Chapéus",
   "shop_collars": "Coleiras",
@@ -458,7 +457,9 @@
   "perk_trait_dozy": "Demora mais para ter fome ({trait})",
   "super_t": "Uma fase superdifícil",
   "hard_splash": "Menos jogadas do que parece",
-  "hard_splash_super": "Vá com calma nesta"
+  "hard_splash_super": "Vá com calma nesta",
+  "shelf_next": "Quase lá",
+  "shelf_rest": "Os outros {n}"
  },
  "one": {
   "lvl_moves": "{n} jogada",

@@ -4943,3 +4943,44 @@ paid. The store said "no forced ads" and "a video only when you ask" in
 seven languages; it says now that no ad ever breaks into the middle of a
 level, which is still true, and the description says when one does
 appear between levels.
+
+## The story on the screen, and a shelf that says how
+
+Asked whether the game looked right, I first answered from a browser in
+dark mode and said everything was navy. That was the theme, not the
+game: Day is cream and green, and it is what the store shots show. But
+it found the first fault, and a fresh save in Day found the rest.
+
+**Auto is the lane's clock.** The theme's Auto followed the phone's dark
+mode, so a player whose phone is dark for the sake of mail got Dusk —
+the rainy navy lane — at noon, every day. The room upstairs already
+keeps the real hour, so the two disagreed with each other as well as
+with the window. Auto is Day from six and Dusk from eight in the
+evening now, checked each minute (`laneEvening`, 60-ui.js); Day and
+Dusk in the settings still fix either.
+
+**The strays are drawn.** Every stretch has somebody waiting behind its
+gate (`STRAY_TALES`), and they were a line of text on the home card and
+a card after the gate. The games this one sits beside show what the
+levels are for, a room restored or a garden back; here it is an animal
+brought home, and the screen never showed one. The next gate's animal
+sits in front of it on the map with a heart over its head
+(`drawStrayAt`, 26-scene.js), and the last two brought home live in the
+room — the newest sitting up by the wall following the pet with its
+eyes, the one before asleep further back. The room is .70 of the width
+tall rather than .62 (262px on a 375px phone, from 232) to hold them.
+
+**The shelf says how.** On a new save it was thirty-two padlocks at half
+opacity, each with a name and "0 / 30", and what a badge asked for was
+in a title attribute a phone never shows. What is won comes first; then
+the three nearest to done, each saying what it wants with a bar; then
+the rest folded away, each in its own picture rather than a lock.
+
+**The pieces sit on the board.** Every tile casts a soft shadow into its
+cell and carries a small hard highlight on the shoulder, so a board
+reads as glazed pieces in a tray rather than stickers printed on it.
+
+**The home screen is shorter.** The line under the care buttons ("they
+manage while you are out") shows for the first five levels, and the
+paragraph saying a trait has not settled yet is gone from the bond card
+— the pet's own card on the family page still says it in full.

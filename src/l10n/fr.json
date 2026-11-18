@@ -431,7 +431,6 @@
   "tut_got": "Compris",
   "ui_bond": "Lien",
   "ui_bond_l": "lien",
-  "prof_who": "Qui il est",
   "shop_toys_hint": "Le meilleur sert",
   "shop_hats": "Chapeaux",
   "shop_collars": "Colliers",
@@ -458,7 +457,9 @@
   "perk_trait_dozy": "A faim moins vite ({trait})",
   "super_t": "Un niveau super difficile",
   "hard_splash": "Moins de coups qu'il n'y paraît",
-  "hard_splash_super": "Prends ton temps sur celui-ci"
+  "hard_splash_super": "Prends ton temps sur celui-ci",
+  "shelf_next": "Presque",
+  "shelf_rest": "Les {n} autres"
  },
  "one": {
   "lvl_moves": "{n} coup",

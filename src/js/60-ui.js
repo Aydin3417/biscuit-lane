@@ -390,7 +390,7 @@ function renderHome() {
         <button class="care ${(pet.energy < 30 && !pet.asleep) || (pet.asleep && pet.energy >= 95) ? 'hot' : ''}" id="careSleep" style="--tint:var(--sage)" ${said('st_energy', pet.energy)}>
           ${pet.asleep ? IC.sun : IC.moon}<span>${pet.asleep ? T('care_wake') : T('care_sleep')}</span>${meter(pet.energy)}<span class="cost">&nbsp;</span></button>
       </div>
-      <div style="font-size:var(--t-micro);color:var(--text-faint);text-align:center">${T('home_care_hint')}</div>
+      ${SAVE.reached < 6 ? `<div style="font-size:var(--t-micro);color:var(--text-faint);text-align:center">${T('home_care_hint')}</div>` : ''}
     </div>
 
     ${giftReady() ? '' : `
@@ -407,14 +407,13 @@ function renderHome() {
       <div class="sectitle"><h3>${T('home_bond', { name: pet.name })}</h3>
         <span class="hint">${T('home_bond_hint', { lv: pet.bond, have: fmtXp(pet.bondXp), need: bondNeed(pet.bond) })}</span></div>
       <div class="bar"><i style="width:${bondPct}%;background:linear-gradient(90deg,var(--rose),var(--accent))"></i></div>
-      <div class="divide"></div>
-      <div class="eyebrow">${T('prof_who')}</div>
-      ${pet.trait
-      ? `<div style="font-size:var(--t-small)"><b style="font-family:Grandstander,sans-serif">${traitName(pet.trait)}.</b>
-         <span style="color:var(--text-dim)">${traitDesc(pet.trait)}</span></div>`
-      : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('trait_none')} ${T('trait_pending', { n: TRAIT_AT_BOND, c: TRAIT_AT_CARE })}</div>`}
-      <div class="divide"></div>
-      <div class="eyebrow">${T('home_perk')}</div>
+      ${/* Who they are, once they are somebody. The paragraph saying a
+           trait has not settled yet was the longest thing on the screen
+           the app opens on, for every new player, and the pet's own card
+           on the family page says it in full. */ ''}
+      ${pet.trait ? `<div style="font-size:var(--t-small)"><b style="font-family:Grandstander,sans-serif">${traitName(pet.trait)}.</b>
+         <span style="color:var(--text-dim)">${traitDesc(pet.trait)}</span></div>` : ''}
+      <div class="eyebrow" style="margin-top:2px">${T('home_perk')}</div>
       ${perks.length
       ? '<div style="display:flex;gap:6px;flex-wrap:wrap">' + perks.map(p => `<span class="pill ok">${IC.check}${perkLabel(p)}</span>`).join('') + '</div>'
       : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('home_perk_none', { name: pet.name })}</div>`}
@@ -857,21 +856,49 @@ function badgeModal(list) {
   $('#bdOk', m.el).addEventListener('click', () => { m.close(); syncPurse(); if (SCREEN === 'family') renderFamily(); });
 }
 
+/* THE SHELF WAS THIRTY-TWO GREY BOXES.
+
+   On a new save every cell was the same padlock at half opacity with a
+   name and "0 / 30" under it, and what a badge asked of you was in a
+   title attribute, which a phone never shows. So the page said there
+   were things to win and not one word about how. Now what is won comes
+   first in its colours; then the three nearest to done, each saying
+   what it wants with a bar for how far along it is; and the rest folded
+   away, each in its own picture rather than a lock, so the shelf shows
+   what it will hold rather than how much of it is locked. */
 function shelfHtml() {
   const have = badgesWon();
-  const cells = BADGES.map(b => {
-    const got = !!SAVE.badges[b.id];
-    const at = Math.min(badgeProgress(b), b.of);
-    return `<div class="trophy ${got ? 'got' : ''}" title="${badgeDesc(b)}">
-      <span class="bi rosette ${got ? 'fam-' + b.fam : 'locked'}">${got ? (IC[b.icon] || IC.crown) : IC.lock}</span>
+  const at = b => Math.min(badgeProgress(b), b.of);
+  const won = BADGES.filter(b => SAVE.badges[b.id]);
+  const left = BADGES.filter(b => !SAVE.badges[b.id])
+    .map(b => ({ b, k: at(b) / b.of }))
+    .sort((x, y) => y.k - x.k || x.b.of - y.b.of)
+    .map(x => x.b);
+  const near = left.slice(0, 3), rest = left.slice(3);
+  const cell = b => `<div class="trophy got">
+      <span class="bi rosette fam-${b.fam}">${IC[b.icon] || IC.crown}</span>
       <span class="bn">${badgeName(b)}</span>
-      <span class="bp">${got ? badgeDesc(b) : at + ' / ' + b.of}</span>
+      <span class="bp">${badgeDesc(b)}</span>
     </div>`;
-  }).join('');
+  const row = b => `<div class="nearRow">
+      <span class="rosette fam-${b.fam} dim">${IC[b.icon] || IC.crown}</span>
+      <span class="t"><b>${badgeName(b)}</b><span>${badgeDesc(b)}</span>
+        <span class="bar"><i style="width:${Math.round(at(b) / b.of * 100)}%"></i></span></span>
+      <span class="n">${at(b)}/${b.of}</span>
+    </div>`;
+  const ghost = b => `<div class="trophy">
+      <span class="bi rosette locked">${IC[b.icon] || IC.crown}</span>
+      <span class="bn">${badgeName(b)}</span>
+      <span class="bp">${badgeDesc(b)}</span>
+      <span class="bp num">${at(b)} / ${b.of}</span>
+    </div>`;
   return `
     <div class="sectitle"><h3>${T('shelf_t')}</h3>
       <span class="hint">${T('shelf_sub', { have, all: BADGES.length })}</span></div>
-    <div class="trophyGrid">${cells}</div>`;
+    ${won.length ? `<div class="trophyGrid">${won.map(cell).join('')}</div>` : ''}
+    ${near.length ? `<div class="eyebrow shelfNext">${T('shelf_next')}</div><div class="card nearList">${near.map(row).join('')}</div>` : ''}
+    ${rest.length ? `<details class="shelfRest"><summary class="btn ghost wide">${T('shelf_rest', { n: rest.length })}</summary>
+      <div class="trophyGrid">${rest.map(ghost).join('')}</div></details>` : ''}`;
 }
 
 /* ---------------- shop ---------------- */
@@ -2995,10 +3022,22 @@ function openSettings() {
     });
   });
 }
+/* AUTO IS THE LANE'S CLOCK, NOT THE PHONE'S SETTING.
+
+   It followed prefers-color-scheme, so every player whose phone is in
+   dark mode — a setting made for mail and maps — got Dusk at noon: a
+   rainy navy lane, navy panels, for good. Dusk is drawn as the lane
+   in the evening, and the room upstairs already keeps the real hour
+   (dayPhase, 26-scene.js), so the two disagreed with each other as
+   well as with the window. Auto now means Day from six in the morning
+   and Dusk from eight at night, checked again each minute; Day and
+   Dusk in the settings still fix either. */
+function laneEvening() { const h = new Date().getHours(); return h >= 20 || h < 6; }
+let THEME_NOW = null;
 function applyTheme() {
   const t = SAVE.settings.theme;
-  if (t === 'auto') document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.setAttribute('data-theme', t);
+  THEME_NOW = t === 'auto' ? (laneEvening() ? 'dark' : 'light') : t;
+  document.documentElement.setAttribute('data-theme', THEME_NOW);
   readPalette();
   themeColorSync();   /* the strip above the top bar follows Day and Dusk */
   clearSprites();
