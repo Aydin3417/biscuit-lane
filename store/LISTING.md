@@ -63,70 +63,35 @@ Tahtadaki kediler ve köpekler, eve götürüp büyüttüğün hayvanların ta k
 ```
 Somebody has left a basket on the step.
 
-Pawtika is a match-3 puzzle about the animal you choose on the first
-screen. Pick a cat or a dog, pick its coat, give it a name — and from
-then on it is the face you match on every board, and the one waiting in
-the room upstairs when you stop playing.
+Pawtika is a match-3 puzzle about the animal you choose on the first screen. Pick a cat or a dog, pick its coat, give it a name — and from then on it is the face you match on every board, and the one waiting in the room upstairs when you stop playing.
 
 THE LANE
-Sixty handmade levels along a country road, and then a lane that keeps
-going. Collect faces, break crates, clear mud, cut back brambles, walk
-the little ones home in their baskets. Every tenth level is a gate: a
-wooden gate in the hedge that stands open once you have come through it,
-so you can see how far you have walked. Somebody is lost on every
-stretch — asleep in a flowerpot, stuck up the old apple tree — and
-coming through the gate is how you bring them home.
+Sixty handmade levels along a country road, and then a lane that keeps going. Collect faces, break crates, clear mud, cut back brambles, walk the little ones home in their baskets. Every tenth level is a gate: a wooden gate in the hedge that stands open once you have come through it, so you can see how far you have walked. Somebody is lost on every stretch — asleep in a flowerpot, stuck up the old apple tree — and coming through the gate is how you bring them home. Once they are home they move into the room upstairs, beside your own animal.
 
-Boards come in shapes, and some were drawn by hand: a paw print in mud,
-a heart of crates. Further down the lane there are bones to dig up,
-mice to catch, toy boxes that open only to their own animal, and
-hungry faces that will not wait for ever.
+Boards come in shapes, and some were drawn by hand: a paw print in mud, a heart of crates. Further down the lane there are bones to dig up, mice to catch, toy boxes that open only to their own animal, and hungry faces that will not wait for ever.
+
+Some levels are harder than the rest, and say so before they start. Hard ones are marked on the map, further down the lane the gate at the end of every stretch is super hard, and both pay more coins the first time you clear them. They may take a few tries; if you keep getting stuck, the level quietly gives you an extra move.
 
 NAP TIME
-A logic puzzle beside the lane, and a new one every day. Every cushion
-gets one sleeping pet: one in each row and each column, and no two
-touching, not even at a corner, or they wake each other up. No luck and
-no hearts — just you, the cushions and the house going quiet. A board
-for every day of the week, small on Monday and big on Sunday, a ladder
-of puzzles that grows with you, and a hint that shows its reasoning.
+A logic puzzle beside the lane, and a new one every day. Every cushion gets one sleeping pet: one in each row and each column, and no two touching, not even at a corner, or they wake each other up. No luck and no hearts — just you, the cushions and the house going quiet. A board for every day of the week, small on Monday and big on Sunday, a ladder of puzzles that grows with you, and a hint that shows its reasoning.
 
 THE ROOM UPSTAIRS
-Your animal lives there. Feed it, play with it, wash it, let it sleep. It
-gets hungry while you are away and pleased when you come back, it grows
-from a kitten or a puppy into a full-grown animal, and how you looked
-after it decides the temperament it settles into.
+Your animal lives there. Feed it, play with it, wash it, let it sleep. It gets hungry while you are away and pleased when you come back, it grows from a kitten or a puppy into a full-grown animal, and how you looked after it decides the temperament it settles into.
 
-Make the room theirs: twenty things to furnish it with, from a rocking
-chair and a fishbowl to a kennel and a string of fairy lights that glow
-after dark, and every coat and eye colour for every animal.
+Make the room theirs: twenty things to furnish it with, from a rocking chair and a fishbowl to a kennel and a string of fairy lights that glow after dark, and every coat and eye colour for every animal.
 
-It is not decoration. A well-kept animal walks onto the board with you
-and brings something with it — more moves, a rocket, a head start on its
-own special move. The care and the puzzle are one loop, not two screens.
+It is not decoration. A well-kept animal walks onto the board with you and brings something with it — more moves, a rocket, a head start on its own special move. The care and the puzzle are one loop, not two screens.
 
 SIX TO BRING HOME
-Six breeds, each with its own move. Adopt a second and it joins the
-board; your own animals crowd out the strangers, until every face you
-are matching is one of yours.
+Six breeds, each with its own move. Adopt a second and it joins the board; your own animals crowd out the strangers, until every face you are matching is one of yours.
 
 DRAWN AS IT RUNS
-Every cat and dog in this game is drawn in code as it runs, which is how
-each one can wear the coat, the eyes, the hat and the mood that are
-yours, and every sound is synthesised — there is not one audio file. The
-lane and the furniture are hand-finished pictures inside the app itself,
-so nothing is ever downloaded: it is small, it opens instantly, and it
-works with the phone in flight mode from the very first launch.
+Every cat and dog in this game is drawn in code as it runs, which is how each one can wear the coat, the eyes, the hat and the mood that are yours, and every sound is synthesised — there is not one audio file. The lane and the furniture are hand-finished pictures inside the app itself, so nothing is ever downloaded: it is small, it opens instantly, and it works with the phone in flight mode from the very first launch.
 
 NO ACCOUNT, NO CONNECTION
-No accounts, and no ad ever breaks into the middle of a level. Now and
-then, after a win, a short ad plays between levels — never on your
-first day, and never once you have bought anything. When you want three
-more moves, a heart or double coins, you can choose to watch a short
-video. Your animals and your progress live on your phone.
+No accounts, and no ad ever breaks into the middle of a level. Now and then, after a win, a short ad plays between levels — never on your first day, and never once you have bought anything. When you want three more moves, a heart or double coins, you can choose to watch a short video. Your animals and your progress live on your phone.
 
-Day and Dusk, seven languages, a quiet music-box lullaby you can switch
-off, and a symbol on every tile for anybody
-who would rather not tell them apart by colour.
+Day and Dusk, seven languages, a quiet music-box lullaby you can switch off, and a symbol on every tile for anybody who would rather not tell them apart by colour.
 ```
 
 **Türkçe**
@@ -134,69 +99,35 @@ who would rather not tell them apart by colour.
 ```
 Kapının önüne bir sepet bırakmışlar.
 
-Pawtika, ilk ekranda seçtiğin hayvanın etrafında dönen bir eşleştirme
-oyunu. Bir kedi ya da köpek seç, tüyünü seç, adını koy — o günden sonra
-her tahtada eşleştirdiğin yüz o olur, sen oynamayı bıraktığında üst
-kattaki odada seni bekleyen de.
+Pawtika, ilk ekranda seçtiğin hayvanın etrafında dönen bir eşleştirme oyunu. Bir kedi ya da köpek seç, tüyünü seç, adını koy — o günden sonra her tahtada eşleştirdiğin yüz o olur, sen oynamayı bıraktığında üst kattaki odada seni bekleyen de.
 
 SOKAK
-Kır yolu boyunca altmış el yapımı bölüm, sonra devam eden bir sokak.
-Yüzleri topla, kasaları kır, çamuru temizle, böğürtlenleri buda,
-minikleri sepetleriyle eve yürüt. Her onuncu bölüm bir kapı: çitteki
-tahta kapı, bir kez geçtikten sonra açık kalır — nereye kadar
-yürüdüğünü görürsün. Yolun her bölümünde kaybolmuş biri var — saksıda
-uyuyan, yaşlı elma ağacında mahsur kalan — ve onu eve getirmenin yolu
-o kapıdan geçmek.
+Kır yolu boyunca altmış el yapımı bölüm, sonra devam eden bir sokak. Yüzleri topla, kasaları kır, çamuru temizle, böğürtlenleri buda, minikleri sepetleriyle eve yürüt. Her onuncu bölüm bir kapı: çitteki tahta kapı, bir kez geçtikten sonra açık kalır — nereye kadar yürüdüğünü görürsün. Yolun her parçasında kaybolmuş biri var — saksıda uyuyan, yaşlı elma ağacında mahsur kalan — ve onu eve getirmenin yolu o kapıdan geçmek. Eve gelenler üst kattaki odaya, kendi hayvanının yanına taşınır.
 
-Tahtalar şekilli, bazıları elle çizildi: çamurdan bir pati izi,
-kasalardan bir kalp. Yolun ilerisinde çıkarılacak kemikler, yakalanacak
-fareler, yalnızca kendi hayvanına açılan oyuncak kutuları ve sonsuza
-kadar beklemeyecek aç yüzler var.
+Tahtalar şekilli, bazıları elle çizildi: çamurdan bir pati izi, kasalardan bir kalp. Yolun ilerisinde çıkarılacak kemikler, yakalanacak fareler, yalnızca kendi hayvanına açılan oyuncak kutuları ve sonsuza kadar beklemeyecek aç yüzler var.
+
+Bazı bölümler ötekilerden zor ve bunu baştan söyler. Zor bölümler haritada işaretli, yolun ilerisinde her parçanın sonundaki kapı çok zor; ikisi de ilk geçişte daha çok altın verir. Birkaç deneme sürebilir; üst üste takılırsan bölüm sana sessizce fazladan bir hamle verir.
 
 ŞEKERLEME
-Sokağın yanında bir mantık bulmacası, her gün yenisi. Her mindere bir
-uykucu: her satırda ve her sütunda bir tane, ve hiçbiri birbirine
-değmeyecek, köşeden bile — yoksa birbirlerini uyandırırlar. Şans yok,
-kalp yok; sadece sen, minderler ve sessizleşen ev. Haftanın her günü
-bir tahta, pazartesi küçük, pazar büyük; seninle büyüyen bir bulmaca
-merdiveni ve nasıl düşündüğünü gösteren bir ipucu.
+Sokağın yanında bir mantık bulmacası, her gün yenisi. Her mindere bir uykucu: her satırda ve her sütunda bir tane, ve hiçbiri birbirine değmeyecek, köşeden bile — yoksa birbirlerini uyandırırlar. Şans yok, kalp yok; sadece sen, minderler ve sessizleşen ev. Haftanın her günü bir tahta, pazartesi küçük, pazar büyük; seninle büyüyen bir bulmaca merdiveni ve nasıl düşündüğünü gösteren bir ipucu.
 
 ÜST KATTAKİ ODA
-Hayvanın orada yaşıyor. Yedir, oyna, yıka, uyut. Sen yokken acıkır, geri
-geldiğinde sevinir; yavruyken büyür, koca bir hayvana dönüşür ve nasıl
-baktığın onun huyunu belirler.
+Hayvanın orada yaşıyor. Yedir, oyna, yıka, uyut. Sen yokken acıkır, geri geldiğinde sevinir; yavruyken büyür, koca bir hayvana dönüşür ve nasıl baktığın onun huyunu belirler.
 
-Odayı onun yap: sallanan sandalyeden akvaryuma, kulübeden hava
-kararınca yanan peri ışıklarına kadar döşeyecek yirmi eşya, ve her hayvan
-için her tüy ve göz rengi.
+Odayı onun yap: sallanan sandalyeden akvaryuma, kulübeden hava kararınca yanan peri ışıklarına kadar döşeyecek yirmi eşya, ve her hayvan için her tüy ve göz rengi.
 
-Bu süs değil. İyi bakılmış bir hayvan tahtaya seninle çıkar ve yanında
-bir şey getirir: fazladan hamle, bir roket, kendi özel hamlesine erken
-başlangıç. Bakım ve bulmaca iki ayrı ekran değil, tek bir döngü.
+Bu süs değil. İyi bakılmış bir hayvan tahtaya seninle çıkar ve yanında bir şey getirir: fazladan hamle, bir roket, kendi özel hamlesine erken başlangıç. Bakım ve bulmaca iki ayrı ekran değil, tek bir döngü.
 
 EVE GÖTÜRÜLECEK ALTI CAN
-Altı cins, her birinin kendi hamlesi var. İkincisini sahiplendiğinde
-tahtaya o da katılır; kendi hayvanların yabancıları yavaş yavaş kovar,
-sonunda eşleştirdiğin her yüz senin olur.
+Altı cins, her birinin kendi hamlesi var. İkincisini sahiplendiğinde tahtaya o da katılır; kendi hayvanların yabancıları yavaş yavaş kovar, sonunda eşleştirdiğin her yüz senin olur.
 
 OYNARKEN ÇİZİLİYOR
-Bu oyundaki her kedi ve köpek, oyun çalışırken kodla çiziliyor — her
-birinin senin seçtiğin tüyü, gözü, şapkası ve ruh haliyle görünebilmesi
-bundan — ve her ses sentezleniyor, tek bir ses dosyası yok. Yol ve
-eşyalar uygulamanın içinde duran, elle bitirilmiş resimler; hiçbir şey
-indirilmiyor: küçük, anında açılıyor ve daha ilk açılıştan itibaren
-telefon uçak modundayken çalışıyor.
+Bu oyundaki her kedi ve köpek, oyun çalışırken kodla çiziliyor — her birinin senin seçtiğin tüyü, gözü, şapkası ve ruh haliyle görünebilmesi bundan — ve her ses sentezleniyor, tek bir ses dosyası yok. Yol ve eşyalar uygulamanın içinde duran, elle bitirilmiş resimler; hiçbir şey indirilmiyor: küçük, anında açılıyor ve daha ilk açılıştan itibaren telefon uçak modundayken çalışıyor.
 
 HESAP YOK, İNTERNET GEREKMEZ
-Hesap yok ve hiçbir reklam bir bölümün ortasına girmez. Arada bir, bir
-galibiyetten sonra bölümler arasında kısa bir reklam çıkar — ilk gününde
-asla, bir şey satın aldıysan hiç. Üç hamle, bir kalp ya da iki kat altın
-istediğinde, istersen kısa bir video izlersin. Hayvanların ve ilerlemen
-telefonunda duruyor.
+Hesap yok ve hiçbir reklam bir bölümün ortasına girmez. Arada bir, bir galibiyetten sonra bölümler arasında kısa bir reklam çıkar — ilk gününde asla, bir şey satın aldıysan hiç. Üç hamle, bir kalp ya da iki kat altın istediğinde, istersen kısa bir video izlersin. Hayvanların ve ilerlemen telefonunda duruyor.
 
-Gündüz ve Akşam, yedi dil, kapatabileceğin sakin bir müzik kutusu
-ninnisi, ve renkten ayırt etmek istemeyenler
-için her taşta bir sembol.
+Gündüz ve Akşam, yedi dil, kapatabileceğin sakin bir müzik kutusu ninnisi, ve renkten ayırt etmek istemeyenler için her taşta bir sembol.
 ```
 
 ---
@@ -272,19 +203,33 @@ Use the Play full description above, unchanged. It is within Apple's
 
 ## What's new — 1.3.0
 
-Each line is a change a player can see in the build; the curve and the
-adaptive budget are said as "harder for those who want it" rather than
-as mechanisms, and nothing promises what is not yet on (the
-between-levels video is in the build and off).
+Each line is a change a player can see in the build, rewritten on 18
+Nov 2026 for what the build had become since the first draft: hard and
+super-hard levels by position with their 1.5× and 2× pay, the strays
+drawn on the map and in the room, the badge shelf, the glossier pieces.
+The adaptive budget is said as "the level gives you an extra move"
+rather than as a mechanism. The between-levels video is on in this
+build; the description says when it plays, and nothing here says
+otherwise.
+
+**The descriptions are one line a paragraph.** They were hard-wrapped
+at seventy-odd characters in this file (and in the Spanish and
+Portuguese ones), and App Store Connect keeps every newline, so the
+product page broke each paragraph into ragged lines at those points.
+Each paragraph is a single line now, the headings on their own line
+above it. German, French and Italian went over Apple's 4000 with the
+new paragraph on hard levels; their "drawn as it runs" paragraph is the
+one cut short.
 
 **English** (4000 max)
 
 ```
-• Somebody to bring home: every stretch of the lane has a lost animal waiting behind its gate.
+• Somebody to bring home: every stretch of the lane has a lost animal waiting at its gate, right there on the map, and the ones you bring home move into the room with your pet.
+• Hard and super-hard levels: marked on the map and announced before they start. They may take a few tries, and pay 1.5× and 2× coins the first time you clear them.
 • Boards come in shapes now — hearts, towers, crowns — and fourteen of them were drawn by hand.
 • New things further down the lane: buried bones, hungry faces, mice to catch and toy boxes.
-• Hard levels are marked with a flame and pay 50% more coins the first time you clear them.
-• Moves land faster, and there is a quiet music-box lullaby you can switch off.
+• A new trophy shelf that tells you what each badge asks for and how close you are.
+• Glossier pieces, faster moves, and a quiet music-box lullaby you can switch off.
 • Now in Spanish, German, French, Portuguese and Italian.
 • Watch a video to double your daily gift or a chest, or for 3 extra moves on a level you are retrying.
 ```
@@ -292,19 +237,21 @@ between-levels video is in the build and off).
 **Türkçe**
 
 ```
-• Eve götürecek biri var: yolun her bölümünde, kapının ardında seni bekleyen kayıp bir dost.
-• Tahtalar artık şekilli: kalp, kule, taç… On dördü de elle çizildi.
+• Eve götürecek biri var: yolun her parçasında, kapısının önünde bekleyen kayıp bir dost, haritada görünüyor; eve getirdiklerin hayvanınla birlikte odaya taşınıyor.
+• Zor ve çok zor bölümler: haritada işaretli, başlamadan önce haber veriyor. Birkaç deneme sürebilir; ilk geçişte 1,5 ve 2 kat altın veriyor.
+• Tahtalar artık şekilli: kalp, kule, taç… On dördü elle çizildi.
 • Yolun ilerisinde yeni şeyler: gömülü kemikler, aç yüzler, yakalanacak fareler ve oyuncak kutuları.
-• Alevle işaretli zor bölümler, ilk geçişte %50 fazla altın veriyor.
-• Hamleler daha hızlı; kapatabileceğin sakin bir müzik kutusu ninnisi de var.
+• Yeni rozet rafı: her rozetin ne istediğini ve ne kadar yaklaştığını gösteriyor.
+• Daha parlak taşlar, daha hızlı hamleler ve kapatabileceğin sakin bir müzik kutusu ninnisi.
 • Artık İspanyolca, Almanca, Fransızca, Portekizce ve İtalyanca.
 • Video izleyerek günlük hediyeni ya da sandığını ikiye katla, tekrar denediğin bölümde 3 hamle kazan.
 ```
 
-**Screenshots for 1.3.0.** Remade from this build (store/slides): the
-first now shows level 8's heart-shaped board, the third the map with
-the hard levels' flames and a caption that says so. Replace all eight in
-both iPhone slots, English (U.S.) and Turkish; English (U.K.) inherits.
+**Screenshots for 1.3.0.** Remade from this build (store/slides) on 18
+Nov 2026, after the visual pass: glossier pieces, and the room in the
+third with the animals brought home off the lane sitting in it. Replace
+all eight in both iPhone slots, in all seven localisations; English
+(U.K.) inherits the U.S. set.
 
 **Five more localisations, from 1.3.0.** Spanish (Mexico — also read by the
 U.S. storefront), German, French, Portuguese (Brazil) and Italian: each
@@ -504,10 +451,16 @@ first launch. All products are consumable.
 Both can be bought in the sandbox once reached; nothing else about the
 game changes with them.
 
-Advertising: rewarded video only, never shown unless the player taps a
-"Watch a video" button. Those buttons appear only when a video has
-loaded, on the out-of-moves card, the out-of-hearts sheet and the
-level-cleared card. The App Tracking Transparency prompt is shown on
+Advertising: two kinds. Rewarded videos are never shown unless the
+player taps a "Watch a video" button; those buttons appear only when a
+video has loaded, on the out-of-moves card, the out-of-hearts sheet,
+the level-cleared card, the treat store, the daily gift, the chest
+and the card of a level being retried. Since 1.3.0 there is also one
+interstitial, shown only between levels after a win: from level 20, at
+most every third win, at least three minutes after any other video,
+never on the day the app was installed and never for a player who has
+made a purchase. No ad is ever shown during a level. The App Tracking
+Transparency prompt is shown on
 first launch, straight after Google's consent form where that form is
 shown, and before the ad SDK loads any ad (if iOS does not present it
 because the app was not yet active, it is asked again the next time the
@@ -523,8 +476,9 @@ be switched off in Settings (gear icon) -> Share play data.
 ## Content rating
 
 - No violence, no language, no gambling, no user-generated content, no
-  social features, no location. **Ads: yes**, rewarded video only, which the
-  player opens themselves (declare it; Google's content filters in the
+  social features, no location. **Ads: yes**: rewarded video, which the
+  player opens themselves, and from 1.3.0 one interstitial between
+  levels after a win (declare it; Google's content filters in the
   AdMob console should be set to "G" / general audiences).
 - In-app purchases: **yes** — digital goods only (treats, and the paid
   column of a season book). Nothing bought is randomised: no loot boxes,
