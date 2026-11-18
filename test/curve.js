@@ -32,7 +32,8 @@ const vm = require('vm');
    levels those are is a fact about LEVELS. Without it this file would
    quote a target seven points below the one the lane was tuned to, and
    the two tools would disagree about the same number. */
-const design = { Math, clamp: (v, a, b) => Math.max(a, Math.min(b, v)), LEVELS: X.LEVELS };
+/* and the daily's number, which tierOf reads to leave the daily untiered */
+const design = { Math, clamp: (v, a, b) => Math.max(a, Math.min(b, v)), LEVELS: X.LEVELS, DAILY_LEVEL: -1 };
 const util = fs.readFileSync(path.join(__dirname, '..', 'src', 'js', '00-util.js'), 'utf8');
 vm.createContext(design);
 vm.runInContext(util.match(/function mulberry[\s\S]*?\n}/)[0], design);

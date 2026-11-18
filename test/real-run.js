@@ -15,7 +15,7 @@
    A level the budget cannot steer gets its work changed, as fit-run
    does it: still cleared fifteen points over the target at the floor
    of eight moves, the goal grows by a quarter and the search runs
-   again; fifteen under at the ceiling, it shrinks by a fifth.
+   again; fifteen under at the ceiling of 64, it shrinks by a fifth.
 
    The four later mechanics (30-engine.js) and the drawn boards have no
    response curve at all, so this is the only fit they have.
@@ -26,6 +26,9 @@
               touched, for refitting those without replaying the rest
    --only     a list (1,2,3) or @file.json of levels; lane levels (under
               61) are fitted too and written into LEVELS by apply-lane
+   --fresh    start every level from the plain goal, not the work it
+              carries: a level dealt a different kind needs this, since
+              a mud level's multiplier makes a collection impossible
    Seeds are n * 50021 + g * 7331, the family test/real-fit.js uses.
    About 0.8 CPU-seconds a game here; 940 levels at sixteen games a
    point is roughly an hour on fifteen workers, which run at low
@@ -41,10 +44,11 @@ const GAMES = +argv.filter(a => !a.startsWith('--'))[0] || 16;
 const FROM = +opt('from', 61), TO = +opt('to', 1000);
 const CHANGED = argv.includes('--changed');
 const WRITE = argv.includes('--write');
+const FRESH = argv.includes('--fresh');
 const JOBS = +opt('jobs', Math.max(1, os.cpus().length - 1));
 const SHARD = opt('shard', '');
 const OUT = opt('out', '');
-const FLOOR = 8, CAP = 64;
+const FLOOR = 8, CAP = 64, LONG = 45;
 const MODULE = path.join(__dirname, '..', 'src', 'js', '13-run-fit.js');
 
 function worker() {
@@ -77,7 +81,7 @@ function worker() {
     const want = X.targetClear(n);
     /* a level the later mechanics took over starts from the plain goal:
        the multiplier it carried was fitted for the level it used to be */
-    let work = touched(n) ? 1 : (X.RUN_WORK[n] || 1);
+    let work = touched(n) || FRESH ? 1 : (X.RUN_WORK[n] || 1);
     let memo, best;
     const lane = n < 61;
     const setMoves = m => { if (lane) X.LEVELS[n - 1].moves = m; else X.RUN_MOVES[n] = m; };
@@ -99,10 +103,14 @@ function worker() {
       if (await rate(m0) < want) {
         let m = m0;
         while (m < CAP && await rate(m) < want) { lo = m; m = Math.min(CAP, m + step); }
+        /* the climb stops on reaching the ceiling without playing it, and
+           a level that cannot be cleared there has to be seen to be */
+        if (m === CAP) await rate(CAP);
         hi = m;
       } else {
         let m = m0;
         while (m > FLOOR && await rate(m) > want) { hi = m; m = Math.max(FLOOR, m - step); }
+        if (m === FLOOR) await rate(FLOOR);
         lo = m;
       }
       for (let i = 0; i < 3 && hi - lo > 1; i++) {
@@ -111,8 +119,10 @@ function worker() {
       }
       best = +Object.keys(memo).sort((a, b) => Math.abs(memo[a] - want) - Math.abs(memo[b] - want) || a - b)[0];
       const p = memo[best];
-      if (!lane && best === FLOOR && p > want + .12 && work < 2.6) { work = Math.round(work * 1.25 * 100) / 100; continue; }
-      if (!lane && best === CAP && p < want - .15 && work > .55) { work = Math.round(work * .8 * 100) / 100; continue; }
+      if (!lane && memo[FLOOR] !== undefined && memo[FLOOR] > want + .12 && work < 2.6) { work = Math.round(work * 1.25 * 100) / 100; continue; }
+      /* and a level that needs more than LONG moves to reach its target is
+         a long slog whatever its rate: its goal shrinks too */
+      if (!lane && (best > LONG || memo[CAP] !== undefined && memo[CAP] < want - .15) && work > .4) { work = Math.round(work * .8 * 100) / 100; continue; }
       break;
     }
     setMoves(best);
@@ -199,7 +209,7 @@ if (SHARD) {
 } else {
   (async () => {
     const t0 = Date.now();
-    const pass = ['--from=' + FROM, '--to=' + TO].concat(CHANGED ? ['--changed'] : [], OUT ? ['--out=' + OUT] : [], SKIP ? ['--skip=' + SKIP] : [], ONLY_ARG ? ['--only=' + ONLY_ARG] : []);
+    const pass = ['--from=' + FROM, '--to=' + TO].concat(CHANGED ? ['--changed'] : [], OUT ? ['--out=' + OUT] : [], SKIP ? ['--skip=' + SKIP] : [], ONLY_ARG ? ['--only=' + ONLY_ARG] : [], FRESH ? ['--fresh'] : []);
     const parts = await Promise.all(Array.from({ length: JOBS }, (_, i) => new Promise((res, rej) =>
       execFile(process.execPath, [__filename, String(GAMES)].concat(pass, ['--shard=' + i + '/' + JOBS]),
         { maxBuffer: 1 << 26 }, (e, so, se) => e ? rej(new Error(se || e.message)) : res(JSON.parse(so))))));

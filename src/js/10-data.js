@@ -1419,7 +1419,7 @@ const LEVELS = [
     map: ['........', '...mm...', '..mmmm..', '.mmmmmm.', 'mmmmmmmm', '.mmmmmm.', '..mmmm..', '...mm...', '........']
   },
   {
-    n: 17, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12000, want: 0.83,
+    n: 17, w: 8, h: 9, types: 6, moves: 24, goals: [[GK.MUD, 0, 22], [GK.COLLECT, 2, 32]], base: 12000, want: 0.83,
     map: ['........', '.mmmmmm.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.m....m.', '.mmmmmm.', '........']
   },
   {
@@ -1427,19 +1427,19 @@ const LEVELS = [
     map: ['C......C', '........', '..cccc..', '..c..c..', '..c..c..', '..cccc..', '........', 'C......C', '........']
   },
   {
-    n: 19, w: 8, h: 9, types: 6, moves: 38, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15100, want: 0.78,
+    n: 19, w: 8, h: 9, types: 6, moves: 33, goals: [[GK.COLLECT, 0, 40], [GK.COLLECT, 2, 34], [GK.COLLECT, 5, 29]], base: 15100, want: 0.78,
     map: ['####..##', '###....#', '##......', '#.......', '........', '........', '........', '........', '........']
   },
   {
-    n: 20, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.RESCUE, 0, 1], [GK.COLLECT, 3, 26]], base: 10500, want: 0.71,
+    n: 20, w: 8, h: 9, types: 6, moves: 23, goals: [[GK.RESCUE, 0, 1], [GK.COLLECT, 3, 26]], base: 10500, want: 0.71,
     map: ['..####..', '..####..', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 21, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.MUD, 0, 24]], base: 9900, want: 0.9,
+    n: 21, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.MUD, 0, 24]], base: 9900, want: 0.9,
     map: ['........', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', 'mmmmmmmm', '........', '........']
   },
   {
-    n: 22, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 13100, want: 0.85,
+    n: 22, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.CRATE, 0, 12], [GK.COLLECT, 3, 34]], base: 13100, want: 0.85,
     map: ['..CCCC..', '........', '.c....c.', '..c..c..', '..c..c..', '........', '.c....c.', '........', '........']
   },
   {
@@ -1459,7 +1459,7 @@ const LEVELS = [
     map: ['##....##', '#......#', '#......#', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 27, w: 8, h: 9, types: 6, moves: 30, goals: [[GK.CRATE, 0, 22]], base: 9100, want: 0.78,
+    n: 27, w: 8, h: 9, types: 6, moves: 20, goals: [[GK.CRATE, 0, 22]], base: 9100, want: 0.78,
     map: ['CC....CC', 'C......C', '..cccc..', '..c..c..', '..c..c..', '..cccc..', 'C......C', 'CC....CC', '........']
   },
   {
@@ -1467,15 +1467,15 @@ const LEVELS = [
     map: ['MMMMMMMM', 'MMMMMMMM', '........', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 29, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 8700, want: 0.75,
+    n: 29, w: 8, h: 9, types: 6, moves: 19, goals: [[GK.RESCUE, 0, 2], [GK.COLLECT, 5, 18]], base: 8700, want: 0.75,
     map: ['.######.', '.######.', '..####..', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 30, w: 8, h: 9, types: 6, moves: 29, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 10600, want: 0.64,
+    n: 30, w: 8, h: 9, types: 6, moves: 24, goals: [[GK.BRAMBLE, 0, 20], [GK.SCORE, 0, 10000]], base: 10600, want: 0.64,
     map: ['........', '........', '.vvvvvv.', '.v....v.', '.v....v.', '.v....v.', '.vvvvvv.', '........', '........']
   },
   {
-    n: 31, w: 8, h: 9, types: 6, moves: 27, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 7700, want: 0.91,
+    n: 31, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.CRATE, 0, 10], [GK.MUD, 0, 20]], base: 7700, want: 0.91,
     map: ['mccccccm', 'm......m', 'm.mmmm.m', 'm......m', '........', 'm......m', 'm.mmmm.m', 'm......m', 'mccccccm']
   },
   {
@@ -1499,7 +1499,7 @@ const LEVELS = [
     map: ['###..###', '##....##', '##....##', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 37, w: 8, h: 9, types: 6, moves: 42, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 11400, want: 0.65,
+    n: 37, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.RESCUE, 0, 2], [GK.MUD, 0, 20]], base: 11400, want: 0.65,
     map: ['mmmmmmmm', '........', '..mmmm..', '........', '........', '........', '..mmmm..', '........', 'mmmmmmmm']
   },
   {
@@ -1507,11 +1507,11 @@ const LEVELS = [
     map: ['C.C..C.C', '........', 'iCiiiiCi', '........', '..CCCC..', '........', 'iCiiiiCi', '........', 'C.C..C.C']
   },
   {
-    n: 39, w: 8, h: 9, types: 6, moves: 41, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 12500, want: 0.66,
+    n: 39, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.MUD, 0, 34], [GK.CRATE, 0, 8], [GK.RESCUE, 0, 2]], base: 12500, want: 0.66,
     map: ['MMMMMMMM', 'Mc.cc.cM', 'M......M', 'M......M', 'M......M', 'M......M', 'M......M', 'Mc.cc.cM', 'MMMMMMMM']
   },
   {
-    n: 40, w: 8, h: 9, types: 6, moves: 20, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 11100, want: 0.56,
+    n: 40, w: 8, h: 9, types: 6, moves: 17, goals: [[GK.SCORE, 0, 10500], [GK.RESCUE, 0, 2]], base: 11100, want: 0.56,
     map: ['##....##', '##....##', '........', '........', '........', '........', '........', '........', '........']
   },
 
@@ -1541,7 +1541,7 @@ const LEVELS = [
     map: ['........', '..vvvv..', '..v..v..', '..v..v..', '..v..v..', '..vvvv..', '........', '........', '........']
   },
   {
-    n: 47, w: 8, h: 9, types: 6, moves: 37, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 12800, want: 0.74,
+    n: 47, w: 8, h: 9, types: 6, moves: 31, goals: [[GK.COLLECT, 2, 34], [GK.COLLECT, 5, 28]], base: 12800, want: 0.74,
     map: ['........', '..iiii..', '........', '.i....i.', '.i....i.', '........', '..iiii..', '........', '........']
   },
   {
@@ -1549,11 +1549,11 @@ const LEVELS = [
     map: ['cc....cc', '........', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '........', 'cc....cc', '........']
   },
   {
-    n: 49, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 11000]], base: 11500, want: 0.6,
+    n: 49, w: 8, h: 9, types: 6, moves: 24, goals: [[GK.RESCUE, 0, 2], [GK.SCORE, 0, 11000]], base: 11500, want: 0.6,
     map: ['########', '.###.###', '..#...#.', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 50, w: 8, h: 9, types: 6, moves: 22, goals: [[GK.MUD, 0, 40], [GK.CRATE, 0, 8], [GK.COLLECT, 0, 26]], base: 9200, want: 0.5,
+    n: 50, w: 8, h: 9, types: 6, moves: 19, goals: [[GK.MUD, 0, 40], [GK.CRATE, 0, 8], [GK.COLLECT, 0, 26]], base: 9200, want: 0.5,
     map: ['MMMMMMMM', 'M.cccc.M', 'M......M', 'M......M', 'M......M', 'M......M', 'M.cccc.M', 'MMMMMMMM', '........']
   },
   {
@@ -1581,7 +1581,7 @@ const LEVELS = [
     map: ['mmmmmmmm', 'mmmmmmmm', 'mmmmmmmm', '........', '........', '........', 'mmmmmmmm', 'mmmmmmmm', '........']
   },
   {
-    n: 57, w: 8, h: 9, types: 6, moves: 45, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 17200, want: 0.62,
+    n: 57, w: 8, h: 9, types: 6, moves: 40, goals: [[GK.BRAMBLE, 0, 20], [GK.MUD, 0, 16]], base: 17200, want: 0.62,
     map: ['mmmmmmmm', '........', '..vvvv..', '.vvvvvv.', '.vvvvvv.', '..vvvv..', '........', 'mmmmmmmm', '........']
   },
   {
@@ -1593,7 +1593,7 @@ const LEVELS = [
     map: ['..####..', '...##...', '...##...', '........', '........', '........', '........', '........', '........']
   },
   {
-    n: 60, w: 8, h: 9, types: 6, moves: 28, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 12700, want: 0.43,
+    n: 60, w: 8, h: 9, types: 6, moves: 25, goals: [[GK.BRAMBLE, 0, 16], [GK.CRATE, 0, 8], [GK.COLLECT, 2, 38]], base: 12700, want: 0.43,
     map: ['mmmmmmmm', '.cc..cc.', '..vvvv..', '..vvvv..', '..vvvv..', '..vvvv..', '.cc..cc.', 'mmmmmmmm', '........']
   }
 ];
@@ -1773,6 +1773,27 @@ function lateKind(n, dealt) {
   if (n > MOUSE_FROM && d < .12) return GK.MOUSE;
   if (d >= .12 && d < .25) return GK.BONE;
   return dealt;
+}
+/* KINDS THAT CANNOT BE HARD.
+
+   A mud level asks for a share of the mud its map holds, and a hill
+   level for its three hills, and the cascade does most of either
+   whatever the player does: fitted on the game on 17 Nov 2026, with the
+   budget at its floor of eight and the work at three times the usual,
+   sixteen of them still cleared 64-100% against targets near 50%, and
+   a quarter of the hard and super-hard levels that had been dealt mud
+   or a hill were free. So a level meant to stop people (tierOf,
+   11-design.js) is never dealt either, and nor are those sixteen, or
+   884 and 996, which the next fit found at 79% and 64% for 43% and 44%:
+   they take crates or a collection instead, alternately, which the
+   budget can steer. A seventeenth, 345, is the paw drawn in mud on a
+   block's fifth level, the breather, and keeps its picture: the three
+   mud pictures come round every hundred and forty levels. */
+const TOO_EASY = [178, 188, 221, 298, 338, 394, 406, 428, 516, 518, 612, 613, 663, 793, 816, 856, 884, 996];
+function hardenKind(n, kind) {
+  if (kind !== GK.MUD && kind !== GK.MOLE) return kind;
+  if (!tierOf(n) && TOO_EASY.indexOf(n) < 0) return kind;
+  return n % 2 ? GK.CRATE : GK.COLLECT;
 }
 function lateHungry(n, kind) {
   if (n < HUNGRY_FROM || kind === GK.MOUSE) return null;
@@ -2081,7 +2102,7 @@ function levelDef(n, ref, forceKind) {
   /* a drawn board says what it is made of; calibration and the reference
      build measure the generator, so they never see one */
   const sig = (ref || forceKind) ? null : signatureFor(n);
-  const kind = forceKind || (sig ? sig.kind : lateKind(n, dealt));
+  const kind = forceKind || (sig ? sig.kind : hardenKind(n, lateKind(n, dealt)));
   r();                                  /* the roll the old pick spent, so the maps below keep their dice */
   const tier = Math.min(4, Math.floor((n - 40) / 12));
   const size = sig ? [sig.map[0].length, sig.map.length] : RUN_SIZES[Math.floor(mulberry(n * 3571)() * RUN_SIZES.length)];

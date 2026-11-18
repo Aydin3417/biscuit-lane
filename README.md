@@ -4901,3 +4901,45 @@ toy boxes have been played by a harness and by nobody's thumbs. The
 tuning file can still move any level six moves and switch the adaptive
 budget off; `v_first_try` is where the first real answers will be.
 
+
+## Hard levels that stop people, and a break between levels
+
+After 1.3.0 was ready the owner asked for two more things before it went
+out: levels that people get stuck on once or twice, with no level that
+simply plays itself, and the between-levels ad turned on.
+
+**The tiers.** The games this one sits beside mark a level or two in
+every ten as hard before it starts, and the end of the block as super
+hard. Here the hard and super-hard beats had been offsets from the ease,
+so they drifted with it — a "hard" level at 61 was drawn at 54%. They
+are by position now (`tierOf`, 11-design.js): the seventh and ninth of
+every block from level 17 are hard, drawn at 40% falling to 30% for the
+player the budgets are fitted to; the tenth from level 20 is super hard,
+28% falling to 20%; and after level 20 nothing is drawn above 80% (82% in
+the lane). A banner the size of the board says which it is as the level
+deals in, the map paints hard levels rose and super-hard ones plum, and
+the first clear pays half again or double. The adaptive budget still
+gives a move back from the third failure, so being stuck has an end.
+
+Mud and hill levels could not be made hard: the goal is a share of what
+the map holds and the cascade does most of it, so seventeen of them
+cleared 64-100% at eight moves and three times the work, and a quarter of
+the hard levels dealt mud or a hill were free. A level meant to stop
+people is never dealt either now (`hardenKind`), and nor are those
+seventeen. The tier levels and the re-dealt ones were fitted again on the
+real game (test/real-run.js, which since this change also fits lane
+levels and takes a list): 342 levels, hard ones drawn at 33% measured
+32%, super-hard ones drawn at 22% measured 22%. On the way the fit
+found the crate levels with toy boxes that no budget could clear and
+some sixty-move slogs; it shrinks the goal of either now, and four
+levels ask for more than 45 moves (two at 48-49, two bramble levels at
+54 and 64), against thirty-four before.
+
+**The break.** `AD_UNITS.interIos` holds the Interstitial unit made for
+it in the same AdMob account, so `ADS.breakAfterWin` runs: after a win
+and never a loss, from level 20, every third win, three minutes from any
+other video, never on the day of install and never for anybody who has
+paid. The store said "no forced ads" and "a video only when you ask" in
+seven languages; it says now that no ad ever breaks into the middle of a
+level, which is still true, and the description says when one does
+appear between levels.
