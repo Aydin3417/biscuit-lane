@@ -401,6 +401,31 @@ submitted, and the privacy answers have not been published.
   privacy page, choosing the build once one has been uploaded, and Add
   for Review.
 
+## 1.3.0, as submitted on 18 Nov 2026
+
+Build 202611181129 (tag ios-11), submitted for review at 15:04 with
+automatic release after approval, all users at once, ratings kept.
+
+- **Localisations:** English (U.S.), English (U.K.), Turkish, and new:
+  German, Spanish (Mexico), French, Italian, Portuguese (Brazil). Each
+  has its name and subtitle (App Information), the privacy policy URL
+  (App Privacy; the five new ones were empty, and Apple lists it as part
+  of the submission), and the version text from this file and
+  store/l10n. The U.K. one keeps its own keyword field and inherits the
+  U.S. screenshots.
+- **Screenshots:** the eight slides of 18 Nov in both iPhone slots
+  (APP_IPHONE_61 at 1206 × 2622, APP_IPHONE_67 at 1320 × 2868), seven
+  languages, 01-08 in order. A file still uploading when the page is
+  left stays AWAITING_UPLOAD and blocks Add for Review with "1 or more
+  screenshots must finish uploading". The iris API lists the
+  assetDeliveryState of every screenshot; deleting the stuck one and
+  uploading it again cleared it.
+- **Marketing URL** `https://www.hellocotidie.com/` in all eight. The
+  live 1.2.0 promotional text still said "No forced ads" in English
+  (U.S. and U.K.) and "Zorla reklam yok" in Turkish; 1.3.0 replaces all
+  three.
+- **Review notes** as above, with the interstitial described.
+
 ## What the App Store reads for search (checked 3 Oct 2026)
 
 - **Indexed:** the name, the subtitle, the keyword field, in-app purchase
