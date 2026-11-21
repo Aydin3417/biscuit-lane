@@ -80,6 +80,16 @@ function roomAct(state, dur) {
   ROOM.stateT = dur || 2.6;
   ROOM.bits = [];
 }
+/* a job on the house project done: the animal is delighted, and the
+   room fills with hearts and sparkles for a moment */
+function roomCelebrate() {
+  roomAct('happy', 2.4);
+  const W = ROOM.w || 300, H = ROOM.h || 200;
+  for (let i = 0; i < 22; i++) {
+    ROOM.bits.push({ x: W * (.15 + Math.random() * .7), y: H * (.35 + Math.random() * .45), vx: rnd(-30, 30), vy: rnd(-90, -40),
+      life: 0, max: rnd(.9, 1.6), kind: i % 3 ? 'heart' : 'spark', col: i % 2 ? PAL.rose : PAL.accent, rot: rnd(-.4, .4) });
+  }
+}
 function roomBit(x, y, kind, col) {
   ROOM.bits.push({ x, y, vx: rnd(-14, 14), vy: rnd(-40, -18), life: 0, max: rnd(1, 1.7), kind, col, rot: rnd(-.4, .4) });
 }
@@ -367,6 +377,12 @@ function renderRoom(dt) {
     c.globalAlpha = 1 - k * k;
     c.translate(b.x, b.y);
     if (b.kind === 'heart') { c.rotate(b.rot); drawPip(c, 'heart', 0, 0, 7, b.col); }
+    else if (b.kind === 'spark') {
+      /* a four-pointed glint, for the project's celebration */
+      c.rotate(b.rot + b.life * 3); c.fillStyle = b.col; c.beginPath();
+      for (let k = 0; k < 8; k++) { const r = k % 2 ? 2.2 : 7; const a = k * Math.PI / 4; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+      c.closePath(); c.fill();
+    }
     else if (b.kind === 'z') {
       c.fillStyle = b.col; c.font = '800 15px Grandstander, sans-serif';
       c.fillText('z', 0, 0);

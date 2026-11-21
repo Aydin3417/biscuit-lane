@@ -89,8 +89,10 @@ function syncPurse() {
       (SAVE.hearts >= HEART_MAX ? '' : '<span class="sub num">' + fmtTime(inT) + '</span>');
     h.title = '';
   }
-  $('#chipCoins').innerHTML = IC.coin + '<span class="num">' + fmtPurse(SAVE.coins) + '</span>';
-  $('#chipTreats').innerHTML = IC.treat + '<span class="num">' + fmtPurse(SAVE.treats) + '</span>';
+  /* the + says what the chip does when tapped: both open a way to get more */
+  const plus = '<span class="plus" aria-hidden="true">+</span>';
+  $('#chipCoins').innerHTML = IC.coin + '<span class="num">' + fmtPurse(SAVE.coins) + '</span>' + plus;
+  $('#chipTreats').innerHTML = IC.treat + '<span class="num">' + fmtPurse(SAVE.treats) + '</span>' + plus;
 }
 
 /* What the interface answers to.
@@ -307,7 +309,6 @@ function renderHome() {
         ${(() => { const k = nextChest(nextN) - nextN; return `<span class="pill info ph-best">${IC.gift}${k === 0 ? T('chest_here') : T(k === 1 ? 'chest_in1' : 'chest_in', { n: k })}</span>`; })()}
         ${(() => { const s = strayAt(nextN); return strayHome(s.k) ? '' : `<span class="ph-stray"><canvas data-face="${s.breed}" data-coat="${s.coat}" width="30" height="30"></canvas><span>${locText(s.tale.where)}</span></span>`; })()}
       </span>
-      <span class="btn primary ph-go">${IC.play}${T('tab_play')}</span>
     </button>`;
 
   /* The thing the player came to do goes first, and the two smaller
@@ -338,6 +339,7 @@ function renderHome() {
   const notice = typeof TUNE !== 'undefined' ? TUNE.notice() : '';
   pad.innerHTML = `
     ${notice ? `<div class="card quiet pad16 tuneNotice">${IC.info}<span>${notice}</span></div>` : ''}
+    ${projectCardHtml()}
     ${heroCard}
     <div class="todaySec">
     <div class="sectitle"><h3>${T('home_today')}</h3></div>
@@ -419,8 +421,14 @@ function renderHome() {
       : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('home_perk_none', { name: pet.name })}</div>`}
     </div>
 
+    ${/* The thing the screen is for, always in reach. The level card above
+         says what the level is; this is the key that starts it, pinned to
+         the bottom of the view however far down the room is scrolled, the
+         way every game this one sits beside keeps its Play. */ ''}
+    <div class="playBar"><button class="btn primary big wide" id="playBar">${IC.play}${T('lvl_intro', { n: nextN })}${tierOf(nextN) ? ` <span class="tierChip ${tierOf(nextN)}">${IC.flame}${T(tierOf(nextN) === 'super' ? 'g_gate' : 'g_hard')}</span>` : ''}</button></div>
   `;
 
+  bindProjectCard(pad);
   /* the face of whoever is lost on this stretch, on the card that says so */
   const ps = $('.ph-stray', pad);
   if (ps) paintArtCanvases(ps);
@@ -432,7 +440,7 @@ function renderHome() {
   $('#carePlay').addEventListener('click', carePlay);
   $('#careWash').addEventListener('click', careWash);
   $('#careSleep').addEventListener('click', careSleep);
-  $('#goPlay').addEventListener('click', () => {
+  const go = () => {
     /* the same route "Carry on" takes at the end of a level: the lane
        underneath, then the card for where you are */
     SFX.tap();
@@ -440,7 +448,9 @@ function renderHome() {
     mapLayout();
     scrollMapToCurrent(true);
     setTimeout(() => openLevelIntro(SAVE.reached), 240);
-  });
+  };
+  $('#goPlay').addEventListener('click', go);
+  $('#playBar').addEventListener('click', go);
 }
 function showMood(text) {
   const b = $('#moodBubble');
@@ -476,7 +486,7 @@ function openFeed() {
     <div class="grid2" id="feedGrid">
       ${owned.map(f => `
         <button class="good" data-id="${f.id}">
-          <div class="art"><canvas data-art="${f.id}" width="66" height="66"></canvas></div>
+          <div class="art"><canvas data-art="${f.id}" width="84" height="84"></canvas></div>
           <div class="nm">${goodName(f)}</div>
           <div class="ds">+${f.food} ${T('st_food').toLowerCase()} · +${f.joy} ${T('st_joy').toLowerCase()}</div>
           <span class="pill info" style="align-self:center">x${SAVE.food[f.id]}</span>
@@ -918,7 +928,7 @@ function renderShop() {
   let body = '';
   if (SHOP_TAB === 'boost') body = shopBoost();
   else if (SHOP_TAB === 'look') body = shopStyle() + shopRoom();
-  else body = shopFood() + shopToys();
+  else body = dealHtml() + shopFood() + shopToys() + packHtml();
 
   pad.innerHTML = `
     <div class="tabs">${tabs.map(t => `<button data-t="${t[0]}" class="${SHOP_TAB === t[0] ? 'on' : ''}">${t[1]}</button>`).join('')}</div>
@@ -931,6 +941,11 @@ function renderShop() {
   paintArtCanvases(pad);
   $$('[data-buy]', pad).forEach(b => b.addEventListener('click', () => buyThing(b.dataset.buy, b.dataset.kind)));
   $$('[data-equip]', pad).forEach(b => b.addEventListener('click', () => equipThing(b.dataset.equip, b.dataset.kind)));
+  const db = $('#dealBuy', pad); if (db) db.addEventListener('click', buyDeal);
+  const pg = $('#packGo', pad); if (pg) pg.addEventListener('click', () => { SFX.tap(); treatStore(); });
+  /* the deal's clock runs while the shop is the screen, and stops itself after */
+  clearInterval(renderShop.tick);
+  renderShop.tick = setInterval(() => { const el = $('#dealClock'); if (!el || SCREEN !== 'shop') { clearInterval(renderShop.tick); return; } el.textContent = dealLeft(); }, 1000);
   syncPurse();
 }
 function priceTag(cost, treat) {
@@ -940,10 +955,85 @@ function priceTag(cost, treat) {
    joke and nothing else, so there was no way to tell stew from kibble
    but the price. Same shape for both now. */
 function foodEffect(f) {
+  /* what it does, as two badges a glance can read: the bowl for how full,
+     the heart for how happy. It was "+26 fullness, +2 joy" in grey at
+     the end of the joke, which is a spreadsheet cell, not a shop */
   const bits = [];
-  if (f.food) bits.push('+' + f.food + ' ' + T('st_food').toLowerCase());
-  if (f.joy) bits.push('+' + f.joy + ' ' + T('st_joy').toLowerCase());
-  return bits.length ? ' <span style="color:var(--text-faint)">' + bits.join(', ') + '</span>' : '';
+  if (f.food) bits.push(`<span class="fx food" title="${T('st_food')}">${IC.bowl}+${f.food}</span>`);
+  if (f.joy) bits.push(`<span class="fx joy" title="${T('st_joy')}">${IC.heart}+${f.joy}</span>`);
+  return bits.length ? '<span class="fxRow">' + bits.join('') + '</span>' : '';
+}
+/* ---------- the deal of the day ----------
+
+   One thing, forty per cent off, until midnight, the same for everybody
+   on the same day. It is the oldest reason a shop gets opened every day,
+   and it costs nothing a player was not going to be offered anyway: the
+   food comes three to a deal and the boosters two, so it is also the
+   cheapest way to stock up. Bought once a day. */
+function dealOfDay() {
+  const day = dayNumber();
+  const pool = [].concat(
+    FOODS.filter(f => !f.treat).map(f => ({ kind: 'food', item: f, qty: 3 })),
+    BOOSTERS.map(b => ({ kind: 'boost', item: b, qty: 2 })),
+    TOYS.filter(t => !SAVE.toys[t.id]).map(t => ({ kind: 'toy', item: t, qty: 1 })));
+  const pick = pool[(day * 7919) % pool.length];
+  const full = pick.item.cost * pick.qty;
+  return Object.assign({ day, full, price: Math.round(full * .6), bought: !!(SAVE.deal && SAVE.deal.day === day) }, pick);
+}
+function dealLeft() {
+  const d = new Date(now()); const mid = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 1).getTime();
+  const s = Math.max(0, Math.floor((mid - now()) / 1000));
+  const p = n => String(n).padStart(2, '0');
+  return p(Math.floor(s / 3600)) + ':' + p(Math.floor(s / 60) % 60) + ':' + p(s % 60);
+}
+function dealHtml() {
+  const d = dealOfDay();
+  const art = d.kind === 'boost' ? `<span class="dealIcon">${IC[d.item.icon]}</span>` : `<canvas data-art="${d.item.id}" width="96" height="96"></canvas>`;
+  return `<div class="dealWrap"><span class="ribbon gold">${T('deal_t')}</span></div>
+  <div class="card deal ${d.bought ? 'bought' : ''}">
+    <div class="dealArt">${art}</div>
+    <div class="dealBody">
+      <b>${goodName(d.item)}${d.qty > 1 ? ' ×' + d.qty : ''}</b>
+      ${d.kind === 'food' ? foodEffect(d.item) : `<span class="dealDs">${goodDesc(d.item)}</span>`}
+      <span class="dealClock"><span id="dealClock">${dealLeft()}</span></span>
+      ${d.bought ? `<span class="pill ok">${IC.check}${T('deal_bought')}</span>`
+        : `<button class="btn sm price" id="dealBuy">${priceTag(d.price)}<s class="was">${d.full}</s></button>`}
+    </div>
+    <span class="dealBadge">-40%</span>
+  </div>`;
+}
+function buyDeal() {
+  const d = dealOfDay();
+  if (d.bought) return;
+  if (SAVE.coins < d.price) { SFX.bad(); coinPurse(d.price - SAVE.coins); return; }
+  SAVE.coins -= d.price;
+  if (d.kind === 'food') SAVE.food[d.item.id] = (SAVE.food[d.item.id] || 0) + d.qty;
+  else if (d.kind === 'boost') SAVE.boosters[d.item.id] = (SAVE.boosters[d.item.id] || 0) + d.qty;
+  else SAVE.toys[d.item.id] = 1;
+  SAVE.deal = { day: d.day };
+  track('deal', { kind: d.kind, id: d.item.id, price: d.price });
+  SFX.coin(); buzz(10);
+  toast(T('shop_bought', { item: goodName(d.item) }), 'check');
+  persist(true); renderShop(); syncPurse();
+}
+/* the welcome pack, for as long as it is on offer: the treat store sells
+   it, this only says it is there, in the place a player is already
+   looking at prices */
+function packHtml() {
+  if (!SAVE.starter || SAVE.starter.bought) return '';
+  const b = STARTER.boosters;
+  return `<div class="card pack">
+    <span class="packTag">${T('pack_tag')}</span>
+    <b class="packT">${T('pack_t')}</b>
+    <div class="packRow">
+      <span>${IC.treat}<i>${STARTER.treats}</i></span>
+      <span>${IC.plusmove}<i>×${b.moves}</i></span>
+      <span>${IC.hammer}<i>×${b.hammer}</i></span>
+      <span>${IC.shuffle}<i>×${b.shuffle}</i></span>
+      <span>${IC.heart}<i>${STARTER.infinite}′</i></span>
+    </div>
+    <button class="btn gold wide" id="packGo">${T('pack_go')}</button>
+  </div>`;
 }
 function shopFood() {
   return `<div class="sectitle"><h3>${T('shop_food')}</h3></div>
@@ -952,8 +1042,8 @@ function shopFood() {
       <div class="art"><canvas data-art="${f.id}" width="66" height="66"></canvas>
         ${(SAVE.food[f.id] || 0) ? `<span class="stock" title="${T('shop_have', { n: SAVE.food[f.id] })}">&times;${SAVE.food[f.id]}</span>` : ''}</div>
       <div class="nm">${goodName(f)}</div>
-      <div class="ds">${goodDesc(f)}${foodEffect(f)}</div>
-      <button class="btn sm price" data-buy="${f.id}" data-kind="food">${T('shop_buy')} ${priceTag(f.cost, f.treat)}</button>
+      <div class="ds">${goodDesc(f)}</div>${foodEffect(f)}
+      <button class="btn sm ${f.treat ? 'plum' : 'price'}" data-buy="${f.id}" data-kind="food">${priceTag(f.cost, f.treat)}</button>
     </div>`).join('')}</div>`;
 }
 function shopToys() {
@@ -961,11 +1051,11 @@ function shopToys() {
   <div class="grid2">${TOYS.map(t => {
     const owned = !!SAVE.toys[t.id];
     return `<div class="good ${owned ? 'owned' : ''}">
-      <div class="art"><canvas data-art="${t.id}" width="66" height="66"></canvas></div>
+      <div class="art"><canvas data-art="${t.id}" width="84" height="84"></canvas></div>
       <div class="nm">${goodName(t)}</div>
-      <div class="ds">${goodDesc(t)} +${t.joy} ${T('st_joy').toLowerCase()}</div>
+      <div class="ds">${goodDesc(t)}</div>${foodEffect({ joy: t.joy })}
       ${owned ? `<span class="pill ok" style="align-self:flex-start">${IC.check}${T('shop_owned')}</span>`
-        : `<button class="btn sm price" data-buy="${t.id}" data-kind="toy">${T('shop_buy')} ${priceTag(t.cost)}</button>`}
+        : `<button class="btn sm price" data-buy="${t.id}" data-kind="toy">${priceTag(t.cost)}</button>`}
     </div>`;
   }).join('')}</div>`;
 }
@@ -977,7 +1067,7 @@ function shopBoost() {
         ${(SAVE.boosters[b.id] || 0) ? `<span class="stock" title="${T('shop_have', { n: SAVE.boosters[b.id] })}">&times;${SAVE.boosters[b.id]}</span>` : ''}</div>
       <div class="nm">${goodName(b)}</div>
       <div class="ds">${goodDesc(b)}</div>
-      <button class="btn sm price" data-buy="${b.id}" data-kind="boost">${T('shop_buy')} ${priceTag(b.cost)}</button>
+      <button class="btn sm price" data-buy="${b.id}" data-kind="boost">${priceTag(b.cost)}</button>
     </div>`).join('')}</div>`;
 }
 function shopStyle() {
@@ -1011,7 +1101,8 @@ function shopStyle() {
 function shopRoom() {
   return `
   <div class="sectitle"><h3>${T('shop_things')}</h3></div>
-  <div class="grid2">${FURNITURE.map(f => {
+  <p class="shopNote">${T('shop_things_project')}</p>
+  <div class="grid2">${FURNITURE.filter(f => SAVE.furniture[f.id]).map(f => {
     const owned = !!SAVE.furniture[f.id];
     const placed = SAVE.room.placed.indexOf(f.id) >= 0;
     return `<div class="good ${placed ? 'owned' : ''}">
@@ -1038,7 +1129,7 @@ function shopRoom() {
     </div>`;
   }).join('')}</div>
   <div class="sectitle"><h3>${T('shop_walls')}</h3></div>
-  <div class="grid2">${ROOM_THEMES.filter(t => !t.book || SAVE.roomThemes[t.id]).map(t => {
+  <div class="grid2">${ROOM_THEMES.filter(t => (!t.book && !projectTheme(t.id)) || SAVE.roomThemes[t.id]).map(t => {
     const owned = !!SAVE.roomThemes[t.id];
     const on = SAVE.room.theme === t.id;
     return `<div class="good ${on ? 'owned' : ''}">
@@ -2184,7 +2275,10 @@ function commitWin() {
   const grew = pet ? addBond(pet, bondXp) : false;
   if (pet) { pet.joy = clamp(pet.joy + 6, 0, 100); pet.energy = clamp(pet.energy - 5, 0, 100); }
   persist(true);
-  G.won = { n, stars, first, prev, prevBest, newBest, coins, treats, chest, jarFilled, grew, bondXp, score: G.score, rate };
+  /* the house project's stars (52-project.js): a first clear only, priced by the tier */
+  const homeStars = first ? starsForLevel(n) : 0;
+  addHomeStars(homeStars, 'level');
+  G.won = { n, stars, first, prev, prevBest, newBest, coins, treats, chest, jarFilled, grew, bondXp, homeStars, score: G.score, rate };
   SAVE.unshownWin = n;
   persist(true);
   return G.won;
@@ -2226,7 +2320,7 @@ function showWin() {
   /* the daily walk is not a numbered level: no stars ledger, no unlock */
   if (n === DAILY_LEVEL) { showDailyResult(true); return; }
   const w = settleWin();
-  const { stars, first, prevBest, newBest, coins, treats, chest, jarFilled, grew, bondXp } = w;
+  const { stars, first, prevBest, newBest, coins, treats, chest, jarFilled, grew, bondXp, homeStars } = w;
   const pet = activePet();
   /* Badges earned by this clear go on this card, as one line. They were
      their own sheet behind it, and on a first session that was nine
@@ -2249,8 +2343,10 @@ function showWin() {
     <div class="rewardRow">
       <span class="reward" style="color:var(--accent-strong)">${IC.coin}+${coins}</span>
       ${treats ? `<span class="reward" style="color:var(--plum)">${IC.treat}+${treats}</span>` : ''}
+      ${homeStars ? `<span class="reward homeStar"><span class="pstar" aria-hidden="true"></span>+${homeStars}</span>` : ''}
       <span class="reward" style="color:var(--sage)">${IC.paw}+${bondXp} ${T('win_bond')}</span>
     </div>
+    ${homeStars ? `<p class="winHome">${T('win_home', { n: homeStars })}</p>` : ''}
     ${first ? '' : `<p style="color:var(--text-faint);font-size:var(--t-micro);margin-top:-4px">${T('win_replay')}</p>`}
     ${first && coins > 0 && ADS.offer('double') ? `<button class="btn wide" id="wDouble">${IC.coin}${T('ad_double', { n: coins })}</button>` : ''}
     ${wonBadges.length ? `<div class="goalItem winBadges"><span class="rosette fam-${wonBadges[0].fam}">${IC[wonBadges[0].icon] || IC.crown}</span>
@@ -2482,6 +2578,7 @@ function showLose() {
   const tip = worst ? T('lose_tip_' + worst.g.kind) : '';
   /* the first carry-on at its price, the second at the higher one */
   const price = (G.extras || 0) === 0 ? ECON.continueTreats : ECON.continueTreats2;
+  const coinPrice = (G.extras || 0) === 0 ? ECON.continueCoins : ECON.continueCoins2;
   const short2 = SAVE.treats < price;
   /* A new level lost ends the run, and the card says so before the
      player chooses, because the carry-on is what keeps it: the run is
@@ -2528,14 +2625,12 @@ function showLose() {
       <span class="t"><b>${T('run_lost', { n: G.runAtRisk })}</b>${(G.extras || 0) < 2 && worthCarryingOn ? T('run_lost_keep') : ''}</span>
     </div>` : ''}
     ${!offered ? '' : `
-    <div class="offer hot">
-      <span class="ot">
-        <b>${T('lose_extra', { n: ECON.continueMoves })}</b>
-        <small id="lExtraSub">${short2 ? T('lose_extra_short', { n: price, have: SAVE.treats }) : T('lose_extra_sub', { n: price })}</small>
-      </span>
-      <button class="btn primary sm" id="lExtra">${T('lose_extra_go')} ${IC.treat}${price}</button>
-    </div>` + (!(G.extras || 0) && ADS.offer('carry') ? `
-    <button class="btn ghost wide adLine" id="lAd">${IC.video}${T('ad_watch', { n: ECON.adMoves })} · ${T('ad_go')}</button>` : '')}
+    <div class="carryKeys">
+      <button class="btn primary big" id="lCoins">+${ECON.continueMoves} ${T('lose_moves')} <span class="price">${IC.coin}${coinPrice}</span></button>
+      <button class="btn plum big" id="lExtra">+${ECON.continueMoves} ${T('lose_moves')} <span class="price">${IC.treat}${price}</span></button>
+    </div>
+    <p class="carryNote" id="lExtraSub">${short2 ? T('lose_extra_short', { n: price, have: SAVE.treats }) : ''}</p>` + (!(G.extras || 0) && ADS.offer('carry') ? `
+    <button class="btn sky wide adLine" id="lAd">${IC.video}${T('ad_watch', { n: ECON.adMoves })} · ${T('ad_go')}</button>` : '')}
     <div class="row">
       <button class="btn ghost" id="lMap">${T('to_map')}</button>
       <button class="btn${offered ? '' : ' primary'}" id="lRetry">${T('retry')}</button>
@@ -2561,12 +2656,24 @@ function showLose() {
     SAVE.treats -= price; keepRun(); persist(true); syncPurse();
     track('continue_buy', { n: G.n, price: price, second: (G.extras || 0) ? 1 : 0 });
     m.close();
+    carryOn();
+  });
+  /* the same five moves for coins; short of them, the coin purse opens */
+  const ec = $('#lCoins', m.el);
+  if (ec) ec.addEventListener('click', () => {
+    if (SAVE.coins < coinPrice) { SFX.bad(); coinPurse(coinPrice - SAVE.coins); return; }
+    SAVE.coins -= coinPrice; keepRun(); persist(true); syncPurse();
+    track('continue_buy', { n: G.n, coins: coinPrice, second: (G.extras || 0) ? 1 : 0 });
+    m.close();
+    carryOn();
+  });
+  function carryOn() {
     G.extras = (G.extras || 0) + 1;
     G.over = false; G.busy = false;
     G.moves = ECON.continueMoves;
     syncHud();
     SFX.coin();
-  });
+  }
   /* The same five moves, paid for with thirty seconds instead of nine
      treats. It is deliberately the second row rather than the first: a
      player holding treats should see the thing they already own before

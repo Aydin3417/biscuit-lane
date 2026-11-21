@@ -404,6 +404,14 @@ const ECON = {
      — so there is a second offer, once, and it costs what the genre
      charges for the second: close to double. There is no third. */
   continueTreats2: 18,
+  /* AND IN COINS (1.4). Carrying on was treats only, so the one moment a
+     player most wants to spend could not be paid with the money the game
+     gives them, and coins piled up with less to buy once the furniture
+     went to the house project (52-project.js). Five hundred is about a
+     dozen first clears' pay — dear enough to be a decision, near enough
+     to be reached — and a second carry-on costs nearly double, as the
+     treat price does. */
+  continueCoins: 500, continueCoins2: 900,
   /* Was twelve, against a player who is holding seven at the moment
      the pool empties — which made it not an offer but a wall with a
      price written on it. Nine is the carry-on price, and a player who

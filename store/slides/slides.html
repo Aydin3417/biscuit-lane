@@ -120,6 +120,31 @@ h1 em{ font-style:normal; -webkit-background-clip:text; background-clip:text; co
 .pet.r{ right:62px; } .pet.l{ left:62px; }
 .pet img{ display:block; width:100%; }
 
+/* ---------- v2: no phone, the game itself ----------
+
+   The first set put each screen inside a drawn iPhone at 85%, under a
+   headline and a line of copy. In a search result a slide is about 115
+   points wide, and there the frame took a third of the width, the game
+   inside it was half the slide, the board's tiles were specks and the
+   line of copy was grey fuzz. The games this one is searched beside show
+   the game edge to edge with a few large words. So: no frame, no status
+   bar, the screen as a card nearly the slide's width running off the
+   bottom edge, the headline larger, the line under it gone. */
+.v2 .copy{ top:46px; padding:0 22px; }
+.v2 h1{ font-size:47px; line-height:1.06; }
+.v2 .eyebrow{ font-size:15px; letter-spacing:2.8px; margin-bottom:12px; }
+.v2 .brand{ margin-bottom:12px; }
+.v2 .sub, .v2 .glow, .v2 .status, .v2 .island, .v2 .homebar{ display:none; }
+.v2 .stage{ left:16px; right:16px; top:226px; bottom:-40px; width:auto; height:auto; margin:0; transform:none; }
+.v2 .phone{ inset:0; padding:0; border-radius:30px; background:#000; overflow:hidden;
+  box-shadow:0 0 0 5px rgba(255,255,255,.62), 0 14px 34px rgba(0,0,0,.34); }
+.v2.light .phone{ box-shadow:0 0 0 5px rgba(255,255,255,.9), 0 14px 34px rgba(92,58,20,.28); }
+.v2 .screen{ width:100%; height:100%; border-radius:30px; }
+.v2 .screen img.shot{ left:0; width:100%; height:auto; }
+/* the animal that sat on the phone's edge sat on the headline once the
+   headline grew; the card is full of animals already */
+.v2 .pet{ display:none; }
+
 /* ---------- the iPad variant ---------- */
 .slide.pad{ width:1032px; height:1376px; }
 .pad .copy{ top:96px; padding:0 80px; }
@@ -147,7 +172,7 @@ h1 em{ font-style:normal; -webkit-background-clip:text; background-clip:text; co
    words that take the gradient. Every claim is something the store build
    does: see the honesty table in store/slides/README.md. */
 const SLIDES = [
-  { screen: 'board', bg: 'amber', tone: 'deep', pet: 'void', side: 'r', brand: true,
+  { screen: 'board', bg: 'amber', tone: 'deep', pet: 'void', side: 'r', brand: true, focus: 60,
     en: { h: ['Match 3 with', '[[your own pets]]'], sub: 'The cats and dogs on the board are the ones you adopt and raise.' },
     tr: { h: ['[[Kendi hayvanlarınla]]', 'üçlü eşleştirme'], sub: 'Tahtadaki kediler ve köpekler, sahiplenip büyüttüğün dostların.' } },
   { screen: 'nap', bg: 'plum', tone: 'deep', pet: 'void', side: 'l',
@@ -165,10 +190,10 @@ const SLIDES = [
   { screen: 'shop', bg: 'amber', tone: 'deep', pet: 'pug', side: 'r',
     en: { eyebrow: 'Make it home', h: ['Decorate a [[cozy]]', 'room for them'], sub: 'Rugs, armchairs, cat towers, hats and collars, all earned by playing.' },
     tr: { eyebrow: 'YUVA YAP', h: ['Onlara [[sıcacık]]', 'bir oda döşe'], sub: 'Halılar, koltuklar, kedi kuleleri, şapkalar ve tasmalar; hepsi oynayarak kazanılır.' } },
-  { screen: 'gift', bg: 'sky', tone: 'light', pet: 'retriever', side: 'l',
+  { screen: 'gift', bg: 'sky', tone: 'light', pet: 'retriever', side: 'l', focus: 40,
     en: { eyebrow: 'Every day', h: ['[[A gift on the step,]]', 'a walk to take'], sub: 'A daily basket that grows for seven days, and a fresh level every morning.' },
     tr: { eyebrow: 'HER GÜN', h: ['[[Kapıda bir hediye,]]', 'günün yürüyüşü'], sub: 'Yedi gün boyunca büyüyen bir sepet ve her sabah yeni bir bölüm.' } },
-  { screen: 'win', bg: 'navy', tone: 'deep', pet: 'marmalade', side: 'r',
+  { screen: 'win', bg: 'navy', tone: 'deep', pet: 'marmalade', side: 'r', focus: 40,
     en: { eyebrow: 'Plays offline', h: ['Three stars and', '[[one happy cat]]'], sub: 'No account, no connection needed, and no ad ever breaks into the middle of a level.' },
     tr: { eyebrow: 'ÇEVRİMDIŞI', h: ['Üç yıldız ve', '[[mutlu bir kedi]]'], sub: 'Hesap yok, internet gerekmez, ve hiçbir reklam bir bölümün ortasına girmez.' } }
 ];
@@ -185,7 +210,7 @@ function slide(i, lang, dev) {
   const meta = (window.RAW_META || {})[`${dev}-${lang}-${s.screen}`] || { top: '#FFFAF2', dark: false };
   const ink = meta.dark ? '#fff' : '#17120d';
   const el = document.createElement('section');
-  el.className = `slide ${s.tone}${dev === 'pad' ? ' pad' : ''}`;
+  el.className = `slide ${s.tone}${dev === 'pad' ? ' pad' : ' v2'}`;
   el.id = `s${i + 1}`;
   el.innerHTML = `
     <div class="bg bg-${s.bg}"></div>
@@ -198,7 +223,7 @@ function slide(i, lang, dev) {
     <div class="pet ${s.side}"><img src="raw/pet-${s.pet}.png" alt=""></div>
     <div class="stage"><div class="phone"><div class="screen">
       <div class="status" style="background:${meta.top};color:${ink}"><span>9:41</span><span class="r">${ICONS(ink)}</span></div>
-      <img class="shot" src="raw/${dev}-${lang}-${s.screen}.png" alt="">
+      <img class="shot" src="raw/${dev}-${lang}-${s.screen}.png" alt="" style="${dev === 'pad' ? '' : 'top:' + (-(s.focus || 0) * 408 / 393) + 'px'}">
       <div class="island"></div>
       <div class="homebar"></div>
     </div></div></div>`;

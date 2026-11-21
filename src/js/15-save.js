@@ -1290,6 +1290,7 @@ function dailyDone(score) {
        It is still the best-paid four minutes in the game; it is no
        longer a salary. */
     const coins = tunePay('coin', ECON.dailyWalkCoins), treats = tunePay('treat', ECON.dailyWalkTreats);
+    addHomeStars(1, 'daily');
     SAVE.coins += coins;
     SAVE.treats += treats;
     persist(true);

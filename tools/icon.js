@@ -170,6 +170,25 @@ const SAFE = 72 / 108;
     };
   }, [dataUrl, DEVICE]);
 
+  /* --preview=0.96 draws only the 1024 iOS icon with the mark at that
+     fraction, to design/icon-tight-<frac>.png, and stops: for trying a
+     tighter mark without rewriting every icon the stores hold */
+  const PREVIEW = (process.argv.find(x => x.startsWith('--preview=')) || '').split('=')[1];
+  if (PREVIEW) {
+    for (const f of PREVIEW.split(',').map(Number)) {
+      const url = await page.evaluate(frac => {
+        const cv = document.createElement('canvas'); cv.width = 1024; cv.height = 1024;
+        const c = cv.getContext('2d'); window.__ground(c, 1024); window.__mark(c, 1024, frac);
+        return cv.toDataURL('image/png');
+      }, f);
+      const out = path.join(__dirname, '..', 'design', 'icon-tight-' + f + '.png');
+      fs.writeFileSync(out, Buffer.from(url.split(',')[1], 'base64'));
+      console.log('wrote ' + out);
+    }
+    await browser.close(); if (server && server.stop) server.stop();
+    return;
+  }
+
   /* the flat colour behind the adaptive icon and under the app */
   const flat = await page.evaluate(() => {
     const cv = document.createElement('canvas');

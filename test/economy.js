@@ -41,13 +41,17 @@ const ctx = {
 };
 vm.createContext(ctx);
 vm.runInContext('var LANG = "en";', ctx);
-require('./_modules.js').WITH_SAVE.forEach(f =>
+require('./_modules.js').WITH_SAVE.concat(['52-project.js']).forEach(f =>
   vm.runInContext(fs.readFileSync(path.join(jsDir, f), 'utf8'), ctx, { filename: f }));
 
 const X = vm.runInContext(
   '({ FOODS, TOYS, BOOSTERS, HATS, COLLARS, FURNITURE, ROOM_THEMES, KEEPSAKES, BADGES, giftFor,' +
   '   HEART_MAX, ECON, JAR, TREAT_PACKS, PASS, PASS_TRACK, passTier, SEASON_DAYS, isGate,' +
-  '   BREEDS, EYE_COLORS, GROOM, targetClear })', ctx);
+  '   BREEDS, EYE_COLORS, GROOM, targetClear, projectTheme })', ctx);
+/* Since 1.4 the furniture and six of the paints are not sold for coins:
+   they are the house project's jobs, paid in stars (52-project.js). The
+   coin catalogue is what is left. */
+const COIN_THEMES = X.ROOM_THEMES.filter(t => !X.projectTheme(t.id));
 const E = X.ECON;
 
 /* the one number that still lives somewhere this cannot import, because
@@ -138,8 +142,7 @@ function catalogue() {
   add('boosters (one of each)', X.BOOSTERS);
   add('hats', X.HATS);
   add('collars', X.COLLARS);
-  add('furniture', X.FURNITURE);
-  add('room themes', X.ROOM_THEMES);
+  add('room themes (the ones not in the project)', COIN_THEMES);
   /* The grooming shelf. Every breed carries three coats and the animal
      arrives wearing one, so a full house of six leaves twelve to buy;
      eye colours are shared across the house like collars are, and one of
@@ -244,8 +247,7 @@ function run(days, farm, seed) {
     .concat(X.TOYS.map(x => ({ key: 'toy:' + x.id, cost: x.cost })))
     .concat(X.HATS.map(x => ({ key: 'hat:' + x.id, cost: x.cost })))
     .concat(X.COLLARS.map(x => ({ key: 'col:' + x.id, cost: x.cost })))
-    .concat(X.FURNITURE.map(x => ({ key: 'fur:' + x.id, cost: x.cost })))
-    .concat(X.ROOM_THEMES.map(x => ({ key: 'thm:' + x.id, cost: x.cost })))
+    .concat(COIN_THEMES.map(x => ({ key: 'thm:' + x.id, cost: x.cost })))
     .filter(x => x.cost > 0)
     .sort((a, b) => a.cost - b.cost);
   const weeks = [];

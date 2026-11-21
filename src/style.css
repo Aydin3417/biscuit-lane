@@ -1328,3 +1328,207 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
   100%{ opacity:0; transform:translate(-50%,-62%) scale(.96); }
 }
 @media (prefers-reduced-motion: reduce){ .hardSplash{ animation:none; } }
+
+/* ============================================================
+   1.4 — THE SKIN
+
+   Asked to look like the games it is measured against, on 21 Nov 2026:
+   "it shows it was made with AI; it wants that softness, that modern
+   feel". What those games share is not a picture, it is a few physical
+   rules, and the old skin broke every one of them: a button was a flat
+   label with a hairline round it; a card was a rectangle with a border;
+   the green that means "go" in every one of them did not exist here,
+   where Play, Buy, Next and Carry on were all the same amber as the
+   coins. So: one lit face and one darker lip under everything that can
+   be pressed, and the lip goes when it is pressed; no hairlines, only
+   soft shadow; green for going on, gold for an offer, plum for treats,
+   sky for a video; type a weight heavier. Laid over the components
+   rather than written into them, so Dusk inherits it through the same
+   tokens.
+   ============================================================ */
+:root{
+  --lip:#E8CDA8; --lip-soft:#F2E1C8;
+  --go-1:#88DE4E; --go-2:#4CB233; --go-lip:#2F861E;
+  --gold-1:#FFC94F; --gold-2:#F5891F; --gold-lip:#BF5D0C;
+  --plum-1:#C79CFF; --plum-2:#8853DD; --plum-lip:#6033AA;
+  --sky-1:#6CC8FF; --sky-2:#2D8DDE; --sky-lip:#1D62A8;
+  --press:3px;
+}
+:root[data-theme="dark"]{ --lip:#0A0F17; --lip-soft:#141C28; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --lip:#0A0F17; --lip-soft:#141C28; } }
+
+/* the bars at the top and bottom: soft sheets rather than ruled strips */
+.topbar{ border-bottom:none; border-radius:0 0 24px 24px; box-shadow:0 6px 20px -8px rgba(70,45,20,.28); }
+.tabbar{ border-top:none; border-radius:24px 24px 0 0; box-shadow:0 -6px 20px -8px rgba(70,45,20,.28); padding-top:8px; }
+.tab{ font-weight:800; font-size:var(--t-nano); gap:3px; }
+.tab svg{ width:25px; height:25px; }
+.tab.on{ background:color-mix(in srgb, var(--accent) 20%, transparent); }
+.tab.on svg{ transform:translateY(-1px) scale(1.08); }
+
+/* the purse: white coins of their own, with a + where tapping one buys */
+.chip{ background:var(--surface); border:none; padding:6px 8px 6px 6px; gap:5px;
+  box-shadow:0 3px 0 var(--lip), 0 6px 12px -4px rgba(70,45,20,.22);
+  font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); color:var(--text); }
+.chip svg{ width:21px; height:21px; }
+.chip.hearts svg{ color:var(--rose); } .chip.coins svg{ color:var(--accent); } .chip.treats svg{ color:var(--plum); }
+.chip .plus{ display:grid; place-items:center; width:19px; height:19px; margin-left:2px; border-radius:7px;
+  background:linear-gradient(var(--go-1),var(--go-2)); color:#fff; font:900 15px/1 "Grandstander",sans-serif;
+  box-shadow:0 2px 0 var(--go-lip); }
+.chip:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--lip); }
+.iconbtn{ background:var(--surface); border:none; box-shadow:0 3px 0 var(--lip), 0 6px 12px -4px rgba(70,45,20,.22); }
+
+/* cards: no hairline, a lip and a soft fall of shadow */
+.card{ background:var(--surface); border:none; border-radius:24px;
+  box-shadow:0 4px 0 var(--lip), 0 14px 28px -14px rgba(70,45,20,.38); }
+.card.hero{ box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 55%, transparent), 0 5px 0 var(--lip), 0 16px 30px -14px rgba(70,45,20,.42); }
+.card.quiet{ box-shadow:none; }
+.sectitle h3{ font-size:1.25rem; font-weight:900; }
+
+/* buttons: a lit face on a lip, pressed into it */
+.btn{ border:none; border-radius:18px; font-weight:800; padding:13px 18px;
+  background:var(--surface); color:var(--text);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.55), 0 var(--press) 0 var(--lip), 0 8px 16px -8px rgba(70,45,20,.3); }
+.btn:active{ transform:translateY(var(--press)); box-shadow:inset 0 2px 0 rgba(255,255,255,.4), 0 0 0 var(--lip); }
+.btn.primary, .btn.go{ color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.16);
+  background:linear-gradient(var(--go-1),var(--go-2));
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 var(--press) 0 var(--go-lip), 0 10px 18px -8px rgba(47,134,30,.55); }
+.btn.primary:active, .btn.go:active{ transform:translateY(var(--press)); box-shadow:inset 0 2px 0 rgba(255,255,255,.35), 0 0 0 var(--go-lip); }
+.btn.gold{ color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.16); background:linear-gradient(var(--gold-1),var(--gold-2));
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.5), 0 var(--press) 0 var(--gold-lip), 0 10px 18px -8px rgba(191,93,12,.5); }
+.btn.plum{ color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.16); background:linear-gradient(var(--plum-1),var(--plum-2));
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 var(--press) 0 var(--plum-lip), 0 10px 18px -8px rgba(96,51,170,.5); }
+.btn.sky{ color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.16); background:linear-gradient(var(--sky-1),var(--sky-2));
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 var(--press) 0 var(--sky-lip), 0 10px 18px -8px rgba(29,98,168,.5); }
+.btn.gold:active, .btn.plum:active, .btn.sky:active{ transform:translateY(var(--press)); box-shadow:inset 0 2px 0 rgba(255,255,255,.35); }
+.btn.rose{ border:none; box-shadow:inset 0 2px 0 rgba(255,255,255,.35), 0 var(--press) 0 color-mix(in srgb, var(--rose) 60%, #000); }
+.btn.ghost{ background:transparent; box-shadow:none; color:var(--text-dim); }
+.btn.ghost:active{ transform:scale(.97); box-shadow:none; }
+.btn.sm{ border-radius:14px; padding:8px 13px; --press:2px; }
+.btn.big{ padding:16px 20px; font-size:1.375rem; border-radius:22px; --press:5px; }
+.btn .price{ display:inline-flex; align-items:center; gap:4px; padding:2px 9px; border-radius:11px; background:rgba(0,0,0,.14); font-size:.95em; }
+.btn .price svg{ width:17px; height:17px; }
+
+/* the segmented control */
+.tabs{ background:var(--surface-2); border:none; border-radius:18px; padding:4px; box-shadow:inset 0 2px 4px rgba(70,45,20,.12); }
+.tabs button{ border-radius:14px; font-weight:800; }
+.tabs button.on{ background:var(--surface); box-shadow:0 3px 0 var(--lip); color:var(--text); }
+
+/* sheets pop in, with a little overshoot, and sit on a lip */
+.sheet{ border:none; border-radius:30px; padding:22px 18px 18px;
+  box-shadow:0 6px 0 var(--lip), 0 28px 60px -12px rgba(0,0,0,.45);
+  transform:translateY(24px) scale(.88); transition:transform .42s cubic-bezier(.2,1.5,.35,1), opacity .2s ease; }
+.sheet h2{ font-size:1.75rem; font-weight:900; letter-spacing:-.01em; }
+
+/* care buttons: four chunky keys */
+.care{ border:none; border-radius:20px; background:var(--surface);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.55), 0 4px 0 var(--lip), 0 10px 18px -10px rgba(70,45,20,.35); }
+.care:active{ transform:translateY(4px); box-shadow:0 0 0 var(--lip); }
+.care.hot{ box-shadow:0 0 0 3px color-mix(in srgb, var(--tint) 55%, transparent), 0 4px 0 var(--lip); }
+
+/* pills read as badges, not as captions */
+.pill{ padding:4px 10px; font-weight:800; }
+
+/* shop goods: the picture first and large, the price a green key under it */
+.good{ align-items:center; text-align:center; border:none; border-radius:22px; background:var(--surface);
+  box-shadow:0 4px 0 var(--lip), 0 12px 22px -12px rgba(70,45,20,.35); }
+.good .art{ border-radius:18px; }
+.good .nm{ font-family:"Grandstander",sans-serif; font-weight:800; font-size:var(--t-body); }
+.good .ds{ -webkit-line-clamp:2; }
+.good .btn{ align-self:stretch; border-radius:14px; }
+.btn.price{ color:#fff; text-shadow:0 2px 0 rgba(0,0,0,.16); background:linear-gradient(var(--go-1),var(--go-2));
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 var(--press) 0 var(--go-lip); }
+.btn.price:active{ transform:translateY(var(--press)); background:linear-gradient(var(--go-1),var(--go-2)); box-shadow:0 0 0 var(--go-lip); }
+.good .art{ height:86px; }
+.good.owned{ box-shadow:0 0 0 3px color-mix(in srgb, var(--sage) 55%, transparent), 0 4px 0 var(--lip); }
+
+/* ---------- the house project card (52-project.js) ---------- */
+.pstar{ display:inline-block; width:1.15em; height:1.15em; vertical-align:-.2em; flex:0 0 auto;
+  background:radial-gradient(circle at 35% 30%,#FFF4B0,#FFC21A 58%,#E08F00);
+  clip-path:polygon(50% 0,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+  filter:drop-shadow(0 1px 0 rgba(140,80,0,.4)); }
+.ribbon{ display:inline-block; font:900 1.0625rem/1.1 "Grandstander",sans-serif; color:#fff; padding:6px 16px 7px; border-radius:12px;
+  background:linear-gradient(#FF8FA8,#E8547A); box-shadow:0 3px 0 #B8355A; text-shadow:0 2px 0 rgba(0,0,0,.15); }
+.projCard{ display:flex; flex-direction:column; gap:8px; }
+.projHead{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.projStars{ display:inline-flex; align-items:center; gap:6px; font:900 1.375rem/1 "Grandstander",sans-serif; color:#C27A00;
+  background:color-mix(in srgb, #FFC21A 18%, var(--surface)); padding:5px 12px 5px 8px; border-radius:16px; box-shadow:0 3px 0 var(--lip); }
+:root[data-theme="dark"] .projStars{ color:#FFD45A; }
+.projBar{ position:relative; height:18px; border-radius:10px; background:var(--surface-3); overflow:hidden; box-shadow:inset 0 2px 3px rgba(0,0,0,.1); margin:2px 0 4px; }
+.projBar i{ display:block; height:100%; border-radius:10px; background:linear-gradient(#FFD45A,#FFAA1E); transition:width .6s cubic-bezier(.2,1.3,.35,1); }
+.projBar b{ position:absolute; inset:0; display:grid; place-items:center; font:900 .8125rem "Grandstander",sans-serif; color:var(--text); }
+.projCard .task{ display:flex; align-items:center; gap:10px; padding:8px 0; border-top:2px dashed var(--surface-3); }
+.projCard .task .thumb{ width:52px; height:46px; border-radius:14px; background:var(--surface-2); display:grid; place-items:center; flex:0 0 auto; overflow:hidden; }
+.projCard .task .thumb canvas{ display:block; }
+.projCard .task .swatch{ width:34px; height:28px; border-radius:8px; box-shadow:0 2px 0 var(--lip); }
+.projCard .task .t{ flex:1 1 auto; min-width:0; font-weight:800; font-size:var(--t-small); line-height:1.25; }
+.projCard .task .btn{ min-width:64px; gap:4px; }
+.projCard .task .btn.locked{ background:var(--surface-2); color:var(--text-faint); box-shadow:0 2px 0 var(--lip); }
+.projNote{ margin:0; font-size:var(--t-micro); color:var(--text-dim); text-align:center; }
+.shopNote{ margin:-6px 3px 0; font-size:var(--t-micro); color:var(--text-dim); }
+.reward.homeStar{ color:#C27A00; display:inline-flex; align-items:center; gap:4px; }
+.winHome{ margin-top:-6px; font-size:var(--t-small); font-weight:700; color:#B06D00; }
+/* the Play key pinned to the bottom of the home screen */
+.playBar{ position:sticky; bottom:10px; z-index:5; margin-top:2px; }
+.playBar .btn{ box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 5px 0 var(--go-lip), 0 14px 26px -6px rgba(47,134,30,.55); }
+.playBar .btn svg{ width:24px; height:24px; }
+.tierChip{ display:inline-flex; align-items:center; gap:3px; margin-left:4px; padding:2px 9px; border-radius:10px;
+  font-size:.75em; background:rgba(0,0,0,.18); }
+.tierChip svg{ width:15px; height:15px; }
+.tierChip.super{ background:rgba(110,40,140,.45); }
+
+/* ---------- shop: effects, the deal of the day, the welcome pack ---------- */
+.good .art{ align-self:stretch; height:92px; }
+.good .ds{ -webkit-line-clamp:1; }
+.fxRow{ display:flex; gap:5px; justify-content:center; flex-wrap:wrap; margin:1px 0 3px; }
+.fx{ display:inline-flex; align-items:center; gap:3px; padding:2px 8px 2px 6px; border-radius:10px; font:800 var(--t-micro) "Karla",sans-serif; }
+.fx svg{ width:14px; height:14px; }
+.fx.food{ background:color-mix(in srgb, var(--accent) 18%, var(--surface)); color:var(--accent-strong); }
+.fx.joy{ background:color-mix(in srgb, var(--rose) 14%, var(--surface)); color:var(--rose); }
+.ribbon.gold{ background:linear-gradient(#FFB45A,#F07A1A); box-shadow:0 3px 0 #B8560C; }
+.dealWrap{ text-align:center; margin-bottom:-22px; position:relative; z-index:2; }
+.card.deal{ position:relative; display:flex; gap:12px; align-items:center; padding:26px 14px 14px; overflow:visible;
+  background:linear-gradient(135deg, var(--surface) 0%, color-mix(in srgb, var(--accent) 10%, var(--surface)) 100%); }
+.dealArt{ width:96px; height:96px; flex:0 0 auto; display:grid; place-items:center; border-radius:20px; background:var(--surface-2); }
+.dealIcon{ width:60px; height:60px; color:var(--accent-strong); display:block; }
+.dealBody{ flex:1; display:flex; flex-direction:column; align-items:flex-start; gap:4px; min-width:0; }
+.dealBody b{ font:900 1.125rem/1.15 "Grandstander",sans-serif; }
+.dealBody .fxRow{ justify-content:flex-start; }
+.dealDs{ font-size:var(--t-micro); color:var(--text-dim); }
+.dealClock{ font:800 var(--t-micro) "Karla",sans-serif; color:#D5502F; font-variant-numeric:tabular-nums; }
+.dealClock::before{ content:"⏱ "; }
+.btn .was{ opacity:.75; font-size:.8em; margin-left:2px; }
+.dealBadge{ position:absolute; top:-10px; right:-4px; transform:rotate(8deg); padding:6px 10px; border-radius:14px;
+  background:linear-gradient(#FF6B8B,#E33E64); color:#fff; font:900 1rem "Grandstander",sans-serif; box-shadow:0 3px 0 #A8264A; }
+.card.deal.bought{ opacity:.75; }
+.card.pack{ position:relative; overflow:visible; padding:22px 16px 16px; color:#fff;
+  background:linear-gradient(135deg,#7E5BD6,#B57BEA); box-shadow:0 5px 0 #5A3AA8, 0 14px 28px -10px rgba(90,58,168,.5); }
+.packTag{ position:absolute; top:-11px; left:16px; padding:4px 12px; border-radius:10px; background:#FFC21A; color:#5A3400;
+  font:900 var(--t-micro) "Grandstander",sans-serif; box-shadow:0 3px 0 #C28A00; }
+.packT{ display:block; font:900 1.375rem "Grandstander",sans-serif; margin-bottom:8px; }
+.packRow{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:12px; }
+.packRow span{ display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 2px; border-radius:14px; background:rgba(255,255,255,.18); }
+.packRow svg{ width:24px; height:24px; color:#fff; }
+.packRow i{ font:900 var(--t-small) "Grandstander",sans-serif; font-style:normal; }
+.carryKeys{ display:flex; flex-direction:column; gap:12px; margin-top:-2px; }
+.carryKeys .btn{ width:100%; }
+.adLine{ margin-top:2px; }
+.carryNote{ margin:-4px 0 0 !important; font-size:var(--t-micro) !important; }
+
+/* ---------- the win card, as a celebration ---------- */
+.winPet{ position:relative; }
+.winPet::before{ content:""; position:absolute; left:50%; top:50%; width:230px; height:230px; margin:-115px 0 0 -115px; z-index:-1;
+  background:radial-gradient(closest-side, rgba(255,214,90,.75), rgba(255,214,90,0)); animation:winGlow 3.2s ease-in-out infinite; }
+@keyframes winGlow{ 50%{ transform:scale(1.12); opacity:.8; } }
+.starsRow{ align-items:flex-end; gap:6px; }
+.starsRow .s{ width:58px; height:58px; color:#FFC21A; filter:drop-shadow(0 3px 0 #C98500) drop-shadow(0 6px 10px rgba(201,133,0,.35)); }
+.starsRow .s[data-i="1"]{ width:74px; height:74px; margin-bottom:10px; }
+.starsRow .s svg{ width:100%; height:100%; }
+.starsRow + h2{ font-size:2.375rem; color:#fff; -webkit-text-stroke:7px #3E9E28; paint-order:stroke fill;
+  text-shadow:0 4px 0 #2F861E; letter-spacing:.01em; }
+.rewardRow{ gap:8px; flex-wrap:wrap; justify-content:center; }
+.rewardRow .reward{ padding:6px 12px; border-radius:16px; background:var(--surface-2); box-shadow:0 3px 0 var(--lip);
+  font-family:"Grandstander",sans-serif; font-weight:900; font-size:1.125rem; }
+.winHome{ font-size:var(--t-micro); }
+.winPet{ isolation:isolate; }
+.starsRow .s svg path, .starsRow .s svg polygon{ fill:#FFC93A; stroke:#E59400; stroke-width:1px; }
+.starsRow + h2{ -webkit-text-stroke-width:5px; }
