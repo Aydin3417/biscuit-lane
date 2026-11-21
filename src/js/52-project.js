@@ -194,7 +194,7 @@ function projectCardHtml() {
     </div>`;
   }
   const pr = projectProgress(p);
-  const open = p.tasks.filter(t => !h.done[t.id]).slice(0, 3);
+  const open = p.tasks.filter(t => !h.done[t.id]).slice(0, 2);
   const thumb = t => t.give[0] === 'theme'
     ? (() => { const th = ROOM_THEMES.find(x => x.id === t.give[1]); return `<span class="swatch" style="background:linear-gradient(160deg,${th.wall},${th.wall2} 60%,${th.floor} 60%)"></span>`; })()
     : `<canvas data-room="${t.give[1]}" width="52" height="46"></canvas>`;

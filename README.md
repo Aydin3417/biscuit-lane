@@ -5029,9 +5029,18 @@ a sentence.
 
 **The skin.** Buttons have a lit face and a lip they press into, chips
 in the top bar carry a +, cards sit on a shadow, the win card's stars
-are gold and its title is stroked. The home screen keeps one green
-button to play stuck above the tab bar, and what scrolls behind it
-fades into the page.
+are gold and its title is stroked. Nothing on the page can be selected
+or copied by a long press any more; the name field still can.
+
+**The home screen has a Play strip of its own.** The first try was a
+sticky bar inside the scrolling cards. The room is pinned above that
+scroller, so on a 375-point phone the cards had about 280px between the
+room and the tab bar, and the bar took 80 of them and sat on whatever
+was under it — the owner's word was that it looked squeezed. The key is
+now a strip between the scroller and the tab bar that nothing passes
+behind; the room is at most a third of the screen's height (227px on a
+667-point phone, unchanged on taller ones); the house card shows the
+next two jobs, not three. Photographed at 375×667, 375×812 and 412×915.
 
 **The icon** is the same device, cropped to fill the square: at .76 it
 sat in a margin of its own background and read as a small thing on a

@@ -421,11 +421,6 @@ function renderHome() {
       : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('home_perk_none', { name: pet.name })}</div>`}
     </div>
 
-    ${/* The thing the screen is for, always in reach. The level card above
-         says what the level is; this is the key that starts it, pinned to
-         the bottom of the view however far down the room is scrolled, the
-         way every game this one sits beside keeps its Play. */ ''}
-    <div class="playBar"><button class="btn primary big wide" id="playBar">${IC.play}${T('lvl_intro', { n: nextN })}${tierOf(nextN) ? ` <span class="tierChip ${tierOf(nextN)}">${IC.flame}${T(tierOf(nextN) === 'super' ? 'g_gate' : 'g_hard')}</span>` : ''}</button></div>
   `;
 
   bindProjectCard(pad);
@@ -450,7 +445,16 @@ function renderHome() {
     setTimeout(() => openLevelIntro(SAVE.reached), 240);
   };
   $('#goPlay').addEventListener('click', go);
-  $('#playBar').addEventListener('click', go);
+  /* The thing the screen is for, always in reach: a strip of its own
+     between the cards and the tab bar, the way the games this one sits
+     beside keep their Play. It was a sticky bar inside the scrolling
+     cards, and on a 375-point phone it sat on top of them — the room,
+     the house jobs and the key pressed into each other, with a card's
+     edge showing round the button. Outside the scroller nothing can
+     pass behind it. */
+  const foot = $('#homeFoot');
+  foot.innerHTML = `<button class="btn primary big wide" id="playBar">${IC.play}${T('lvl_intro', { n: nextN })}${tierOf(nextN) ? ` <span class="tierChip ${tierOf(nextN)}">${IC.flame}${T(tierOf(nextN) === 'super' ? 'g_gate' : 'g_hard')}</span>` : ''}</button>`;
+  $('#playBar', foot).addEventListener('click', go);
 }
 function showMood(text) {
   const b = $('#moodBubble');

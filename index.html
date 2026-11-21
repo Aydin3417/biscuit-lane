@@ -234,7 +234,13 @@ body{
   -webkit-font-smoothing:antialiased;
   -webkit-tap-highlight-color:transparent;
   overscroll-behavior:none;
+  /* A game, not a page: a long press on a label selected it and offered
+     to copy it, on both phones. The one field that takes typing (the
+     pet's name) gets selection back below. */
+  -webkit-user-select:none; user-select:none;
+  -webkit-touch-callout:none;
 }
+input, textarea, [contenteditable]{ -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
 h1,h2,h3,h4{ font-family:"Grandstander","Trebuchet MS",system-ui,sans-serif; font-weight:800; margin:0; letter-spacing:-.01em; text-wrap:balance; }
 button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; }
 :focus-visible{ outline:3px solid var(--accent); outline-offset:2px; border-radius:6px; }
@@ -1526,14 +1532,10 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .reward.homeStar{ color:#C27A00; display:inline-flex; align-items:center; gap:4px; }
 .winHome{ margin-top:-6px; font-size:var(--t-small); font-weight:700; color:#B06D00; }
 /* the Play key pinned to the bottom of the home screen */
-.playBar{ position:sticky; bottom:10px; z-index:5; margin-top:2px; }
-/* What scrolls behind the bar fades into the page instead of showing a
-   sliver of the card underneath round its edges — on a phone the hero
-   card's frame and goal line peeked out above and below the button. */
-.playBar::before{ content:""; position:absolute; z-index:-1; left:-18px; right:-18px; top:-34px; bottom:-16px;
-  background:linear-gradient(to bottom, color-mix(in srgb, var(--bg) 0%, transparent), var(--bg) 32%); pointer-events:none; }
-.playBar .btn{ box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 5px 0 var(--go-lip), 0 14px 26px -6px rgba(47,134,30,.55); }
-.playBar .btn svg{ width:24px; height:24px; }
+.homeFoot{ flex:0 0 auto; padding:10px 16px 12px; }
+.homeFoot:empty{ display:none; }
+.homeFoot .btn{ box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 5px 0 var(--go-lip), 0 12px 22px -8px rgba(47,134,30,.5); }
+.homeFoot .btn svg{ width:24px; height:24px; }
 .tierChip{ display:inline-flex; align-items:center; gap:3px; margin-left:4px; padding:2px 9px; border-radius:10px;
   font-size:.75em; background:rgba(0,0,0,.18); }
 .tierChip svg{ width:15px; height:15px; }
@@ -1541,7 +1543,6 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 
 /* ---------- shop: effects, the deal of the day, the welcome pack ---------- */
 .good .art{ align-self:stretch; height:92px; }
-.good .ds{ -webkit-line-clamp:1; }
 .fxRow{ display:flex; gap:5px; justify-content:center; flex-wrap:wrap; margin:1px 0 3px; }
 .fx{ display:inline-flex; align-items:center; gap:3px; padding:2px 8px 2px 6px; border-radius:10px; font:800 var(--t-micro) "Karla",sans-serif; }
 .fx svg{ width:14px; height:14px; }
@@ -1633,6 +1634,7 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
         <div class="scroller">
           <div class="pad" id="homePad"></div>
         </div>
+        <div class="homeFoot" id="homeFoot"></div>
       </section>
 
       <!-- ============ MAP ============ -->
@@ -19781,7 +19783,11 @@ function roomLayout() {
      screen the app opens on, and since the animals brought home off
      the lane live in it as well it was being asked to hold three of
      them in a strip 232px tall on a 375px phone. */
-  const h = Math.round(clamp(w * .70, 190, 300));
+  /* and no more than a third of the screen's height: under it sit the
+     house jobs and the Play strip, and on a 667-point phone a room of
+     .70 of the width left the jobs a strip 200px tall */
+  const vh = window.innerHeight || 800;
+  const h = Math.round(clamp(Math.min(w * .70, vh * .32), 190, 300));
   ROOM.w = w; ROOM.h = h;
   ROOM.ctx = fitCanvas(cv, w, h);
 }
@@ -20938,7 +20944,7 @@ function projectCardHtml() {
     </div>`;
   }
   const pr = projectProgress(p);
-  const open = p.tasks.filter(t => !h.done[t.id]).slice(0, 3);
+  const open = p.tasks.filter(t => !h.done[t.id]).slice(0, 2);
   const thumb = t => t.give[0] === 'theme'
     ? (() => { const th = ROOM_THEMES.find(x => x.id === t.give[1]); return `<span class="swatch" style="background:linear-gradient(160deg,${th.wall},${th.wall2} 60%,${th.floor} 60%)"></span>`; })()
     : `<canvas data-room="${t.give[1]}" width="52" height="46"></canvas>`;
@@ -21383,11 +21389,6 @@ function renderHome() {
       : `<div style="font-size:var(--t-small);color:var(--text-faint)">${T('home_perk_none', { name: pet.name })}</div>`}
     </div>
 
-    ${/* The thing the screen is for, always in reach. The level card above
-         says what the level is; this is the key that starts it, pinned to
-         the bottom of the view however far down the room is scrolled, the
-         way every game this one sits beside keeps its Play. */ ''}
-    <div class="playBar"><button class="btn primary big wide" id="playBar">${IC.play}${T('lvl_intro', { n: nextN })}${tierOf(nextN) ? ` <span class="tierChip ${tierOf(nextN)}">${IC.flame}${T(tierOf(nextN) === 'super' ? 'g_gate' : 'g_hard')}</span>` : ''}</button></div>
   `;
 
   bindProjectCard(pad);
@@ -21412,7 +21413,16 @@ function renderHome() {
     setTimeout(() => openLevelIntro(SAVE.reached), 240);
   };
   $('#goPlay').addEventListener('click', go);
-  $('#playBar').addEventListener('click', go);
+  /* The thing the screen is for, always in reach: a strip of its own
+     between the cards and the tab bar, the way the games this one sits
+     beside keep their Play. It was a sticky bar inside the scrolling
+     cards, and on a 375-point phone it sat on top of them — the room,
+     the house jobs and the key pressed into each other, with a card's
+     edge showing round the button. Outside the scroller nothing can
+     pass behind it. */
+  const foot = $('#homeFoot');
+  foot.innerHTML = `<button class="btn primary big wide" id="playBar">${IC.play}${T('lvl_intro', { n: nextN })}${tierOf(nextN) ? ` <span class="tierChip ${tierOf(nextN)}">${IC.flame}${T(tierOf(nextN) === 'super' ? 'g_gate' : 'g_hard')}</span>` : ''}</button>`;
+  $('#playBar', foot).addEventListener('click', go);
 }
 function showMood(text) {
   const b = $('#moodBubble');

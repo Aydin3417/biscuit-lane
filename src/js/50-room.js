@@ -20,7 +20,11 @@ function roomLayout() {
      screen the app opens on, and since the animals brought home off
      the lane live in it as well it was being asked to hold three of
      them in a strip 232px tall on a 375px phone. */
-  const h = Math.round(clamp(w * .70, 190, 300));
+  /* and no more than a third of the screen's height: under it sit the
+     house jobs and the Play strip, and on a 667-point phone a room of
+     .70 of the width left the jobs a strip 200px tall */
+  const vh = window.innerHeight || 800;
+  const h = Math.round(clamp(Math.min(w * .70, vh * .32), 190, 300));
   ROOM.w = w; ROOM.h = h;
   ROOM.ctx = fitCanvas(cv, w, h);
 }

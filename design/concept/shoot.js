@@ -5,7 +5,7 @@
 
    A fresh save each time: the onboarding is clicked through, a pet is
    brought home, then the given script runs and the page is shot to
-   design/concept/shots/<name>.png at 390x844, 2x. */
+   design/concept/shots/<name>.png at 390x844 (or VIEW), 2x. */
 const path = require('path');
 const fs = require('fs');
 const PW = require('../../tools/_pw.js');
@@ -14,7 +14,9 @@ const [name, setup, scheme] = process.argv.slice(2);
 (async () => {
   const server = await PW.serve();
   const browser = await PW.launch();
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2,
+  /* VIEW=375x667 for another phone; 390x844 by default */
+  const [vw, vh] = (process.env.VIEW || '390x844').split('x').map(Number);
+  const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, deviceScaleFactor: 2,
     colorScheme: scheme === 'dark' ? 'dark' : 'light', hasTouch: true, isMobile: true });
   const page = await ctx.newPage();
   await page.addInitScript(() => { Date.prototype.getHours = () => 12; Date.prototype.getMinutes = () => 0; });
