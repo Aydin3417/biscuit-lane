@@ -337,7 +337,22 @@ const ADS = {
          bought anything: someone who paid has paid
      Every rule is in breakDue(), so the test can read the rules rather
      than the plumbing. */
-  inter: { loading: null, loaded: false, wins: 0 },
+  /* THE COUNT OF WINS LIVES IN THE SAVE.
+
+     It was a number on this object, so it started at nought every time
+     the app did, and "every third win" meant every third win in one
+     sitting. The owner played 1.3.0 for four days, four sittings of one
+     or two levels each, from level 31 to 34 past the level-20 start:
+     the rewarded video loaded every time (three ad_load ok, five offers
+     on the server) and the break was never once due. Most people play a
+     level or two between other things, so the break as shipped reached
+     almost nobody. The count is kept with the save now, across
+     launches; the three minutes between videos still start afresh. */
+  inter: {
+    loading: null, loaded: false,
+    get wins() { return (typeof SAVE !== 'undefined' && SAVE && +SAVE.adWins) || 0; },
+    set wins(v) { if (typeof SAVE !== 'undefined' && SAVE) SAVE.adWins = v; }
+  },
   lastShown: 0,
   interUnit() {
     const ios = nativePlatform() === 'ios';
@@ -369,6 +384,7 @@ const ADS = {
      never waits more than a minute. */
   async breakAfterWin(n, quiet) {
     this.inter.wins++;
+    persist();
     /* a chest or a pet growing up is already queued behind the card;
        an ad is never stacked on a celebration */
     if (quiet || !this.ready() || !this.inited) return false;

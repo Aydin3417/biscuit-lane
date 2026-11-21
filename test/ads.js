@@ -138,6 +138,12 @@ const mock = mode => `
         A.lastShown = 0; A.inter.wins = 1;
         out.tooSoon = A.breakDue(40);
         out.count = __ad.inter || 0;
+        /* the count is the save's, so a win before closing the app
+           still counts after it opens again */
+        A.inter.wins = 2;
+        out.inSave = S.adWins;
+        S.adWins = 1;
+        out.fromSave = A.inter.wins;
         S.created = created; S.granted = granted;
         return out;
       });
@@ -150,6 +156,7 @@ const mock = mode => `
       ok(b.shown === true && b.count === 1, 'shown once when due', b);
       ok(b.gap === false, 'never twice inside the gap', b);
       ok(b.tooSoon === false, 'never before enough wins', b);
+      ok(b.inSave === 2 && b.fromSave === 1, 'the count of wins is kept in the save, across launches', b);
     }
     ok(errors.length === 0, 'nothing threw in the page', errors);
     await page.close();

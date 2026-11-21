@@ -17,6 +17,7 @@ function freshSave() {
   return {
     v: SAVE_VERSION,
     created: now(),
+    adWins: 0,                // wins since the last between-levels video (19-ads.js)
     lastSeen: now(),
     install: 0,               // random, made on first boot, forgotten with the save
     coins: 120,
@@ -94,7 +95,7 @@ const SAVE_VERSION = 2;
 /* what a build calls itself when it reports anything. Bumped by hand,
    with android/app/build.gradle's versionName, so a crash from an old
    install is not read as one from the current one. */
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 
 function migrate(d) {
   const v = d.v || 1;

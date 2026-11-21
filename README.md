@@ -4984,3 +4984,20 @@ reads as glazed pieces in a tray rather than stickers printed on it.
 manage while you are out") shows for the first five levels, and the
 paragraph saying a trait has not settled yet is gone from the bond card
 — the pet's own card on the family page still says it in full.
+
+## 1.3.1: the break counted its wins from zero every launch
+
+The owner played 1.3.0 for four days and never saw the between-levels
+video. The server had the whole story: the rewarded video loaded every
+launch (three `ad_load` ok, five `ad_offer`, none tapped), AdMob had the
+iOS app ready and serving with app-ads.txt verified on 100% of requests,
+and the four sittings went one win, none, two wins, one win, from level
+31 to 34. "Every third win" was a number on the ADS object, so it began
+at nought with every launch and meant every third win in one sitting.
+Most people play a level or two between other things; the break as
+shipped reached almost nobody.
+
+The count is `SAVE.adWins` now and survives a relaunch
+(`test/ads.js` checks it); the three minutes between videos still start
+afresh. Every other rule is unchanged: after a win, from level 20,
+never on the day of install, never for a payer.
