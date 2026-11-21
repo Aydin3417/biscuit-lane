@@ -1527,6 +1527,11 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .winHome{ margin-top:-6px; font-size:var(--t-small); font-weight:700; color:#B06D00; }
 /* the Play key pinned to the bottom of the home screen */
 .playBar{ position:sticky; bottom:10px; z-index:5; margin-top:2px; }
+/* What scrolls behind the bar fades into the page instead of showing a
+   sliver of the card underneath round its edges — on a phone the hero
+   card's frame and goal line peeked out above and below the button. */
+.playBar::before{ content:""; position:absolute; z-index:-1; left:-18px; right:-18px; top:-34px; bottom:-16px;
+  background:linear-gradient(to bottom, color-mix(in srgb, var(--bg) 0%, transparent), var(--bg) 32%); pointer-events:none; }
 .playBar .btn{ box-shadow:inset 0 2px 0 rgba(255,255,255,.45), 0 5px 0 var(--go-lip), 0 14px 26px -6px rgba(47,134,30,.55); }
 .playBar .btn svg{ width:24px; height:24px; }
 .tierChip{ display:inline-flex; align-items:center; gap:3px; margin-left:4px; padding:2px 9px; border-radius:10px;
@@ -6901,7 +6906,7 @@ const SAVE_VERSION = 2;
 /* what a build calls itself when it reports anything. Bumped by hand,
    with android/app/build.gradle's versionName, so a crash from an old
    install is not read as one from the current one. */
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4.0';
 
 function migrate(d) {
   const v = d.v || 1;
@@ -8096,7 +8101,6 @@ function dailyDone(score) {
        It is still the best-paid four minutes in the game; it is no
        longer a salary. */
     const coins = tunePay('coin', ECON.dailyWalkCoins), treats = tunePay('treat', ECON.dailyWalkTreats);
-    addHomeStars(1, 'daily');
     SAVE.coins += coins;
     SAVE.treats += treats;
     persist(true);
@@ -8155,6 +8159,19 @@ function claimGift() {
   if (reward.booster) SAVE.boosters[reward.booster] = (SAVE.boosters[reward.booster] || 0) + 1;
   persist(true);
   return { reward, day };
+}
+
+/* Who has been brought home (see STRAY_TALES, 10-data.js). Read from
+   the gates themselves rather than kept as a list: a gate cleared is an
+   animal home, on this save and on one made before there were any. Kept
+   here with the save it reads, beneath both the room that draws them
+   and the family page that lists them. */
+function strayHome(k) { return SAVE.stars[(k + 1) * BLOCK] > 0; }
+function straysHome() {
+  const out = [];
+  const last = Math.floor(Math.max(0, SAVE.reached - 1) / BLOCK);
+  for (let k = 0; k <= last; k++) if (strayHome(k)) out.push(k);
+  return out;
 }
 
 /* ===== 16-notify.js ===== */
@@ -19878,7 +19895,7 @@ function renderRoom(dt) {
      back. Two and no more: a room with nine animals in it is a shelter,
      and the family page's wall has all of them. Drawn before the pet, so
      it walks in front of them. */
-  const lodgers = typeof straysHome === 'function' ? straysHome().slice(-2).reverse() : [];
+  const lodgers = straysHome().slice(-2).reverse();
   lodgers.forEach((k, i) => {
     const s = strayOf(k);
     const size = H * (i ? .19 : .22);
@@ -23141,7 +23158,11 @@ function noHeartsSheet() {
 function commitWin() {
   if (G.won) return G.won;
   if (G.n === DAILY_LEVEL) {
-    G.won = { daily: dailyDone(G.score) };
+    /* the walk's star for the house is paid here, not in dailyDone:
+       the save sits under the house project and does not call up */
+    const daily = dailyDone(G.score);
+    if (daily.first) addHomeStars(1, 'daily');
+    G.won = { daily };
     return G.won;
   }
   const n = G.n;
@@ -23387,16 +23408,6 @@ function showWin() {
 }
 /* The chest, opened. Shut for a beat and shaking, then open with what
    was in it: the half second of not knowing is most of what a chest is. */
-/* Who has been brought home (see STRAY_TALES, 10-data.js). Read from
-   the gates themselves rather than kept as a list: a gate cleared is an
-   animal home, on this save and on one made before there were any. */
-function strayHome(k) { return SAVE.stars[(k + 1) * BLOCK] > 0; }
-function straysHome() {
-  const out = [];
-  const last = Math.floor(Math.max(0, SAVE.reached - 1) / BLOCK);
-  for (let k = 0; k <= last; k++) if (strayHome(k)) out.push(k);
-  return out;
-}
 function strayWallHtml() {
   const home = straysHome();
   const nextK = home.length ? home[home.length - 1] + 1 : 0;

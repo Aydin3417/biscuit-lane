@@ -2196,7 +2196,11 @@ function noHeartsSheet() {
 function commitWin() {
   if (G.won) return G.won;
   if (G.n === DAILY_LEVEL) {
-    G.won = { daily: dailyDone(G.score) };
+    /* the walk's star for the house is paid here, not in dailyDone:
+       the save sits under the house project and does not call up */
+    const daily = dailyDone(G.score);
+    if (daily.first) addHomeStars(1, 'daily');
+    G.won = { daily };
     return G.won;
   }
   const n = G.n;
@@ -2442,16 +2446,6 @@ function showWin() {
 }
 /* The chest, opened. Shut for a beat and shaking, then open with what
    was in it: the half second of not knowing is most of what a chest is. */
-/* Who has been brought home (see STRAY_TALES, 10-data.js). Read from
-   the gates themselves rather than kept as a list: a gate cleared is an
-   animal home, on this save and on one made before there were any. */
-function strayHome(k) { return SAVE.stars[(k + 1) * BLOCK] > 0; }
-function straysHome() {
-  const out = [];
-  const last = Math.floor(Math.max(0, SAVE.reached - 1) / BLOCK);
-  for (let k = 0; k <= last; k++) if (strayHome(k)) out.push(k);
-  return out;
-}
 function strayWallHtml() {
   const home = straysHome();
   const nextK = home.length ? home[home.length - 1] + 1 : 0;

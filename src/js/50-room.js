@@ -134,7 +134,7 @@ function renderRoom(dt) {
      back. Two and no more: a room with nine animals in it is a shelter,
      and the family page's wall has all of them. Drawn before the pet, so
      it walks in front of them. */
-  const lodgers = typeof straysHome === 'function' ? straysHome().slice(-2).reverse() : [];
+  const lodgers = straysHome().slice(-2).reverse();
   lodgers.forEach((k, i) => {
     const s = strayOf(k);
     const size = H * (i ? .19 : .22);

@@ -43,8 +43,12 @@ async function setup(page) {
     BL.checkBadges();
     for (let i = 1; i < 34; i++) S.stars[i] = 2 + (i % 2);
     S.toys = { yarn: 1, tennis: 1 }; S.food = { kibble: 5, tuna: 2 };
-    S.furniture = { rug: 1, shelf: 1, armchair: 1, basket: 1, tower: 1 };
-    S.room = { theme: 'oat', placed: ['rug', 'shelf', 'armchair', 'basket', 'tower'] };
+    /* since 1.4 the room is the house project: the first room done but
+       for its last job, which the sixth slide does in front of the camera */
+    S.furniture = { rug: 1, plant: 1, petbed: 1, shelf: 1, armchair: 1, lamp: 1 };
+    S.roomThemes = { oat: 1, blush: 1 };
+    S.room = { theme: 'blush', placed: ['rug', 'plant', 'petbed', 'shelf', 'armchair', 'lamp'] };
+    S.home = { stars: 6, earned: 22, chests: 0, done: { 'u-rug': 1, 'u-plant': 1, 'u-bed': 1, 'u-shelf': 1, 'u-paint': 1, 'u-chair': 1, 'u-lamp': 1 } };
     S.pets.forEach(p => { p.bond = 9; p.food = 88; p.joy = 84; p.clean = 90; p.energy = 80; p.asleep = false; });
     S.seen = { swap: 1, pet: 1, special: 1, bramble: 1, mole: 1, rescue: 1, crate: 1, mud: 1, ice: 1 };
     S.settings.theme = 'light';
@@ -136,23 +140,15 @@ const SHOTS = [
   },
   {
     id: 'shop',
+    keepModal: true,
+    /* the house project's payoff: the first room's last job done, and the
+       chest that finishes it, over the room it has just finished */
     go: async page => {
-      await page.evaluate(() => { BL.setScreen('shop'); BL.renderShop(); });
+      await page.evaluate(() => { BL.setScreen('home'); BL.renderHome(); });
       await page.waitForTimeout(300);
-      await page.evaluate(() => { const b = document.querySelector('.tabs [data-t="look"]'); if (b) b.click(); });
-      await page.waitForTimeout(500);
-      /* down to the furniture: that is the shelf with pictures on it */
-      await page.evaluate(() => {
-        /* found by what is under it, not by its name: the heading whose
-           shelf holds the furniture pictures, in whichever language is up */
-        const shelf = document.querySelector('canvas[data-room]');
-        const grid = shelf && shelf.closest('.grid2');
-        const things = grid && grid.previousElementSibling;
-        if (!things) return;
-        let sc = things.parentElement;
-        while (sc && !(sc.scrollHeight > sc.clientHeight + 20 && /auto|scroll/.test(getComputedStyle(sc).overflowY))) sc = sc.parentElement;
-        if (sc) sc.scrollTop += things.getBoundingClientRect().top - sc.getBoundingClientRect().top - 12;
-      });
+      await page.evaluate(() => { const b = document.querySelector('[data-task]'); if (b) b.click(); });
+      await page.waitForTimeout(2200);
+      await page.evaluate(() => { const t = document.getElementById('toasts'); if (t) t.innerHTML = ''; });
     }
   },
   {

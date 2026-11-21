@@ -111,10 +111,18 @@ const steps = [
    does every level still build, deal and finish — and leaves the rest
    to the full run before a release. */
 const CURVE_GAMES = QUICK ? 2 : 9;
+/* The bare run's floor is 40, not 55. On 17 Nov the 7th, 9th and 10th
+   level of every block were made hard and super hard on purpose (tierOf,
+   11-design.js) and refit on the real game, and this solver reads six to
+   eleven points harder than 40-game.js does. 1.3.0 as shipped measures
+   46% here and 1.4.0 47%; 55 was written before the tiers, and a gate
+   that fails on the design it is meant to hold gets ignored. The
+   cared-for run, which is how the run is actually played, still has to
+   clear 60. */
 const CURVES = [
   ['the handcrafted lane', 1, 60, 0, 55, 90],
   ['the handcrafted lane, cared-for pet', 1, 60, 1, 60, 96],
-  ['the endless run', 61, 140, 0, 55, 90],
+  ['the endless run', 61, 140, 0, 40, 90],
   ['the endless run, cared-for pet', 61, 140, 1, 60, 96],
 ];
 

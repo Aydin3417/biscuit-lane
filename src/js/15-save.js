@@ -95,7 +95,7 @@ const SAVE_VERSION = 2;
 /* what a build calls itself when it reports anything. Bumped by hand,
    with android/app/build.gradle's versionName, so a crash from an old
    install is not read as one from the current one. */
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4.0';
 
 function migrate(d) {
   const v = d.v || 1;
@@ -1290,7 +1290,6 @@ function dailyDone(score) {
        It is still the best-paid four minutes in the game; it is no
        longer a salary. */
     const coins = tunePay('coin', ECON.dailyWalkCoins), treats = tunePay('treat', ECON.dailyWalkTreats);
-    addHomeStars(1, 'daily');
     SAVE.coins += coins;
     SAVE.treats += treats;
     persist(true);
@@ -1349,4 +1348,17 @@ function claimGift() {
   if (reward.booster) SAVE.boosters[reward.booster] = (SAVE.boosters[reward.booster] || 0) + 1;
   persist(true);
   return { reward, day };
+}
+
+/* Who has been brought home (see STRAY_TALES, 10-data.js). Read from
+   the gates themselves rather than kept as a list: a gate cleared is an
+   animal home, on this save and on one made before there were any. Kept
+   here with the save it reads, beneath both the room that draws them
+   and the family page that lists them. */
+function strayHome(k) { return SAVE.stars[(k + 1) * BLOCK] > 0; }
+function straysHome() {
+  const out = [];
+  const last = Math.floor(Math.max(0, SAVE.reached - 1) / BLOCK);
+  for (let k = 0; k <= last; k++) if (strayHome(k)) out.push(k);
+  return out;
 }

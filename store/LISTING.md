@@ -78,7 +78,7 @@ A logic puzzle beside the lane, and a new one every day. Every cushion gets one 
 THE ROOM UPSTAIRS
 Your animal lives there. Feed it, play with it, wash it, let it sleep. It gets hungry while you are away and pleased when you come back, it grows from a kitten or a puppy into a full-grown animal, and how you looked after it decides the temperament it settles into.
 
-Make the room theirs: twenty things to furnish it with, from a rocking chair and a fishbowl to a kennel and a string of fairy lights that glow after dark, and every coat and eye colour for every animal.
+Do the house up as you go: every level you win pays stars, and stars buy the next job in the room — lay the rug, paint the walls, put an armchair by the window. Four rooms, twenty-six jobs, and a chest at the end of each. Every coat and eye colour for every animal is there too.
 
 It is not decoration. A well-kept animal walks onto the board with you and brings something with it — more moves, a rocket, a head start on its own special move. The care and the puzzle are one loop, not two screens.
 
@@ -114,7 +114,7 @@ Sokağın yanında bir mantık bulmacası, her gün yenisi. Her mindere bir uyku
 ÜST KATTAKİ ODA
 Hayvanın orada yaşıyor. Yedir, oyna, yıka, uyut. Sen yokken acıkır, geri geldiğinde sevinir; yavruyken büyür, koca bir hayvana dönüşür ve nasıl baktığın onun huyunu belirler.
 
-Odayı onun yap: sallanan sandalyeden akvaryuma, kulübeden hava kararınca yanan peri ışıklarına kadar döşeyecek yirmi eşya, ve her hayvan için her tüy ve göz rengi.
+İlerledikçe evi döşe: kazandığın her bölüm yıldız verir, yıldızlar da odadaki sıradaki işi yapar — halıyı ser, duvarları boya, pencerenin önüne bir koltuk koy. Dört oda, yirmi altı iş ve her odanın sonunda bir sandık. Her hayvan için her tüy ve göz rengi de burada.
 
 Bu süs değil. İyi bakılmış bir hayvan tahtaya seninle çıkar ve yanında bir şey getirir: fazladan hamle, bir roket, kendi özel hamlesine erken başlangıç. Bakım ve bulmaca iki ayrı ekran değil, tek bir döngü.
 
@@ -145,16 +145,16 @@ unchanged — it is inside Apple's 4000 and says nothing Android-specific.
 **Name** (30 max)
 
 ```
-Pawtika: Match & Raise Pets
+Pawtika: Cat & Dog Match 3
 ```
-[27]
+[26] — since 1.4. "Match & Raise Pets" held none of the words people type; a search for "cat game" or "match 3 pets" did not find it in the first two hundred results (iTunes search API, 21 Nov 2026).
 
 **Subtitle** (30 max)
 
 ```
-Cute Cat & Dog Puzzle Game
+Cute Cozy Puzzle Game
 ```
-[26] — no word here repeats the name: Apple indexes name, subtitle and
+[21] — no word here repeats the name: Apple indexes name, subtitle and
 keywords together, and a repeated word buys nothing. "Game" is here on
 purpose: "cat game", "dog game", "pet game" and "puzzle game" are what
 people type, and Apple joins words across the fields to make them.
@@ -272,16 +272,16 @@ and has not been read by a native speaker.
 **Ad** (30 max)
 
 ```
-Pawtika: Eşleştir ve Büyüt
+Pawtika: Kedi Köpek Oyunu
 ```
-[26]
+[25] — 1.4'ten beri; "kedi oyunu" aramasında 32. sıradaydık ve diğer aramalarda ilk 200'de yoktuk. (Eski App Store adı: Pawtika: Eşleştir & Büyüt.)
 
 **Altyazı** (30 max)
 
 ```
-Kedi Köpek Eşleştirme Oyunu
+Sevimli Eşleştirme Bulmacası
 ```
-[27] — Turkish is searched in the exact form typed, and the App Store
+[28] — Turkish is searched in the exact form typed, and the App Store
 does not stem it: "eşleştirme oyunu", "kedi oyunu" and "köpek oyunu" are
 the searches, so those forms are the ones written out.
 
@@ -400,6 +400,34 @@ submitted, and the privacy answers have not been published.
   e-mail), the Digital Services Act trader declaration, Publish on the
   privacy page, choosing the build once one has been uploaded, and Add
   for Review.
+
+## What's new — 1.4.0
+
+**English**
+
+```
+• A house to do up: every level you win pays stars, and stars buy the next job in the room — a rug, a bed, a coat of paint. Four rooms, each ending in a chest.
+• A brighter, softer look throughout, with buttons you can feel.
+• A deal of the day in the shop, and food that shows what it does at a glance.
+• Out of moves? Carry on with coins now, as well as treats.
+• Bigger celebrations when you clear a level.
+• A cleaner icon and a few fixes.
+```
+
+**Türkçe**
+
+```
+• Döşenecek bir ev: kazandığın her bölüm yıldız verir, yıldızlar da odadaki sıradaki işi yapar — halı, yatak, bir kat boya. Dört oda, her birinin sonunda bir sandık.
+• Baştan sona daha parlak ve yumuşak bir görünüm, basınca hissedilen butonlar.
+• Mağazada günün fırsatı; mamaların ne işe yaradığı tek bakışta.
+• Hamle mi bitti? Artık ödülün yanında altınla da devam edebilirsin.
+• Bölüm geçince daha büyük kutlamalar.
+• Daha net bir simge ve birkaç düzeltme.
+```
+
+The other five are in store/l10n/<lang>.json. The interstitial fix (the
+count of wins kept across launches) ships here too, unannounced: it is
+not a feature.
 
 ## 1.3.0, as submitted on 18 Nov 2026
 

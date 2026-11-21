@@ -208,7 +208,10 @@ const SAFE = 72 / 108;
       cv.width = px; cv.height = px;
       const c = cv.getContext('2d');
       window.__ground(c, px);
-      window.__mark(c, px, kind === 'maskable' ? 0.56 : 0.76);
+      /* the mark fills the icon (1.0) since 1.4: at .76 a fifth of the
+         square was pastel, and in a search result the device read as a
+         small toy in a big frame; the owner asked for it without the gap */
+      window.__mark(c, px, kind === 'maskable' ? 0.56 : 1.0);
       return cv.toDataURL('image/png');
     }, [px, kind]);
   }
@@ -307,7 +310,7 @@ const SAFE = 72 / 108;
         window.__mark(c, px, 0.2);
         return cv.toDataURL('image/png');
       };
-      return { icon: square(1024, 0.76), splash: splash(2732) };
+      return { icon: square(1024, 1.0), splash: splash(2732) };
     });
   }
 
