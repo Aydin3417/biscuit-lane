@@ -21768,6 +21768,14 @@ function paintArtCanvases(root) {
 /* Shop thumbnail for one piece of furniture. The room scene draws each
    piece with its own routine, so the preview calls the same ones rather
    than staging a whole room. */
+/* A piece drawn from a picture (the bed, the armchair) is blank until
+   its image has decoded, and a thumbnail painted in the first second
+   after launch stayed blank: the house card on the home screen showed
+   an empty square where the bed should be. When a picture arrives, the
+   thumbnails on the screen in front of you are painted again. */
+EV.on('repaint', () => {
+  ['#scr-home.on .projCard', '#scr-shop.on'].forEach(sel => { const r = $(sel); if (r) paintArtCanvases(r); });
+});
 function drawFurniturePreview(c, id, px) {
   const th = ROOM_THEMES.find(x => x.id === SAVE.room.theme) || ROOM_THEMES[0];
   const cx = px / 2, base = px * .78;
