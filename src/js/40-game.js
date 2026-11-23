@@ -405,12 +405,14 @@ function startLevel(n, opts) {
   if (G.def.hungry && !res) {
     for (let i = 0; i < G.def.hungry.n; i++) hungryPlace(G.B, G.def.hungry.t + i * 2);
   }
-  /* an energetic pet leaves a rocket lying about */
-  if (!res && perks.some(p => p.id === 'gift')) {
+  /* an energetic pet leaves a rocket lying about, and a video on the
+     level card leaves another (ADS.caps.boost) */
+  const gifts = (perks.some(p => p.id === 'gift') ? 1 : 0) + (opts.adRockets || 0);
+  if (!res && gifts) {
     const spots = [];
-    eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.ice === 0) spots.push([r, c]); });
-    if (spots.length) {
-      const [r, c] = pick(spots);
+    eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && cell.ice === 0) spots.push([r, c]); });
+    for (let i = 0; i < gifts && spots.length; i++) {
+      const [r, c] = spots.splice(Math.floor(Math.random() * spots.length), 1)[0];
       G.B.cell[r][c].tile.sp = Math.random() < .5 ? SP.ROW : SP.COL;
     }
   }

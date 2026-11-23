@@ -355,7 +355,7 @@
   "trait_pending": "Il carattere si definisce oltre il legame {n}, dopo che ti sei preso cura di loro allo stesso modo {c} volte.",
   "ad_watch": "{n} mosse in più",
   "ad_heart": "Guarda un video per un cuore",
-  "ad_double": "Guarda un video: +{n} in più",
+  "ad_double": "Guarda un video: +{n} monete e un bocconcino",
   "ad_go": "Guarda",
   "pass_t": "Il libro della stagione",
   "pass_sub": "Tappa {n} di {c} · {d} giorni rimasti",
@@ -475,7 +475,11 @@
   "pack_t": "Pacchetto di benvenuto",
   "pack_tag": "IL PIÙ POPOLARE",
   "pack_go": "Vedi i pacchetti",
-  "lose_moves": "mosse"
+  "lose_moves": "mosse",
+  "ad_rocket": "Guarda un video: inizia con un razzo",
+  "ad_rocket_on": "Un razzo ti aspetta sul tabellone",
+  "free_t": "Bocconcini gratis",
+  "free_s": "Un breve video per {n} bocconcini. Ne restano {left} oggi."
  },
  "one": {
   "lvl_moves": "{n} mossa",

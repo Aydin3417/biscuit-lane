@@ -355,7 +355,7 @@
   "trait_pending": "O jeito se define depois do laço {n}, quando você tiver cuidado do mesmo modo {c} vezes.",
   "ad_watch": "Mais {n} jogadas",
   "ad_heart": "Veja um vídeo e ganhe um coração",
-  "ad_double": "Veja um vídeo: +{n} a mais",
+  "ad_double": "Veja um vídeo: +{n} moedas e um petisco",
   "ad_go": "Assistir",
   "pass_t": "O álbum da temporada",
   "pass_sub": "Etapa {n} de {c} · faltam {d} dias",
@@ -475,7 +475,11 @@
   "pack_t": "Pacote de boas-vindas",
   "pack_tag": "MAIS POPULAR",
   "pack_go": "Ver os pacotes",
-  "lose_moves": "jogadas"
+  "lose_moves": "jogadas",
+  "ad_rocket": "Veja um vídeo: comece com um foguete",
+  "ad_rocket_on": "Um foguete espera por você no tabuleiro",
+  "free_t": "Petiscos grátis",
+  "free_s": "Veja um vídeo curto por {n} petiscos. Restam {left} hoje."
  },
  "one": {
   "lvl_moves": "{n} jogada",

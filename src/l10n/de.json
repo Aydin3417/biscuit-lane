@@ -355,7 +355,7 @@
   "trait_pending": "Ein Wesenszug festigt sich ab Band {n}, wenn du dich {c} Mal auf dieselbe Art gekümmert hast.",
   "ad_watch": "{n} Züge mehr",
   "ad_heart": "Video ansehen für ein Herz",
-  "ad_double": "Video ansehen: +{n} mehr",
+  "ad_double": "Video ansehen: +{n} Münzen und ein Leckerli",
   "ad_go": "Ansehen",
   "pass_t": "Das Saisonbuch",
   "pass_sub": "Stufe {n} von {c} · noch {d} Tage",
@@ -475,7 +475,11 @@
   "pack_t": "Willkommenspaket",
   "pack_tag": "AM BELIEBTESTEN",
   "pack_go": "Pakete ansehen",
-  "lose_moves": "Züge"
+  "lose_moves": "Züge",
+  "ad_rocket": "Video ansehen: mit einer Rakete starten",
+  "ad_rocket_on": "Eine Rakete wartet auf dem Brett",
+  "free_t": "Gratis-Leckerlis",
+  "free_s": "Ein kurzes Video für {n} Leckerlis. Heute noch {left}."
  },
  "one": {
   "lvl_moves": "{n} Zug",

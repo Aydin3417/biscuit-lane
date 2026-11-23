@@ -355,7 +355,7 @@
   "trait_pending": "El carácter se define pasado el vínculo {n}, cuando le hayas dado el mismo cuidado {c} veces.",
   "ad_watch": "{n} movimientos más",
   "ad_heart": "Mira un video y gana un corazón",
-  "ad_double": "Mira un video: +{n} más",
+  "ad_double": "Mira un video: +{n} monedas y una golosina",
   "ad_go": "Ver",
   "pass_t": "El álbum de temporada",
   "pass_sub": "Escalón {n} de {c} · quedan {d} días",
@@ -475,7 +475,11 @@
   "pack_t": "Pack de bienvenida",
   "pack_tag": "EL MÁS POPULAR",
   "pack_go": "Ver los packs",
-  "lose_moves": "movimientos"
+  "lose_moves": "movimientos",
+  "ad_rocket": "Mira un video: empieza con un cohete",
+  "ad_rocket_on": "Un cohete te espera en el tablero",
+  "free_t": "Golosinas gratis",
+  "free_s": "Mira un video corto por {n} golosinas. Te quedan {left} hoy."
  },
  "one": {
   "lvl_moves": "{n} movimiento",

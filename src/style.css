@@ -1538,3 +1538,14 @@ a.btn{ text-decoration:none; display:flex; align-items:center; justify-content:c
 .winPet{ isolation:isolate; }
 .starsRow .s svg path, .starsRow .s svg polygon{ fill:#FFC93A; stroke:#E59400; stroke-width:1px; }
 .starsRow + h2{ -webkit-text-stroke-width:5px; }
+
+/* ---------- 1.5: treats for a video, at the top of the Care tab ---------- */
+.card.freeCard{ display:flex; align-items:center; gap:12px; padding:12px 14px;
+  background:linear-gradient(135deg, color-mix(in srgb, var(--sky) 16%, var(--surface)), var(--surface) 70%); }
+.freeCard .freeIc{ flex:0 0 auto; width:46px; height:46px; border-radius:14px; display:grid; place-items:center;
+  color:var(--plum); background:color-mix(in srgb, var(--plum) 14%, var(--surface)); }
+.freeCard .freeIc svg{ width:28px; height:28px; }
+.freeCard .t{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.freeCard .t b{ font-family:"Grandstander",sans-serif; font-size:1.0625rem; }
+.freeCard .t small{ color:var(--text-dim); font-size:var(--t-micro); line-height:1.35; }
+.freeCard .btn{ flex:0 0 auto; }

@@ -93,10 +93,25 @@ const ADS = {
        retry   three moves on the level card, from the second attempt
                at the same level — the moment a player is stuck, which
                is also the moment the curve below means them to be */
-  caps: { carry: 5, treat: 3, heart: 5, double: 6, gift: 1, chest: 2, retry: 3 },
+  /* RAISED AGAIN, and moved to where a winner looks, 23 Nov 2026 (1.5).
+     Fourteen days of the server: six people played, 325 levels, 268 of
+     them won; 23 videos offered, 3 watched. Fifteen of the offers were
+     "double your coins" on the win card and two were taken — forty-odd
+     coins is not worth thirty seconds. And the daily gift's video was
+     missed five times out of five, every one "fill": the gift opens at
+     launch, before the first video has finished loading. So:
+       boost   a rocket on the board, from the level card, on any level
+               not already stuck (retry has that one) — the card every
+               level passes through, so the one offer a winner meets
+       treat   three treats, from a card at the top of the shop's Care
+               tab, where it can be seen, as well as the earn sheet
+       double  three times the coins and a treat, not twice the coins
+     and a card that wanted a video while one was still loading draws its
+     button when the load lands (ADS.later), instead of never. */
+  caps: { carry: 5, treat: 3, heart: 5, double: 6, gift: 1, chest: 2, retry: 3, boost: 5 },
   retryMoves: 3,
 
-  treatReward: 2,
+  treatReward: 3,
 
   inited: false,
   initing: null,
@@ -214,19 +229,31 @@ const ADS = {
      approved), the second is the game. v_ads in the server views reads
      these. */
   loadFails: 0,
+  loadedAt: 0,
+  /* AdMob keeps a loaded video good for an hour. One loaded at launch and
+     offered after a long sitting was shown stale and failed, which the
+     player saw as a button that did nothing; past fifty minutes it is
+     thrown away and another asked for. */
+  stale() { return this.loaded && Date.now() - this.loadedAt > 50 * 60000; },
   preload() {
     if (this.loading || !this.inited || this.blocked) return this.loading;
+    /* `loading` is only ever a load in flight now (ADS.later and the
+       'loading' miss read it), so one already sitting there is said so */
+    if (this.loaded && !this.stale()) return Promise.resolve(true);
     this.loaded = false;
     const t0 = Date.now();
     this.loading = this.plugin.prepareRewardVideoAd({ adId: this.unit(), isTesting: this.testing(), npa: !this.personalised })
-      .then(() => { this.loaded = true; this.loadFails = 0; track('ad_load', { ok: 1, ms: Date.now() - t0 }); return true; }, e => {
+      .then(() => { this.loaded = true; this.loadedAt = Date.now(); this.loadFails = 0; this.loading = null; track('ad_load', { ok: 1, ms: Date.now() - t0 }); return true; }, e => {
         /* one report per launch for a run of failures, plus the first:
            a phone with no signal would otherwise send one a minute */
         if (this.loadFails++ < 3) track('ad_load', { ok: 0, ms: Date.now() - t0, code: adErrCode(e) });
         this.loading = null;
         /* no fill is the ordinary state of a new ad unit, and of a phone
-           with no signal; ask again in a while rather than never */
-        if (!this.retry) this.retry = setTimeout(() => { this.retry = null; this.preload(); }, 60000);
+           with no signal; ask again soon, then less often: 15 s, 30 s, a
+           minute, two. A flat minute meant a player who opened the game,
+           took the gift and played one level never had a video at all. */
+        const wait = Math.min(120000, 15000 * Math.pow(2, Math.max(0, this.loadFails - 1)));
+        if (!this.retry) this.retry = setTimeout(() => { this.retry = null; this.preload(); }, wait);
         return false;
       });
     return this.loading;
@@ -253,7 +280,18 @@ const ADS = {
   available(slot) {
     if (!this.ready() || this.left(slot) <= 0) return false;
     if (!this.inited) { this.init(); return false; }
+    if (this.stale()) { this.loaded = false; this.preload(); return false; }
     return !!this.loaded;
+  },
+  /* For a card that wanted a video and found none yet: if one is on its
+     way, `draw` runs when it lands — while the card is still open is the
+     caller's to check. Counted as an offer then, not as a miss now. */
+  later(slot, draw) {
+    if (!this.ready() || this.left(slot) <= 0 || this.available(slot)) return;
+    const wait = this.loading || (this.inited && !this.blocked ? this.preload() : this.init().then(ok => ok && this.loading));
+    Promise.resolve(wait).then(ok => {
+      if (ok && this.available(slot)) { track('ad_offer', { slot, late: 1 }); draw(); }
+    }, () => { });
   },
   /* available(), said out loud: what a card asks when it is deciding
      whether to draw a button. A drawn button is an `ad_offer`; a slot
@@ -265,7 +303,9 @@ const ADS = {
     if (!this.ready()) return false;
     if (this.left(slot) <= 0) return false;
     const yes = this.available(slot);
-    track(yes ? 'ad_offer' : 'ad_miss', yes ? { slot } : { slot, why: !this.inited ? 'init' : this.blocked ? 'consent' : 'fill' });
+    track(yes ? 'ad_offer' : 'ad_miss', yes ? { slot } : { slot, why: !this.inited ? 'init' : this.blocked ? 'consent' : this.loading ? 'loading' : 'fill' });
+    /* a miss with nothing on its way asks for one now, not in a minute */
+    if (!yes && this.inited && !this.blocked && !this.loading) this.preload();
     return yes;
   },
 

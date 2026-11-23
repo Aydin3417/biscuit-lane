@@ -5078,3 +5078,32 @@ rug, the deal bought, a level lost and carried on with coins, with no
 error on the page. The Android emulator could not take the build — the
 disk image was full — so the walk ran in Playwright's phone emulation
 on the same bundle.
+
+## 1.5 (not yet released): videos where a winner looks
+
+Asked on 23 Nov 2026, the day 1.4 went to review: are there too few
+ads, and should videos pay more? The server's last fourteen days: six
+people played, 325 levels started and 268 won; rewarded videos were
+offered 23 times and watched 3 times. AdMob for the same weeks: ₺0.82,
+nearly all of it from rewarded video. Fifteen of the offers were
+"double your coins" on the win card, taken twice. The daily gift's
+video missed five times in five, every one "fill" — the gift opens at
+launch, before the first video has loaded.
+
+- **A rocket for a video on the level card** (`boost`, five a day),
+  on every level from the fourth that is not already offering the stuck
+  player's three moves. One video button per card.
+- **Free treats at the top of the Care tab** (`treat`, three a day,
+  three treats each — two before), the slot that lived only on the
+  earn-treats sheet a player opened when they had run out.
+- **The win card's video pays three times the coins and a treat.**
+- **A card that wanted a video while one was loading draws the button
+  when it lands** (`ADS.later`), and the miss is counted as `loading`
+  rather than `fill`; a failed load is retried at 15 s, 30 s, a minute,
+  two, instead of a flat minute; a video older than fifty minutes is
+  thrown away (AdMob keeps them good for an hour).
+
+`test/ads.js` has a slow-loading stand-in for the last of these and
+checks the rocket lands on the board. None of it changes what the
+interstitial does. More videos per player is worth little at six
+players; the same change at a few hundred is what it is for.

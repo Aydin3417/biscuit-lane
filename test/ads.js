@@ -20,6 +20,11 @@
                   rules: no unit no break, never before its level, never
                   on install day, never for a payer, never twice inside
                   the gap, never on top of a chest
+     a slow load  a card that wanted a video while one was loading is
+                  told so ('loading', not 'fill') and draws its button
+                  when the load lands; a video past fifty minutes is
+                  thrown away and another asked for; the level card's
+                  video puts a rocket on the board (1.5, 23 Nov 2026)
 */
 const { launch, at, serve } = require('../tools/_pw.js');
 
@@ -36,6 +41,7 @@ const mock = mode => `
     prepareRewardVideoAd: async () => {
       __ad.calls.push('load');
       __ad.prepared++;
+      if (__ad.mode === 'slow') await new Promise(r => setTimeout(r, 1500));
       if (__ad.mode === 'nofill') { const e = new Error('Loading failed'); e.code = 3; throw e; }
       return { adUnitId: 'x' };
     },
@@ -65,7 +71,7 @@ const mock = mode => `
   let bad = 0;
   const ok = (cond, name, got) => { console.log((cond ? '  ✓ ' : '  ✗ ') + name + (cond ? '' : '   got ' + JSON.stringify(got))); if (!cond) bad++; };
 
-  for (const mode of ['att', 'nofill', 'watched', 'closed']) {
+  for (const mode of ['att', 'nofill', 'watched', 'closed', 'slow']) {
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', e => errors.push(e.message));
@@ -86,6 +92,34 @@ const mock = mode => `
       ok(calls.indexOf('consent') < calls.indexOf('att'), "and after Google's consent form", calls);
       const again = await page.evaluate(async () => { await new Promise(r => setTimeout(r, 2200)); await BL.ADS.resumed(); return { asked: __ad.attAsked, status: __ad.att, personalised: BL.ADS.personalised }; });
       ok(again.asked >= 2 && again.status === 'authorized', 'a prompt iOS did not show is asked again', again);
+    } else if (mode === 'slow') {
+      const r = await page.evaluate(async () => {
+        await new Promise(res => setTimeout(res, 2000));     /* the launch's own load lands */
+        BL.ADS.loaded = false; BL.ADS.loading = null;        /* and is spent */
+        BL.ADS.preload();                                    /* the next is on its way */
+        const offered = BL.ADS.offer('gift');
+        const miss = BL.TRACK.buf.filter(e => e.e === 'ad_miss').pop();
+        let drawn = 0;
+        BL.ADS.later('gift', () => { drawn++; });
+        await new Promise(res => setTimeout(res, 2200));
+        const late = BL.TRACK.buf.filter(e => e.e === 'ad_offer').pop();
+        /* a video loaded an hour ago is no video */
+        const before = __ad.prepared;
+        BL.ADS.loadedAt = Date.now() - 51 * 60000;
+        const stale = BL.ADS.available('gift');
+        return { offered, miss, drawn, late, stale, reasked: __ad.prepared > before };
+      });
+      ok(r.offered === false && r.miss && JSON.stringify(r.miss).includes('loading'), "a slot asked while a video loads is a miss 'loading', not 'fill'", r.miss);
+      ok(r.drawn === 1 && r.late && JSON.stringify(r.late).includes('late'), 'and its button is drawn when the video lands', r);
+      ok(r.stale === false && r.reasked, 'a video loaded fifty minutes ago is not offered, and another is asked for', r);
+      const rk = await page.evaluate(() => {
+        BL.save.winRun = 0;
+        const count = () => { let n = 0; for (let y = 0; y < BL.game.B.h; y++) for (let x = 0; x < BL.game.B.w; x++) { const t = BL.game.B.cell[y][x].tile; if (t && t.sp) n++; } return n; };
+        BL.startLevel(3, { perks: [] }); const plain = count();
+        BL.startLevel(3, { perks: [], adRockets: 1 }); const boosted = count();
+        return { plain, boosted };
+      });
+      ok(rk.boosted === rk.plain + 1, "the level card's video puts one rocket on the board", rk);
     } else if (mode === 'nofill') {
       ok(before.inited && before.prepared >= 1, 'the SDK was started and a video asked for', before);
       ok(before.avail === false, 'no video, so no slot is offered', before);

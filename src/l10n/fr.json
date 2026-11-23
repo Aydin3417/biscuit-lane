@@ -355,7 +355,7 @@
   "trait_pending": "Un trait se fixe après le lien {n}, une fois que tu t'es occupé de lui de la même façon {c} fois.",
   "ad_watch": "{n} coups de plus",
   "ad_heart": "Une vidéo pour un cœur",
-  "ad_double": "Une vidéo : +{n} de plus",
+  "ad_double": "Une vidéo : +{n} pièces et une friandise",
   "ad_go": "Voir",
   "pass_t": "Le carnet de saison",
   "pass_sub": "Palier {n} sur {c} · {d} jours restants",
@@ -475,7 +475,11 @@
   "pack_t": "Pack de bienvenue",
   "pack_tag": "LE PLUS POPULAIRE",
   "pack_go": "Voir les packs",
-  "lose_moves": "coups"
+  "lose_moves": "coups",
+  "ad_rocket": "Une vidéo : commence avec une fusée",
+  "ad_rocket_on": "Une fusée t’attend sur le plateau",
+  "free_t": "Friandises gratuites",
+  "free_s": "Une courte vidéo pour {n} friandises. Encore {left} aujourd’hui."
  },
  "one": {
   "lvl_moves": "{n} coup",

@@ -940,7 +940,7 @@ function renderShop() {
   let body = '';
   if (SHOP_TAB === 'boost') body = shopBoost();
   else if (SHOP_TAB === 'look') body = shopStyle() + shopRoom();
-  else body = dealHtml() + shopFood() + shopToys() + packHtml();
+  else body = freeTreatsHtml() + dealHtml() + shopFood() + shopToys() + packHtml();
 
   pad.innerHTML = `
     <div class="tabs">${tabs.map(t => `<button data-t="${t[0]}" class="${SHOP_TAB === t[0] ? 'on' : ''}">${t[1]}</button>`).join('')}</div>
@@ -954,6 +954,7 @@ function renderShop() {
   $$('[data-buy]', pad).forEach(b => b.addEventListener('click', () => buyThing(b.dataset.buy, b.dataset.kind)));
   $$('[data-equip]', pad).forEach(b => b.addEventListener('click', () => equipThing(b.dataset.equip, b.dataset.kind)));
   const db = $('#dealBuy', pad); if (db) db.addEventListener('click', buyDeal);
+  const ft = $('#freeTreats', pad); if (ft) ft.addEventListener('click', watchForTreats);
   const pg = $('#packGo', pad); if (pg) pg.addEventListener('click', () => { SFX.tap(); treatStore(); });
   /* the deal's clock runs while the shop is the screen, and stops itself after */
   clearInterval(renderShop.tick);
@@ -997,6 +998,27 @@ function dealLeft() {
   const s = Math.max(0, Math.floor((mid - now()) / 1000));
   const p = n => String(n).padStart(2, '0');
   return p(Math.floor(s / 3600)) + ':' + p(Math.floor(s / 60) % 60) + ':' + p(s % 60);
+}
+/* Treats for a video, where they can be seen (1.5). The same slot and
+   the same three a day as the earn-treats sheet, which only a player
+   who had run out ever opened. Drawn only with a video ready, like
+   every other video button. */
+function freeTreatsHtml() {
+  if (!ADS.offer('treat')) return '';
+  return `<div class="card freeCard">
+    <span class="freeIc">${IC.treat}</span>
+    <span class="t"><b>${T('free_t')}</b><small>${T('free_s', { n: ADS.treatReward, left: ADS.left('treat') })}</small></span>
+    <button class="btn sky" id="freeTreats">${IC.video}${T('ad_go')}</button>
+  </div>`;
+}
+async function watchForTreats(e) {
+  const b = e.currentTarget;
+  b.disabled = true;
+  if (!await ADS.show('treat')) { b.disabled = false; SFX.bad(); return; }
+  SAVE.treats += ADS.treatReward;
+  persist(true); syncPurse(); SFX.coin();
+  toast(T('store_thanks', { n: ADS.treatReward }), 'treat');
+  if (SCREEN === 'shop') renderShop();
 }
 function dealHtml() {
   const d = dealOfDay();
@@ -1791,6 +1813,13 @@ function openLevelIntro(n) {
      a stuck player actually wants (ADS.caps.retry) */
   const retryAd = n !== DAILY_LEVEL && !SAVE.stars[n] && ((SAVE.tries && SAVE.tries[n]) || 0) >= 1 && ADS.offer('retry');
   let adMoves = 0;
+  /* Everyone else, on any level past the first few, is offered a rocket
+     on the board for a video: the one card a winning player passes every
+     time (ADS.caps.boost). Not alongside the three moves — one video
+     button on a card, and the stuck player's is the better one. */
+  const boostWanted = !retryAd && n !== DAILY_LEVEL && SAVE.reached >= 4;
+  const boostAd = boostWanted && ADS.offer('boost');
+  let adRockets = 0;
 
   const m = modal(`
     <div class="eyebrow">${chapterName(n)} · ${T('lvl_intro', { n })} · ${T('lvl_moves', { n: def.moves + adaptMoves(n, def.moves, (SAVE.tries && SAVE.tries[n]) || 0) + (perks.reduce((a, p) => a + (p.id === 'moves' || p.id === 'bondmoves' || p.id === 'trait' ? p.v : 0), 0)) })}${SAVE.scores[n] ? ' · ' + T('map_best', { n: fmt(SAVE.scores[n]) }) : ''}${def.sig ? ' · ' + T('lvl_sig') : ''}</div>
@@ -1834,6 +1863,7 @@ function openLevelIntro(n) {
       <span class="pill info" id="movesPill">${T('pill_off')}</span>
     </button>
     ${retryAd ? `<button class="btn wide adLine" id="liAd">${IC.video}${T('ad_retry', { n: ADS.retryMoves })}</button>` : ''}
+    ${boostAd ? `<button class="btn sky wide adLine" id="liRocket">${IC.video}${T('ad_rocket')}</button>` : ''}
     <div class="row sheetFoot">
       <button class="btn ghost" id="liCancel">${T('cancel')}</button>
       <button class="btn primary" id="liGo">${IC.heart}${T('lvl_start')}</button>
@@ -1858,6 +1888,24 @@ function openLevelIntro(n) {
     lia.innerHTML = IC.plusmove + T('ad_retry_on', { n: adMoves });
     lia.classList.add('got');
   });
+  const bindRocket = lr => lr.addEventListener('click', async () => {
+    if (adRockets) return;
+    lr.disabled = true;
+    if (!await ADS.show('boost')) { lr.disabled = false; SFX.bad(); return; }
+    adRockets = 1;
+    SFX.coin();
+    lr.disabled = false;
+    lr.innerHTML = IC.check + T('ad_rocket_on');
+    lr.classList.add('got');
+  });
+  if ($('#liRocket', m.el)) bindRocket($('#liRocket', m.el));
+  else if (boostWanted) ADS.later('boost', () => {
+    if (!m.el.isConnected || $('#liRocket', m.el) || $('#liAd', m.el)) return;
+    const b = document.createElement('button');
+    b.className = 'btn sky wide adLine'; b.id = 'liRocket'; b.innerHTML = IC.video + T('ad_rocket');
+    $('.sheetFoot', m.el).before(b);
+    bindRocket(b);
+  });
   $('#liCancel', m.el).addEventListener('click', m.close);
   let starting = false;
   $('#liGo', m.el).addEventListener('click', () => {
@@ -1870,7 +1918,7 @@ function openLevelIntro(n) {
     m.close();
     syncPurse();
     setScreen('game');
-    startLevel(n, { perks, extraMoves: (useMoves ? 5 : 0) + adMoves });
+    startLevel(n, { perks, extraMoves: (useMoves ? 5 : 0) + adMoves, adRockets });
     maybeTutorial(def);
   });
 }
@@ -2364,7 +2412,7 @@ function showWin() {
     </div>
     ${homeStars ? `<p class="winHome">${T('win_home', { n: homeStars })}</p>` : ''}
     ${first ? '' : `<p style="color:var(--text-faint);font-size:var(--t-micro);margin-top:-4px">${T('win_replay')}</p>`}
-    ${first && coins > 0 && ADS.offer('double') ? `<button class="btn wide" id="wDouble">${IC.coin}${T('ad_double', { n: coins })}</button>` : ''}
+    ${first && coins > 0 && ADS.offer('double') ? `<button class="btn sky wide adLine" id="wDouble">${IC.video}${T('ad_double', { n: coins * 2 })}</button>` : ''}
     ${wonBadges.length ? `<div class="goalItem winBadges"><span class="rosette fam-${wonBadges[0].fam}">${IC[wonBadges[0].icon] || IC.crown}</span>
       <span class="t"><b>${T('win_badges', { names: wonBadges.map(badgeName).join(', ') })}</b></span>
       <span class="pill warn">${badgeCoins ? '+' + badgeCoins : ''}${badgeTreats ? ' +' + badgeTreats + IC.treat : ''}</span></div>` : ''}
@@ -2385,12 +2433,15 @@ function showWin() {
   if (wd) wd.addEventListener('click', async () => {
     wd.disabled = true;
     if (!await ADS.show('double')) { wd.disabled = false; SFX.bad(); return; }
-    SAVE.coins += coins;
+    /* three times the level's coins in all, and a treat: twice the coins
+       was taken twice in fifteen offers (ADS.caps, 1.5) */
+    SAVE.coins += coins * 2;
+    SAVE.treats += 1;
     persist(true);
     SFX.coin();
     syncPurse();
     wd.remove();
-    toast(T('purse_done', { n: fmt(coins) }), 'coin');
+    toast(T('purse_done', { n: fmt(coins * 2) }) + ' · ' + T('store_pack', { n: 1 }), 'coin');
   });
   const wj = $('#wJar', m.el);
   if (wj) wj.addEventListener('click', () => { SFX.tap(); treatStore(); });
@@ -2964,8 +3015,7 @@ function openDailyGift() {
   `, { dismissable: false });
   /* the same gift again for a video: the one moment every player who
      comes back meets, winning or not */
-  const dga = $('#dgAd', m.el);
-  if (dga) dga.addEventListener('click', async () => {
+  const bindGiftAd = dga => dga.addEventListener('click', async () => {
     dga.disabled = true;
     if (!await ADS.show('gift')) { dga.disabled = false; SFX.bad(); return; }
     SAVE.coins += reward.coins || 0;
@@ -2973,6 +3023,17 @@ function openDailyGift() {
     persist(true); syncPurse(); SFX.coin();
     dga.remove();
     toast(T('ad_twice_done'), 'coin');
+  });
+  if ($('#dgAd', m.el)) bindGiftAd($('#dgAd', m.el));
+  /* The gift opens at launch, which is before the first video has
+     loaded: every one of its offers on the server was a miss (1.5). If
+     one is on its way, the button arrives with it. */
+  else if (reward.coins || reward.treats) ADS.later('gift', () => {
+    if (!m.el.isConnected || $('#dgAd', m.el)) return;
+    const b = document.createElement('button');
+    b.className = 'btn wide'; b.id = 'dgAd'; b.innerHTML = IC.video + T('ad_twice');
+    $('#dgOk', m.el).before(b);
+    bindGiftAd(b);
   });
   /* the rung you have just landed on arrives after the sheet does, so
      the eye is drawn to the week rather than to the coins */
