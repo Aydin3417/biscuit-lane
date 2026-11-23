@@ -27,7 +27,7 @@ python store/slides/render.py
 | 4 | A puzzle lane that **keeps on going** | Hiç bitmeyen bir **bulmaca yolu** | The map around level 34, where the next hard levels show their flame |
 | 5 | Pick who comes **home with you** | Eve kim gelecek, **sen seç** | The breed picker from the first launch |
 | 6 | Decorate a **cozy** room for them | Onlara **sıcacık** bir oda döşe | The shop's furniture shelf |
-| 7 | **A gift on the step,** a walk to take | **Kapıda bir hediye,** günün yürüyüşü | The daily basket and its seven-day ladder |
+| 7 | **A gift on the step,** a walk to take | **Her gün bir hediye,** her gün yeni bölüm | The daily basket and its seven-day ladder |
 | 8 | Three stars and **one happy cat** | Üç yıldız ve **mutlu bir kedi** | The win card |
 
 Nap time is second since 1.3.0: the cat logic puzzle is what the chart's top free game was being found by, and the second picture is the last one most people see. The first, third and fourth carry the words of the store name and subtitle (match 3, pets, adopt, cats, dogs, puzzle), because those are the three the search results show and the App Store reads the text in them.

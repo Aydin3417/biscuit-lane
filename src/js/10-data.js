@@ -19,7 +19,7 @@ const BREEDS = [
     ear: 'triangle', face: 'cat', mark: 'tabby', pip: 'fish',
     eyes: '#7ABF63',
     coats: [
-      { id: 'ginger', en: 'Ginger', tr: 'Zencefil', fur: '#F0954B', fur2: '#D6742E', belly: '#FBE0C2' },
+      { id: 'ginger', en: 'Ginger', tr: 'Turuncu', fur: '#F0954B', fur2: '#D6742E', belly: '#FBE0C2' },
       { id: 'cream', en: 'Cream', tr: 'Krem', fur: '#F3D9B0', fur2: '#DCBB88', belly: '#FDF2E1' },
       { id: 'smoke', en: 'Smoke', tr: 'Duman', fur: '#9AA4B0', fur2: '#77828F', belly: '#E2E7EC' }
     ],
@@ -79,9 +79,9 @@ const BREEDS = [
     ear: 'tall', face: 'cat', mark: 'points', pip: 'leaf',
     eyes: '#5FB8DC',
     coats: [
-      { id: 'seal', en: 'Seal point', tr: 'Koyu uç', fur: '#EFDFC4', fur2: '#5C4736', belly: '#FBF3E4' },
-      { id: 'blue', en: 'Blue point', tr: 'Mavi uç', fur: '#EDE9E2', fur2: '#6C7887', belly: '#FAF8F5' },
-      { id: 'choc', en: 'Chocolate', tr: 'Kakao uç', fur: '#F0E0C8', fur2: '#7A5238', belly: '#FBF3E5' }
+      { id: 'seal', en: 'Seal point', tr: 'Koyu', fur: '#EFDFC4', fur2: '#5C4736', belly: '#FBF3E4' },
+      { id: 'blue', en: 'Blue point', tr: 'Mavi', fur: '#EDE9E2', fur2: '#6C7887', belly: '#FAF8F5' },
+      { id: 'choc', en: 'Chocolate', tr: 'Kakao', fur: '#F0E0C8', fur2: '#7A5238', belly: '#FBF3E5' }
     ],
     ability: 'chorus'
   },
@@ -266,7 +266,7 @@ function strayAt(n) { return strayOf(chapterIdx(n)); }
 const ABILITIES = {
   pounce: {
     steps: [1, 2, 3], enUnit: ['tile', 'tiles'], trUnit: 'taş',
-    en: 'Pounce', tr: 'Atlayış',
+    en: 'Pounce', tr: 'Zıpla',
     enDesc: 'Lands on a goal tile and blows open everything around it.',
     trDesc: 'Bir hedef taşın üstüne atlar, etrafındaki her şeyi patlatır.'
   },
@@ -280,7 +280,7 @@ const ABILITIES = {
     steps: [2, 3, 4], enUnit: ['rocket', 'rockets'], trUnit: 'roket',
     en: 'Shadow', tr: 'Gölge',
     enDesc: 'Leaves rockets behind on tiles you did not expect.',
-    trDesc: 'Beklemediğin taşların üstünde roketler bırakır.'
+    trDesc: 'Rastgele taşların üstüne roket bırakır.'
   },
   fetch: {
     steps: [4, 6, 8], enUnit: ['tile', 'tiles'], trUnit: 'taş',
@@ -289,16 +289,16 @@ const ABILITIES = {
     trDesc: 'Tahtanın her yerinden hedef taşları toplayıp getirir.'
   },
   chorus: {
-    steps: [1, 2, 3], enUnit: ['cross', 'crosses'], trUnit: 'kesişme',
-    en: 'Chorus', tr: 'Koro',
+    steps: [1, 2, 3], enUnit: ['cross', 'crosses'], trUnit: 'artı',
+    en: 'Chorus', tr: 'Miyav',
     enDesc: 'One long yowl clears a whole row and column.',
-    trDesc: 'Uzun bir miyavlama koca bir satırı ve sütunu siler.'
+    trDesc: 'Uzun bir miyavla bir satırı ve bir sütunu temizler.'
   },
   snuffle: {
     steps: [4, 6, 8], enUnit: ['tile', 'tiles'], trUnit: 'taş',
-    en: 'Snuffle', tr: 'Koklama',
+    en: 'Snuffle', tr: 'Kokla',
     enDesc: 'Sniffs out tiles and turns them into what you actually need.',
-    trDesc: 'Taşları koklayıp gerçekten ihtiyacın olan şeye çevirir.'
+    trDesc: 'Taşları koklar, ihtiyacın olan taşa çevirir.'
   }
 };
 /* extra moves a stage is worth, and the last word on it: this is the
@@ -562,9 +562,9 @@ function storeLink() {
    than a promise. */
 const TREAT_PACKS = [
   { id: 'pocket', sku: 'treats_pocket_40', treats: 40, usd: '$1.99', en: 'Pocketful', tr: 'Bir avuç' },
-  { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Kese kâğıdı' },
-  { id: 'tin', sku: 'treats_tin_240', treats: 240, usd: '$9.99', en: 'Biscuit tin', tr: 'Bisküvi kutusu', infinite: 60 },
-  { id: 'sack', sku: 'treats_sack_520', treats: 520, usd: '$19.99', en: 'Feed sack', tr: 'Mama çuvalı', best: true, infinite: 180 }
+  { id: 'bag', sku: 'treats_bag_110', treats: 110, usd: '$4.99', en: 'Paper bag', tr: 'Torba' },
+  { id: 'tin', sku: 'treats_tin_240', treats: 240, usd: '$9.99', en: 'Biscuit tin', tr: 'Kutu', infinite: 60 },
+  { id: 'sack', sku: 'treats_sack_520', treats: 520, usd: '$19.99', en: 'Feed sack', tr: 'Çuval', best: true, infinite: 180 }
 ];
 
 /* ---------- coins for treats ----------
@@ -874,7 +874,7 @@ function winRunGifts(run, gate) { return WIN_RUN[clamp((run || 0) - (gate ? 1 : 
 /* ---------- goods ---------- */
 const FOODS = [
   { id: 'kibble', en: 'Kibble', tr: 'Mama', cost: 12, food: 26, joy: 2, art: 'kibble', enDesc: 'The everyday stuff.', trDesc: 'Günlük mama.' },
-  { id: 'tuna', en: 'Tuna flakes', tr: 'Ton balığı', cost: 34, food: 46, joy: 9, art: 'tuna', enDesc: 'Opens a door across the whole house.', trDesc: 'Kapağı açılınca evin her yerinden koşarlar.' },
+  { id: 'tuna', en: 'Tuna flakes', tr: 'Ton balığı', cost: 34, food: 46, joy: 9, art: 'tuna', enDesc: 'Opens a door across the whole house.', trDesc: 'Kapağı açılınca evin her yerinden koşarak gelirler.' },
   { id: 'stew', en: 'Beef stew', tr: 'Etli güveç', cost: 62, food: 74, joy: 14, art: 'stew', enDesc: 'A proper dinner.', trDesc: 'Doğru dürüst bir akşam yemeği.' },
   { id: 'cake', en: 'Carrot cake', tr: 'Havuçlu kek', cost: 3, treat: true, food: 55, joy: 40, art: 'cake', enDesc: 'For a very good day.', trDesc: 'Çok iyi bir gün için.' }
 ];
@@ -890,7 +890,7 @@ const BOOSTERS = [
      that matters is not a booster anybody decides to use. */
   { id: 'moves', en: '+5 moves', tr: '+5 hamle', cost: 220, icon: 'plusmove', enDesc: 'Five extra moves before the level starts.', trDesc: 'Bölüm başlamadan beş hamle ekler.' },
   { id: 'hammer', en: 'Hammer', tr: 'Çekiç', cost: 170, icon: 'hammer', enDesc: 'Smash any single tile or blocker.', trDesc: 'Tek bir taşı ya da engeli kırar.' },
-  { id: 'swap', en: 'Free swap', tr: 'Serbest takas', cost: 190, icon: 'swap', enDesc: 'Swap any two tiles, anywhere, for free.', trDesc: 'İstediğin iki taşı bedavaya değiştirir.' },
+  { id: 'swap', en: 'Free swap', tr: 'Yer değiştir', cost: 190, icon: 'swap', enDesc: 'Swap any two tiles, anywhere, for free.', trDesc: 'İstediğin iki taşın yerini hamle harcamadan değiştirir.' },
   { id: 'shuffle', en: 'Shuffle', tr: 'Karıştır', cost: 150, icon: 'shuffle', enDesc: 'Reshuffle the board without spending a move.', trDesc: 'Hamle harcamadan tahtayı karıştırır.' }
 ];
 const HATS = [
@@ -927,7 +927,7 @@ const FURNITURE = [
   { id: 'plant', en: 'Fern', tr: 'Eğrelti otu', cost: 65, slot: 'left', enDesc: 'Will be chewed within a week.', trDesc: 'Bir hafta içinde kemirilecek.' },
   { id: 'shelf', en: 'Shelf', tr: 'Raf', cost: 120, slot: 'wall', enDesc: 'Holds three things and a cat.', trDesc: 'Üç eşya ve bir kedi taşır.' },
   { id: 'lamp', en: 'Floor lamp', tr: 'Lambader', cost: 140, slot: 'right', enDesc: 'Turns the room to evening.', trDesc: 'Odayı akşama çevirir.' },
-  { id: 'tower', en: 'Cat tower', tr: 'Kedi kulesi', cost: 260, slot: 'right', enDesc: 'The high ground.', trDesc: 'Yüksek mevzi.' },
+  { id: 'tower', en: 'Cat tower', tr: 'Kedi kulesi', cost: 260, slot: 'right', enDesc: 'The high ground.', trDesc: 'Evin en yüksek yeri.' },
   { id: 'window', en: 'Bird feeder', tr: 'Kuş yemliği', cost: 190, slot: 'wall', enDesc: 'Television for pets.', trDesc: 'Hayvanlar için televizyon.' },
   { id: 'basket', en: 'Toy basket', tr: 'Oyuncak sepeti', cost: 100, slot: 'left', enDesc: 'Everything ends up on the floor anyway.', trDesc: 'Nasılsa hepsi yere dökülüyor.' },
   { id: 'poster', en: 'Framed print', tr: 'Çerçeveli baskı', cost: 110, slot: 'wall', enDesc: 'A very good dog, painted badly.', trDesc: 'Çok iyi bir köpek, kötü çizilmiş.' },
@@ -946,10 +946,10 @@ const FURNITURE = [
   { id: 'monstera', en: 'Monstera', tr: 'Deve tabanı', cost: 180, slot: 'right', at: [.89, .40, .38], enDesc: 'Grows a leaf every time you look away.', trDesc: 'Arkanı döndükçe bir yaprak çıkarır.' },
   { id: 'bookcase', en: 'Bookcase', tr: 'Kitaplık', cost: 200, slot: 'right', at: [.86, .20, .36], enDesc: 'The top shelf is already taken.', trDesc: 'En üst raf çoktan kapıldı.' },
   { id: 'fishbowl', en: 'Fishbowl', tr: 'Akvaryum', cost: 210, slot: 'right', at: [.90, .36, .26], enDesc: 'The only show everyone agrees on.', trDesc: 'Herkesin anlaştığı tek dizi.' },
-  { id: 'petbed', en: 'Pet bed', tr: 'Minder yatak', cost: 130, slot: 'bed', at: [.70, .86, .13], enDesc: 'Ignored in favour of the box it came in.', trDesc: 'Geldiği kutu uğruna görmezden gelinir.' },
-  { id: 'kennel', en: 'Kennel', tr: 'Kulübe', cost: 260, slot: 'bed', at: [.66, .30, .27], enDesc: 'Indoors, which is rather the point.', trDesc: 'İçeride, bütün mesele de bu.' },
+  { id: 'petbed', en: 'Pet bed', tr: 'Minder yatak', cost: 130, slot: 'bed', at: [.70, .86, .13], enDesc: 'Ignored in favour of the box it came in.', trDesc: 'Kutusu daha çok ilgi görür.' },
+  { id: 'kennel', en: 'Kennel', tr: 'Kulübe', cost: 260, slot: 'bed', at: [.66, .30, .27], enDesc: 'Indoors, which is rather the point.', trDesc: 'Hem de evin içinde.' },
   { id: 'bunting', en: 'Bunting', tr: 'Flama', cost: 90, slot: 'top', wall: true, at: [.5, .16, .14], enDesc: 'Every day is a small occasion.', trDesc: 'Her gün küçük bir kutlama.' },
-  { id: 'lights', en: 'Fairy lights', tr: 'Peri ışıkları', cost: 120, slot: 'top', wall: true, glow: true, at: [.5, .15, .12], enDesc: 'Best after dark.', trDesc: 'En güzeli hava kararınca.' }
+  { id: 'lights', en: 'Fairy lights', tr: 'Işık zinciri', cost: 120, slot: 'top', wall: true, glow: true, at: [.5, .15, .12], enDesc: 'Best after dark.', trDesc: 'En güzeli hava kararınca.' }
 ];
 /* ---------- keepsakes ----------
 
@@ -970,7 +970,7 @@ const KEEPSAKES = [
   { id: 'photo', en: 'Photograph', tr: 'Fotoğraf', cost: 40, treat: true, slot: 'wall',
     enDesc: 'Framed, exactly as they are today.', trDesc: 'Tam bugünkü haliyle, çerçevede.' },
   { id: 'paw', en: 'Paw print', tr: 'Pati izi', cost: 40, treat: true, slot: 'wall',
-    enDesc: 'Pressed into clay, name and all.', trDesc: 'Kile basılmış, adıyla birlikte.' }
+    enDesc: 'Pressed into clay, name and all.', trDesc: 'Kile basılmış, adı da yazılı.' }
 ];
 
 /* Both tables furnish the same room, so anything that places an object
@@ -1016,26 +1016,26 @@ const TRAITS = {
   greedy: {
     en: 'Greedy', tr: 'Obur',
     enDesc: 'Fed more than anything else. Finds an extra coin in everything.',
-    trDesc: 'En çok yemek yedi. Her işten fazladan altın çıkarıyor.',
-    enHow: 'Fed the most', trHow: 'En çok yedirildi'
+    trDesc: 'En çok o yedi. Bölümlerden daha fazla altın kazandırır.',
+    enHow: 'Fed the most', trHow: 'en çok yedirildi'
   },
   playful: {
     en: 'Playful', tr: 'Oyuncu',
     enDesc: 'Played with constantly. Their move charges faster.',
-    trDesc: 'Sürekli oynandı. Hamlesi daha hızlı doluyor.',
-    enHow: 'Played with the most', trHow: 'En çok oynandı'
+    trDesc: 'Çok oyun oynadı. Özel gücü daha hızlı dolar.',
+    enHow: 'Played with the most', trHow: 'en çok oynandı'
   },
   tidy: {
     en: 'Tidy', tr: 'Titiz',
     enDesc: 'Washed more than any cat would like. Worth an extra move.',
-    trDesc: 'Hiçbir kedinin istemeyeceği kadar yıkandı. Bir hamle değerinde.',
-    enHow: 'Washed the most', trHow: 'En çok yıkandı'
+    trDesc: 'Çok yıkandı. Her bölüme +1 hamle getirir.',
+    enHow: 'Washed the most', trHow: 'en çok yıkandı'
   },
   dozy: {
     en: 'Dozy', tr: 'Uykucu',
     enDesc: 'Slept through most of it. Everything fades more slowly.',
-    trDesc: 'Çoğunu uyuyarak geçirdi. Her şey daha yavaş azalıyor.',
-    enHow: 'Slept the most', trHow: 'En çok uyudu'
+    trDesc: 'Çok uyudu. Tokluğu ve neşesi daha yavaş azalır.',
+    enHow: 'Slept the most', trHow: 'en çok uyudu'
   }
 };
 const TRAIT_AT_BOND = 3;
@@ -1089,12 +1089,12 @@ const BADGES = [
        one move in a hundred and fourteen on plain matches (test/chains.js),
        which is rare enough to be noticed and common enough to arrive. */
     id: 'combo5', icon: 'flame', fam: 'feat', en: 'Snowball', tr: 'Çığ',
-    enDesc: 'Set off a six-chain cascade.', trDesc: 'Altı zincirlik bir çığ başlat.',
+    enDesc: 'Set off a six-chain cascade.', trDesc: 'Tek hamlede 6 zincirleme patlama yap.',
     of: 6, at: s => s.stats.bestCombo, coins: 25
   },
   {
     id: 'combo8', icon: 'bolt', fam: 'feat', en: 'Avalanche', tr: 'Heyelan',
-    enDesc: 'Set off an eight-chain cascade.', trDesc: 'Sekiz zincirlik bir çığ başlat.',
+    enDesc: 'Set off an eight-chain cascade.', trDesc: 'Tek hamlede 8 zincirleme patlama yap.',
     of: 8, at: s => s.stats.bestCombo, coins: 70, treats: 1
   },
   {
@@ -1103,13 +1103,13 @@ const BADGES = [
     of: 40, at: s => s.stats.biggestClear, coins: 50
   },
   {
-    id: 'pop2k', icon: 'shuffle', fam: 'feat', en: 'Two thousand faces', tr: 'İki bin yüz',
+    id: 'pop2k', icon: 'shuffle', fam: 'feat', en: 'Two thousand faces', tr: 'İki bin taş',
     enDesc: 'Clear two thousand tiles in total.', trDesc: 'Toplam iki bin taş temizle.',
     of: 2000, at: s => s.stats.tilesPopped, coins: 65
   },
   {
     id: 'rescue10', icon: 'heart', fam: 'lane', en: 'Ten walked home', tr: 'On tanesi evde',
-    enDesc: 'Walk ten baskets to the door.', trDesc: 'On sepeti kapıya götür.',
+    enDesc: 'Walk ten baskets to the door.', trDesc: 'On yavruyu aşağı indir.',
     of: 10, at: s => s.stats.rescued, coins: 60, treats: 1
   },
   {
@@ -1129,12 +1129,12 @@ const BADGES = [
   },
   {
     id: 'bond5', icon: 'heart', fam: 'family', en: 'Inseparable', tr: 'Ayrılmaz',
-    enDesc: 'Reach bond level five with any pet.', trDesc: 'Bir hayvanla beşinci bağ seviyesine ulaş.',
+    enDesc: 'Reach bond level five with any pet.', trDesc: 'Bir hayvanla dostluğu 5. seviyeye çıkar.',
     of: 5, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 50
   },
   {
     id: 'bond12', icon: 'star', fam: 'family', en: 'Grown up together', tr: 'Birlikte büyüdük',
-    enDesc: 'Reach bond level twelve.', trDesc: 'On ikinci bağ seviyesine ulaş.',
+    enDesc: 'Reach bond level twelve.', trDesc: 'Dostluğu 12. seviyeye çıkar.',
     of: 12, at: s => s.pets.reduce((m, p) => Math.max(m, p.bond), 0), coins: 130, treats: 3
   },
   {
@@ -1148,8 +1148,8 @@ const BADGES = [
     of: 7, at: s => s.streak, coins: 70, treats: 3
   },
   {
-    id: 'walk7', icon: 'ball', fam: 'care', en: 'Seven walks', tr: 'Yedi yürüyüş',
-    enDesc: 'Finish the daily walk seven days running.', trDesc: 'Günlük yürüyüşü yedi gün üst üste bitir.',
+    id: 'walk7', icon: 'ball', fam: 'care', en: 'Seven walks', tr: 'Yedi gün',
+    enDesc: 'Finish the daily walk seven days running.', trDesc: 'Günün bölümünü yedi gün üst üste oyna.',
     of: 7, at: s => (s.daily && s.daily.streak) || 0, coins: 100, treats: 3
   },
   {
@@ -1179,7 +1179,7 @@ const BADGES = [
      nothing looking at it. */
   {
     id: 'chain7', icon: 'star', fam: 'lane', en: 'One thing led to another', tr: 'Biri diğerini getirdi',
-    enDesc: 'Reach a seven-deep cascade.', trDesc: 'Yedi kademelik bir zincir yakala.',
+    enDesc: 'Reach a seven-deep cascade.', trDesc: 'Tek hamlede 7 zincirleme patlama yap.',
     of: 7, at: s => s.stats.bestCombo, coins: 25,  treats: 1
   },
   {
@@ -1201,7 +1201,7 @@ const BADGES = [
     of: 30, at: s => Object.keys(s.stars || {}).filter(k => s.stars[k] >= 3).length, coins: 40, treats: 1
   },
   {
-    id: 'pop50k', icon: 'paw', fam: 'lane', en: 'Fifty thousand faces', tr: 'Elli bin yüz',
+    id: 'pop50k', icon: 'paw', fam: 'lane', en: 'Fifty thousand faces', tr: 'Elli bin taş',
     enDesc: 'Clear fifty thousand tiles.', trDesc: 'Elli bin taş patlat.',
     of: 50000, at: s => s.stats.tilesPopped, coins: 35, treats: 1
   },

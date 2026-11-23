@@ -33,8 +33,8 @@ const PROJECTS = [
     reward: { coins: 150, treats: 3, booster: 'hammer' },
     tasks: [
       { id: 'u-rug', give: ['furniture', 'rug'], cost: 1, en: 'Lay a rug by the window', tr: 'Pencerenin önüne halı ser' },
-      { id: 'u-plant', give: ['furniture', 'plant'], cost: 1, en: 'A fern in the corner', tr: 'Köşeye bir eğrelti otu' },
-      { id: 'u-bed', give: ['furniture', 'petbed'], cost: 2, en: 'A soft bed of their own', tr: 'Kendine ait yumuşak bir yatak' },
+      { id: 'u-plant', give: ['furniture', 'plant'], cost: 1, en: 'A fern in the corner', tr: 'Köşeye bir bitki koy' },
+      { id: 'u-bed', give: ['furniture', 'petbed'], cost: 2, en: 'A soft bed of their own', tr: 'Yumuşak bir yatak' },
       { id: 'u-shelf', give: ['furniture', 'shelf'], cost: 2, en: 'Put up a shelf', tr: 'Duvara bir raf as' },
       { id: 'u-paint', give: ['theme', 'blush'], cost: 2, en: 'Paint the walls blush', tr: 'Duvarları pudra rengine boya' },
       { id: 'u-chair', give: ['furniture', 'armchair'], cost: 3, en: 'An armchair by the window', tr: 'Pencerenin önüne bir koltuk' },
@@ -48,20 +48,20 @@ const PROJECTS = [
       { id: 'p-paint', give: ['theme', 'mint'], cost: 2, en: 'Paint the walls mint', tr: 'Duvarları nane yeşiline boya' },
       { id: 'p-tower', give: ['furniture', 'tower'], cost: 3, en: 'A tower to climb', tr: 'Tırmanmak için bir kule' },
       { id: 'p-birds', give: ['furniture', 'window'], cost: 3, en: 'A bird feeder to watch', tr: 'İzlemek için bir kuş yemliği' },
-      { id: 'p-bean', give: ['furniture', 'beanbag'], cost: 3, en: 'A beanbag to sink into', tr: 'Gömülmek için armut koltuk' },
-      { id: 'p-print', give: ['furniture', 'poster'], cost: 2, en: 'Frame a painting', tr: 'Bir tablo çerçevelet' },
-      { id: 'p-lights', give: ['furniture', 'lights'], cost: 3, en: 'String up fairy lights', tr: 'Peri ışıklarını as' }
+      { id: 'p-bean', give: ['furniture', 'beanbag'], cost: 3, en: 'A beanbag to sink into', tr: 'Bir armut koltuk' },
+      { id: 'p-print', give: ['furniture', 'poster'], cost: 2, en: 'Frame a painting', tr: 'Duvara bir tablo as' },
+      { id: 'p-lights', give: ['furniture', 'lights'], cost: 3, en: 'String up fairy lights', tr: 'Işık zinciri as' }
     ] },
   { id: 'nook', en: 'The reading nook', tr: 'Okuma köşesi',
     reward: { coins: 350, treats: 8, booster: 'swap' },
     tasks: [
       { id: 'n-paint', give: ['theme', 'butter'], cost: 2, en: 'Paint the walls buttermilk', tr: 'Duvarları ayran rengine boya' },
-      { id: 'n-books', give: ['furniture', 'bookcase'], cost: 3, en: 'A bookcase, top shelf theirs', tr: 'Bir kitaplık, en üst raf onun' },
+      { id: 'n-books', give: ['furniture', 'bookcase'], cost: 3, en: 'A bookcase, top shelf theirs', tr: 'Bir kitaplık koy' },
       { id: 'n-rocker', give: ['furniture', 'rocker'], cost: 3, en: 'A rocking chair', tr: 'Sallanan bir sandalye' },
       { id: 'n-cactus', give: ['furniture', 'cactus'], cost: 2, en: 'A cactus nobody chews', tr: 'Kimsenin kemirmediği bir kaktüs' },
       { id: 'n-fish', give: ['furniture', 'fishbowl'], cost: 3, en: 'A fishbowl to stare at', tr: 'Seyretmek için bir akvaryum' },
       { id: 'n-basket', give: ['furniture', 'basket'], cost: 2, en: 'A basket for everything', tr: 'Her şey için bir sepet' },
-      { id: 'n-plant', give: ['furniture', 'monstera'], cost: 3, en: 'A monstera that never stops', tr: 'Hiç durmayan bir deve tabanı' }
+      { id: 'n-plant', give: ['furniture', 'monstera'], cost: 3, en: 'A monstera that never stops', tr: 'Kocaman bir deve tabanı' }
     ] },
   { id: 'evening', en: 'The evening room', tr: 'Akşam odası',
     reward: { coins: 450, treats: 10, booster: 'shuffle' },
@@ -69,7 +69,7 @@ const PROJECTS = [
       { id: 'e-paint', give: ['theme', 'night'], cost: 3, en: 'Paint the walls deep blue', tr: 'Duvarları gece mavisine boya' },
       { id: 'e-kennel', give: ['furniture', 'kennel'], cost: 3, en: 'A kennel indoors', tr: 'İçeride bir kulübe' },
       { id: 'e-moss', give: ['theme', 'moss'], cost: 3, en: 'Try the walls in moss', tr: 'Duvarları yosun yeşiline boya' },
-      { id: 'e-clay', give: ['theme', 'clay'], cost: 3, en: 'Or terracotta, warmer', tr: 'Ya da kiremit, daha sıcak' }
+      { id: 'e-clay', give: ['theme', 'clay'], cost: 3, en: 'Or terracotta, warmer', tr: 'Duvarları kiremit rengine boya' }
     ] }
 ];
 function projectTheme(id) { return PROJECTS.some(p => p.tasks.some(t => t.give[0] === 'theme' && t.give[1] === id)); }

@@ -931,7 +931,7 @@ function perksFor(p) {
   const out = [];
   if (!p) return out;
   if (p.food >= 70) out.push({ id: 'moves', en: '+2 moves', tr: '+2 hamle', v: 2 });
-  if (p.joy >= 70) out.push({ id: 'charge', en: 'Starts 35% charged', tr: '%35 dolu başlar', v: 35 });
+  if (p.joy >= 70) out.push({ id: 'charge', en: 'Starts 35% charged', tr: 'Özel güç %35 dolu başlar', v: 35 });
   if (p.clean >= 70) out.push({ id: 'score', en: '+12% score', tr: '+%12 puan', v: .12 });
   if (p.energy >= 70) out.push({ id: 'gift', en: 'A rocket on the board', tr: 'Tahtada bir roket', v: 1 });
   const tidy = traitMoveBonus(p);

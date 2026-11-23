@@ -5053,6 +5053,18 @@ house project. Who is home now lives with the save it reads, and the
 walk's star is paid where the win is committed. `test/deps.js` is back
 to the one known cycle.
 
+**Turkish, in plain words.** The owner, playing in Turkish: most of it
+was hard to follow. It had been written as a translation of the English,
+register and all, so a currency was "ödül" (which also means any reward
+— "9 ödül · sende 6 var"), hearts were "kalp" in one place and "can" in
+another, and lines like "Ödüller, zamanın satın aldığı şeyleri satın
+alır" said nothing a player could act on. 263 interface strings and 45
+names were rewritten to one glossary: kemik (the currency, whose icon
+is a bone), can, altın, dostluk, bonus, güçlendirici, özel güç, günün
+bölümü, günlük hediye, sezon bileti, rozetler, haritaya dön. The
+in-level bones became "gömülü kemik" so the two do not collide. The
+English is unchanged.
+
 **A gate moved, with its reason.** The full suite failed one band: the
 endless run, bare pet, at 47% against a floor of 55. 1.3.0 as shipped
 measures 46% on the same sweep, so nothing in 1.4 moved it — the floor

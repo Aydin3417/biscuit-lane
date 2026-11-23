@@ -370,6 +370,11 @@ submitted, and the privacy answers have not been published.
   Turkish, a review screenshot (`store/review/`) and a review note each.
   The Turkish display names: Bir Avuç / Bir Kese / Bir Kutu / Bir Çuval
   Evcil Hayvan Ödülü, Hoş Geldin Paketi, Ödül Kavanozu, Sezon Kitabı.
+  From 1.4 the game calls treats "kemik" and the book "Sezon bileti"
+  (the plain-Turkish pass, 23 Nov 2026); the display names above are
+  still the old ones in App Store Connect and want the same words:
+  Bir Avuç Kemik / Bir Torba Kemik / Bir Kutu Kemik / Bir Çuval Kemik,
+  Kemik Kavanozu, Sezon Bileti.
 - **App Privacy:** eight data types, none linked to the user. Used for
   tracking: Device ID, Coarse Location, Advertising Data, Product
   Interaction. Not used for tracking: Purchase History, Crash Data,
@@ -420,7 +425,8 @@ submitted, and the privacy answers have not been published.
 • Döşenecek bir ev: kazandığın her bölüm yıldız verir, yıldızlar da odadaki sıradaki işi yapar — halı, yatak, bir kat boya. Dört oda, her birinin sonunda bir sandık.
 • Baştan sona daha parlak ve yumuşak bir görünüm, basınca hissedilen butonlar.
 • Mağazada günün fırsatı; mamaların ne işe yaradığı tek bakışta.
-• Hamle mi bitti? Artık ödülün yanında altınla da devam edebilirsin.
+• Hamle mi bitti? Artık kemiğin yanında altınla da devam edebilirsin.
+• Oyundaki bütün Türkçe metinler sadeleşti: kısa, açık, anlaşılır.
 • Bölüm geçince daha büyük kutlamalar.
 • Daha net bir simge ve birkaç düzeltme.
 ```
