@@ -109,7 +109,7 @@ Tahtalar şekilli, bazıları elle çizildi: çamurdan bir pati izi, kasalardan 
 Bazı bölümler ötekilerden zor ve bunu baştan söyler. Zor bölümler haritada işaretli, yolun ilerisinde her parçanın sonundaki kapı çok zor; ikisi de ilk geçişte daha çok altın verir. Birkaç deneme sürebilir; üst üste takılırsan bölüm sana sessizce fazladan bir hamle verir.
 
 ŞEKERLEME
-Sokağın yanında bir mantık bulmacası, her gün yenisi. Her mindere bir uykucu: her satırda ve her sütunda bir tane, ve hiçbiri birbirine değmeyecek, köşeden bile — yoksa birbirlerini uyandırırlar. Şans yok, kalp yok; sadece sen, minderler ve sessizleşen ev. Haftanın her günü bir tahta, pazartesi küçük, pazar büyük; seninle büyüyen bir bulmaca merdiveni ve nasıl düşündüğünü gösteren bir ipucu.
+Sokağın yanında bir mantık bulmacası, her gün yenisi. Her mindere bir uykucu: her satırda ve her sütunda bir tane, ve hiçbiri birbirine değmeyecek, köşeden bile — yoksa birbirlerini uyandırırlar. Şans yok, can harcamak yok; sadece sen, minderler ve sessizleşen ev. Haftanın her günü bir tahta, pazartesi küçük, pazar büyük; seninle büyüyen bir bulmaca merdiveni ve nasıl düşündüğünü gösteren bir ipucu.
 
 ÜST KATTAKİ ODA
 Hayvanın orada yaşıyor. Yedir, oyna, yıka, uyut. Sen yokken acıkır, geri geldiğinde sevinir; yavruyken büyür, koca bir hayvana dönüşür ve nasıl baktığın onun huyunu belirler.
@@ -118,14 +118,14 @@ Hayvanın orada yaşıyor. Yedir, oyna, yıka, uyut. Sen yokken acıkır, geri g
 
 Bu süs değil. İyi bakılmış bir hayvan tahtaya seninle çıkar ve yanında bir şey getirir: fazladan hamle, bir roket, kendi özel hamlesine erken başlangıç. Bakım ve bulmaca iki ayrı ekran değil, tek bir döngü.
 
-EVE GÖTÜRÜLECEK ALTI CAN
+EVE GELECEK ALTI DOST
 Altı cins, her birinin kendi hamlesi var. İkincisini sahiplendiğinde tahtaya o da katılır; kendi hayvanların yabancıları yavaş yavaş kovar, sonunda eşleştirdiğin her yüz senin olur.
 
 OYNARKEN ÇİZİLİYOR
 Bu oyundaki her kedi ve köpek, oyun çalışırken kodla çiziliyor — her birinin senin seçtiğin tüyü, gözü, şapkası ve ruh haliyle görünebilmesi bundan — ve her ses sentezleniyor, tek bir ses dosyası yok. Yol ve eşyalar uygulamanın içinde duran, elle bitirilmiş resimler; hiçbir şey indirilmiyor: küçük, anında açılıyor ve daha ilk açılıştan itibaren telefon uçak modundayken çalışıyor.
 
 HESAP YOK, İNTERNET GEREKMEZ
-Hesap yok ve hiçbir reklam bir bölümün ortasına girmez. Arada bir, bir galibiyetten sonra bölümler arasında kısa bir reklam çıkar — ilk gününde asla, bir şey satın aldıysan hiç. Üç hamle, bir kalp ya da iki kat altın istediğinde, istersen kısa bir video izlersin. Hayvanların ve ilerlemen telefonunda duruyor.
+Hesap yok ve hiçbir reklam bir bölümün ortasına girmez. Arada bir, bir galibiyetten sonra bölümler arasında kısa bir reklam çıkar — ilk gününde asla, bir şey satın aldıysan hiç. Üç hamle, bir can ya da iki kat altın istediğinde, istersen kısa bir video izlersin. Hayvanların ve ilerlemen telefonunda duruyor.
 
 Gündüz ve Akşam, yedi dil, kapatabileceğin sakin bir müzik kutusu ninnisi, ve renkten ayırt etmek istemeyenler için her taşta bir sembol.
 ```
@@ -288,7 +288,7 @@ the searches, so those forms are the ones written out.
 **Tanıtım metni** (170 max)
 
 ```
-Kendi hayvanlarınla eşleştirme, bir de Şekerleme: her gün yeni bir kedi köpek mantık bulmacası, kalp gerekmez. Çevrimdışı oynanır, hesap gerekmez.
+Kendi hayvanlarınla eşleştirme, bir de Şekerleme: her gün yeni bir kedi köpek mantık bulmacası, can harcamaz. Çevrimdışı oynanır, hesap gerekmez.
 ```
 [146]
 
@@ -434,6 +434,20 @@ submitted, and the privacy answers have not been published.
 The other five are in store/l10n/<lang>.json. The interstitial fix (the
 count of wins kept across launches) ships here too, unannounced: it is
 not a feature.
+
+## 1.4.0, as submitted on 23 Nov 2026
+
+Build 202611230928 (tag ios-12), submitted for review at 12:50 (ASC
+time) on 23 Nov 2026. Entered through the App Store Connect web API from
+the signed-in page: in all eight localisations the new name and
+subtitle, the description (house-project paragraph; the Turkish one
+in the plain glossary, "can" for hearts), the 1.4.0 what's new and the
+promotional text; in the seven with their own screenshots, the eight
+6.9-inch (1320×2868) and eight 6.3-inch (1206×2622) pictures replaced —
+en-GB borrows en-US. A set holds at most ten, so the old eight go first.
+The Turkish in-app purchase display names were left as they were
+(Ödül Kavanozu, Sezon Kitabı): editing an approved product sends it back
+to review, and they appear only on Apple's payment sheet.
 
 ## 1.3.0, as submitted on 18 Nov 2026
 
