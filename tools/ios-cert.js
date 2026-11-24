@@ -86,7 +86,9 @@ async function call(method, url, body) {
    one on that is already on is skipped; one that will not turn on is
    said, and the export step is where it shows. */
 async function ensureCaps(bundle) {
-  const have = await call('GET', '/bundleIds/' + bundle.id + '/bundleIdCapabilities?limit=50');
+  /* no ?limit here: this relationship refuses the parameter (ios-13,
+     24 Nov 2026, 400 PARAMETER_ERROR.ILLEGAL) */
+  const have = await call('GET', '/bundleIds/' + bundle.id + '/bundleIdCapabilities');
   const types = have.data.map(c => c.attributes.capabilityType);
   console.log('capabilities on ' + BUNDLE + ': ' + (types.join(', ') || 'none listed'));
   const want = [
@@ -123,10 +125,19 @@ async function create(dir) {
   fs.writeFileSync(path.join(dir, 'cert.cer'), Buffer.from(cert.data.attributes.certificateContent, 'base64'));
   console.log('certificate ' + cert.data.id + '  ' + cert.data.attributes.name + '  serial ' + cert.data.attributes.serialNumber);
 
-  const ids = await call('GET', '/bundleIds?filter[identifier]=' + BUNDLE + '&limit=50');
-  const bundle = ids.data.find(b => b.attributes.identifier === BUNDLE);
-  if (!bundle) throw new Error('no bundle id ' + BUNDLE + ' on the team');
-  await ensureCaps(bundle);
+  /* Anything that fails from here on would leave the certificate just
+     made standing with no profile pointing at it, where sweep() never
+     looks — ios-13 did exactly that. So a failure takes it back. */
+  let bundle;
+  try {
+    const ids = await call('GET', '/bundleIds?filter[identifier]=' + BUNDLE + '&limit=50');
+    bundle = ids.data.find(b => b.attributes.identifier === BUNDLE);
+    if (!bundle) throw new Error('no bundle id ' + BUNDLE + ' on the team');
+    await ensureCaps(bundle);
+  } catch (e) {
+    try { await call('DELETE', '/certificates/' + cert.data.id); console.log('certificate ' + cert.data.id + ' taken back'); } catch (e2) { }
+    throw e;
+  }
 
   const name = 'Pawtika CI ' + new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
   const prof = await call('POST', '/profiles', {
