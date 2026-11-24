@@ -406,6 +406,38 @@ submitted, and the privacy answers have not been published.
   privacy page, choosing the build once one has been uploaded, and Add
   for Review.
 
+## 1.5.0, as submitted on 24 Nov 2026
+
+Build 202611241233 (tag ios-15; ios-13 and ios-14 stopped in
+tools/ios-cert.js, see its history). Submitted for review with the two
+Game Center leaderboards, pawtika.level and pawtika.week, the first
+leaderboards the app has — Apple reviews a first leaderboard only with a
+Game Center-enabled version, so the version's Game Center box is ticked.
+Only the what's new changed in the eight localisations; descriptions,
+names and screenshots are 1.4.0's.
+
+**English**
+
+```
+• Weekly events: collect the week’s breed for prizes, and a weekend run — win seven levels in a row.
+• Start boosters: take a rocket, a bomb or a star into any level.
+• Game Center leaderboards: the furthest level, and this week’s breed.
+• Your game is saved to iCloud: change phone and carry on where you left off.
+• Free treats for a short video in the shop, and bigger prizes on the win card.
+```
+
+**Türkçe**
+
+```
+• Haftalık etkinlikler: haftanın cinsini topla, ödülleri kap; hafta sonu üst üste yedi bölüm kazan.
+• Başlangıç güçlendiricileri: bölüme roket, bomba ya da yıldızla başla.
+• Game Center sıralamaları: en ileri bölüm ve haftanın cinsi.
+• Oyunun iCloud’a kaydediliyor: telefon değiştirsen de kaldığın yerden devam.
+• Dükkanda kısa bir videoyla ücretsiz kemik, bölüm geçince daha büyük ödüller.
+```
+
+The other five are in store/l10n/<lang>.json.
+
 ## What's new — 1.4.0
 
 **English**
