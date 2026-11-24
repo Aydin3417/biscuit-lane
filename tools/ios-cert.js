@@ -118,9 +118,27 @@ async function create(dir) {
   console.log('distribution certificates on the team before this run: ' + have.data.length);
   have.data.forEach(c => console.log('  ' + c.id + '  ' + c.attributes.name + '  expires ' + (c.attributes.expirationDate || '').slice(0, 10)));
 
-  const cert = await call('POST', '/certificates', {
+  const ask = () => call('POST', '/certificates', {
     data: { type: 'certificates', attributes: { certificateType: 'DISTRIBUTION', csrContent: csr } }
   });
+  /* A team holds two distribution certificates at most. ios-13 made one
+     and failed before any profile named it, and ios-14 was refused with
+     409 "You already have a current Distribution certificate". A
+     certificate no profile on the team names has signed nothing that can
+     still be signed with, so on that refusal those are removed — and only
+     those: the one behind the build in review or on sale is in a profile
+     sweep() kept — and the request made once more. */
+  let cert;
+  try { cert = await ask(); } catch (e) {
+    if (!/409/.test(e.message)) throw e;
+    const profiles = await call('GET', '/profiles?limit=200&include=certificates');
+    const used = new Set();
+    profiles.data.forEach(p => ((p.relationships.certificates || {}).data || []).forEach(c => used.add(c.id)));
+    const loose = have.data.filter(c => !used.has(c.id));
+    console.log('refused (' + e.message.slice(0, 80) + '); certificates no profile names: ' + (loose.map(c => c.id).join(', ') || 'none'));
+    for (const c of loose) { await call('DELETE', '/certificates/' + c.id); console.log('  removed ' + c.id); }
+    cert = await ask();
+  }
   state.certId = cert.data.id; save();
   fs.writeFileSync(path.join(dir, 'cert.cer'), Buffer.from(cert.data.attributes.certificateContent, 'base64'));
   console.log('certificate ' + cert.data.id + '  ' + cert.data.attributes.name + '  serial ' + cert.data.attributes.serialNumber);
