@@ -1083,10 +1083,34 @@ function eventsSheet() {
         <span class="s">${st.raced ? IC.check : ''}</span>
       </div>
     </div>
+    ${KIT.ready() ? `<button class="btn sky wide" id="evBoard">${IC.crown}${T('gc_week')}</button>` : ''}
     <button class="btn primary wide" id="evOk">${T('ok')}</button>
   `);
   paintArtCanvases(m.el);
   $('#evOk', m.el).addEventListener('click', m.close);
+  const eb = $('#evBoard', m.el);
+  if (eb) eb.addEventListener('click', () => { SFX.tap(); KIT.show(GC_BOARDS.week); });
+}
+/* iCloud holds a game further on than this phone's (54-native.js):
+   say how far, and take it only on a yes */
+function cloudOffer(theirs) {
+  const m = modal(`
+    <span style="color:var(--sky);width:52px;height:52px;align-self:center">${IC.home}</span>
+    <h2>${T('cloud_t')}</h2>
+    <p>${T('cloud_s', { n: Math.max(1, (+theirs.reached || 1) - 1), here: Math.max(0, (SAVE.reached || 1) - 1) })}</p>
+    <div class="row">
+      <button class="btn ghost" id="clNo">${T('cloud_no')}</button>
+      <button class="btn primary" id="clYes">${T('cloud_yes')}</button>
+    </div>
+  `, { dismissable: false });
+  /* On a new phone the first thing up is the welcome, which sits above
+     every sheet — and the one player this question is for would have had
+     to adopt a new animal before seeing it. Above the welcome, then. */
+  const host = $('#modals'), onb = $('#onb');
+  const lift = onb && onb.classList.contains('on');
+  if (lift) host.style.zIndex = '90';
+  $('#clNo', m.el).addEventListener('click', () => { track('cloud_keep', {}); m.close(); if (lift) host.style.zIndex = ''; });
+  $('#clYes', m.el).addEventListener('click', () => { m.close(); takeCloudSave(theirs); });
 }
 function dealHtml() {
   const d = dealOfDay();
@@ -3214,6 +3238,7 @@ function openSettings() {
     </div>
     <div class="setLinks">
       <button class="btn ghost sm" id="setHow">${T('how_open')}</button>
+      ${KIT.ready() ? `<button class="btn ghost sm" id="setBoards">${IC.crown}${T('gc_boards')}</button>` : ''}
       ${touchOnly() ? '' : `<button class="btn ghost sm" id="setKeys">${T('a11y_help_t')}</button>`}
       ${STORE_LINKS.privacy ? `<a class="btn ghost sm" id="setPrivacy" href="${STORE_LINKS.privacy}" target="_blank" rel="noopener">${T('set_privacy')}</a>` : ''}
       ${ADS.privacyOptions ? `<button class="btn ghost sm" id="setAdChoices">${T('set_ad_choices')}</button>` : ''}
@@ -3269,6 +3294,7 @@ function openSettings() {
   $('#setHow', m.el).addEventListener('click', () => { m.close(); howToPlay(); });
   const sk = $('#setKeys', m.el);
   if (sk) sk.addEventListener('click', () => { m.close(); keyboardHelp(); });
+  const sb = $('#setBoards', m.el); if (sb) sb.addEventListener('click', () => { SFX.tap(); KIT.show(''); });
   $('#setClose', m.el).addEventListener('click', m.close);
   /* The way back to the consent form, which Google requires wherever it
      required the form: a choice that cannot be changed is not one. */

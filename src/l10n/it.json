@@ -486,7 +486,13 @@
   "ev_left": "mancano {t}",
   "ev_done": "Fatto! La settimana prossima ce n’è uno nuovo.",
   "ev_prize": "Premio dell’evento",
-  "dur_d": "{n} g"
+  "dur_d": "{n} g",
+  "gc_boards": "Classifiche",
+  "gc_week": "Classifica della settimana",
+  "cloud_t": "Una partita su iCloud",
+  "cloud_s": "Su iCloud c’è una partita con {n} livelli superati; su questo telefono {here}. Caricare quella di iCloud? Sostituirà quella di questo telefono.",
+  "cloud_yes": "Carica",
+  "cloud_no": "Tieni questa"
  },
  "one": {
   "lvl_moves": "{n} mossa",

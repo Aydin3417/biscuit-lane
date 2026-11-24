@@ -486,7 +486,13 @@
   "ev_left": "faltam {t}",
   "ev_done": "Feito! Semana que vem tem outro.",
   "ev_prize": "Prêmio do evento",
-  "dur_d": "{n} d"
+  "dur_d": "{n} d",
+  "gc_boards": "Rankings",
+  "gc_week": "Ranking da semana",
+  "cloud_t": "Um jogo no iCloud",
+  "cloud_s": "O iCloud tem um jogo com {n} fases vencidas; este celular tem {here}. Carregar o do iCloud? Ele substitui o jogo deste celular.",
+  "cloud_yes": "Carregar",
+  "cloud_no": "Ficar com este"
  },
  "one": {
   "lvl_moves": "{n} jogada",

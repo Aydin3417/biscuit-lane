@@ -95,7 +95,7 @@ const SAVE_VERSION = 2;
 /* what a build calls itself when it reports anything. Bumped by hand,
    with android/app/build.gradle's versionName, so a crash from an old
    install is not read as one from the current one. */
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.5.0';
 
 function migrate(d) {
   const v = d.v || 1;
@@ -404,6 +404,8 @@ function persist(immediate) {
        ending, the app going into a pocket — so those go through the
        throttle rather than waiting behind it. */
     VAULT.write(json, !!immediate);
+    /* and to whoever keeps a copy elsewhere (iCloud, 54-native.js) */
+    EV.emit('saved', { json, immediate: !!immediate });
   };
   if (immediate) doIt(); else saveTimer = setTimeout(doIt, 400);
 }

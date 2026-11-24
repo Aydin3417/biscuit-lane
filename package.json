@@ -1,6 +1,6 @@
 {
   "name": "pawtika",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "private": true,
   "description": "A match-3 puzzle where the cats and dogs on the board are the pets you adopt, feed and raise in the room upstairs.",
   "license": "UNLICENSED",
@@ -42,7 +42,8 @@
     "test:quick": "node test/check.js && node test/deps.js && node test/till.js && node test/economy.js",
     "test:fast": "node test/run-all.js quick",
     "test:till-live": "node test/till-live.js",
-    "test:ads": "node test/ads.js"
+    "test:ads": "node test/ads.js",
+    "test:native": "node test/native.js"
   },
   "devDependencies": {
     "playwright": "^1.62.1"

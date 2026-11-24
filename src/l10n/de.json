@@ -486,7 +486,13 @@
   "ev_left": "noch {t}",
   "ev_done": "Geschafft! Nächste Woche gibt es ein neues.",
   "ev_prize": "Event-Preis",
-  "dur_d": "{n} T"
+  "dur_d": "{n} T",
+  "gc_boards": "Ranglisten",
+  "gc_week": "Rangliste der Woche",
+  "cloud_t": "Ein Spiel in iCloud",
+  "cloud_s": "In iCloud liegt ein Spiel mit {n} geschafften Levels, auf diesem Telefon sind es {here}. Das aus iCloud laden? Das Spiel auf diesem Telefon wird ersetzt.",
+  "cloud_yes": "Laden",
+  "cloud_no": "Dieses behalten"
  },
  "one": {
   "lvl_moves": "{n} Zug",

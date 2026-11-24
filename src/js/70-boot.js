@@ -244,6 +244,8 @@ function boot() {
   /* and the videos, so that one is loaded by the time a card could offer
      it: a slot is only drawn when a video is ready (ADS.available) */
   if (ADS.ready()) ADS.init();
+  /* Game Center, and a game further on in iCloud than on this phone */
+  nativeBoot(cloudOffer);
   /* tonight's cushions and the next rung, made off the main thread while
      the player is still looking at the room */
   if (SAVE.reached >= tuneNapFrom()) setTimeout(() => NAP.warm(), 2500);
@@ -447,7 +449,7 @@ if (BL_OPEN) window.BL = {
   levelDef, findMatches, allMoves, hasMove, tryMove, canSwap, firePetAbility, persist, wipeSave,
   perksFor, activePet, makePet, healPet, loadSave, freshSave, BREEDS, LEVELS,
   checkBadges, badgesWon, badgeProgress, bumpCare, settleTrait, addBond,
-  track, TRACK, ADS, earnTreatsSheet,
+  track, TRACK, ADS, earnTreatsSheet, EV, KIT,
   dailyState, dailyDone, dailyLevel, dayNumber, DAILY_LEVEL, startDailyWalk,
   setLang,
   /* nap time: the board in play, and the way in */

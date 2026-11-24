@@ -77,6 +77,33 @@ async function call(method, url, body) {
   return text ? JSON.parse(text) : null;
 }
 
+/* GAME_CENTER and ICLOUD on the App ID, before the profile is made. A
+   profile carries the capabilities its App ID had at the moment it was
+   made, and from 1.5 the app is signed with both (Game Center's
+   leaderboards, and the save copied to iCloud's key-value store —
+   ios/App/App/App.entitlements). An export whose entitlements the
+   profile does not grant is refused, so this has to come first. Turning
+   one on that is already on is skipped; one that will not turn on is
+   said, and the export step is where it shows. */
+async function ensureCaps(bundle) {
+  const have = await call('GET', '/bundleIds/' + bundle.id + '/bundleIdCapabilities?limit=50');
+  const types = have.data.map(c => c.attributes.capabilityType);
+  console.log('capabilities on ' + BUNDLE + ': ' + (types.join(', ') || 'none listed'));
+  const want = [
+    { capabilityType: 'GAME_CENTER' },
+    { capabilityType: 'ICLOUD', settings: [{ key: 'ICLOUD_VERSION', options: [{ key: 'XCODE_6' }] }] }
+  ];
+  for (const w of want) {
+    if (types.indexOf(w.capabilityType) >= 0) continue;
+    try {
+      await call('POST', '/bundleIdCapabilities', {
+        data: { type: 'bundleIdCapabilities', attributes: w, relationships: { bundleId: { data: { type: 'bundleIds', id: bundle.id } } } }
+      });
+      console.log('  turned on ' + w.capabilityType);
+    } catch (e) { console.log('  could not turn on ' + w.capabilityType + ': ' + e.message); }
+  }
+}
+
 async function create(dir) {
   const csr = fs.readFileSync(path.join(dir, 'csr.pem'), 'utf8');
   const state = {};
@@ -99,6 +126,7 @@ async function create(dir) {
   const ids = await call('GET', '/bundleIds?filter[identifier]=' + BUNDLE + '&limit=50');
   const bundle = ids.data.find(b => b.attributes.identifier === BUNDLE);
   if (!bundle) throw new Error('no bundle id ' + BUNDLE + ' on the team');
+  await ensureCaps(bundle);
 
   const name = 'Pawtika CI ' + new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12);
   const prof = await call('POST', '/profiles', {

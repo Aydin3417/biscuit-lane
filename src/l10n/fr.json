@@ -486,7 +486,13 @@
   "ev_left": "encore {t}",
   "ev_done": "Terminé ! Un nouveau la semaine prochaine.",
   "ev_prize": "Prix de l’événement",
-  "dur_d": "{n} j"
+  "dur_d": "{n} j",
+  "gc_boards": "Classements",
+  "gc_week": "Classement de la semaine",
+  "cloud_t": "Une partie dans iCloud",
+  "cloud_s": "iCloud contient une partie avec {n} niveaux réussis ; ce téléphone en a {here}. Charger celle d’iCloud ? Elle remplacera celle de ce téléphone.",
+  "cloud_yes": "Charger",
+  "cloud_no": "Garder celle-ci"
  },
  "one": {
   "lvl_moves": "{n} coup",

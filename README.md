@@ -5107,3 +5107,31 @@ launch, before the first video has loaded.
 checks the rocket lands on the board. None of it changes what the
 interstitial does. More videos per player is worth little at six
 players; the same change at a few hundred is what it is for.
+
+### 1.5, the rest: start boosters, the week's events, Game Center, iCloud
+
+Asked on 24 Nov 2026 what the game lacks next to the big ones, the owner
+said bring all of it.
+
+- **Start boosters** for coins on the level card: +5 moves, a rocket,
+  a bomb, a star (180 / 240 / 320 coins for the last three).
+- **The week's events** (`53-events.js`, `test/events.js`): the week's
+  breed, Monday to Sunday, prizes at 120 / 300 / 600 of its tiles; the
+  weekend run, seven wins in a row Friday to Sunday. Worked out from the
+  date, no server, no invented rivals.
+- **Game Center** (`ios/App/App/PawtikaNative.swift`, `54-native.js`):
+  two leaderboards, made in App Store Connect on 24 Nov — `pawtika.level`
+  (levels cleared) and `pawtika.week` (the week's breed, recurring every
+  seven days from Monday 30 Nov 00:00 Istanbul time). Sign-in a few
+  seconds after launch, Game Center's own sheet.
+- **The iCloud copy**: every immediate save also goes to iCloud's
+  key-value store; a phone behind iCloud is asked before anything is
+  taken, and the question sits above the first-launch welcome, where the
+  player it is for will be. `test/native.js` holds both against a
+  stand-in plugin.
+- **Signing**: `App.entitlements` carries Game Center and the key-value
+  store; `tools/ios-cert.js` turns GAME_CENTER and ICLOUD on for the App
+  ID before it makes the profile, because a profile only grants what its
+  App ID had when it was made.
+- **Who comes back**: `server/supabase/migrations/20261124000000_retention.sql`
+  adds `v_retention` and `v_retention_daily`; not yet run on the server.
