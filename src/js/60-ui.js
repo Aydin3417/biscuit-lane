@@ -344,6 +344,7 @@ function renderHome() {
     <div class="todaySec">
     <div class="sectitle"><h3>${T('home_today')}</h3></div>
     <div class="todayStrip">
+    ${settled && evOpen() ? eventCardsHtml() : ''}
     ${giftReady() ? heroGift() : ''}
     ${napOn ? napHomeCard() : ''}
     ${!settled ? '' : (() => {
@@ -431,6 +432,8 @@ function renderHome() {
   const gc = $('#giftCard'); if (gc) gc.addEventListener('click', openDailyGift);
   const dc = $('#dailyCard'); if (dc) dc.addEventListener('click', startDailyWalk);
   const pc = $('#passCard'); if (pc) pc.addEventListener('click', passSheet);
+  $$('[data-event]', pad).forEach(c => c.addEventListener('click', () => { SFX.tap(); eventsSheet(); }));
+  $$('.eventCard', pad).forEach(c => paintArtCanvases(c));
   $('#careFeed').addEventListener('click', openFeed);
   $('#carePlay').addEventListener('click', carePlay);
   $('#careWash').addEventListener('click', careWash);
@@ -1019,6 +1022,71 @@ async function watchForTreats(e) {
   persist(true); syncPurse(); SFX.coin();
   toast(T('store_thanks', { n: ADS.treatReward }), 'treat');
   if (SCREEN === 'shop') renderShop();
+}
+/* ---------- the week's events, drawn (rules in 53-events.js) ---------- */
+function evLeftText() {
+  const ms = evLeftMs();
+  const d = Math.floor(ms / 86400000), h = Math.floor(ms / 3600000) % 24, m = Math.floor(ms / 60000) % 60;
+  return T('ev_left', { t: d ? T('dur_d', { n: d }) + (h ? ' ' + T('dur_h', { n: h }) : '') : h ? T('dur_h', { n: h }) : T('dur_m', { n: Math.max(1, m) }) });
+}
+function evCollectNext(st) { return EV_COLLECT_TIERS[Math.min(st.tiers, EV_COLLECT_TIERS.length - 1)]; }
+function eventCardsHtml() {
+  const st = evState();
+  const b = evBreed(st.week);
+  const next = evCollectNext(st);
+  const doneAll = st.tiers >= EV_COLLECT_TIERS.length;
+  const pct = doneAll ? 100 : Math.round(Math.min(1, st.got / next.need) * 100);
+  const race = evRaceOn() ? `
+    <button class="card todayTile eventCard race" data-event="race">
+      <span class="di" style="color:var(--rose)">${IC.flame}</span>
+      <span class="dt">
+        <b>${T('ev_race_t')}</b>
+        <small>${st.raced ? T('ev_done') : T('ev_race_s', { n: EV_RACE.need })}</small>
+        <span class="evBar"><i style="width:${Math.round(Math.min(1, st.run / EV_RACE.need) * 100)}%"></i><em>${st.raced ? EV_RACE.need : st.run} / ${EV_RACE.need}</em></span>
+        <span class="evLeft">${IC.flame}${evLeftText()}</span>
+      </span>
+    </button>` : '';
+  return `
+    <button class="card todayTile eventCard" data-event="collect">
+      <span class="di"><canvas data-face="${b}" width="40" height="40"></canvas></span>
+      <span class="dt">
+        <b>${T('ev_collect_t', { breed: breedName(b) })}</b>
+        <small>${doneAll ? T('ev_done') : T('ev_collect_s', { breed: breedName(b) })}</small>
+        <span class="evBar"><i style="width:${pct}%"></i><em>${doneAll ? next.need : st.got} / ${next.need}</em></span>
+        <span class="evLeft">${IC.flame}${evLeftText()}</span>
+      </span>
+    </button>${race}`;
+}
+function eventsSheet() {
+  const st = evState();
+  const b = evBreed(st.week);
+  const tierRow = (t, i) => `<div class="evTier${st.tiers > i ? ' got' : ''}">
+      <span class="n num">${t.need}</span>
+      <span class="w">${evPrizeLine(t)}</span>
+      <span class="s">${st.tiers > i ? IC.check : ''}</span>
+    </div>`;
+  const m = modal(`
+    <span style="color:var(--accent-strong);width:52px;height:52px;align-self:center">${IC.star}</span>
+    <h2>${T('ev_title')}</h2>
+    <p class="evLeftBig">${evLeftText()}</p>
+    <div class="evBlock">
+      <div class="evHead"><canvas data-face="${b}" width="44" height="44"></canvas>
+        <span><b>${T('ev_collect_t', { breed: breedName(b) })}</b><small>${T('ev_collect_s', { breed: breedName(b) })} · <span class="num">${st.got}</span></small></span></div>
+      ${EV_COLLECT_TIERS.map(tierRow).join('')}
+    </div>
+    <div class="evBlock${evRaceOn() ? '' : ' soon'}">
+      <div class="evHead"><span class="flameDot">${IC.flame}</span>
+        <span><b>${T('ev_race_t')}</b><small>${evRaceOn() ? T('ev_race_s', { n: EV_RACE.need }) : T('ev_race_soon')}</small></span></div>
+      <div class="evTier${st.raced ? ' got' : ''}">
+        <span class="n num">${evRaceOn() ? (st.raced ? EV_RACE.need : st.run) + ' / ' + EV_RACE.need : EV_RACE.need}</span>
+        <span class="w">${evPrizeLine(EV_RACE)}</span>
+        <span class="s">${st.raced ? IC.check : ''}</span>
+      </div>
+    </div>
+    <button class="btn primary wide" id="evOk">${T('ok')}</button>
+  `);
+  paintArtCanvases(m.el);
+  $('#evOk', m.el).addEventListener('click', m.close);
 }
 function dealHtml() {
   const d = dealOfDay();
@@ -1784,12 +1852,29 @@ function runGiftLine(n, gate) {
   if (bombs) return T('run_gift_rb', { r: rockets, b: bombs });
   return T(rockets === 1 ? 'run_gift_r1' : 'run_gift_r', { r: rockets });
 }
+/* one tile of the level card's start boosters: what it is, how many are
+   owned, or its price when none are */
+function preTileInner(id, on) {
+  const b = BOOSTERS.find(x => x.id === id);
+  const have = SAVE.boosters[id] || 0;
+  return `<span class="pi">${IC[b.icon]}</span>
+    ${on ? `<span class="ok">${IC.check}</span>` : have ? `<span class="ct num">${have}</span>` : `<span class="pp">${IC.coin}<span class="num">${b.cost}</span></span>`}
+    <span class="pn">${goodName(b)}</span>`;
+}
+function preTileHtml(id) {
+  return `<button class="preB" data-pre="${id}" aria-pressed="false" aria-label="${goodName(BOOSTERS.find(x => x.id === id))}">${preTileInner(id, false)}</button>`;
+}
+function preTileSet(t, on) {
+  t.classList.toggle('on', on);
+  t.setAttribute('aria-pressed', on ? 'true' : 'false');
+  t.innerHTML = preTileInner(t.dataset.pre, on);
+}
 function openLevelIntro(n) {
   heartTick();
   const def = levelDef(n);
   const pet = activePet();
   const perks = perksFor(pet);
-  let useMoves = false;
+  const chosen = {};
   if (SAVE.hearts <= 0 && !heartsInfinite()) { noHeartsSheet(); return; }
   /* straight in, the first time through the opening levels. Everything
      the Start button does, in the same order — the heart is still spent,
@@ -1857,11 +1942,7 @@ function openLevelIntro(n) {
       <span class="chargedBy">${T('lvl_charges')} ${castName(favType(def.types))}</span></span>
     </div>` : ''}
     <div class="eyebrow">${T('lvl_boosters')}</div>
-    <button class="goalItem" id="pickMoves" style="width:100%">
-      <span style="width:32px;display:grid;place-items:center;color:var(--accent-strong)">${IC.plusmove}</span>
-      <span class="t"><b>${T('boost_moves')}</b>${T('shop_have', { n: SAVE.boosters.moves || 0 })}</span>
-      <span class="pill info" id="movesPill">${T('pill_off')}</span>
-    </button>
+    <div class="preRow">${PRE_BOOSTERS.map(preTileHtml).join('')}</div>
     ${retryAd ? `<button class="btn wide adLine" id="liAd">${IC.video}${T('ad_retry', { n: ADS.retryMoves })}</button>` : ''}
     ${boostAd ? `<button class="btn sky wide adLine" id="liRocket">${IC.video}${T('ad_rocket')}</button>` : ''}
     <div class="row sheetFoot">
@@ -1871,14 +1952,23 @@ function openLevelIntro(n) {
   `);
   paintArtCanvases(m.el);
   paintGoalIcons(m.el);
-  $('#pickMoves', m.el).addEventListener('click', () => {
-    if (!(SAVE.boosters.moves > 0)) { SFX.bad(); toast(T('toast_none'), 'plusmove'); return; }
-    useMoves = !useMoves;
-    SFX.tap();
-    const pill = $('#movesPill', m.el);
-    pill.textContent = useMoves ? T('pill_on') : T('pill_off');
-    pill.className = 'pill ' + (useMoves ? 'ok' : 'info');
-  });
+  /* A start booster is picked by tapping it. One not owned shows its
+     price, and the tap buys one with coins and picks it — the price was
+     on the tile, so the tap is the decision; short of coins, the purse. */
+  $$('[data-pre]', m.el).forEach(t => t.addEventListener('click', () => {
+    const id = t.dataset.pre;
+    if (chosen[id]) { chosen[id] = false; SFX.tap(); preTileSet(t, false); return; }
+    if (!(SAVE.boosters[id] > 0)) {
+      const b = BOOSTERS.find(x => x.id === id);
+      if (SAVE.coins < b.cost) { SFX.bad(); coinPurse(b.cost - SAVE.coins); return; }
+      SAVE.coins -= b.cost;
+      SAVE.boosters[id] = (SAVE.boosters[id] || 0) + 1;
+      persist(true); syncPurse(); SFX.coin();
+      track('pre_buy', { id, n });
+    } else SFX.tap();
+    chosen[id] = true;
+    preTileSet(t, true);
+  }));
   const lia = $('#liAd', m.el);
   if (lia) lia.addEventListener('click', async () => {
     lia.disabled = true;
@@ -1914,11 +2004,13 @@ function openLevelIntro(n) {
     if (starting) return;
     starting = true;
     if (!spendHeart()) { m.close(); noHeartsSheet(); return; }
-    if (useMoves) { SAVE.boosters.moves--; persist(); }
+    const start = {};
+    PRE_BOOSTERS.forEach(id => { if (chosen[id] && SAVE.boosters[id] > 0) { SAVE.boosters[id]--; if (id !== 'moves') start[id] = 1; } });
+    if (PRE_BOOSTERS.some(id => chosen[id])) { persist(); track('pre_use', { n, ids: PRE_BOOSTERS.filter(id => chosen[id]).join('.') }); }
     m.close();
     syncPurse();
     setScreen('game');
-    startLevel(n, { perks, extraMoves: (useMoves ? 5 : 0) + adMoves, adRockets });
+    startLevel(n, { perks, extraMoves: (chosen.moves ? 5 : 0) + adMoves, adRockets, start });
     maybeTutorial(def);
   });
 }
@@ -2411,6 +2503,7 @@ function showWin() {
       <span class="reward" style="color:var(--sage)">${IC.paw}+${bondXp} ${T('win_bond')}</span>
     </div>
     ${homeStars ? `<p class="winHome">${T('win_home', { n: homeStars })}</p>` : ''}
+    ${evOpen() && G.n > 0 ? (() => { const st = evState(); const nx = evCollectNext(st); return `<p class="winEvent">${T('ev_collect_t', { breed: breedName(evBreed(st.week)) })}: <b class="num">${Math.min(st.got, nx.need)} / ${nx.need}</b>${evRaceOn() && !st.raced ? ' · ' + T('ev_race_t') + ': <b class="num">' + st.run + ' / ' + EV_RACE.need + '</b>' : ''}</p>`; })() : ''}
     ${first ? '' : `<p style="color:var(--text-faint);font-size:var(--t-micro);margin-top:-4px">${T('win_replay')}</p>`}
     ${first && coins > 0 && ADS.offer('double') ? `<button class="btn sky wide adLine" id="wDouble">${IC.video}${T('ad_double', { n: coins * 2 })}</button>` : ''}
     ${wonBadges.length ? `<div class="goalItem winBadges"><span class="rosette fam-${wonBadges[0].fam}">${IC[wonBadges[0].icon] || IC.crown}</span>
@@ -2584,6 +2677,8 @@ function chestModal(ch) {
   $('#chOk', m.el).addEventListener('click', m.close);
 }
 function showLose() {
+  /* the weekend run broke on this loss: said once, on the card that caused it */
+  if (SAVE.events && SAVE.events.broke) { SAVE.events.broke = false; setTimeout(() => toast(T('ev_race_lost'), 'flame'), 600); }
   say(T('a11y_failed'), true);
   if (G.n === DAILY_LEVEL) { showDailyResult(false); return; }
   const pet = activePet();
@@ -2804,6 +2899,7 @@ function confirmQuit() {
     m.close();
     track('level_quit', { n: G.n, left: G.moves });
     if (ends) SAVE.winRun = 0;
+    evLost();
     if (refund) returnHeart(); else forfeitHeart();
     persist(true);
     leaveLevel();

@@ -437,11 +437,7 @@
   "shop_keeps": "Ricordi",
   "shop_keeps_hint": "fatti con il tuo animale",
   "toast_treats": "Bocconcini insufficienti",
-  "toast_none": "Non ne hai",
   "care_perks": "La cura sblocca vantaggi",
-  "boost_moves": "+5 mosse",
-  "pill_on": "On",
-  "pill_off": "Off",
   "set_played": "Giocati",
   "set_cleared": "Superati",
   "set_bestcombo": "Miglior combo",
@@ -479,7 +475,18 @@
   "ad_rocket": "Guarda un video: inizia con un razzo",
   "ad_rocket_on": "Un razzo ti aspetta sul tabellone",
   "free_t": "Bocconcini gratis",
-  "free_s": "Un breve video per {n} bocconcini. Ne restano {left} oggi."
+  "free_s": "Un breve video per {n} bocconcini. Ne restano {left} oggi.",
+  "ev_title": "Gli eventi della settimana",
+  "ev_collect_t": "La settimana del {breed}",
+  "ev_collect_s": "Togli tessere {breed} su qualsiasi tabellone",
+  "ev_race_t": "Corsa del weekend",
+  "ev_race_s": "Vinci {n} livelli di fila entro lunedì. Se perdi, ricomincia.",
+  "ev_race_soon": "Apre venerdì",
+  "ev_race_lost": "Corsa interrotta: si riparte da 0",
+  "ev_left": "mancano {t}",
+  "ev_done": "Fatto! La settimana prossima ce n’è uno nuovo.",
+  "ev_prize": "Premio dell’evento",
+  "dur_d": "{n} g"
  },
  "one": {
   "lvl_moves": "{n} mossa",
@@ -790,6 +797,12 @@
   "Paint the walls deep blue": "Dipingi le pareti di blu notte",
   "A kennel indoors": "Una cuccia in casa",
   "Try the walls in moss": "Prova le pareti verde muschio",
-  "Or terracotta, warmer": "O terracotta, più caldo"
+  "Or terracotta, warmer": "O terracotta, più caldo",
+  "Start rocket": "Razzo iniziale",
+  "Start bomb": "Bomba iniziale",
+  "Start star": "Stella iniziale",
+  "A rocket on the board when the level begins.": "Un razzo sul tabellone all’inizio del livello.",
+  "A bomb on the board when the level begins.": "Una bomba sul tabellone all’inizio del livello.",
+  "A star on the board: swap it to clear a whole colour.": "Una stella sul tabellone: scambiala per togliere un intero colore."
  }
 }

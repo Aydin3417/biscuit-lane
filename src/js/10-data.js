@@ -891,8 +891,19 @@ const BOOSTERS = [
   { id: 'moves', en: '+5 moves', tr: '+5 hamle', cost: 220, icon: 'plusmove', enDesc: 'Five extra moves before the level starts.', trDesc: 'Bölüm başlamadan beş hamle ekler.' },
   { id: 'hammer', en: 'Hammer', tr: 'Çekiç', cost: 170, icon: 'hammer', enDesc: 'Smash any single tile or blocker.', trDesc: 'Tek bir taşı ya da engeli kırar.' },
   { id: 'swap', en: 'Free swap', tr: 'Yer değiştir', cost: 190, icon: 'swap', enDesc: 'Swap any two tiles, anywhere, for free.', trDesc: 'İstediğin iki taşın yerini hamle harcamadan değiştirir.' },
-  { id: 'shuffle', en: 'Shuffle', tr: 'Karıştır', cost: 150, icon: 'shuffle', enDesc: 'Reshuffle the board without spending a move.', trDesc: 'Hamle harcamadan tahtayı karıştırır.' }
+  { id: 'shuffle', en: 'Shuffle', tr: 'Karıştır', cost: 150, icon: 'shuffle', enDesc: 'Reshuffle the board without spending a move.', trDesc: 'Hamle harcamadan tahtayı karıştırır.' },
+  /* START BOOSTERS (1.5), chosen on the level card and lying on the board
+     when it deals in, the way the genre sells its first help. Coins had
+     one thing a player chose before a level (+5 moves) and the owner's
+     question was where coins should go; these are dearer than the moves
+     because each does more than five moves do on most boards: a rocket
+     clears a line, a bomb a three-by-three, a star a whole colour. */
+  { id: 'rocket', en: 'Start rocket', tr: 'Başlangıç roketi', cost: 180, icon: 'rocket', pre: true, enDesc: 'A rocket on the board when the level begins.', trDesc: 'Bölüm başlarken tahtada bir roket.' },
+  { id: 'bomb', en: 'Start bomb', tr: 'Başlangıç bombası', cost: 240, icon: 'bomb', pre: true, enDesc: 'A bomb on the board when the level begins.', trDesc: 'Bölüm başlarken tahtada bir bomba.' },
+  { id: 'star', en: 'Start star', tr: 'Başlangıç yıldızı', cost: 320, icon: 'rainbow', pre: true, enDesc: 'A star on the board: swap it to clear a whole colour.', trDesc: 'Tahtada bir yıldız: yerini değiştir, bir rengin hepsi gitsin.' }
 ];
+/* what the level card offers, in the order it shows them */
+const PRE_BOOSTERS = ['moves', 'rocket', 'bomb', 'star'];
 const HATS = [
   { id: 'none', en: 'No hat', tr: 'Yok', cost: 0, art: 'none' },
   { id: 'party', en: 'Party hat', tr: 'Parti şapkası', cost: 60, art: 'party' },

@@ -407,14 +407,20 @@ function startLevel(n, opts) {
   }
   /* an energetic pet leaves a rocket lying about, and a video on the
      level card leaves another (ADS.caps.boost) */
-  const gifts = (perks.some(p => p.id === 'gift') ? 1 : 0) + (opts.adRockets || 0);
-  if (!res && gifts) {
+  const st = opts.start || {};
+  const gifts = (perks.some(p => p.id === 'gift') ? 1 : 0) + (opts.adRockets || 0) + (st.rocket || 0);
+  const lay = [];
+  for (let i = 0; i < gifts; i++) lay.push(Math.random() < .5 ? SP.ROW : SP.COL);
+  for (let i = 0; i < (st.bomb || 0); i++) lay.push(SP.BOMB);
+  for (let i = 0; i < (st.star || 0); i++) lay.push(SP.RAIN);
+  if (!res && lay.length) {
     const spots = [];
     eachCell(G.B, (cell, r, c) => { if (cell.tile && cell.tile.type >= 0 && cell.tile.sp === SP.NONE && cell.ice === 0) spots.push([r, c]); });
-    for (let i = 0; i < gifts && spots.length; i++) {
+    lay.forEach(sp => {
+      if (!spots.length) return;
       const [r, c] = spots.splice(Math.floor(Math.random() * spots.length), 1)[0];
-      G.B.cell[r][c].tile.sp = Math.random() < .5 ? SP.ROW : SP.COL;
-    }
+      G.B.cell[r][c].tile.sp = sp;
+    });
   }
   /* The win streak's gifts, on a level not yet cleared: a rocket, two,
      then two and a bomb (WIN_RUN). Placed on plain tiles away from the
@@ -937,6 +943,8 @@ async function blastWaves(startKeys, chain, silent) {
   let wave = Array.from(startKeys);
   let guard = 0;
   let totalTiles = 0;
+  /* what went, by slot, for the week's event (53-events.js) */
+  const bySlot = {};
   while (wave.length && guard++ < 24) {
     /* `mole` was missing from this, so closing a hill did undefined + 1,
        applyCounts read NaN as nothing, and every molehill level from 76
@@ -1006,6 +1014,7 @@ async function blastWaves(startKeys, chain, silent) {
     if (stale(_ep)) return;
     ctx.removed.forEach(it => {
       const cell = G.B.cell[it.r][it.c];
+      if (it.t && it.t.type >= 0) bySlot[it.t.type] = (bySlot[it.t.type] || 0) + 1;
       if (cell.tile === it.t) cell.tile = null;
     });
     /* next wave from specials we just consumed */
@@ -1017,6 +1026,7 @@ async function blastWaves(startKeys, chain, silent) {
   }
   SAVE.stats.tilesPopped += totalTiles;
   SAVE.stats.biggestClear = Math.max(SAVE.stats.biggestClear || 0, totalTiles);
+  if (G.n > 0) EV.emit('tiles', bySlot);
   return totalTiles;
 }
 

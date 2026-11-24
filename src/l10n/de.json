@@ -437,11 +437,7 @@
   "shop_keeps": "Andenken",
   "shop_keeps_hint": "aus deinem eigenen Tier gemacht",
   "toast_treats": "Nicht genug Leckerlis",
-  "toast_none": "Du hast keine",
   "care_perks": "Pflege schaltet Boni frei",
-  "boost_moves": "+5 Züge",
-  "pill_on": "An",
-  "pill_off": "Aus",
   "set_played": "Gespielt",
   "set_cleared": "Geschafft",
   "set_bestcombo": "Beste Kombo",
@@ -479,7 +475,18 @@
   "ad_rocket": "Video ansehen: mit einer Rakete starten",
   "ad_rocket_on": "Eine Rakete wartet auf dem Brett",
   "free_t": "Gratis-Leckerlis",
-  "free_s": "Ein kurzes Video für {n} Leckerlis. Heute noch {left}."
+  "free_s": "Ein kurzes Video für {n} Leckerlis. Heute noch {left}.",
+  "ev_title": "Die Events dieser Woche",
+  "ev_collect_t": "{breed}-Woche",
+  "ev_collect_s": "Räume {breed}-Kacheln auf jedem Brett",
+  "ev_race_t": "Wochenend-Lauf",
+  "ev_race_s": "Gewinne {n} Level hintereinander bis Montag. Eine Niederlage setzt ihn zurück.",
+  "ev_race_soon": "Öffnet am Freitag",
+  "ev_race_lost": "Wochenend-Lauf unterbrochen: zurück auf 0",
+  "ev_left": "noch {t}",
+  "ev_done": "Geschafft! Nächste Woche gibt es ein neues.",
+  "ev_prize": "Event-Preis",
+  "dur_d": "{n} T"
  },
  "one": {
   "lvl_moves": "{n} Zug",
@@ -790,6 +797,12 @@
   "Paint the walls deep blue": "Die Wände tiefblau streichen",
   "A kennel indoors": "Eine Hundehütte drinnen",
   "Try the walls in moss": "Die Wände moosgrün probieren",
-  "Or terracotta, warmer": "Oder Terrakotta, wärmer"
+  "Or terracotta, warmer": "Oder Terrakotta, wärmer",
+  "Start rocket": "Start-Rakete",
+  "Start bomb": "Start-Bombe",
+  "Start star": "Start-Stern",
+  "A rocket on the board when the level begins.": "Eine Rakete auf dem Brett, wenn das Level beginnt.",
+  "A bomb on the board when the level begins.": "Eine Bombe auf dem Brett, wenn das Level beginnt.",
+  "A star on the board: swap it to clear a whole colour.": "Ein Stern auf dem Brett: tausche ihn, um eine ganze Farbe zu räumen."
  }
 }

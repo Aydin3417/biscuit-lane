@@ -437,11 +437,7 @@
   "shop_keeps": "Souvenirs",
   "shop_keeps_hint": "faits à partir de ton animal",
   "toast_treats": "Pas assez de friandises",
-  "toast_none": "Tu n'en as plus",
   "care_perks": "Les soins débloquent des atouts",
-  "boost_moves": "+5 coups",
-  "pill_on": "Oui",
-  "pill_off": "Non",
   "set_played": "Joués",
   "set_cleared": "Réussis",
   "set_bestcombo": "Meilleur combo",
@@ -479,7 +475,18 @@
   "ad_rocket": "Une vidéo : commence avec une fusée",
   "ad_rocket_on": "Une fusée t’attend sur le plateau",
   "free_t": "Friandises gratuites",
-  "free_s": "Une courte vidéo pour {n} friandises. Encore {left} aujourd’hui."
+  "free_s": "Une courte vidéo pour {n} friandises. Encore {left} aujourd’hui.",
+  "ev_title": "Les événements de la semaine",
+  "ev_collect_t": "La semaine du {breed}",
+  "ev_collect_s": "Retire des pièces {breed} sur n’importe quel plateau",
+  "ev_race_t": "Course du week-end",
+  "ev_race_s": "Gagne {n} niveaux d’affilée avant lundi. Une défaite la fait recommencer.",
+  "ev_race_soon": "Ouvre vendredi",
+  "ev_race_lost": "Course interrompue : retour à 0",
+  "ev_left": "encore {t}",
+  "ev_done": "Terminé ! Un nouveau la semaine prochaine.",
+  "ev_prize": "Prix de l’événement",
+  "dur_d": "{n} j"
  },
  "one": {
   "lvl_moves": "{n} coup",
@@ -790,6 +797,12 @@
   "Paint the walls deep blue": "Peins les murs en bleu nuit",
   "A kennel indoors": "Une niche à l’intérieur",
   "Try the walls in moss": "Essaie les murs vert mousse",
-  "Or terracotta, warmer": "Ou terre cuite, plus chaud"
+  "Or terracotta, warmer": "Ou terre cuite, plus chaud",
+  "Start rocket": "Fusée de départ",
+  "Start bomb": "Bombe de départ",
+  "Start star": "Étoile de départ",
+  "A rocket on the board when the level begins.": "Une fusée sur le plateau au début du niveau.",
+  "A bomb on the board when the level begins.": "Une bombe sur le plateau au début du niveau.",
+  "A star on the board: swap it to clear a whole colour.": "Une étoile sur le plateau : échange-la pour vider toute une couleur."
  }
 }

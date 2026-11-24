@@ -18,6 +18,7 @@ const steps = [
   ['the live-tuning file, clamped', 'live-tune.js', []],
   ['the budget that follows the player', 'adapt.js', []],
   ['the house project, a star at a time', 'project.js', []],
+  ['the events of the week', 'events.js', []],
   ['five more languages, held to the English', 'l10n.js', []],
   /* cheapest first: a missing translation is found by reading two
      tables, and it is the fault most likely to reach a player */

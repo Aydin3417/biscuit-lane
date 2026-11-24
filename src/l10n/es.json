@@ -437,11 +437,7 @@
   "shop_keeps": "Recuerdos",
   "shop_keeps_hint": "con tu mascota como modelo",
   "toast_treats": "Faltan golosinas",
-  "toast_none": "No tienes ninguno",
   "care_perks": "Cuidar da ventajas",
-  "boost_moves": "+5 movimientos",
-  "pill_on": "Sí",
-  "pill_off": "No",
   "set_played": "Jugados",
   "set_cleared": "Superados",
   "set_bestcombo": "Mejor combo",
@@ -479,7 +475,18 @@
   "ad_rocket": "Mira un video: empieza con un cohete",
   "ad_rocket_on": "Un cohete te espera en el tablero",
   "free_t": "Golosinas gratis",
-  "free_s": "Mira un video corto por {n} golosinas. Te quedan {left} hoy."
+  "free_s": "Mira un video corto por {n} golosinas. Te quedan {left} hoy.",
+  "ev_title": "Eventos de esta semana",
+  "ev_collect_t": "Semana del {breed}",
+  "ev_collect_s": "Quita fichas de {breed} en cualquier tablero",
+  "ev_race_t": "Racha del finde",
+  "ev_race_s": "Gana {n} niveles seguidos antes del lunes. Si pierdes, vuelve a empezar.",
+  "ev_race_soon": "Se abre el viernes",
+  "ev_race_lost": "Carrera rota: vuelves a 0",
+  "ev_left": "quedan {t}",
+  "ev_done": "¡Hecho! La semana que viene hay otro.",
+  "ev_prize": "Premio del evento",
+  "dur_d": "{n} d"
  },
  "one": {
   "lvl_moves": "{n} movimiento",
@@ -790,6 +797,12 @@
   "Paint the walls deep blue": "Pinta las paredes de azul noche",
   "A kennel indoors": "Una caseta dentro de casa",
   "Try the walls in moss": "Prueba las paredes verde musgo",
-  "Or terracotta, warmer": "O terracota, más cálido"
+  "Or terracotta, warmer": "O terracota, más cálido",
+  "Start rocket": "Cohete inicial",
+  "Start bomb": "Bomba inicial",
+  "Start star": "Estrella inicial",
+  "A rocket on the board when the level begins.": "Un cohete en el tablero al empezar el nivel.",
+  "A bomb on the board when the level begins.": "Una bomba en el tablero al empezar el nivel.",
+  "A star on the board: swap it to clear a whole colour.": "Una estrella en el tablero: muévela para quitar todo un color."
  }
 }
