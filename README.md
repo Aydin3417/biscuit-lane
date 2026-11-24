@@ -5134,4 +5134,4 @@ said bring all of it.
   ID before it makes the profile, because a profile only grants what its
   App ID had when it was made.
 - **Who comes back**: `server/supabase/migrations/20261124000000_retention.sql`
-  adds `v_retention` and `v_retention_daily`; not yet run on the server.
+  adds `v_first_days` and `v_first_days_daily` (run 24 Nov; a hand-made `v_retention` with d1/d3/d7/d14/d30 cohorts was already there and is left alone).
